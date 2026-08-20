@@ -225,6 +225,12 @@ int main(int argc, char* argv[])
         estEndTime = humanWarmupLength + (sim::endDate() - sim::startDate()) + sim::oneTS();
         assert( estEndTime + sim::never() < sim::zero() );
 
+        // Everything above this point is scenario initialisation and error
+        // checking (schema/parameter validation, model graph construction).
+        // SKIP_SIMULATION ("--validate-only" etc.) stops here, before any
+        // timestep evolution, so callers can validate a scenario cheaply.
+        if (!util::CommandLine::option(util::CommandLine::SKIP_SIMULATION))
+        {
         if (startedFromCheckpoint)
         {
             mon::Continuous::init(scenario->getMonitoring(), true);
@@ -238,11 +244,11 @@ int main(int argc, char* argv[])
             mon::Continuous::init(scenario->getMonitoring(), false);
             population->createInitialHumans();
             transmission->init2(population->humans);
-            
+
             /** Calculate ento availability percentiles **/
             Transmission::PerHostAnophParams::calcAvailabilityPercentiles();
 
-            /** Warm-up phase: 
+            /** Warm-up phase:
              * Run the simulation using the equilibrium inoculation rates over one
              * complete lifespan (sim::maxHumanAge()) to reach immunological
              * equilibrium in all age classes. Don't report any events. */
@@ -262,7 +268,7 @@ int main(int argc, char* argv[])
             }
 
             /** Main phase:
-             * This procedure starts with the current state of the simulation 
+             * This procedure starts with the current state of the simulation
              * It continues updating assuming:
              * (i)         the default (exponential) demographic model
              * (ii)        the entomological input defined by the EIRs in intEIR()
@@ -288,13 +294,14 @@ int main(int argc, char* argv[])
 
         // Main phase loop
         run(*population, *transmission, humanWarmupLength, endTime, estEndTime, surveyOnlyNewEp, "Intervention period");
-       
+
         cerr << '\r' << flush;  // clean last line of progress-output
-        
+
         for(Host::Human &human : population->humans)
             human.clinicalModel->flushReports();
 
         mon::writeSurveyData();
+        }
         
     # ifdef OM_STREAM_VALIDATOR
         util::StreamValidator.saveStream();

@@ -139,12 +139,14 @@ add_dependencies (model schema)
 
 # -----  generate openMalaria  -----
 
-if (UNIX)
+# Emscripten/WASM is single-threaded and provides pthread symbols via libc; no
+# separate pthread library exists to find, so skip this requirement there.
+if (UNIX AND NOT EMSCRIPTEN)
   find_library (PTHREAD_LIBRARIES pthread PATHS ${CMAKE_SOURCE_DIR}/lib /usr/lib /usr/local/lib)
   if (NOT PTHREAD_LIBRARIES)
     message (SEND_ERROR "PThread library not found")
   endif (NOT PTHREAD_LIBRARIES)
-endif (UNIX)
+endif (UNIX AND NOT EMSCRIPTEN)
 mark_as_advanced (PTHREAD_LIBRARIES)
 
 include_directories (SYSTEM
