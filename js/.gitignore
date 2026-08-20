@@ -1,0 +1,3 @@
+node_modules/
+wasm/*.mjs
+wasm/*.wasm
