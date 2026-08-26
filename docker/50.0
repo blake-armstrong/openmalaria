@@ -1,7 +1,7 @@
 FROM ubuntu:jammy AS builder
 WORKDIR /
 
-ARG OM_BRANCH=schema-50
+ARG OM_BRANCH=main
 ARG OM_VERSION=50
 
 RUN apt-get update && apt-get install -y --no-install-recommends \
