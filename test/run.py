@@ -195,10 +195,8 @@ def runScenario(options,omOptions,name):
     if options.logging:
         print(time.strftime("\033[0;33m%a, %d %b %Y %H:%M:%S")+"\t\033[1;33m%s" % scenarioSrc)
     
-    # -5.0 second for the first loop to make sure that 'last time' happened 'before' the loop
-    # on old Mac OS systems, lasttime seems to be rounded to the second.
-    # for processes < 1 second, the checkpoint file would be written 'before lastTime.
-    startTime=lastTime=time.time() - 5.0
+    startTime=time.time()
+    lastCheckpoint=None
     # While no output.txt file and cmd exits successfully:
     while (not os.path.isfile(outputFile)):
         if options.logging:
@@ -236,10 +234,14 @@ def runScenario(options,omOptions,name):
         # if the checkpoint file hasn't been updated, stop
         if not os.path.isfile(checkFile):
             break
-        checkTime=os.path.getmtime(checkFile)
-        if not checkTime > lastTime:
+
+        with open(checkFile) as f:
+            checkpoint=f.read().strip()
+
+        if checkpoint == lastCheckpoint:
             break
-        lastTime=checkTime
+
+        lastCheckpoint=checkpoint
     
     if ret == 0 and options.logging:
         print("\033[0;33mDone in " + str(time.time()-startTime) + " seconds")
