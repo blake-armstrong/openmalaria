@@ -28,7 +28,7 @@ jobs:
           tag_name: ${{ github.ref }}
           release_name: Release ${{ github.ref }}
           body: |
-            Release of OpenMalaria.
+              Release of OpenMalaria.
 
             Updates: https://github.com/OpenMalaria-Org/openmalaria/wiki/SchemaUpdateGuide
             Changelog: https://github.com/OpenMalaria-Org/openmalaria/wiki/Changelog
