@@ -195,6 +195,13 @@ endif (OM_COPY_LIBS)
 # add_executable (pVivax model/Pv_mod/Source.cpp)
 # target_link_libraries (pVivax libpvivax)
 
+# -----  Python bindings (nanobind)  -----
+
+option (OM_BUILD_PYTHON "Build nanobind-based Python bindings (openmalaria Python package)" OFF)
+if (OM_BUILD_PYTHON)
+  add_subdirectory (python)
+endif (OM_BUILD_PYTHON)
+
 
 # -----  OM_BOXTEST - black-box & unit testing  -----
 
