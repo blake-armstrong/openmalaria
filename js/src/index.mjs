@@ -39,8 +39,8 @@ export class OpenMalariaError extends Error {
  * @param {(line: string) => void} [options.onStderr] - Called per stderr line
  *   (progress/warnings, not necessarily errors -- see result.warnings).
  * @returns {Promise<{output?: string, cts?: string, warnings: string[]}>}
- * @throws {TypeError} synchronously if scenarioXml is not a non-empty string
- *   -- a caller error, distinct from a simulation failure.
+ * @throws {TypeError} synchronously if scenarioXml is not a non-empty string,
+ * which is a caller error, distinct from a simulation failure.
  */
 export function runScenario(scenarioXml, options = {}) {
     if (typeof scenarioXml !== 'string' || scenarioXml.length === 0) {
@@ -68,8 +68,8 @@ async function runScenarioAsync(scenarioXml, options) {
     if (options.validateOnly) argv.push('--validate-only');
 
     // Emscripten's Node target sets the process-global `process.exitCode` as
-    // a side effect of every callMain() call, success or failure alike --
-    // it's modeling a CLI process exit, which is meaningless here since
+    // a side effect of every callMain() call, success or failure alike.
+    // It's modelling a CLI process exit, which is meaningless here since
     // this library communicates success/failure through the returned
     // Promise instead. Restore whatever the host process had before this
     // call so that running multiple scenarios in one Node process (or this
