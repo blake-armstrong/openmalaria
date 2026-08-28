@@ -94,78 +94,17 @@ cp "${REPO_DIR}/test/autoRegressionParameters.csv" "${EMBED_DIR}/autoRegressionP
 mkdir -p "${BUILD_DIR}"
 cd "${BUILD_DIR}"
 
-# Linker flags to shape the JS-facing API:
-#
-# -sMODULARIZE=1 -sEXPORT_ES6=1 -sEXPORT_NAME=createOpenMalaria
-#   Without MODULARIZE, Emscripten splats a single global Module object into
-#   whatever scope loads it. MODULARIZE instead wraps the module in an async
-#   factory function returning a fresh, independent instance each call. 
-#   OpenMalaria has global static state (sim, master_RNG,
-#   mon::internal::runtime, ModelOptions, InterventionManager, Genotypes,
-#   CommandLine's own static fields) that's set up once per run and never
-#   reset, so two scenario runs in one browser tab must not share an
-#   instance.
-#
-# -sEXPORTED_RUNTIME_METHODS=FS,callMain
-#   The chosen alternative to Embind: FS (the MEMFS filesystem object) and
-#   callMain (invoke the existing, unmodified main(argc, argv), get its exit
-#   code back, without auto-running). The wasm build's "API" is literally
-#   the CLI's existing file-in/file-out contract, replayed through an
-#   in-memory filesystem. Trade-off: a whole-XML-in/whole-TSV-out API, no
-#   fine-grained/streaming calls (the CLI is already designed like this anyway).
-#
-# -sINVOKE_RUN=0
-#   Emscripten's default auto-invokes main() the instant the module finishes
-#   loading. The JS wrapper needs to write the scenario XML into MEMFS
-#   before main() runs (main reads it as a -s argument), so auto-invocation
-#   must be suppressed and main called manually via callMain() once the
-#   file is staged.
-#
-# -sEXIT_RUNTIME=0
-#   A real CLI process calls exit() after main() returns, tearing down
-#   stdio. Here callMain() is just a function call, not a process exit.
-#   The JS side still needs to read files back out of FS afterward.
-#
-# -sFORCE_FILESYSTEM=1
-#   The C++ side never itself calls anything that would make the build
-#   decide it needs the fuller MEMFS filesystem code (dead-code elimination
-#   would otherwise strip it), but the JS wrapper uses Module.FS.writeFile/
-#   readFile directly.
-#
-# -sALLOW_MEMORY_GROWTH=1 -sINITIAL_MEMORY=64MB
-#   Wasm linear memory is fixed-size at compile time unless grown. Scenario
-#   population sizes and run lengths vary enormously; a fixed cap would
-#   either waste memory on small scenarios or hard-crash on large ones.
-#
-# -sSTACK_SIZE=1MB
-#   Bumped from the default: a C++ simulator has non-trivial call depth
-#   (recursive XML DOM traversal during parsing, nested simulation logic).
-#   A stack overflow here would otherwise manifest as an opaque crash.
-#
-# -sASSERTIONS=1
-#   Emscripten's runtime sanity checks and clearer failure messages.
-#
-# -fexceptions
-#   Must match the flag Xerces was built with (see deps/build-xerces.sh).
-#   Emscripten disables C++ exceptions by default, and both Xerces and
-#   OpenMalaria's own util/errors.h machinery rely on C++ exceptions
-#   propagating across this link.
-
-LINKER_FLAGS="-fexceptions"
-LINKER_FLAGS="${LINKER_FLAGS} -sMODULARIZE=1 -sEXPORT_ES6=1 -sEXPORT_NAME=createOpenMalaria"
-LINKER_FLAGS="${LINKER_FLAGS} -sEXPORTED_RUNTIME_METHODS=FS,callMain"
-LINKER_FLAGS="${LINKER_FLAGS} -sINVOKE_RUN=0 -sEXIT_RUNTIME=0 -sFORCE_FILESYSTEM=1"
-LINKER_FLAGS="${LINKER_FLAGS} -sALLOW_MEMORY_GROWTH=1 -sINITIAL_MEMORY=64MB -sSTACK_SIZE=1MB"
-LINKER_FLAGS="${LINKER_FLAGS} -sASSERTIONS=1"
-LINKER_FLAGS="${LINKER_FLAGS} --embed-file ${EMBED_DIR}/scenario_current.xsd@/work/scenario_current.xsd"
-LINKER_FLAGS="${LINKER_FLAGS} --embed-file ${EMBED_DIR}/densities.csv@/work/densities.csv"
-LINKER_FLAGS="${LINKER_FLAGS} --embed-file ${EMBED_DIR}/autoRegressionParameters.csv@/work/autoRegressionParameters.csv"
+# The JS-facing linker flags (MODULARIZE, EXPORTED_RUNTIME_METHODS,
+# --embed-file, etc.) live in the root CMakeLists.txt now, behind the
+# OM_BUILD_WASM option (see the "WASM/Emscripten linker configuration"
+# section there for the full flag-by-flag rationale) -- this script only
+# needs to turn that option on and tell it where the staged embed files are.
 
 echo "> Configuring OpenMalaria for wasm32"
 # -fexceptions must be passed to the *compiler* here, not just the linker:
 # Emscripten's exception support affects codegen (landing pads/catch
 # dispatch), so main.cpp's own try/catch around XSD/xerces/OpenMalaria
-# exceptions only works if main.cpp itself was compiled with -fexceptions. 
+# exceptions only works if main.cpp itself was compiled with -fexceptions.
 # Matching just the linker flags produces no link error, only a silent
 # runtime failure where every exception propagates uncaught past callMain()
 # as a raw CppException instead of being handled and converted to an exit
@@ -174,6 +113,8 @@ emcmake cmake "${REPO_DIR}" \
   -DCMAKE_BUILD_TYPE=Release \
   -DOM_CXXTEST_ENABLE=OFF \
   -DOM_BOXTEST_ENABLE=OFF \
+  -DOM_BUILD_WASM=ON \
+  -DOM_WASM_EMBED_DIR="${EMBED_DIR}" \
   -DCMAKE_CXX_FLAGS="-fexceptions" \
   -DGSL_INCLUDE_DIR="${DEPS_INSTALL}/include" \
   -DGSL_INCLUDE_DIR2="${DEPS_INSTALL}/include/gsl" \
@@ -184,8 +125,7 @@ emcmake cmake "${REPO_DIR}" \
   -DZ_INCLUDE_DIRS="${Z_INCLUDE_DIRS}" \
   -DZ_LIBRARIES="${Z_LIBRARIES}" \
   -DXSD_EXECUTABLE="${XSD_EXECUTABLE}" \
-  -DXSD_INCLUDE_DIRS="${XSD_INCLUDE_DIRS}" \
-  -DCMAKE_EXE_LINKER_FLAGS="${LINKER_FLAGS}"
+  -DXSD_INCLUDE_DIRS="${XSD_INCLUDE_DIRS}"
 
 echo "> Building openMalaria (wasm)"
 emmake cmake --build . --target openMalaria -- -j"$(sysctl -n hw.ncpu 2>/dev/null || nproc)"

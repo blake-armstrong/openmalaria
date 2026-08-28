@@ -48,12 +48,23 @@ The `js` package also references the schema version, in the following places:
 - js/API.md — "currently schema version XX" (twice)
 - js/test/fixtures/scenario1.xml — the
   `http://openmalaria.org/schema/scenario_XX` namespace and `schemaVersion="XX"`
+- js/package.json — the `description` field's "(targets schema version XX)"
 
 The `python` package's example scenario also references the schema version:
 
 - python/examples/scenario1.xml — the
   `http://openmalaria.org/schema/scenario_XX` namespace and `schemaVersion="XX"`
 - python/examples/scenario_XX.xsd
+- python/pyproject.toml — the `description` field's "(targets schema version XX)"
+
+## Binding package versions (Python / JS)
+
+The `openmalaria` (PyPI) and `openmalaria-wasm` (npm) package versions are
+separate from the schema version. They are not synchronised with each other.
+Their versions are defined in `bindings_version.txt` at the repo root; run
+`scripts/sync_bindings_version.sh` to propagate it into `python/pyproject.toml`
+and `js/package.json`, and to get a warning if either package's
+"(targets schema version XX)" description looks out of date relative to `version.txt`.
 
 # Installation instructions:
 

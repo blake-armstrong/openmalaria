@@ -1,7 +1,7 @@
 {
   "name": "openmalaria-wasm",
   "version": "0.1.0",
-  "description": "OpenMalaria malaria simulation model, compiled to WebAssembly",
+  "description": "OpenMalaria malaria simulation model, compiled to WebAssembly (targets schema version 50)",
   "type": "module",
   "license": "GPL-3.0-or-later",
   "engines": {

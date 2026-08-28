@@ -30,11 +30,16 @@ already exists; delete it to force a rebuild).
 
 `CMakeLists.txt`: the `pthread` library lookup is guarded with
 `AND NOT EMSCRIPTEN`, since Emscripten is single-threaded and reports
-`UNIX=TRUE` but has no separate pthread library to find. The wasm build lives in
-this directory, driven entirely by pre-seeding the exact CMake cache variables
-the repo's hand-rolled `cmake/Find{GSL,XercesC,Z,XSD}.cmake` modules would
-otherwise search for themselves (`-D` flags on the `cmake` invocation in
-`build-model.sh`).
+`UNIX=TRUE` but has no separate pthread library to find. Cross-compiled
+dependency locations (GSL/Xerces-C/Z/XSD) are still pre-seeded into the repo's
+hand-rolled `cmake/Find{GSL,XercesC,Z,XSD}.cmake` modules via `-D` flags on the
+`cmake` invocation in `build-model.sh`. The JS-facing linker flags are
+configured in CMake proper: the root `CMakeLists.txt`'s `OM_BUILD_WASM` option
+(off by default) applies them to the existing `openMalaria` target via
+`target_link_options`. `build-model.sh` just passes
+`-DOM_BUILD_WASM=ON -DOM_WASM_EMBED_DIR=<staged _embed dir>` and otherwise
+builds the same `openMalaria` target `cmake --build . --target openMalaria`
+builds natively.
 
 Build & design decisions:
 
@@ -84,9 +89,10 @@ Build & design decisions:
    literally named `openMalaria.js`; Node resolves `.mjs` as ESM unambiguously
    regardless of the nearest `package.json`'s `"type"` field.
 
-See the full flag-by-flag rationale as comments in `build-model.sh` itself, and
-`../js/API.md` for the resulting JS-facing contract (including why runs must
-happen in a Web Worker in a browser, and why no COOP/COEP headers are needed).
+See the full flag-by-flag rationale as comments in the root `CMakeLists.txt`'s
+`OM_BUILD_WASM` block, and `../js/API.md` for the resulting JS-facing contract
+(including why runs must happen in a Web Worker in a browser, and why no
+COOP/COEP headers are needed).
 
 ## Issues during testing
 

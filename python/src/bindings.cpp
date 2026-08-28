@@ -182,9 +182,7 @@ VersionInfo version_impl() {
   return VersionInfo{OM::util::semantic_version, OM::util::SCHEMA_VERSION};
 }
 
-} // namespace
-
-NB_MODULE(_openmalaria, m) {
+void register_core_bindings(nb::module_ &m) {
   // rv_policy::copy: these members are nb::ndarray (or contain one), which
   // already owns its data via a capsule set up in vector_to_ndarray().
   // The default reference_internal policy conflicts with that ownership.
@@ -208,11 +206,20 @@ NB_MODULE(_openmalaria, m) {
       .def_ro("program_version", &VersionInfo::program_version)
       .def_ro("schema_version", &VersionInfo::schema_version);
 
-  nb::exception<OpenMalariaError>(m, "OpenMalariaError");
-
   m.def("_run", &run_impl, "xml"_a = nb::none(), "path"_a = nb::none(),
         "resource_path"_a = "", "validate_only"_a = false, "verbose"_a = false,
         "progress"_a = false, "seed"_a = nb::none());
 
   m.def("_version", &version_impl);
+}
+
+void register_error_bindings(nb::module_ &m) {
+  nb::exception<OpenMalariaError>(m, "OpenMalariaError");
+}
+
+} // namespace
+
+NB_MODULE(_openmalaria, m) {
+  register_core_bindings(m);
+  register_error_bindings(m);
 }

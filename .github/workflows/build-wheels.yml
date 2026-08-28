@@ -1,0 +1,127 @@
+name: Build Python wheels
+
+on:
+  push:
+    tags: "v*"
+  pull_request:
+    paths:
+      - 'python/**'
+      - 'model/**'
+      - 'schema/**'
+      - 'contrib/**'
+      - 'cmake/**'
+      - 'CMakeLists.txt'
+      - '.github/workflows/build-wheels.yml'
+  workflow_dispatch:
+    inputs:
+      upload_to_testpypi:
+        description: 'Upload to TestPyPI after building (dry run)'
+        required: false
+        type: boolean
+        default: false
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+
+jobs:
+  build_wheels:
+    name: Build wheels on ${{ matrix.os }}-${{ matrix.pyver }}-${{ matrix.arch }}
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - os: ubuntu-latest
+            pyver: cp39
+            arch: x86_64
+          - os: ubuntu-latest
+            pyver: cp310
+            arch: x86_64
+          - os: ubuntu-latest
+            pyver: cp311
+            arch: x86_64
+          - os: ubuntu-latest
+            pyver: cp312
+            arch: x86_64
+          - os: ubuntu-latest
+            pyver: cp313
+            arch: x86_64
+          - os: macos-latest
+            pyver: cp39
+            arch: arm64
+          - os: macos-latest
+            pyver: cp310
+            arch: arm64
+          - os: macos-latest
+            pyver: cp311
+            arch: arm64
+          - os: macos-latest
+            pyver: cp312
+            arch: arm64
+          - os: macos-latest
+            pyver: cp313
+            arch: arm64
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v5
+
+      - name: Install macOS build dependencies
+        if: startsWith(matrix.os, 'macos')
+        run: |
+          HOMEBREW_NO_AUTO_UPDATE=1 brew install coreutils gsl xerces-c xsd || true
+          HOMEBREW_NO_AUTO_UPDATE=1 brew link --overwrite xsd
+
+      - name: Build wheels
+        uses: pypa/cibuildwheel@v3.1.4
+        with:
+          package-dir: python
+        env:
+          CIBW_BUILD: ${{ matrix.pyver }}-*
+          CIBW_ARCHS: ${{ matrix.arch }}
+          CIBW_BUILD_FRONTEND: "build"
+          CIBW_BEFORE_ALL_LINUX: >
+            dnf install -y epel-release &&
+            dnf install -y gsl-devel xerces-c-devel &&
+            curl -fsSL -o /tmp/xsd.tar.bz2 https://www.codesynthesis.com/download/xsd/4.2/linux-gnu/x86_64/xsd-4.2.0-x86_64-linux-gnu.tar.bz2 &&
+            tar xjf /tmp/xsd.tar.bz2 -C /tmp &&
+            cp /tmp/xsd-4.2.0-x86_64-linux-gnu/bin/xsd /usr/local/bin/xsdcxx
+          CIBW_TEST_COMMAND: >
+            python -c "import openmalaria; print(openmalaria.version())"
+
+      - name: Upload artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          path: ./wheelhouse/*.whl
+          name: openmalaria-${{ matrix.os }}-${{ matrix.pyver }}-${{ matrix.arch }}
+
+  # NOTE: only the TestPyPI dry-run path below exists. A real PyPI job can
+  # be added after being properly confirmed
+
+  upload_testpypi:
+    runs-on: ubuntu-latest
+    needs: [build_wheels]
+    environment:
+      name: testpypi
+      url: https://test.pypi.org/p/openmalaria/
+    permissions:
+      id-token: write
+    if: github.event_name == 'workflow_dispatch' && inputs.upload_to_testpypi
+    steps:
+      - uses: actions/download-artifact@v5
+        with:
+          path: artifacts
+          pattern: 'openmalaria-*'
+
+      - name: Collect wheels
+        run: |
+          mkdir -p dist
+          find artifacts -name "*.whl" -exec cp {} dist/ \;
+          ls -la dist/
+
+      - uses: pypa/gh-action-pypi-publish@v1.12.4
+        with:
+          repository-url: https://test.pypi.org/legacy/
+          skip-existing: true
+          print-hash: true
