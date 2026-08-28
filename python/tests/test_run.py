@@ -57,6 +57,13 @@ def test_continuous_schema_and_values(scenario1_result, expected_ctsout1):
     )
 
 
+def test_version():
+    v = om.version()
+    assert set(v.keys()) == {"program_version", "schema_version"}
+    assert isinstance(v["program_version"], str) and v["program_version"]
+    assert isinstance(v["schema_version"], int) and v["schema_version"] > 0
+
+
 def test_missing_scenario_raises(tmp_path):
     # Deliberately resource_path="" (default): a non-empty resource_path
     # would consume the one-per-process budget on util::CommandLine's

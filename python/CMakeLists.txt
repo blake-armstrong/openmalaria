@@ -35,6 +35,7 @@ nanobind_add_module (_openmalaria src/bindings.cpp)
 target_include_directories (_openmalaria PRIVATE
   ${CMAKE_SOURCE_DIR}/model
   ${CMAKE_BINARY_DIR}
+  ${CMAKE_BINARY_DIR}/model
 )
 
 target_link_libraries (_openmalaria PRIVATE

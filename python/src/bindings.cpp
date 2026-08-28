@@ -22,9 +22,7 @@
  */
 
 // nanobind extension module: thin C++/Python boundary over
-// OM::Simulator::run(). Only exposes a single low-level _run() function
-// returning raw arrays; pandas construction happens in the pure-Python wrapper
-// (openmalaria/__init__.py), not here.
+// OM::Simulator::run().
 
 #include <nanobind/nanobind.h>
 #include <nanobind/ndarray.h>
@@ -35,7 +33,9 @@
 #include "Simulator.h"
 #include "schema/scenario.h"
 #include "util/CommandLine.h"
+#include "util/DocumentLoader.h"
 #include "util/errors.h"
+#include "util/version.h"
 
 #include <stdexcept>
 #include <string>
@@ -84,6 +84,11 @@ struct ContinuousData {
 struct RawRunResult {
   SurveyData survey;
   ContinuousData continuous;
+};
+
+struct VersionInfo {
+  std::string program_version;
+  int schema_version;
 };
 
 SurveyData convertSurvey(std::vector<OM::mon::SurveyRow> &rows) {
@@ -173,6 +178,10 @@ RawRunResult run_impl(std::optional<std::string> xml,
   }
 }
 
+VersionInfo version_impl() {
+  return VersionInfo{OM::util::semantic_version, OM::util::SCHEMA_VERSION};
+}
+
 } // namespace
 
 NB_MODULE(_openmalaria, m) {
@@ -195,9 +204,15 @@ NB_MODULE(_openmalaria, m) {
       .def_ro("survey", &RawRunResult::survey)
       .def_ro("continuous", &RawRunResult::continuous);
 
+  nb::class_<VersionInfo>(m, "VersionInfo")
+      .def_ro("program_version", &VersionInfo::program_version)
+      .def_ro("schema_version", &VersionInfo::schema_version);
+
   nb::exception<OpenMalariaError>(m, "OpenMalariaError");
 
   m.def("_run", &run_impl, "xml"_a = nb::none(), "path"_a = nb::none(),
         "resource_path"_a = "", "validate_only"_a = false, "verbose"_a = false,
         "progress"_a = false, "seed"_a = nb::none());
+
+  m.def("_version", &version_impl);
 }

@@ -10,9 +10,9 @@ from typing import Optional
 
 import pandas as pd
 
-from ._openmalaria import OpenMalariaError, _run
+from ._openmalaria import OpenMalariaError, _run, _version
 
-__all__ = ["run", "OpenMalariaError"]
+__all__ = ["run", "version", "OpenMalariaError"]
 
 
 def run(
@@ -73,3 +73,16 @@ def run(
         })
 
     return {"survey": survey_df, "continuous": continuous_df}
+
+
+def version() -> dict:
+    """Return OpenMalaria's version info, equivalent to the CLI's `--version`.
+
+    Returns a dict:
+        "program_version": str, e.g. "schema-50.0"
+        "schema_version": int, the scenario XML schema version scenarios
+            are validated against (see model/util/DocumentLoader.h's
+            SCHEMA_VERSION)
+    """
+    v = _version()
+    return {"program_version": v.program_version, "schema_version": v.schema_version}

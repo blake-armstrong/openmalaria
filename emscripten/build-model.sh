@@ -86,7 +86,7 @@ Z_LIBRARIES="${EM_CACHE}/sysroot/lib/wasm32-emscripten/libz.a"
 # empirical within-host model. The file is small enough that embedding  seems reasonable.
 echo "> Staging embedded files"
 mkdir -p "${EMBED_DIR}"
-cp "${REPO_DIR}/schema/scenario_49.xsd" "${EMBED_DIR}/scenario_current.xsd"
+cp "${REPO_DIR}/schema/scenario_50.xsd" "${EMBED_DIR}/scenario_current.xsd"
 cp "${REPO_DIR}/test/densities.csv" "${EMBED_DIR}/densities.csv"
 cp "${REPO_DIR}/test/autoRegressionParameters.csv" "${EMBED_DIR}/autoRegressionParameters.csv"
 

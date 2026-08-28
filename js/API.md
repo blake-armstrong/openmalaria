@@ -16,7 +16,7 @@ console.log(result.output); // tab-separated survey data
 ```
 
 - `scenarioXml` (`string`, required): the full contents of a scenario XML
-  document, valid against the embedded schema (currently schema version 49).
+  document, valid against the embedded schema (currently schema version 50).
 - `options.validateOnly` (`boolean`): parse, schema-validate, and build the
   model graph, then return without running the timestep loop. Much cheaper than
   a full run (milliseconds vs. seconds/minutes depending on scenario size).This
@@ -106,7 +106,7 @@ the main thread, so the page stays responsive.
   single-threaded (no `SharedArrayBuffer`/wasm-threads dependency), so it works
   on any static host without special CORS isolation.
 - The module has **zero runtime network dependency**: the schema
-  (`scenario_current.xsd`, currently schema version 49) and the reference data
+  (`scenario_current.xsd`, currently schema version 50) and the reference data
   files it needs (`densities.csv`, `autoRegressionParameters.csv`) are embedded
   into the wasm binary at build time, not fetched.
 - Bundlers: `src/index.mjs` imports `../wasm/openMalaria.mjs` by relative path,
