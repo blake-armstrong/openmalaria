@@ -13,6 +13,7 @@ build*/
 lib
 .clangd
 .cache/
+*.un~
 *.swp
 .vscode
 
