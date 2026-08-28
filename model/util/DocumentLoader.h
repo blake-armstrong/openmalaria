@@ -34,7 +34,7 @@
 
 namespace OM {
 namespace util {
-static const int SCHEMA_VERSION = 49;
+static const int SCHEMA_VERSION = 50;
 
 /** Load a scenario from a file on disk at path `lXmlFile`. */
 std::unique_ptr<scnXml::Scenario> loadScenarioFromFile(std::string lXmlFile);

@@ -30,6 +30,7 @@
 #include "util/errors.h"
 
 #include <algorithm>
+#include <bit>
 #include <cmath>
 #include <fstream>
 #include <gzstream/gzstream.h>
@@ -55,6 +56,12 @@ uint32_t cohortSetOutputId(uint32_t cohortSet) {
     }
   }
   return outNum;
+}
+
+template <typename T>
+void writeBinaryValue(ostream& stream, const T& value)
+{
+    stream.write(reinterpret_cast<const char*>(&value), sizeof(value));
 }
 
 } // namespace
@@ -215,18 +222,82 @@ void writeMeasure(ostream &stream, Writer writeRow, size_t survey,
   }
 }
 
-template <class Writer> void writeRows(ostream &stream, Writer writeRow) {
+enum class ValueType { All, Integer, Double };
+
+template <class Writer>
+void writeRows(ostream &stream, Writer writeRow,
+              ValueType type = ValueType::All) {
   for (size_t survey = 0; survey < runtime.nSurveys; ++survey) {
     for (const internal::MeasureStore &store : runtime.stores) {
-      if (store.output.outId < 0)
+      if (store.output.outId < 0 ||
+          (type == ValueType::Integer && store.output.isDouble) ||
+          (type == ValueType::Double && !store.output.isDouble))
         continue;
       writeMeasure(stream, writeRow, survey, store);
     }
   }
-  if (runtime.reportIMR >= 0) {
+  if (runtime.reportIMR >= 0 && type != ValueType::Integer) {
     writeRow(stream, 1, 1, runtime.reportIMR,
              Clinical::InfantMortality::allCause(), true);
   }
+}
+
+uint64_t countRows(bool isDouble) {
+  uint64_t count = isDouble && runtime.reportIMR >= 0 ? 1 : 0;
+  for (const internal::MeasureStore &store : runtime.stores) {
+    if (store.output.outId < 0 || store.output.isDouble != isDouble)
+      continue;
+    count += static_cast<uint64_t>(runtime.nSurveys) * outputAgeGroups(store) *
+             store.nCohorts * store.nSpecies * store.nGenotypes *
+             store.nDrugs;
+  }
+  return count;
+}
+
+void writeBinary(ostream &stream) {
+  static_assert(std::endian::native == std::endian::little,
+               "output.bin uses little-endian values");
+  static_assert(sizeof(double) == 8 && std::numeric_limits<double>::is_iec559,
+               "output.bin needs IEEE-754 doubles");
+  static_assert(
+      std::numeric_limits<int>::digits <= std::numeric_limits<int32_t>::digits,
+      "integer monitoring values must fit in int32_t");
+  const char magic[8] = {'O', 'M', 'O', 'U', 'T', 'B', 'I', 'N'};
+  const uint32_t version = 2;
+  const uint64_t integerRows = countRows(false);
+  const uint64_t doubleRows = countRows(true);
+  stream.write(magic, sizeof(magic));
+  writeBinaryValue(stream, version);
+  writeBinaryValue(stream, integerRows);
+  writeBinaryValue(stream, doubleRows);
+
+  auto writeIdColumn = [&](auto select) {
+    for (ValueType type : {ValueType::Integer, ValueType::Double}) {
+      writeRows(
+          stream,
+          [&](ostream &output, int survey, int column, int measure, double,
+              bool) {
+            writeBinaryValue<int32_t>(output, select(survey, column, measure));
+          },
+          type);
+    }
+  };
+  writeIdColumn([](int survey, int, int) { return survey; });
+  writeIdColumn([](int, int column, int) { return column; });
+  writeIdColumn([](int, int, int measure) { return measure; });
+  writeRows(
+      stream,
+      [](ostream &output, int, int, int, double value, bool) {
+        assert(std::trunc(value) == value);
+        writeBinaryValue<int32_t>(output, static_cast<int32_t>(value));
+      },
+      ValueType::Integer);
+  writeRows(
+      stream,
+      [](ostream &output, int, int, int, double value, bool) {
+        writeBinaryValue<double>(output, value);
+      },
+      ValueType::Double);
 }
 
 void writeText(ostream &stream) { writeRows(stream, writeTextRow); }
@@ -375,13 +446,15 @@ void concludeSurvey() {
 
 void writeSurveyData() {
   string filename = util::CommandLine::getOutputName();
+  const bool binary = util::CommandLine::getOutputFormat() ==
+                      util::CommandLine::OutputFormat::BIN;
+  const auto writer = binary ? writeBinary : writeText;
   const ios::openmode mode = ios::out | ios::binary;
 
   if (util::CommandLine::option(util::CommandLine::COMPRESS_OUTPUT)) {
-    filename.append(".gz");
-    writeOutput<ogzstream>(filename, mode, writeText);
+    writeOutput<ogzstream>(filename, mode, writer);
   } else {
-    writeOutput<ofstream>(filename, mode, writeText);
+    writeOutput<ofstream>(filename, mode, writer);
   }
 }
 
