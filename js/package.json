@@ -23,7 +23,7 @@
     "API.md"
   ],
   "scripts": {
-    "test": "node --test test/"
+    "test": "node --test test/run.mjs"
   },
   "repository": {
     "type": "git",
