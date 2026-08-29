@@ -84,11 +84,12 @@ jobs:
           CIBW_BEFORE_ALL_LINUX: >
             dnf install -y epel-release &&
             dnf install -y gsl-devel xerces-c-devel &&
-            curl -fsSL -o /tmp/xsd.tar.bz2 https://www.codesynthesis.com/download/xsd/4.2/linux-gnu/x86_64/xsd-4.2.0-x86_64-linux-gnu.tar.bz2 &&
-            tar xjf /tmp/xsd.tar.bz2 -C /tmp &&
-            cp /tmp/xsd-4.2.0-x86_64-linux-gnu/bin/xsd /usr/local/bin/xsdcxx
+            dnf install -y
+            https://www.codesynthesis.com/download/xsd/4.2/rhel/rhel8.10/x86_64/xsd-4.2.0-1.el8.x86_64.rpm
+            https://www.codesynthesis.com/download/xsd/4.2/rhel/rhel8.10/x86_64/libxsd-devel-4.2.0-1.el8.x86_64.rpm
           CIBW_TEST_COMMAND: >
             python -c "import openmalaria; print(openmalaria.version())"
+          CIBW_ENVIRONMENT_MACOS: "MACOSX_DEPLOYMENT_TARGET=26.0"
 
       - name: Upload artifacts
         uses: actions/upload-artifact@v4

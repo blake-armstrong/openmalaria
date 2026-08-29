@@ -11,7 +11,7 @@ INSTALL_DIR="${DEPS_DIR}/_install"
 
 GSL_VERSION=2.8
 GSL_TARBALL="gsl-${GSL_VERSION}.tar.gz"
-GSL_URL="https://ftp.gnu.org/gnu/gsl/${GSL_TARBALL}"
+GSL_URL="https://ftpmirror.gnu.org/gsl/${GSL_TARBALL}"
 GSL_SRC_DIR="${WORK_DIR}/gsl-${GSL_VERSION}"
 
 if ! command -v emconfigure >/dev/null 2>&1; then
