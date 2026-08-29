@@ -62,7 +62,10 @@ jobs:
       - name: Install host build dependencies
         run: |
           sudo apt update
-          sudo apt install -y build-essential xsdcxx
+          sudo apt install -y build-essential
+          curl -fsSL --retry 5 --retry-delay 3 --retry-all-errors -o /tmp/xsd.deb "https://www.codesynthesis.com/download/xsd/4.2/ubuntu/ubuntu24.04/x86_64/xsd_4.2.0-0~ubuntu24.04_amd64.deb"
+          curl -fsSL --retry 5 --retry-delay 3 --retry-all-errors -o /tmp/libxsd-dev.deb "https://www.codesynthesis.com/download/xsd/4.2/ubuntu/ubuntu24.04/x86_64/libxsd-dev_4.2.0-0~ubuntu24.04_amd64.deb"
+          sudo apt install -y /tmp/xsd.deb /tmp/libxsd-dev.deb
 
       - name: Cache cross-compiled GSL/Xerces-C
         uses: actions/cache@v4
