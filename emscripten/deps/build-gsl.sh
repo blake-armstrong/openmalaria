@@ -23,7 +23,7 @@ mkdir -p "${WORK_DIR}" "${INSTALL_DIR}"
 
 if [ ! -f "${WORK_DIR}/${GSL_TARBALL}" ]; then
   echo "> Downloading GSL ${GSL_VERSION}"
-  curl -fsSL -o "${WORK_DIR}/${GSL_TARBALL}" "${GSL_URL}"
+  curl -fsSL --retry 5 --retry-delay 3 -o "${WORK_DIR}/${GSL_TARBALL}" "${GSL_URL}"
 fi
 
 if [ ! -d "${GSL_SRC_DIR}" ]; then
@@ -39,8 +39,8 @@ cd "${GSL_SRC_DIR}"
 # `./config.sub wasm32-unknown-emscripten`), not GSL-specific. Refresh both
 # from upstream GNU config so the triple is recognised.
 echo "> Refreshing config.sub / config.guess"
-curl -fsSL -o config.sub "https://git.savannah.gnu.org/cgit/config.git/plain/config.sub"
-curl -fsSL -o config.guess "https://git.savannah.gnu.org/cgit/config.git/plain/config.guess"
+curl -fsSL --retry 5 --retry-delay 3 -o config.sub "https://git.savannah.gnu.org/cgit/config.git/plain/config.sub"
+curl -fsSL --retry 5 --retry-delay 3 -o config.guess "https://git.savannah.gnu.org/cgit/config.git/plain/config.guess"
 
 if [ -f "${INSTALL_DIR}/lib/libgsl.a" ] && [ -f "${INSTALL_DIR}/lib/libgslcblas.a" ]; then
   echo "> GSL already built at ${INSTALL_DIR}, skipping (delete ${INSTALL_DIR} to force a rebuild)"

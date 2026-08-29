@@ -26,6 +26,8 @@ execute_process (
 list (APPEND CMAKE_PREFIX_PATH "${NB_DIR}")
 find_package (nanobind CONFIG REQUIRED)
 
+set_target_properties (model schema contrib PROPERTIES POSITION_INDEPENDENT_CODE ON)
+
 nanobind_add_module (_openmalaria src/bindings.cpp)
 
 # Belt-and-braces: the root CMakeLists.txt's directory-scoped
