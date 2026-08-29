@@ -39,8 +39,8 @@ cd "${GSL_SRC_DIR}"
 # `./config.sub wasm32-unknown-emscripten`), not GSL-specific. Refresh both
 # from upstream GNU config so the triple is recognised.
 echo "> Refreshing config.sub / config.guess"
-curl -fsSL --retry 5 --retry-delay 3 --retry-all-errors -o config.sub "https://git.savannah.gnu.org/cgit/config.git/plain/config.sub"
-curl -fsSL --retry 5 --retry-delay 3 --retry-all-errors -o config.guess "https://git.savannah.gnu.org/cgit/config.git/plain/config.guess"
+curl -fsSL --retry 5 --retry-delay 3 --retry-all-errors -o config.sub "https://raw.githubusercontent.com/gcc-mirror/gcc/master/config.sub"
+curl -fsSL --retry 5 --retry-delay 3 --retry-all-errors -o config.guess "https://raw.githubusercontent.com/gcc-mirror/gcc/master/config.guess"
 
 if [ -f "${INSTALL_DIR}/lib/libgsl.a" ] && [ -f "${INSTALL_DIR}/lib/libgslcblas.a" ]; then
   echo "> GSL already built at ${INSTALL_DIR}, skipping (delete ${INSTALL_DIR} to force a rebuild)"
