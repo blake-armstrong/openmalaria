@@ -48,6 +48,9 @@ jobs:
           - os: ubuntu-latest
             pyver: cp313
             arch: x86_64
+          - os: ubuntu-latest
+            pyver: cp314
+            arch: x86_64
           - os: macos-latest
             pyver: cp39
             arch: arm64
@@ -62,6 +65,9 @@ jobs:
             arch: arm64
           - os: macos-latest
             pyver: cp313
+            arch: arm64
+          - os: macos-latest
+            pyver: cp314
             arch: arm64
 
     steps:
