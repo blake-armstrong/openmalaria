@@ -79,6 +79,7 @@ jobs:
           package-dir: python
         env:
           CIBW_BUILD: ${{ matrix.pyver }}-*
+          CIBW_SKIP: "*-musllinux*"
           CIBW_ARCHS: ${{ matrix.arch }}
           CIBW_BUILD_FRONTEND: "build"
           CIBW_BEFORE_ALL_LINUX: >

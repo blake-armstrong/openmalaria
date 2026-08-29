@@ -27,7 +27,7 @@ mkdir -p "${WORK_DIR}" "${INSTALL_DIR}"
 
 if [ ! -f "${WORK_DIR}/${XERCES_TARBALL}" ]; then
   echo "> Downloading Xerces-C ${XERCES_VERSION}"
-  curl -fsSL --retry 5 --retry-delay 3 -o "${WORK_DIR}/${XERCES_TARBALL}" "${XERCES_URL}"
+  curl -fsSL --retry 5 --retry-delay 3 --retry-all-errors -o "${WORK_DIR}/${XERCES_TARBALL}" "${XERCES_URL}"
 fi
 
 if [ ! -d "${XERCES_SRC_DIR}" ]; then
