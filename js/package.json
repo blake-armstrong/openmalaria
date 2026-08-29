@@ -1,0 +1,33 @@
+{
+  "name": "openmalaria-wasm",
+  "version": "0.1.0",
+  "description": "OpenMalaria malaria simulation model, compiled to WebAssembly (targets schema version 50)",
+  "type": "module",
+  "license": "GPL-3.0-or-later",
+  "engines": {
+    "node": ">=18"
+  },
+  "exports": {
+    ".": {
+      "types": "./index.d.ts",
+      "import": "./src/index.mjs"
+    }
+  },
+  "types": "./index.d.ts",
+  "files": [
+    "src/",
+    "wasm/openMalaria.mjs",
+    "wasm/openMalaria.wasm",
+    "index.d.ts",
+    "README.md",
+    "API.md"
+  ],
+  "scripts": {
+    "test": "node --test test/run.mjs"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/blake-armstrong/openmalaria.git",
+    "directory": "js"
+  }
+}

@@ -139,12 +139,14 @@ add_dependencies (model schema)
 
 # -----  generate openMalaria  -----
 
-if (UNIX)
+# Emscripten/WASM is single-threaded and provides pthread symbols via libc; no
+# separate pthread library exists to find, so skip this requirement there.
+if (UNIX AND NOT EMSCRIPTEN)
   find_library (PTHREAD_LIBRARIES pthread PATHS ${CMAKE_SOURCE_DIR}/lib /usr/lib /usr/local/lib)
   if (NOT PTHREAD_LIBRARIES)
     message (SEND_ERROR "PThread library not found")
   endif (NOT PTHREAD_LIBRARIES)
-endif (UNIX)
+endif (UNIX AND NOT EMSCRIPTEN)
 mark_as_advanced (PTHREAD_LIBRARIES)
 
 include_directories (SYSTEM
@@ -192,6 +194,74 @@ endif (OM_COPY_LIBS)
 
 # add_executable (pVivax model/Pv_mod/Source.cpp)
 # target_link_libraries (pVivax libpvivax)
+
+# -----  WASM/Emscripten linker configuration  -----
+#
+# Configures the existing openMalaria target for Emscripten instead of adding
+# a second target: the CLI's file-in & -out design is achieved through an 
+# in-memory filesystem (MEMFS) rather than bound via Embind. See emscripten/README.md.
+
+option (OM_BUILD_WASM "Configure the openMalaria target for Emscripten/WASM (CLI-replay via callMain/MEMFS)" OFF)
+if (OM_BUILD_WASM)
+  if (NOT OM_WASM_EMBED_DIR)
+    message (SEND_ERROR "OM_BUILD_WASM requires OM_WASM_EMBED_DIR to point at the staged --embed-file directory")
+  endif (NOT OM_WASM_EMBED_DIR)
+
+  target_link_options (openMalaria PRIVATE
+    # -fexceptions
+    #   Must match the flag Xerces was built with. Emscripten disables C++
+    #   exceptions by default, and both Xerces and OpenMalaria's own
+    #   util/errors.h machinery rely on C++ exceptions propagating across
+    #   this link.
+    -fexceptions
+    # -sMODULARIZE=1 -sEXPORT_ES6=1 -sEXPORT_NAME=createOpenMalaria
+    #   Wraps the module in an async factory function returning a fresh,
+    #   independent instance each call. OpenMalaria has global static state
+    #   (sim, master_RNG, mon::internal::runtime, ModelOptions,
+    #   InterventionManager, Genotypes, CommandLine's own static fields)
+    #   that's set up once per run and never reset, so two scenario runs in
+    #   one browser tab must not share an instance.
+    -sMODULARIZE=1 -sEXPORT_ES6=1 -sEXPORT_NAME=createOpenMalaria
+    # -sEXPORTED_RUNTIME_METHODS=FS,callMain
+    #   The chosen alternative to Embind: FS (the MEMFS filesystem object)
+    #   and callMain (invoke the existing, unmodified main(argc, argv), get
+    #   its exit code back, without auto-running).
+    -sEXPORTED_RUNTIME_METHODS=FS,callMain
+    # -sINVOKE_RUN=0
+    #   The JS wrapper needs to write the scenario XML into MEMFS before
+    #   main() runs, so auto-invocation must be suppressed.
+    # -sEXIT_RUNTIME=0
+    #   callMain() is just a function call here, not a process exit; the JS
+    #   side still needs to read files back out of FS afterward.
+    # -sFORCE_FILESYSTEM=1
+    #   The JS wrapper uses Module.FS.writeFile/readFile directly, which
+    #   dead-code elimination would otherwise strip.
+    -sINVOKE_RUN=0 -sEXIT_RUNTIME=0 -sFORCE_FILESYSTEM=1
+    # -sALLOW_MEMORY_GROWTH=1 -sINITIAL_MEMORY=64MB
+    #   Scenario population sizes and run lengths vary enormously; a fixed
+    #   memory cap would either waste memory or hard-crash on large runs.
+    # -sSTACK_SIZE=1MB
+    #   Bumped from the default: recursive XML DOM traversal and nested
+    #   simulation logic have non-trivial call depth.
+    -sALLOW_MEMORY_GROWTH=1 -sINITIAL_MEMORY=64MB -sSTACK_SIZE=1MB
+    # -sASSERTIONS=1
+    #   Emscripten's runtime sanity checks and clearer failure messages.
+    -sASSERTIONS=1
+    # --embed-file: bakes runtime data files into the module's MEMFS data
+    # segment (staged into OM_WASM_EMBED_DIR by build-model.sh beforehand),
+    # so the resulting module has zero runtime network dependency.
+    "--embed-file=${OM_WASM_EMBED_DIR}/scenario_current.xsd@/work/scenario_current.xsd"
+    "--embed-file=${OM_WASM_EMBED_DIR}/densities.csv@/work/densities.csv"
+    "--embed-file=${OM_WASM_EMBED_DIR}/autoRegressionParameters.csv@/work/autoRegressionParameters.csv"
+  )
+endif (OM_BUILD_WASM)
+
+# -----  Python bindings (nanobind)  -----
+
+option (OM_BUILD_PYTHON "Build nanobind-based Python bindings (openmalaria Python package)" OFF)
+if (OM_BUILD_PYTHON)
+  add_subdirectory (python)
+endif (OM_BUILD_PYTHON)
 
 
 # -----  OM_BOXTEST - black-box & unit testing  -----

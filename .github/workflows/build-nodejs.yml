@@ -1,0 +1,156 @@
+name: JavaScript/WebAssembly Tests & Publish
+
+on:
+  push:
+    branches: ["main"]
+    tags: "v*"
+    paths:
+      - 'js/**'
+      - 'emscripten/**'
+      - 'model/**'
+      - 'schema/**'
+      - 'contrib/**'
+      - 'cmake/**'
+      - 'CMakeLists.txt'
+      - '.github/workflows/build_nodejs.yml'
+  pull_request:
+    paths:
+      - 'js/**'
+      - 'emscripten/**'
+      - 'model/**'
+      - 'schema/**'
+      - 'contrib/**'
+      - 'cmake/**'
+      - 'CMakeLists.txt'
+      - '.github/workflows/build_nodejs.yml'
+  workflow_dispatch:
+    inputs:
+      upload_to_npm:
+        description: 'Upload to npm after building'
+        required: false
+        type: boolean
+        default: false
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+
+jobs:
+  test-js:
+    name: Test JavaScript package (Node.js ${{ matrix.node-version }})
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        node-version: [18, 20, 22]
+      fail-fast: false
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v5
+
+      - name: Setup Node.js ${{ matrix.node-version }}
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ matrix.node-version }}
+
+      - name: Setup Emscripten
+        uses: mymindstorm/setup-emsdk@v14
+        with:
+          version: '6.0.3'
+          actions-cache-folder: 'emsdk-cache'
+
+      - name: Install host build dependencies
+        run: |
+          sudo apt update
+          sudo apt install -y build-essential
+          curl -fsSL --retry 5 --retry-delay 3 --retry-all-errors -o /tmp/xsd.deb "https://www.codesynthesis.com/download/xsd/4.2/ubuntu/ubuntu24.04/x86_64/xsd_4.2.0-0~ubuntu24.04_amd64.deb"
+          curl -fsSL --retry 5 --retry-delay 3 --retry-all-errors -o /tmp/libxsd-dev.deb "https://www.codesynthesis.com/download/xsd/4.2/ubuntu/ubuntu24.04/x86_64/libxsd-dev_4.2.0-0~ubuntu24.04_amd64.deb"
+          sudo apt install -y /tmp/xsd.deb /tmp/libxsd-dev.deb
+
+      - name: Cache cross-compiled GSL/Xerces-C
+        uses: actions/cache@v4
+        with:
+          path: emscripten/deps/_install
+          key: wasm-deps-${{ runner.os }}-${{ hashFiles('emscripten/deps/build-gsl.sh', 'emscripten/deps/build-xerces.sh') }}
+
+      - name: Build wasm dependencies (GSL, Xerces-C)
+        working-directory: emscripten
+        run: |
+          bash deps/build-gsl.sh
+          bash deps/build-xerces.sh
+
+      - name: Build WASM module
+        working-directory: emscripten
+        run: bash build-model.sh
+
+      - name: Install js/ dependencies
+        working-directory: js
+        run: npm install
+
+      - name: Run tests
+        working-directory: js
+        run: npm test
+
+      - name: Pack package for testing
+        working-directory: js
+        run: npm pack
+
+      - name: Upload WASM build artifacts
+        if: matrix.node-version == 20 && ((github.event_name == 'push' && (github.ref == 'refs/heads/main' || startsWith(github.ref, 'refs/tags/v'))) || github.event_name == 'workflow_dispatch')
+        uses: actions/upload-artifact@v4
+        with:
+          name: wasm-build
+          path: js/wasm/
+          retention-days: 30
+
+      - name: Upload package artifact
+        if: matrix.node-version == 20 && ((github.event_name == 'push' && (github.ref == 'refs/heads/main' || startsWith(github.ref, 'refs/tags/v'))) || github.event_name == 'workflow_dispatch')
+        uses: actions/upload-artifact@v4
+        with:
+          name: openmalaria-wasm-package
+          path: js/*.tgz
+          retention-days: 30
+
+  publish-npm:
+    name: Publish to npm
+    needs: test-js
+    runs-on: ubuntu-latest
+    if: (github.event_name == 'push' && startsWith(github.ref, 'refs/tags/v')) || (github.event_name == 'workflow_dispatch' && inputs.upload_to_npm)
+    permissions:
+      contents: read
+      id-token: write
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v5
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          registry-url: 'https://registry.npmjs.org'
+
+      - name: Download WASM build artifacts
+        uses: actions/download-artifact@v5
+        with:
+          name: wasm-build
+          path: js/wasm/
+
+      - name: Check if version changed
+        id: version
+        working-directory: js
+        run: |
+          PACKAGE_VERSION=$(node -p "require('./package.json').version")
+          NPM_VERSION=$(npm view openmalaria-wasm version 2>/dev/null || echo "0.0.0")
+          echo "package_version=$PACKAGE_VERSION" >> $GITHUB_OUTPUT
+          echo "npm_version=$NPM_VERSION" >> $GITHUB_OUTPUT
+          if [ "$PACKAGE_VERSION" != "$NPM_VERSION" ]; then
+            echo "should_publish=true" >> $GITHUB_OUTPUT
+          else
+            echo "should_publish=false" >> $GITHUB_OUTPUT
+          fi
+
+      - name: Publish to npm
+        if: steps.version.outputs.should_publish == 'true'
+        working-directory: js
+        run: npm publish --provenance --access public
