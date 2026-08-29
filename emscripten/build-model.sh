@@ -42,25 +42,22 @@ if [ -z "${XSD_EXECUTABLE}" ]; then
   exit 1
 fi
 
-# xsd's generated code needs xsd's own runtime headers (xsd/cxx/parser/elements.hxx).
-# If XSD_INCLUDE_DIRS also contains a xercesc/ header tree (e.g., a full Xerces
-# install that xsd depends on), the compiler picks up those (possibly
-# different-version) Xerces headers while actually linking against our
-# wasm-built Xerces archive which manifests as an ABI mismatch surfacing as confusing link
-# errors, not a clean version error. Homebrew keeps xsd's own headers in a
-# keg separate from its xerces-c dependency keg, so prefer that if present.
+# Stage only the xsd/ header subtree so the cross-compiler never sees the rest of the host's /usr/include (glibc, host xercesc/).
 if command -v brew >/dev/null 2>&1 && brew --prefix xsd >/dev/null 2>&1; then
-  XSD_INCLUDE_DIRS="$(brew --prefix xsd)/include"
+  XSD_HOST_INCLUDE_DIRS="$(brew --prefix xsd)/include"
 else
-  XSD_INCLUDE_DIRS="$(dirname "$(dirname "${XSD_EXECUTABLE}")")/include"
+  XSD_HOST_INCLUDE_DIRS="$(dirname "$(dirname "${XSD_EXECUTABLE}")")/include"
 fi
-if [ -d "${XSD_INCLUDE_DIRS}/xercesc" ]; then
-  echo "error: ${XSD_INCLUDE_DIRS} also contains a xercesc/ tree -- this will shadow the" >&2
-  echo "       wasm-built Xerces headers with the host's. Point at an xsd-only include dir." >&2
+if [ ! -d "${XSD_HOST_INCLUDE_DIRS}/xsd" ]; then
+  echo "error: no xsd/ header tree found under ${XSD_HOST_INCLUDE_DIRS}" >&2
   exit 1
 fi
 
-# TODO: test on other OS
+XSD_STAGE_DIR="${SCRIPT_DIR}/_xsd_include"
+rm -rf "${XSD_STAGE_DIR}"
+mkdir -p "${XSD_STAGE_DIR}"
+cp -R "${XSD_HOST_INCLUDE_DIRS}/xsd" "${XSD_STAGE_DIR}/xsd"
+XSD_INCLUDE_DIRS="${XSD_STAGE_DIR}"
 
 # ---  Locate zlib  ---
 #
