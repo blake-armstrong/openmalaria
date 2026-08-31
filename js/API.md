@@ -87,12 +87,15 @@ The full, authoritative catalog is `model/mon/OutMeasures.h` in the OpenMalaria
 source (each entry: name, numeric id, whether it's a floating-point value, and
 its dimensions). A few commonly used ones:
 
-| id | name | meaning | |----|------|---------| | 0 | nHost | number of hosts |
-| 1 | nInfect | number of infected hosts | | 3 | nPatent | number of patent
-(detectable) infections | | 14 | nUncomp | number of uncomplicated episodes | |
-15 | nSevere | number of severe episodes | | 35 | inputEIR | input entomological
-inoculation rate | | 36 | simulatedEIR | simulated entomological inoculation
-rate |
+| id | name | meaning |
+|----|------|---------|
+| 0  | nHost | number of hosts |
+| 1  | nInfect | number of infected hosts |
+| 3  | nPatent | number of patent (detectable) infections |
+| 14 | nUncomp | number of uncomplicated episodes |
+| 15 | nSevere | number of severe episodes |
+| 35 | inputEIR | input entomological inoculation rate |
+| 36 | simulatedEIR | simulated entomological inoculation rate |
 
 ## Running in a browser
 
