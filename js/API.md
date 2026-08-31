@@ -1,6 +1,6 @@
-# openmalaria-wasm API
+# openmalaria (npm) API
 
-`openmalaria-wasm` runs the OpenMalaria malaria simulation model entirely
+`openmalaria` (npm) runs the OpenMalaria malaria simulation model entirely
 client-side, compiled to WebAssembly via Emscripten. It exposes one operation,
 `runScenario`, which mirrors the native CLI's file-in/file-out design
 (`openMalaria -s scenario.xml -o output.txt`) replayed through an in-memory
@@ -9,7 +9,7 @@ filesystem inside the wasm module.
 ## `runScenario(scenarioXml, options?)`
 
 ```js
-import { runScenario, OpenMalariaError } from 'openmalaria-wasm';
+import { runScenario, OpenMalariaError } from 'openmalaria';
 
 const result = await runScenario(scenarioXmlString);
 console.log(result.output); // tab-separated survey data

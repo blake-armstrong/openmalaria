@@ -36,20 +36,16 @@ sed_inplace -E "s/\"version\": \"[^\"]*\"/\"version\": \"${BINDINGS_VERSION}\"/"
 
 echo "> python/pyproject.toml and js/package.json now at version ${BINDINGS_VERSION}"
 
-# ---  Soft schema-version cross-reference check  ---
+# ---  Schema-version cross-reference  ---
 #
-# Not an auto-sync: just a nudge. Warns (does not fail) if the schema version
-# currently in version.txt isn't mentioned anywhere in either binding
-# manifest, so a human can decide whether the binding's "targets schema
-# version NN" description needs updating -- without forcing every schema
-# bump to also bump the binding version, or vice versa.
+# Rewrites the "schema version NN" number already present in each binding
+# manifest's description field to match version.txt, without touching the
+# rest of the description text or coupling the binding package version
+# (above) to the schema version.
 schema_number="${SCHEMA_VERSION#schema-}"
 schema_number="${schema_number%.*}"
 
-if ! grep -q "schema version ${schema_number}" "${PYPROJECT}"; then
-  echo "warning: ${PYPROJECT} does not mention 'schema version ${schema_number}' (version.txt says ${SCHEMA_VERSION}) -- update its description if the Python bindings now target a different schema version" >&2
-fi
+sed_inplace -E "s/schema version [0-9]+/schema version ${schema_number}/" "${PYPROJECT}"
+sed_inplace -E "s/schema version [0-9]+/schema version ${schema_number}/" "${PACKAGE_JSON}"
 
-if ! grep -q "schema version ${schema_number}" "${PACKAGE_JSON}"; then
-  echo "warning: ${PACKAGE_JSON} does not mention 'schema version ${schema_number}' (version.txt says ${SCHEMA_VERSION}) -- update its description if the JS bindings now target a different schema version" >&2
-fi
+echo "> python/pyproject.toml and js/package.json now reference schema version ${schema_number}"

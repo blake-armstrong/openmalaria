@@ -1,11 +1,11 @@
-# openmalaria-wasm
+# openmalaria (npm)
 
 The [OpenMalaria](https://github.com/SwissTPH/openmalaria) malaria simulation
 model, compiled to WebAssembly, runnable in Node or a browser with zero server
 dependency.
 
 ```js
-import { runScenario } from 'openmalaria-wasm';
+import { runScenario } from 'openmalaria';
 import { readFileSync } from 'node:fs';
 
 const scenarioXml = readFileSync('scenario.xml', 'utf8');

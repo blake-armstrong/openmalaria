@@ -1,8 +1,8 @@
 # OpenMalaria → WebAssembly build
 
 Compiles the OpenMalaria simulation model (`model/`) into a single
-self-contained WebAssembly module, consumed by the `openmalaria-wasm` npm
-package in `../js/`.
+self-contained WebAssembly module, consumed by the `openmalaria` npm
+package (`../js/`).
 
 ## Build
 

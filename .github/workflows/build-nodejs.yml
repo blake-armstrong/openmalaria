@@ -141,7 +141,7 @@ jobs:
         working-directory: js
         run: |
           PACKAGE_VERSION=$(node -p "require('./package.json').version")
-          NPM_VERSION=$(npm view openmalaria-wasm version 2>/dev/null || echo "0.0.0")
+          NPM_VERSION=$(npm view openmalaria version 2>/dev/null || echo "0.0.0")
           echo "package_version=$PACKAGE_VERSION" >> $GITHUB_OUTPUT
           echo "npm_version=$NPM_VERSION" >> $GITHUB_OUTPUT
           if [ "$PACKAGE_VERSION" != "$NPM_VERSION" ]; then

@@ -1,5 +1,5 @@
 {
-  "name": "openmalaria-wasm",
+  "name": "openmalaria",
   "version": "0.1.0",
   "description": "OpenMalaria malaria simulation model, compiled to WebAssembly (targets schema version 50)",
   "type": "module",
