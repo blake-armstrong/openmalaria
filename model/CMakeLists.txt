@@ -37,7 +37,8 @@ set (Model_CPP
   Population.cpp
   PopulationAgeStructure.cpp
   checkpoint.cpp
-  
+  Simulator.cpp
+
   Host/Human.cpp
   Host/InfectionIncidenceModel.cpp
   Host/NeonatalMortality.cpp
