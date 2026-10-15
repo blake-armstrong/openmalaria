@@ -6,7 +6,7 @@ See `PLAN.md` for the session protocol, chunks and gates. Append one log entry p
 
 | Chunk | Status | Commits |
 |---|---|---|
-| A1 | todo | |
+| A1 | done | cfcb16e3, (this log entry) |
 | A2 | todo | |
 | B1 | todo | |
 | B2 | todo | |
@@ -60,3 +60,11 @@ See `PLAN.md` for the session protocol, chunks and gates. Append one log entry p
 | J4 | todo | |
 
 ## Log
+
+### A1: Create the branch and put the plan in the repo (done, 2026-10-15)
+- Fetched upstream: `upstream/main` moved from 7b1d8919 (#430) to 0b264527 (#468).
+- `throwaway_ai_rework` was created from `upstream/main` with `--no-track`. Before the docs commit, `git rev-parse HEAD upstream/main` gave matching hashes and `git diff --quiet upstream/main` was clean.
+- `core-only` had no tracked changes. The untracked `.cache/`, `python/` and `.README.md.un~` (a vim undo file, probably ignored on `core-only`) carried over. All three were left alone.
+- Commits: cfcb16e3 (PLAN.md and PROGRESS.md), plus the commit that adds this entry.
+- Gates: none for this chunk.
+- Next: A2.
