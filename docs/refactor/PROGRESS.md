@@ -9,7 +9,7 @@ See `PLAN.md` for the session protocol, chunks and gates. Append one log entry p
 | A1 | done | cfcb16e3, (this log entry) |
 | A2 | done | (this log entry) |
 | B1 | done | b7991e9f, 35450066, 8c4dc9b1, dec06531, 2205f6e8, ddc959a8, (this log entry) |
-| B2 | todo | |
+| B2 | done | 0bf623e3, 4882b106, b7052696, (this log entry) |
 | B3 | todo | |
 | B4 | todo | |
 | B5 | todo | |
@@ -121,3 +121,22 @@ See `PLAN.md` for the session protocol, chunks and gates. Append one log entry p
   - B4: clang-tidy does not strip the `m_` and `_` member prefixes; that needs a scripted step. Header guards (`Hmod_*`) will be renamed to UPPER_CASE.
   - B5: the pre-commit hook should pin clang-format 22.1.8. CI needs `uv`.
 - Next: B2 (or P1, S1, C1).
+
+### B2: Whole-tree format (done, 2026-10-15)
+- **Upstream merge question:** `git fetch upstream` showed no new commits since A1 (`upstream/main` still 0b264527), so there was nothing to merge before the reformat.
+- Commits:
+  - 0bf623e3: `util/style.sh format -i` over all 173 tracked `.cpp`/`.h` files under `model/` and `unittest/`. 171 files changed, +13,162 / -14,526 lines. Mechanical only.
+  - 4882b106: `.git-blame-ignore-revs`, listing 0bf623e3
+  - b7052696: STYLE.md updated (B2 stats, how to enable the blame-ignore file)
+- Done criterion: `clang-format --dry-run -Werror` over every tracked C++ file in the repo (including `contrib/`, which has `DisableFormat`) exits 0.
+- Gates:
+  - G-exact / G-unit: 52/52 pass under `caffeinate -i`, 13.1 s at `-j10`. The only build warnings are the baseline ones (`sprintf` deprecated, now at `model/main.cpp:65`; duplicate `-lc++`).
+  - CxxTest discovers tests by regex over the headers, so the count was checked too: 86 `void test*()` methods match `cxxtestgen`'s pattern both before and after the reformat. The runner executes 66 of them, the subset CMake registers.
+  - G-style was not run: it is not a B2 gate, and clang-tidy-diff over 13k reformatted lines would only report legacy names. The git-clang-format half is clean by the done criterion.
+- Notes:
+  - `blame.ignoreRevsFile` was set in this clone's local git config. Other clones need the command in STYLE.md.
+  - `util/` has no C++, as noted in B1, so only `model/` and `unittest/` were formatted.
+- Follow-ups:
+  - B4: each rename commit appends its hash to `.git-blame-ignore-revs`.
+  - From now on, `util/style.sh check` on a whole changed file and on changed lines give the same format verdict.
+- Next: P1.
