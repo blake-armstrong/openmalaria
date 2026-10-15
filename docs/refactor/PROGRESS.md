@@ -8,7 +8,7 @@ See `PLAN.md` for the session protocol, chunks and gates. Append one log entry p
 |---|---|---|
 | A1 | done | cfcb16e3, (this log entry) |
 | A2 | done | (this log entry) |
-| B1 | todo | |
+| B1 | done | b7991e9f, 35450066, 8c4dc9b1, dec06531, 2205f6e8, ddc959a8, (this log entry) |
 | B2 | todo | |
 | B3 | todo | |
 | B4 | todo | |
@@ -87,3 +87,37 @@ See `PLAN.md` for the session protocol, chunks and gates. Append one log entry p
   - Binary survey output (`OM_BOXTEST_BINARY=ON`, `--binary`) is not part of this baseline.
   - The raw log and JUnit XML are `build-rework/ctest-baseline.log` and `build-rework/ctest-baseline.xml`. They are not committed.
 - Next: any of B1, P1, S1 or C1.
+
+### B1: Style configs (done, 2026-10-15)
+- **Pinned LLVM 22.1.8**, for both clang-format and clang-tidy. LLVM was not installed. The tools come from the PyPI wheels and run through `uvx`, with no global install. The version is set once, in `util/style.sh`.
+- Commits:
+  - b7991e9f: `.clang-format`, plus `DisableFormat` in `contrib/` and `schema/`
+  - 35450066: `.clang-tidy`
+  - 8c4dc9b1: `CMAKE_EXPORT_COMPILE_COMMANDS` on by default
+  - dec06531: allow short functions on one line
+  - 2205f6e8: `util/style.sh`
+  - ddc959a8: `docs/refactor/STYLE.md`
+- **Naming, confirmed by the user during the chunk:** classes and other types are PascalCase; methods and functions move to snake_case. This matches the plan's § Code style. The user also asked for every change to be tracked in its own git commit, hence the six small commits.
+- Gates:
+  - G-exact: 52/52 pass.
+    - The first run reported 1000 s total. The Mac went into idle sleep for 990 s mid-run (pmset log, 14:55:04), which stalled the 10 tests in flight; all of them passed.
+    - Rerun under `caffeinate -i`: 52/52 in 11.2 s at `-j10`.
+    - Long ctest runs should be wrapped in `caffeinate -i`.
+  - G-style: now available, via `util/style.sh check [base]`. On this chunk it reports no changed C++ files.
+    - Tried on throwaway edits to `model/Population.cpp`, then reverted: a badly formatted, badly named function failed on both halves, and a well-formed one passed.
+- Done criteria:
+  - `util/style.sh format` and `util/style.sh tidy` both run on `model/Population.cpp` with the project configs.
+  - Every tidy exclusion and its reason is listed in `docs/refactor/STYLE.md`.
+- Deviations and surprises:
+  - **G-style checks changed lines only** (`git-clang-format --diff`), not `clang-format --dry-run -Werror` on whole changed files. Until B2, every legacy file fails a whole-file check. After B2 the two are equivalent. B5's CI job should use the same `check` command.
+  - **CMake:** `CMAKE_EXPORT_COMPILE_COMMANDS` has to be set before `project()`, because `project()` creates an empty cache entry first.
+  - **macOS sysroot:** CMake 4 does not put `-isysroot` in `compile_commands.json`, so the PyPI clang-tidy cannot find libc++ headers. `util/style.sh` adds `-isysroot $(xcrun --show-sdk-path)` on Darwin.
+  - **Whole-tree tidy runs** must anchor the file regex at the repo root. Otherwise the generated CxxTest runner `<build>/unittest/tests.cpp` is checked too. The command is in STYLE.md.
+  - **clang-format overrides** were chosen by measuring churn: about 13k of 36.6k lines will change in B2 whatever the config, because the current spacing is inconsistent.
+- Baseline diagnostics with the final config (`model/` + `unittest/`): 5626 distinct, including 3176 naming hits (437 methods, 144 functions, 426 members, 32 namespaces).
+- Follow-ups:
+  - B2: format only `model/` and `unittest/`; `util/` has no C++. Then run `util/style.sh format -i`.
+  - B3: skills should call `util/style.sh`, not raw tool names.
+  - B4: clang-tidy does not strip the `m_` and `_` member prefixes; that needs a scripted step. Header guards (`Hmod_*`) will be renamed to UPPER_CASE.
+  - B5: the pre-commit hook should pin clang-format 22.1.8. CI needs `uv`.
+- Next: B2 (or P1, S1, C1).
