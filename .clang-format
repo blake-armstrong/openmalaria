@@ -12,7 +12,6 @@ DerivePointerAlignment: false
 SortIncludes: Never
 IncludeBlocks: Preserve
 ReflowComments: Never
-AllowShortFunctionsOnASingleLine: Inline
 AllowShortIfStatementsOnASingleLine: Never
 AllowShortLoopsOnASingleLine: false
 ...
