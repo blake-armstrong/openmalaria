@@ -72,7 +72,7 @@ The work is split into **small, self-contained chunks**. Each chunk fits in one 
 | **G-exact** | `ctest` in the build dir (or `./build.sh -t`): every existing scenario, including checkpoint-stop/resume, is byte-identical to `test/expected/` | A2 |
 | **G-unit** | the CxxTest suites in `unittest/` pass | A2 |
 | **G-style** | `OM_BUILD_DIR=build-rework util/style.sh check <chunk's base commit>`: `git-clang-format --diff` and `clang-tidy-diff` report nothing on changed lines (see `docs/refactor/STYLE.md`) | B1 |
-| **G-perf** | the benchmark runtime is within 3% of the baseline recorded in `PROGRESS.md` | P1 |
+| **G-perf** | `OM_BUILD_DIR=build-rework util/bench.sh`: the median wall time is within 3% of the baseline recorded in `PROGRESS.md` | P1 |
 | **G-stat** | `ctest -L statistical` passes | S4 (full coverage after S5) |
 | **G-two-sims** | two `Simulation`s in one process match two separate runs exactly | D9 |
 

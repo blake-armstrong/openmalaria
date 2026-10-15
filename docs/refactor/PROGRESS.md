@@ -13,7 +13,7 @@ See `PLAN.md` for the session protocol, chunks and gates. Append one log entry p
 | B3 | todo | |
 | B4 | todo | |
 | B5 | todo | |
-| P1 | todo | |
+| P1 | done | f29d38e3, 81a14090, (this log entry) |
 | S1 | todo | |
 | S2 | todo | |
 | S3 | todo | |
@@ -140,3 +140,20 @@ See `PLAN.md` for the session protocol, chunks and gates. Append one log entry p
   - B4: each rename commit appends its hash to `.git-blame-ignore-revs`.
   - From now on, `util/style.sh check` on a whole changed file and on changed lines give the same format verdict.
 - Next: P1.
+
+### P1: Benchmark (done, 2026-10-15)
+- **Benchmark scenario:** `test/bench/scenarioBench.xml`, a copy of `scenarioMSAT.xml` with `popSize` 100 → 1000 and a new `name`. It is a separate file so later edits to the test scenario cannot shift the baseline.
+  - Why MSAT: 1-day steps and the most hot paths of any registered scenario: Molineaux within-host, PK/PD, dynamic vector transmission, ITNs, MDA, the clinical event scheduler.
+  - Run time is linear in `popSize` (100: 1.9 s, 1000: 15 s). Most of it is the 90-year warmup, so interventions are a small share, as in real runs.
+  - It is not registered with CTest and has no expected output.
+- **Script:** `util/bench.sh [-n RUNS] [scenario.xml]`, with `OM_BUILD_DIR` as in `util/style.sh`. It runs each repeat in a fresh temp dir (schema linked as `test/run.py` does), checks for a zero exit and an `output.txt`, and prints each run's wall and CPU time, then the median, min, max and spread ((max − min) / median). On macOS it re-runs itself under `caffeinate -i`.
+- **Baseline (G-perf reference):** median wall **14.93 s** at 63d87323, `build-rework/` Release, Apple clang 21.0.0, on the 10-core Mac from A2. G-perf passes when the median is **≤ 15.38 s** (+3%).
+  - Batch 1: 14.918, 14.965, 14.938, 14.931, 14.815 → median 14.931, spread 1.00%.
+  - Batch 2, right after: 14.680, 14.786, 15.038, 15.024, 15.052 → median 15.024, spread 2.48%.
+  - The two medians differ by 0.6%. CPU time tracks wall time within 0.2%.
+  - The machine was not fully idle (load average ~2.5–3.5 from a pytest run in another repo), but spread stayed under 3%.
+- Gates: G-exact / G-unit 52/52 pass (12.7 s at `-j10`). No C++ changed.
+- Follow-ups:
+  - G-perf: `OM_BUILD_DIR=build-rework util/bench.sh`. If the median lands within 3% but near the edge, rerun on an idle machine before calling it a regression. Don't run it while S5 is going.
+  - The baseline is tied to this machine and compiler. If either changes, re-measure at the last G-perf-passing commit and record the new baseline here.
+- Next: B3.
