@@ -13,7 +13,7 @@ See `PLAN.md` for the session protocol, chunks and gates. Append one log entry p
 | B3 | todo | |
 | B4 | todo | |
 | B5 | todo | |
-| P1 | done | f29d38e3, 81a14090, (this log entry) |
+| P1 | done | f29d38e3, 81a14090, b0309128, 6bfcf8c0, 4b803c7f, (this log entry) |
 | S1 | todo | |
 | S2 | todo | |
 | S3 | todo | |
@@ -147,16 +147,24 @@ See `PLAN.md` for the session protocol, chunks and gates. Append one log entry p
   - Run time is linear in `popSize` (100: 1.9 s, 1000: 15 s). Most of it is the 90-year warmup, so interventions are a small share, as in real runs.
   - It is not registered with CTest and has no expected output.
 - **Script:** `util/bench.sh [-n RUNS] [scenario.xml]`, with `OM_BUILD_DIR` as in `util/style.sh`. It runs each repeat in a fresh temp dir (schema linked as `test/run.py` does), checks for a zero exit and an `output.txt`, and prints each run's wall and CPU time, then the median, min, max and spread ((max − min) / median). On macOS it re-runs itself under `caffeinate -i`.
-- **Baseline (G-perf reference):** median wall **14.60 s** at 63d87323, `build-rework/` Release, Apple clang 21.0.0, on the 10-core Mac from A2, on battery with Low Power Mode off. G-perf passes when the median is **≤ 15.04 s** (+3%).
+- **Stored baseline (sanity check only; G-perf itself is the A/B comparison below):** median wall **14.60 s** at 63d87323, `build-rework/` Release, Apple clang 21.0.0, on the 10-core Mac from A2, on battery with Low Power Mode off. A plain run far from this (more than ~3%) means the machine or toolchain has changed.
   - 14.60 s is the median of the 10 runs in batches 3 and 4, taken with the machine quieter (load average ~1.3–1.6).
   - Batch 3: 14.264, 14.504, 14.458, 14.612, 14.550 → median 14.504, spread 2.40%.
   - Batch 4: 14.934, 14.590, 14.602, 14.710, 14.634 → median 14.634, spread 2.35%.
   - Batches 1 and 2 ran earlier, while a pytest run in another repo kept the load average at ~2.5–3.5. They gave medians of 14.931 s (spread 1.00%) and 15.024 s (spread 2.48%).
   - In every batch, CPU time tracks wall time within 0.2%.
-  - **The load cost ~2.5–3% in median, but did not change the spread.** So the median of the same build moves by about as much as the 3% gate allows, depending on what else the machine is doing. Batch 2's 15.024 s is within 0.1% of failing against this baseline, for unchanged code.
+  - **The load cost ~2.5–3% in median, but did not change the spread.** So the median of the same build moves by about as much as the 3% gate allows, depending on what else the machine is doing. Batch 2's 15.024 s would be within 0.1% of failing a +3% limit on this baseline, for unchanged code.
 - Gates: G-exact / G-unit 52/52 pass (12.7 s at `-j10`). No C++ changed.
 - Follow-ups:
-  - G-perf: `OM_BUILD_DIR=build-rework util/bench.sh`. If the median lands within 3% but near the edge, rerun on an idle machine before calling it a regression. Don't run it while S5 is going.
+  - G-perf: `OM_BUILD_DIR=build-rework util/bench.sh --compare ../om-bench-base/build-rework`. Even with A/B, don't run it while S5 is going: a saturated CPU raises noise for both sides.
   - The baseline is tied to this machine, compiler and power state. If any of them changes, re-measure at the last G-perf-passing commit and record the new baseline here.
-  - Proposed, not done: an A/B mode (`util/bench.sh --compare <base-build-dir>`) that alternates runs of the base and candidate builds in one session, so both see the same load and power state. Given how far the median moves between sessions, this would make G-perf much more reliable than comparing against a stored number.
+- **A/B mode added (4b803c7f), now the G-perf gate.** The stored baseline moves by about as much as the 3% limit between sessions, so G-perf now compares the candidate against a build of the chunk's base commit, in the same session.
+  - `util/bench.sh --compare <base build dir>` alternates base and candidate runs in ABBA order (5 of each by default, ~2.5 min). It reports both medians and the median per-pair ratio candidate/base, and exits 1 if that ratio is over 1.03. The per-pair ratio cancels slow drift (load, heat, power) that hits both runs of a pair.
+  - Base build recipe (in `util/bench.sh -h`): `git worktree add ../om-bench-base <base>`, then configure with `-DCMAKE_BUILD_TYPE=Release` and build the `openMalaria` and `inlined_xsd` targets. The worktree can be kept between chunks: `git -C ../om-bench-base checkout --detach <new base>` and rebuild.
+  - `OM_BUILD_DIR` may now also be an absolute path.
+  - Each binary gets one untimed `--help` launch first. macOS added ~0.6 s to the first launch of a freshly built binary (0.61 s, then 0.00 s for `--help`). In the first A/A test, the base's first run showed 15.04 s wall against 14.61 s CPU because of it.
+  - Validation:
+    - A/A: HEAD in `build-rework/` against a separate Release build of the same commit, 5 pairs: median ratio 0.9992 (−0.08%), exit 0. That run predates the warm-up fix; the base's first run carried the launch cost and still passed.
+    - Known regression: candidate built with `-DCMAKE_CXX_FLAGS_RELEASE=-O1`, 2 pairs: median ratio 1.0409 (+4.09%), per-pair 1.039–1.043, exit 1.
+    - Usage errors (missing `--compare` argument, missing dir, unknown flag) exit 2; plain mode still works.
 - Next: B3.
