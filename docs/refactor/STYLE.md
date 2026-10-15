@@ -24,8 +24,8 @@ util/style.sh check [base]              # G-style gate, lines changed since base
 
 `check` runs `git-clang-format --diff` and `clang-tidy-diff.py` on the
 `model/` and `unittest/` C++ lines changed since `base`. It looks only at changed lines
-because the tree is not formatted until B2, and legacy names are not fixed until each
-module's rename. It exits non-zero on any finding. It reads `git diff`, so new files
+because legacy names are not fixed until each module's rename. (Formatting alone could
+be checked whole-file since the B2 reformat.) It exits non-zero on any finding. It reads `git diff`, so new files
 must be staged (or `git add -N`) to be seen.
 
 On macOS, `util/style.sh` adds `-isysroot $(xcrun --show-sdk-path)` to clang-tidy.
@@ -59,8 +59,17 @@ in the B2 reformat, measured over `model/` and `unittest/` (36.6k lines):
 | `AllowShortIfStatementsOnASingleLine` | Never | LLVM default, made explicit |
 | `AllowShortLoopsOnASingleLine` | false | LLVM default, made explicit |
 
-Even so, B2 will change about 13k lines. The current spacing is too inconsistent for
-any config to match it.
+Even so, the B2 reformat (0bf623e3) changed 171 files (+13,162 / -14,526 lines). The
+old spacing was too inconsistent for any config to match it.
+
+## Blame
+
+Bulk mechanical commits (the B2 reformat, the per-module renames) are listed in
+`.git-blame-ignore-revs`. Enable it once per clone:
+
+```sh
+git config blame.ignoreRevsFile .git-blame-ignore-revs
+```
 
 ### Format exclusions
 
