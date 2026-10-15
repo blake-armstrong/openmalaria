@@ -147,13 +147,16 @@ See `PLAN.md` for the session protocol, chunks and gates. Append one log entry p
   - Run time is linear in `popSize` (100: 1.9 s, 1000: 15 s). Most of it is the 90-year warmup, so interventions are a small share, as in real runs.
   - It is not registered with CTest and has no expected output.
 - **Script:** `util/bench.sh [-n RUNS] [scenario.xml]`, with `OM_BUILD_DIR` as in `util/style.sh`. It runs each repeat in a fresh temp dir (schema linked as `test/run.py` does), checks for a zero exit and an `output.txt`, and prints each run's wall and CPU time, then the median, min, max and spread ((max − min) / median). On macOS it re-runs itself under `caffeinate -i`.
-- **Baseline (G-perf reference):** median wall **14.93 s** at 63d87323, `build-rework/` Release, Apple clang 21.0.0, on the 10-core Mac from A2. G-perf passes when the median is **≤ 15.38 s** (+3%).
-  - Batch 1: 14.918, 14.965, 14.938, 14.931, 14.815 → median 14.931, spread 1.00%.
-  - Batch 2, right after: 14.680, 14.786, 15.038, 15.024, 15.052 → median 15.024, spread 2.48%.
-  - The two medians differ by 0.6%. CPU time tracks wall time within 0.2%.
-  - The machine was not fully idle (load average ~2.5–3.5 from a pytest run in another repo), but spread stayed under 3%.
+- **Baseline (G-perf reference):** median wall **14.60 s** at 63d87323, `build-rework/` Release, Apple clang 21.0.0, on the 10-core Mac from A2, on battery with Low Power Mode off. G-perf passes when the median is **≤ 15.04 s** (+3%).
+  - 14.60 s is the median of the 10 runs in batches 3 and 4, taken with the machine quieter (load average ~1.3–1.6).
+  - Batch 3: 14.264, 14.504, 14.458, 14.612, 14.550 → median 14.504, spread 2.40%.
+  - Batch 4: 14.934, 14.590, 14.602, 14.710, 14.634 → median 14.634, spread 2.35%.
+  - Batches 1 and 2 ran earlier, while a pytest run in another repo kept the load average at ~2.5–3.5. They gave medians of 14.931 s (spread 1.00%) and 15.024 s (spread 2.48%).
+  - In every batch, CPU time tracks wall time within 0.2%.
+  - **The load cost ~2.5–3% in median, but did not change the spread.** So the median of the same build moves by about as much as the 3% gate allows, depending on what else the machine is doing. Batch 2's 15.024 s is within 0.1% of failing against this baseline, for unchanged code.
 - Gates: G-exact / G-unit 52/52 pass (12.7 s at `-j10`). No C++ changed.
 - Follow-ups:
   - G-perf: `OM_BUILD_DIR=build-rework util/bench.sh`. If the median lands within 3% but near the edge, rerun on an idle machine before calling it a regression. Don't run it while S5 is going.
-  - The baseline is tied to this machine and compiler. If either changes, re-measure at the last G-perf-passing commit and record the new baseline here.
+  - The baseline is tied to this machine, compiler and power state. If any of them changes, re-measure at the last G-perf-passing commit and record the new baseline here.
+  - Proposed, not done: an A/B mode (`util/bench.sh --compare <base-build-dir>`) that alternates runs of the base and candidate builds in one session, so both see the same load and power state. Given how far the median moves between sessions, this would make G-perf much more reliable than comparing against a stored number.
 - Next: B3.
