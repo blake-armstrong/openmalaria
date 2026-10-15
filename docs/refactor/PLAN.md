@@ -39,6 +39,8 @@ The work is split into **small, self-contained chunks**. Each chunk fits in one 
 ## Session protocol (every chunk)
 
 1. **Start fresh** in `/Users/blaarm/git/openmalaria-fork` on branch `throwaway_ai_rework`. Never work in `/Users/blaarm/git/openmalaria`.
+   - If the user names a chunk, do that chunk.
+   - If the user just says to continue (e.g. "do the next chunk"), do the first chunk in **§ Recommended order** below whose status in `PROGRESS.md` is not `done`.
 2. **Read only:**
    - `docs/refactor/PLAN.md` (a copy of this file, made by chunk A1): Part 1, the one chunk being done, and the Part 3 reference sections that chunk names
    - `docs/refactor/PROGRESS.md`
@@ -69,7 +71,7 @@ The work is split into **small, self-contained chunks**. Each chunk fits in one 
 |---|---|---|
 | **G-exact** | `ctest` in the build dir (or `./build.sh -t`): every existing scenario, including checkpoint-stop/resume, is byte-identical to `test/expected/` | A2 |
 | **G-unit** | the CxxTest suites in `unittest/` pass | A2 |
-| **G-style** | `clang-format --dry-run -Werror` is clean on changed files; `clang-tidy-diff` reports nothing on changed lines | B1 |
+| **G-style** | `OM_BUILD_DIR=build-rework util/style.sh check <chunk's base commit>`: `git-clang-format --diff` and `clang-tidy-diff` report nothing on changed lines (see `docs/refactor/STYLE.md`) | B1 |
 | **G-perf** | the benchmark runtime is within 3% of the baseline recorded in `PROGRESS.md` | P1 |
 | **G-stat** | `ctest -L statistical` passes | S4 (full coverage after S5) |
 | **G-two-sims** | two `Simulation`s in one process match two separate runs exactly | D9 |
@@ -87,6 +89,35 @@ A1 → A2 ─┬─ B1 → B2 → B3 → B4 → B5
 - The B, P and S tracks can run in any order relative to each other and to C/D.
 - D2b (splitting the RNG streams) is the first chunk allowed to change draw order, so it requires S6.
 - Every chunk from D onward requires B4, so that each module's rename can run right after it is refactored.
+
+## Recommended order
+
+The dependency graph allows many orders. Follow this one unless the user says otherwise. Work down the list. The next chunk is the first one not marked `done` in `PROGRESS.md`.
+
+| # | Chunk(s) | Notes |
+|---|---|---|
+| 1 | A1, A2, B1 | Done. |
+| 2 | **B2** | Before any other chunk touches C++, so that every later diff is format-clean. **First ask the user** whether they want to merge new upstream commits into this branch. If so, they should do it before B2, because the reformat makes later upstream merges painful. |
+| 3 | **P1** | Needed before C1, which gates on G-perf. Measure on an idle machine under `caffeinate -i`, with no S5 job running. |
+| 4 | **B3**, then **B4** | B4's pilot (`model/PkPd/`) shows the real cost of the `m_`/`_` member prefixes and header guards before the bigger modules are renamed. |
+| 5 | **B5** | So that pre-commit catches format slips throughout C and D. |
+| 6 | **C1**, then **C2** | The first structural refactor. Gates: G-exact, G-unit, G-style, G-perf. |
+| 7 | **S1 → S4** | Have the statistical tooling working before the D track gets going. |
+| 8 | **S5** | A long compute job (≈1 h at `-j10` for N = 500 if every scenario is run; more with stragglers). Run it overnight or while no G-perf measurement is being taken, because it saturates the CPU. Every chunk up to D2 keeps outputs byte-identical, so it doesn't matter which commit generates the references. |
+| 9 | **D1**, **D2** | These can overlap with S5/S6 in calendar time, but don't take G-perf measurements while S5 is running. |
+| 10 | **S6** | Must be done before D2b. |
+| 11 | **D2b** | **First ask the user Decision 1.** The first chunk allowed to change draw order; it is gated by G-stat, not G-exact. |
+| 12 | **D3 → D9** | |
+| 13 | **E1 → E6** | **Ask the user Decision 3 before E1.** |
+| 14 | **F0 → F6**, **G1 → G3** | |
+| 15 | **H1 → H3** | **Ask the user Decision 2 before H1.** If Python is a primary goal, do stage J immediately after H2 (before H3 and I). |
+| 16 | **I1 → I3** | **Ask the user Decision 4 before I2.** |
+| 17 | **J1 → J4** | Before J1, ask the user about the untracked `python/` directory (see Stage J). |
+
+Practical notes for every chunk:
+- Use `build-rework/` as the build dir (see the A2 entry in `PROGRESS.md`). Set `OM_BUILD_DIR=build-rework` for `util/style.sh`.
+- Wrap long `ctest` or benchmark runs in `caffeinate -i`. During B1, idle sleep stalled a test run for 990 s.
+- Commit each logical step as it lands, in its own small commit, not one commit per chunk.
 
 ---
 
