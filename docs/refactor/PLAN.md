@@ -1,0 +1,455 @@
+# OpenMalaria → OpenMM-style library + CLI: chunked refactor plan
+
+## Context
+
+Today OpenMalaria is a single executable, not a library:
+- `model/main.cpp` is the driver. It runs a hand-ordered chain of about 35 static `init()` calls, then the warmup, EIR-calibration and main phases, then the time-step loop (`run()`).
+- Simulation state is global:
+  - `sim::` time statics (`model/sim.h`)
+  - `util::master_RNG` (`util/random.h`)
+  - `ModelOptions` and `CommandLine` bitsets
+  - file-static `opt_*` flags and parameter copies, e.g. `WHFalciparum.cpp:55-79`
+  - a fully static `InterventionManager`
+  - `mon::internal::runtime`
+  - PK/PD `schedules` and `dosages`
+  - `PerHost::params`
+- The CodeSynthesis-generated `scnXml::` types reach 85 of about 150 model files. Some are still held and used at runtime, e.g. `TimedChangeHSDeployment` and `changeEIRIntervention`.
+- Model variants are picked by hard-coded if/else chains. There is no registry.
+
+Consequences:
+- Only one simulation can run per process.
+- There is no stable API to embed in Python/R or calibration frameworks.
+- Adding a model variant means editing factories and the schema together.
+
+The goal is a layered design like OpenMM's:
+- a small, stable C++ core API
+- pluggable model components
+- explicit simulation objects that own their state
+- a thin CLI and nanobind Python bindings on top
+- the scenario XML kept as one input format, not the internal data model
+- one enforced code style
+- statistical tests, so that changes which alter RNG draw order can still be verified
+
+The work is split into **small, self-contained chunks**. Each chunk fits in one Claude Code session and ends in a committed, tested state, so the context can be cleared between chunks.
+
+---
+
+# Part 1: How to work through the chunks
+
+## Session protocol (every chunk)
+
+1. **Start fresh** in `/Users/blaarm/git/openmalaria-fork` on branch `throwaway_ai_rework`. Never work in `/Users/blaarm/git/openmalaria`.
+2. **Read only:**
+   - `docs/refactor/PLAN.md` (a copy of this file, made by chunk A1): Part 1, the one chunk being done, and the Part 3 reference sections that chunk names
+   - `docs/refactor/PROGRESS.md`
+3. **Check the chunk's prerequisites** against `PROGRESS.md`. If any is missing, stop and say so.
+4. **Do only that chunk.** If it is clearly growing beyond one session (more than ~20 files of non-mechanical change), stop at a green point. Split the rest into a new chunk ID (e.g. `D4b`) and record the split in both `PLAN.md` and `PROGRESS.md`.
+5. **Pass the gates the chunk lists** (below).
+6. **Commit** on `throwaway_ai_rework`:
+   - Keep mechanical commits (formatting, renames, file moves) separate from logic commits.
+   - Stage files by name, never with `git add -A`, because `.cache/` and `python/` are untracked user files.
+   - Never push unless the user asks.
+7. **Append to `PROGRESS.md`:**
+   - the chunk ID and status
+   - the commit hashes
+   - the gate results
+   - surprises and deviations from the plan
+   - follow-ups for later chunks
+8. **Clear the context.** The next chunk starts again at step 1.
+
+**Stop and ask the user** before:
+- discarding or stashing tracked changes
+- editing `test/expected/*`
+- answering any of the open decisions in Part 3
+- touching the untracked `python/` directory
+
+## Gates
+
+| Gate | Command / check | Available from |
+|---|---|---|
+| **G-exact** | `ctest` in the build dir (or `./build.sh -t`): every existing scenario, including checkpoint-stop/resume, is byte-identical to `test/expected/` | A2 |
+| **G-unit** | the CxxTest suites in `unittest/` pass | A2 |
+| **G-style** | `clang-format --dry-run -Werror` is clean on changed files; `clang-tidy-diff` reports nothing on changed lines | B1 |
+| **G-perf** | the benchmark runtime is within 3% of the baseline recorded in `PROGRESS.md` | P1 |
+| **G-stat** | `ctest -L statistical` passes | S4 (full coverage after S5) |
+| **G-two-sims** | two `Simulation`s in one process match two separate runs exactly | D9 |
+
+Every chunk must pass every gate that is available at that point. One exception applies: a chunk whose *purpose* is to change RNG draw order may fail G-exact, but must then pass G-stat. It must say so in its commit message and in `PROGRESS.md`.
+
+## Dependency overview
+
+```
+A1 → A2 ─┬─ B1 → B2 → B3 → B4 → B5
+         ├─ P1
+         ├─ S1 → S2 → S3 → S4 → S5 → S6
+         └─ C1 → C2 → D1 … D9 → E1 … E6 → F0 … F6 → G1 … G3 → H1 … H3 → I1 … I3 → J1 … J4
+```
+- The B, P and S tracks can run in any order relative to each other and to C/D.
+- D2b (splitting the RNG streams) is the first chunk allowed to change draw order, so it requires S6.
+- Every chunk from D onward requires B4, so that each module's rename can run right after it is refactored.
+
+---
+
+# Part 2: Chunks
+
+Each chunk has the same fields:
+- **Needs:** chunks that must be done first
+- **Read:** the Part 3 reference sections to read
+- **Do:** the work
+- **Done when:** the exit criteria
+- **Gates:** the gates it must pass
+
+## Stage A: Workspace
+
+### A1: Create the branch and put the plan in the repo
+- **Needs:** nothing. **Read:** Part 3 § Workspace facts.
+- **Do:**
+  ```sh
+  cd /Users/blaarm/git/openmalaria-fork
+  git status                                   # must show no tracked changes on core-only
+  git fetch upstream
+  git switch --no-track -c throwaway_ai_rework upstream/main
+  git rev-parse HEAD upstream/main             # the two hashes must be identical
+  git diff --quiet upstream/main && echo clean
+  git status --short                           # only ?? .cache/ and ?? python/
+  ```
+  - If `git status` shows tracked changes, stop and ask.
+  - Then copy this plan file to `docs/refactor/PLAN.md` and create `docs/refactor/PROGRESS.md` with a table of all chunk IDs (status `todo`). Commit both.
+- **Done when:** the branch HEAD equals `upstream/main` plus the one docs commit.
+- **Gates:** none.
+
+### A2: Baseline build and tests
+- **Needs:** A1.
+- **Do:**
+  - Build with `./build.sh` (or CMake with `-DCMAKE_EXPORT_COMPILE_COMMANDS=ON`) and run `ctest`.
+  - Record in `PROGRESS.md`: compiler and version, the pass/fail list, the total test time, and the **wall time of each scenario**, which S5 needs for planning.
+  - If any test fails on clean upstream, record it as a known failure. Do not fix it.
+- **Done when:** the baseline is recorded.
+- **Gates:** G-exact and G-unit establish the baseline.
+
+## Stage B: Style tooling and Claude Code skills
+
+### B1: Style configs
+- **Needs:** A2. **Read:** § Code style.
+- **Do:**
+  - Add `.clang-format` (matching the current 4-space style) and `.clang-tidy` (Core Guidelines checks plus `readability-identifier-naming` per § Code style).
+  - Exclude `schema/` (generated code) and `contrib/`.
+  - Turn on `CMAKE_EXPORT_COMPILE_COMMANDS` by default.
+  - Record the pinned LLVM version.
+  - Do not reformat anything yet.
+- **Done when:** both tools run on `model/Population.cpp` with the project config. The tidy exclusions are listed in `docs/refactor/STYLE.md`, each with its reason.
+- **Gates:** G-exact.
+
+### B2: Whole-tree format
+- **Needs:** B1.
+- **Do:** run clang-format over `model/`, `unittest/` and `util/` C++ in one commit. Add that commit's hash to `.git-blame-ignore-revs` in a second commit.
+- **Done when:** `clang-format --dry-run -Werror` is clean on the whole tree.
+- **Gates:** G-exact, G-unit.
+
+### B3: `cpp-style` and `cpp-lint` skills
+- **Needs:** B1. **Read:** § Code style.
+- **Do:**
+  - Write `.claude/skills/cpp-style/SKILL.md`: the naming and Core Guidelines rules, plus running clang-format on changed files.
+  - Write `.claude/skills/cpp-lint/SKILL.md`: clang-tidy on changed files, apply the safe fix-its, rebuild, and report anything left that needs judgement.
+  - Optionally add a `PostToolUse` hook in `.claude/settings.json` that runs clang-format on any edited `*.cpp`/`*.h`.
+- **Done when:** both skills have been tried on a throwaway edit, and the edit has been reverted.
+- **Gates:** G-style.
+
+### B4: `rename-module` skill plus a pilot
+- **Needs:** B3.
+- **Do:**
+  - Write `.claude/skills/rename-module/SKILL.md`. It runs clang-tidy `readability-identifier-naming` fix-its over one directory and the call sites that use it, builds, runs G-exact, makes one commit, and appends that commit to `.git-blame-ignore-revs`.
+  - Pilot it on one small leaf module, e.g. `model/PkPd/`.
+- **Done when:** the pilot commit contains only renames and passes the gates.
+- **Gates:** G-exact, G-unit, G-style.
+
+### B5: Pre-commit and CI
+- **Needs:** B2.
+- **Do:**
+  - Add `.pre-commit-config.yaml` for clang-format.
+  - Add a GitHub Actions job in `.github/workflows/` that runs clang-format and `clang-tidy-diff` against the merge base.
+- **Done when:** the job definition passes locally (e.g. with `act`, or by running its script by hand).
+- **Gates:** G-style.
+
+## Stage P: Performance baseline
+
+### P1: Benchmark
+- **Needs:** A2.
+- **Do:**
+  - Choose or add a benchmark scenario with a large population and many steps.
+  - Add `util/bench.sh`, which runs it 5 times and reports the median wall time.
+  - Record the baseline in `PROGRESS.md`.
+- **Done when:** the baseline is recorded and the run-to-run spread is under 3%.
+- **Gates:** G-exact.
+
+## Stage S: Statistical regression tests
+
+### S1: Seeded replicate runner
+- **Needs:** A2. **Read:** § Statistical tests.
+- **Do:** add `test/stats/run_replicates.py`. It:
+  - copies a scenario into a temporary directory
+  - rewrites `<computationParameters iseed>`
+  - runs `openMalaria`, reusing what `test/run.py` already does (paths, schema link, binary-to-text conversion)
+  - collects `output.txt` and `ctsout.txt` per seed
+  - takes a `--jobs` option to run in parallel
+- **Done when:** running the same seed twice gives byte-identical output, and two different seeds give different output (shown on `scenario1`).
+- **Gates:** G-exact.
+
+### S2: Reference builder
+- **Needs:** S1. **Read:** § Statistical tests (1).
+- **Do:** add `test/stats/generate_reference.py`. It computes, per cell, the mean, the SD, q2.5 and q97.5. It also computes the leave-one-out miss-count threshold and the aggregate intervals, and writes `test/reference/<scenario>.csv` with a metadata header. Add unit tests that use synthetic data.
+- **Done when:** a reference for `scenario1` at N = 50 is produced and the unit tests pass.
+- **Gates:** G-exact.
+
+### S3: Single-run checker
+- **Needs:** S2. **Read:** § Statistical tests (2).
+- **Do:** add `test/stats/check_scenario.py`. It handles:
+  - zero-width cells, which must match exactly
+  - the out-of-range count against the threshold
+  - the key aggregates
+  - a report sorted by |z|
+  - a `--replicates K` mode
+- **Done when:**
+  - The checker passes on unchanged code.
+  - It fails on a deliberately perturbed copy of `scenario1`, e.g. EIR × 1.5.
+- **Gates:** G-exact.
+
+### S4: CTest integration
+- **Needs:** S3.
+- **Do:**
+  - In `test/CMakeLists.txt`, register `stat_<scenario>` with label `statistical` for every scenario that has a reference file.
+  - Scenarios without one are skipped with a message.
+- **Done when:** `ctest -L statistical` runs `stat_scenario1`. A plain `ctest -LE statistical` still runs only the old tests.
+- **Gates:** G-exact, G-stat.
+
+### S5: Generate the full references
+- **Needs:** S4.
+- **Do:**
+  - Use the per-scenario timings from A2 to batch the scenarios. Default N = 500; for slow scenarios use a lower N and record it.
+  - This is a long compute job. Run it in the background or on a cluster. One chunk session may cover only some batches; record which are done in `PROGRESS.md`.
+  - Commit the CSVs.
+- **Done when:** every scenario has a reference.
+- **Gates:** G-stat.
+
+### S6: Validate the method
+- **Needs:** S5. **Read:** § Statistical tests (4).
+- **Do:**
+  - Measure the false-failure rate with 200 fresh-seed runs; it must be ≤ 0.5%.
+  - Run the power study with parameter perturbations of 5%, 10% and 20%, and with an intervention switched off.
+  - Write `test/stats/README.md` with the minimum detectable effect for each scenario.
+  - Optionally add a nightly random-seed job.
+- **Done when:** the README exists and the false-failure target is met. If it isn't, retune the thresholds and record why.
+- **Gates:** G-stat.
+
+## Stage C: Extract the Simulation (Phase 1)
+
+### C1: Move the initialisation into `Simulation`
+- **Needs:** A2. **Read:** § Mapping.
+- **Do:**
+  - Create `model/Simulation.{h,cpp}`.
+  - Move the ordered `init()` chain from `main.cpp` into its constructor, keeping the exact call order.
+  - The globals stay as they are.
+- **Done when:** `main.cpp` constructs a `Simulation` and calls into it.
+- **Gates:** G-exact, G-unit, G-perf (once available).
+
+### C2: Move the phases and the step loop
+- **Needs:** C1.
+- **Do:**
+  - Move the warmup, EIR calibration, main phase and `run()` into `Simulation::step()`, `run_until()` and `run_phase()`.
+  - Keep the checkpoint read/write behaviour identical.
+  - `main.cpp` becomes argument parsing plus a call to `Simulation`.
+- **Done when:** `main.cpp` is under ~100 lines.
+- **Gates:** G-exact (including the checkpoint tests), G-unit, G-perf.
+
+## Stage D: De-globalise (Phase 2)
+
+**Bridge pattern used by every D chunk**, so that each chunk stays small:
+- Each global family moves into an object owned by `Simulation`.
+- The old static accessors are kept temporarily. They delegate through a single "current simulation" pointer, so call sites can migrate gradually.
+- Each chunk:
+  1. converts one family
+  2. migrates the call sites in the modules it owns
+  3. runs `/rename-module` on those modules as a separate commit
+- D9 removes the bridge.
+
+For each D chunk, **Needs:** the previous D chunk plus B4. **Gates:** G-exact, G-unit, G-style and G-perf, except where a chunk says otherwise.
+
+| Chunk | Global family → new owner |
+|---|---|
+| **D1** | `sim::` time statics in `model/sim.h` → `Clock`, a member of `Simulation` |
+| **D2** | `util::master_RNG` → an RNG owned by `Simulation`, with the same single stream and draw order |
+| **D2b** | Split into per-purpose RNG streams. **Changes draw order on purpose.** Needs S6 and the user's answer to Decision 1. Gate: G-stat instead of G-exact. Regenerate `test/expected/` only with the user's approval. |
+| **D3** | `ModelOptions`, `CommandLine` bitsets, `Parameters` → a `ModelOptions` object built once and owned by `Simulation` |
+| **D4** | Within-host and infection file statics (`WHFalciparum.cpp:55-79`, `CommonWithinHost`, the `Infection` subclasses) → component instance members. Split by subdirectory if it grows past ~20 files. |
+| **D5** | PK/PD `schedules`/`dosages` and `PerHost::params` → instance state |
+| **D6** | Pathogenesis and clinical statics → instance members |
+| **D7** | Transmission and vector statics → instance members |
+| **D8** | Static `InterventionManager` → an instance per `Simulation` |
+| **D9** | `mon::internal::runtime` → owned by `Simulation`. Remove the bridge pointer. Add the G-two-sims test. Gates add G-two-sims. |
+
+## Stage E: Config boundary (Phase 3)
+
+**Pattern for every E chunk:**
+- Define plain `om::config::<Area>` structs.
+- Add the XML → config translation under `model/io/xml/` (or `src/io/xml/` after F0).
+- Make the area's components consume config, never `scnXml::`.
+
+For each E chunk, **Needs:** the previous chunk; E1 needs D9. **Gates:** G-exact, G-unit, G-style.
+
+| Chunk | Area |
+|---|---|
+| **E1** | Health system, including replacing the runtime XML uses: `ClinicalModel::setHS` and `TimedChangeHSDeployment` |
+| **E2** | Transmission and vectors, including `changeEIRIntervention` |
+| **E3** | Within-host, infection and PK/PD |
+| **E4** | Demography and population |
+| **E5** | Interventions |
+| **E6** | Monitoring. Then enforce the boundary: `model` no longer links the `schema` target directly, and `grep scnXml` matches only `io/xml`. |
+
+Decision 3 (whether XML stays the main format) must be answered before E1.
+
+## Stage F: Layout and component registry (Phase 4)
+
+| Chunk | Do |
+|---|---|
+| **F0** | Mechanical move into the target layout (§ Target layering) with `git mv`. Split CMake into per-layer targets whose link dependencies enforce the dependency rule. Make one commit and add it to `.git-blame-ignore-revs`. |
+| **F1** | Registry core (name → factory, with typed config) plus unit tests. Nothing is migrated yet. |
+| **F2** | Within-host and infection through the registry. Replaces `WHInterface::createWithinHostModel` and the `CommonWithinHost::createInfection` function pointer. |
+| **F3** | Clinical and pathogenesis through the registry (`createClinicalModel`) |
+| **F4** | Transmission through the registry (`createTransmissionModel`) |
+| **F5** | Interventions through the registry (the if-chain at `InterventionManager.cpp:140-183`) |
+| **F6** | An explicit host interface for interventions, instead of reaching into `Human`'s sub-objects |
+
+Each F chunk needs the previous one; F0 needs E6. **Gates:** G-exact (registry dispatch must keep the creation order), G-unit, G-style, G-perf.
+
+## Stage G: Monitoring as Reporters (Phase 5)
+
+| Chunk | Do |
+|---|---|
+| **G1** | A per-`Simulation` `Monitor` plus a `Reporter` interface. The survey-txt/bin reporter reproduces the current output exactly. |
+| **G2** | A ctsout reporter |
+| **G3** | An in-memory reporter that returns arrays, with unit tests |
+
+**Gates:** G-exact, G-unit, G-style.
+
+## Stage H: Public API and packaging (Phase 6)
+
+| Chunk | Do |
+|---|---|
+| **H1** | Headers under `include/openmalaria/`: `Model`, `Simulation`, `State`, `Reporter`, `Registry`, with pimpl and no internal types exposed |
+| **H2** | A shared library, CMake `install`/`export` and a package config, plus a tiny out-of-tree consumer project used as a test |
+| **H3** | A versioned `State`/checkpoint format, with a round-trip test |
+
+**Gates:** all available gates.
+
+## Stage I: CLI rewrite (Phase 7)
+
+| Chunk | Do |
+|---|---|
+| **I1** | A CLI11 app at `apps/cli/` with a `run` subcommand on the public API and a `--seed` flag. Switch S1's runner from rewriting XML to `--seed`. |
+| **I2** | The `validate`, `resume` and `print …` subcommands. The legacy flags become aliases (Decision 4). Remove the `CommandLine` reads from inside the model. |
+| **I3** | Tests that every legacy invocation used in `test/` and `util/` still works |
+
+**Gates:** all available gates.
+
+## Stage J: Python bindings with nanobind (Phase 8)
+
+Before J1, ask the user what the existing untracked `python/` directory in the fork is. Do not overwrite it. If needed, use a different directory name such as `bindings/python/`.
+
+| Chunk | Do |
+|---|---|
+| **J1** | A nanobind module plus `pyproject.toml` (scikit-build-core, `STABLE_ABI`). Expose `Model.from_xml`, `Simulation`, `run` and `step`. |
+| **J2** | Reporters returning NumPy (`nb::ndarray`) and pandas; `get_state`/`set_state` |
+| **J3** | A pure-Python `openmalaria.app` layer, plus smoke tests that compare against the CLI output |
+| **J4** | Wheel builds with cibuildwheel in CI |
+
+**Gates:** all available gates, plus the Python smoke tests from J3 onward. Decision 2 (whether Python is a primary goal) may move this stage earlier, to directly after H2.
+
+**Later and optional:** a threaded "Platform" for human updates (this will need G-stat), R bindings, and Catch2/GoogleTest in place of CxxTest.
+
+---
+
+# Part 3: Reference (read the sections a chunk names)
+
+## Workspace facts
+- The fork has two remotes: `origin` (blake-armstrong/openmalaria) and `upstream` (OpenMalaria-Org/openmalaria).
+- It is currently on `core-only`. `.cache/` and `python/` are untracked and not in `upstream/main`, so they carry over when switching branches untouched.
+- The local `upstream/main` ref is stale (#430), so a fetch is required.
+- `--no-track` means a bare `git push` can never target the upstream org repo.
+
+## Mapping
+| OpenMM | OpenMalaria equivalent |
+|---|---|
+| `System` | `om::Model`: an immutable description built from plain config types |
+| `Force` / `ForceImpl` | Component definitions plus per-simulation `*Impl`, chosen through a name-keyed registry |
+| `Integrator` | `Stepper`: the ordered per-step update (interventions → transmission → humans → population → survey) plus the phase logic |
+| `Context` | `om::Simulation`: owns the clock, RNG, population, transmission, interventions and monitor; several can exist per process |
+| `State` | `om::State`: a snapshot plus a versioned checkpoint blob |
+| `Platform` | Later: serial vs. threaded updates |
+| `app` / Reporters | `om::io` loaders and writers, plus `Reporter` observers |
+
+## Target layering
+```
+include/openmalaria/   public C++ API
+src/core/              clock, RNG, Simulation, Stepper, registry, errors
+src/components/        within_host/, infection/, clinical/, transmission/, interventions/, pkpd/
+src/monitoring/        Monitor, Reporters
+src/io/xml/            the only place scnXml:: is used
+src/io/checkpoint/     versioned State serialisation
+apps/cli/              CLI (public API only)
+bindings/python/       nanobind module + openmalaria.app   (name to be confirmed, see J)
+.claude/skills/        cpp-style, cpp-lint, rename-module
+```
+Dependency rule: `components` → `core`. `io` → `core`, `components` and `schema`. CLI and Python → the public API only.
+
+## Code style
+- Follows the ISO C++ Core Guidelines (isocpp.github.io/CppCoreGuidelines).
+- Classes, structs, enums, type aliases and template parameters: `PascalCase`.
+- Functions and methods: `snake_case`.
+- Variables, parameters, members and namespaces: `snake_case` (NL.10), with no member prefix.
+- Constants and enumerators: `PascalCase`. This is assumed; adjust if you prefer otherwise.
+- `.clang-tidy` enables `cppcoreguidelines-*`, `bugprone-*`, `modernize-*`, `performance-*` and `readability-identifier-naming`. Every disabled check is recorded with its reason, e.g. hot-loop or checkpoint `operator&` idioms.
+- CI runs clang-tidy in diff mode, so legacy code never blocks a change.
+- Renames happen per module, as separate commits made by tools, each listed in `.git-blame-ignore-revs`.
+- Because the C++ names follow these rules, the nanobind bindings match PEP 8 with no renaming layer.
+
+## Statistical tests
+
+**Why.** The byte-for-byte tests fail on any change in RNG draw order, even a correct one. These tests instead check that a single run falls inside the range that many replicate runs of the reference code produce.
+
+**Facts they build on:**
+- The seed comes only from `<computationParameters iseed="N"/>` (`model/main.cpp:154`).
+- `output.txt` rows are `survey, group, measure, value`; `output1.txt` has 792 rows.
+- Reuse `test/run.py` and `util/compareOutput.py` rather than writing new parsers.
+
+1. **References.** For each scenario:
+   - Run N = 500 replicates with seeds 1001…1000+N.
+   - For each cell, compute the mean, the SD and the empirical q2.5/q97.5. This is a 95% *prediction* interval for one new run.
+   - Use empirical quantiles rather than mean ± 1.96·SD, because the outputs are skewed counts and often zero.
+   - Write a CSV with a metadata header: N, seeds, commit, schema version and date.
+2. **Single-run check.** Use the scenario's own `iseed`, which is outside the reference range, so the verdict is deterministic.
+   - Zero-width cells must match exactly.
+   - About 5% of cells miss by chance, so the test fails only when the count of out-of-range cells exceeds the 99.9th percentile of leave-one-out miss counts from the replicates. This allows for correlation between cells.
+   - The key aggregates (clinical episodes, severe episodes, deaths, mean prevalence, mean EIR) must each sit inside a Bonferroni-widened interval.
+   - The report lists misses sorted by |z|.
+3. **Integration.** Each scenario is a CTest test `stat_<scenario>` with label `statistical`.
+   - The byte-for-byte tests stay the oracle for pure refactors.
+   - Checkpoint-and-resume stays exact, comparing against the same build and seed.
+4. **Validation.**
+   - False failures must be ≤ 0.5% over 200 fresh seeds.
+   - A power study (perturbations of 5%, 10% and 20%, and an intervention switched off) records each scenario's minimum detectable effect.
+   - A `--replicates 20` mode gives a stronger test for changes expected to move outputs only slightly.
+5. **Updates.** References are regenerated only for intended changes in behaviour. The regeneration goes in its own commit, with a summary of which measures moved.
+
+## Key risks
+- **Reproducibility.** Pure refactors keep G-exact. Deliberate draw-order changes rely on G-stat, which only catches shifts above the minimum detectable effect measured in S6.
+- **Statistical test cost.** About 50 scenarios × 500 runs is a large one-off job. Batch it using the A2 timings.
+- **Performance.** The per-human loop is hot. Dispatch per component, not per human per step, and check G-perf.
+- **Scale.** About 32k lines. The bridge pattern and chunk splitting keep each session small.
+- **Compatibility.** Users depend on the XML schema and the output formats; keep both stable.
+- **Rename churn.** Renames happen per module, in separate commits made by tools.
+
+## Open decisions (ask the user before the chunk that needs them)
+1. **Before D2b:** which changes may give up byte-for-byte equality and rely on G-stat instead? (Recommended: only chunks whose purpose is to change draw order.)
+2. **Before H1:** are Python bindings a primary goal? If so, move stage J to directly after H2.
+3. **Before E1:** does XML stay the primary user format, or is YAML/JSON or Python-built config added?
+4. **Before I2:** must the existing CLI flags stay backward compatible, and for how long?
