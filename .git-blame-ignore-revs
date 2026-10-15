@@ -1,0 +1,5 @@
+# Bulk mechanical commits (formatting, renames). Use with:
+#   git config blame.ignoreRevsFile .git-blame-ignore-revs
+
+# B2: whole-tree clang-format of model/ and unittest/
+0bf623e342fbbb0bc4541cc2309124811c34c499
