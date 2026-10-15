@@ -23,6 +23,8 @@
 
 cmake_minimum_required (VERSION 3.15)
 
+set(CMAKE_EXPORT_COMPILE_COMMANDS ON CACHE BOOL "Write compile_commands.json for clang-tidy")
+
 project (OpenMalaria CXX)
 
 # The FindXXX.cmake files included are not quite the same as standard ones.
