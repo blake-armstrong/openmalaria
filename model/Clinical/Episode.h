@@ -32,10 +32,10 @@
 
 namespace OM {
 namespace Host {
-    class Human;
+class Human;
 }
 namespace Clinical {
-    
+
 /** Summary of clinical events during a caseManagementMemory period, in one individual.
  *
  * Terminology:
@@ -44,7 +44,7 @@ namespace Clinical {
  * An "episode" is a clinical-view of sickness caused by a malaria infection.
  * There's no reason an "episode" can't span multiple infections and multiple
  * bouts of sickness and recovery (the most severe is reported). */
-class Episode{
+class Episode {
 public:
     /**
      * State description flags. Note that values are carefully engineered to
@@ -56,56 +56,52 @@ public:
         * http://en.wikipedia.org/wiki/Flag_byte
         * Max: 0x80000000
         * (note & | ^ are C++'s binary AND, OR and XOR operators). */
-        NONE                = WithinHost::Pathogenesis::NONE,            ///< Not sick
-        
+        NONE = WithinHost::Pathogenesis::NONE, ///< Not sick
+
         // Flags for current state/worst state to report:
-        SICK                = WithinHost::Pathogenesis::SICK,          ///< Sick (may or may not be from malaria)
-        MALARIA             = WithinHost::Pathogenesis::MALARIA,          ///< Malaria sickness
+        SICK = WithinHost::Pathogenesis::SICK,       ///< Sick (may or may not be from malaria)
+        MALARIA = WithinHost::Pathogenesis::MALARIA, ///< Malaria sickness
         /// Used by ClinicalEventScheduler to indicate a second bout of malarial sickness within the same episode (roughly)
-        SECOND_CASE         = 0x10,
-        SEVERE              = 0x8,      ///< Severe malaria case
-        COINFECTION         = 0x4,      ///< Malaria with a coinfection
-        COMPLICATED         = WithinHost::Pathogenesis::COMPLICATED,         ///< Flag used to indicate SEVERE and/or COINFECTION
-        
+        SECOND_CASE = 0x10,
+        SEVERE = 0x8,                                        ///< Severe malaria case
+        COINFECTION = 0x4,                                   ///< Malaria with a coinfection
+        COMPLICATED = WithinHost::Pathogenesis::COMPLICATED, ///< Flag used to indicate SEVERE and/or COINFECTION
+
         //NEED_ANTIBIOTIC     = 0x40,         ///< Flag indicates a non-malaria fever requires (antibiotic) treatment
-        
-        MORBIDITY_MASK      = 0x7F,         ///< Mask coving all above states
-        
+
+        MORBIDITY_MASK = 0x7F, ///< Mask coving all above states
+
         // Flags for outcome reporting:
-        EVENT_IN_HOSPITAL   = 0x400,        ///< Indicates recovery/sequelae/death event occurred in hospital − only set on one of these events (ImmediateOutcomes only)
-        DIRECT_DEATH        = 0x1000,       ///< Used for reporting death (from COMPLICATED sickness)
-        SEQUELAE            = 0x2000,       ///< Reporting recovered with sequelae (from COMPLICATED sickness)
-        RECOVERY            = 0x4000,       ///< Report that individual fully recovered
-        EVENT_FIRST_DAY     = 0x8000,       ///< Used in combination with DIRECT_DEATH to report death happens on first day (before treatment has effect)
-        RUN_CM_TREE = 0x10000,      ///< Flag to indicate that CM tree should be run now or after a delay
-    };
-    
-    Episode() :
-            time(sim::never()),
-            surveyPeriod(mon::NOT_USED),
-            ageGroup(0),
-            cohortSet(0),
-            state(NONE)
-    {
-        healthSystemMemoryFix = util::ModelOptions::option (util::HEALTH_SYSTEM_MEMORY_FIX);
+        EVENT_IN_HOSPITAL =
+            0x400, ///< Indicates recovery/sequelae/death event occurred in hospital − only set on one of these events (ImmediateOutcomes only)
+        DIRECT_DEATH = 0x1000, ///< Used for reporting death (from COMPLICATED sickness)
+        SEQUELAE = 0x2000,     ///< Reporting recovered with sequelae (from COMPLICATED sickness)
+        RECOVERY = 0x4000,     ///< Report that individual fully recovered
+        EVENT_FIRST_DAY =
+            0x8000, ///< Used in combination with DIRECT_DEATH to report death happens on first day (before treatment has effect)
+        RUN_CM_TREE = 0x10000, ///< Flag to indicate that CM tree should be run now or after a delay
     };
 
-  ~Episode();
-    
+    Episode() : time(sim::never()), surveyPeriod(mon::NOT_USED), ageGroup(0), cohortSet(0), state(NONE) {
+        healthSystemMemoryFix = util::ModelOptions::option(util::HEALTH_SYSTEM_MEMORY_FIX);
+    };
+
+    ~Episode();
+
     /// Report anything pending, as on destruction
     void flush();
-    
+
     /** Report an episode, its severity, and any outcomes it entails.
      *
      * @param human The human whose info is being reported
      * @param newState The severity (diagnosis) and outcome.
      */
     void update(const Host::Human& human, Episode::State newState);
-    
+
     /// Checkpointing
-    void operator& (istream& stream);
-    void operator& (ostream& stream);	///< ditto
-    
+    void operator&(istream& stream);
+    void operator&(ostream& stream); ///< ditto
+
     /// Time of event, potentially never
     SimTime time = sim::never();
     /// Survey during which the event occured
@@ -119,7 +115,7 @@ public:
     Episode::State state;
 
     WithinHost::InfectionOrigin infectionType = WithinHost::InfectionOrigin::Indigenous;
-    
+
 private:
     /** Report a clinical episode.
      *
@@ -132,5 +128,6 @@ private:
     bool healthSystemMemoryFix = false;
 };
 
-} }
+}
+}
 #endif

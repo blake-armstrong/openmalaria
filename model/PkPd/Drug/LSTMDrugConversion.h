@@ -47,22 +47,22 @@ struct Params_convFactor;
 class LSTMDrugConversion : public LSTMDrug {
 public:
     /** Create a new instance. */
-    LSTMDrugConversion (const LSTMDrugType& parent, const LSTMDrugType& metabolite, LocalRng& rng);
-    
+    LSTMDrugConversion(const LSTMDrugType& parent, const LSTMDrugType& metabolite, LocalRng& rng);
+
     virtual size_t getIndex() const;
     virtual double getConcentration(size_t index) const;
-    
-    virtual double calculateDrugFactor(LocalRng& rng, WithinHost::CommonInfection *inf, double body_mass) const;
-    virtual void updateConcentration (double body_mass);
+
+    virtual double calculateDrugFactor(LocalRng& rng, WithinHost::CommonInfection* inf, double body_mass) const;
+    virtual void updateConcentration(double body_mass);
     double getMetaboliteConcentration() const;
     double getParentConcentration() const;
-    
+
 protected:
-    virtual void checkpoint (istream& stream);
-    virtual void checkpoint (ostream& stream);
-    
+    virtual void checkpoint(istream& stream);
+    virtual void checkpoint(ostream& stream);
+
     double calculateFactor(const Params_convFactor& p, double duration) const;
-    
+
     //TODO: do we need to link these?
     const LSTMDrugType &parentType, &metaboliteType;
 
@@ -70,7 +70,7 @@ protected:
     // in circulation; units: mg. In the paper, these are labelled A, B, C.
     //TODO: move metabolite data to a separate class object? Or not?
     double qtyG, qtyP, qtyM;
-    
+
     /// @brief Sampled elimination and conversion rate constants
     //@{
     /// Absorbtion rate constant (-x)
@@ -86,10 +86,10 @@ protected:
     /// Last body mass (kg)
     double last_bm;
     //@}
-    
+
 private:
     void setConversionParameters(Params_convFactor& p, double body_mass) const;
-    void setKillingParameters(LocalRng& rng, Params_convFactor& p, WithinHost::CommonInfection *inf) const;
+    void setKillingParameters(LocalRng& rng, Params_convFactor& p, WithinHost::CommonInfection* inf) const;
 };
 
 }

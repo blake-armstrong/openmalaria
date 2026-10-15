@@ -28,19 +28,14 @@
 namespace OM {
 namespace Clinical {
 
-Episode::~Episode ()
-{
-    report ();
-}
+Episode::~Episode() { report(); }
 
 void Episode::flush() {
     report();
     time = sim::never();
 }
 
-
-void Episode::update (const Host::Human& human, Episode::State newState)
-{
+void Episode::update(const Host::Human& human, Episode::State newState) {
     bool toReport = false;
 
     if (healthSystemMemoryFix && (time + ClinicalModel::hsMemory() <= sim::ts0()))
@@ -48,10 +43,10 @@ void Episode::update (const Host::Human& human, Episode::State newState)
     else if (!healthSystemMemoryFix && (time + ClinicalModel::hsMemory() < sim::ts0()))
         toReport = true;
 
-    if(toReport) {
+    if (toReport) {
         infectionType = human.withinHostModel->getInfectionOrigin();
 
-        report ();
+        report();
 
         time = sim::ts0();
         surveyPeriod = mon::eventSurveyNumber();
@@ -59,14 +54,14 @@ void Episode::update (const Host::Human& human, Episode::State newState)
         cohortSet = human.getCohortSet();
         state = newState;
     } else {
-        state = Episode::State (state | newState);
+        state = Episode::State(state | newState);
     }
 }
 
-void Episode::report () {
-    if (time < sim::zero())        // Nothing to report
+void Episode::report() {
+    if (time < sim::zero()) // Nothing to report
         return;
-    
+
     // Reports malarial/non-malarial UC fever dependent on cause, not diagnosis.
     if (state & Episode::MALARIA) {
         // Malarial fevers: report bout
@@ -77,9 +72,9 @@ void Episode::report () {
             }
         } else { // UC or UC2
             mon::recordEvent(mon::measure("nUncomp"), surveyPeriod, ageGroup, cohortSet);
-            if(infectionType == WithinHost::InfectionOrigin::Indigenous)
+            if (infectionType == WithinHost::InfectionOrigin::Indigenous)
                 mon::recordEvent(mon::measure("nUncomp_Indigenous"), surveyPeriod, ageGroup, cohortSet);
-            else if(infectionType == WithinHost::InfectionOrigin::Introduced)
+            else if (infectionType == WithinHost::InfectionOrigin::Introduced)
                 mon::recordEvent(mon::measure("nUncomp_Introduced"), surveyPeriod, ageGroup, cohortSet);
             else
                 mon::recordEvent(mon::measure("nUncomp_Imported"), surveyPeriod, ageGroup, cohortSet);
@@ -90,26 +85,24 @@ void Episode::report () {
             if (state & Episode::DIRECT_DEATH) {
                 mon::recordEvent(mon::measure("nDirDeaths"), surveyPeriod, ageGroup, cohortSet);
                 mon::recordEvent(mon::measure("nHospitalDeaths"), surveyPeriod, ageGroup, cohortSet);
-                if (state & Episode::EVENT_FIRST_DAY){
+                if (state & Episode::EVENT_FIRST_DAY) {
                     mon::recordEvent(mon::measure("Clinical_FirstDayDeaths"), surveyPeriod, ageGroup, cohortSet);
-                    mon::recordEvent(mon::measure("Clinical_HospitalFirstDayDeaths"), surveyPeriod, ageGroup, cohortSet);
+                    mon::recordEvent(mon::measure("Clinical_HospitalFirstDayDeaths"), surveyPeriod, ageGroup,
+                                     cohortSet);
                 }
-            }
-            else if (state & Episode::SEQUELAE) {
+            } else if (state & Episode::SEQUELAE) {
                 mon::recordEvent(mon::measure("nSeq"), surveyPeriod, ageGroup, cohortSet);
                 mon::recordEvent(mon::measure("nHospitalSeqs"), surveyPeriod, ageGroup, cohortSet);
-            }
-            else if (state & Episode::RECOVERY){
+            } else if (state & Episode::RECOVERY) {
                 mon::recordEvent(mon::measure("nHospitalRecovs"), surveyPeriod, ageGroup, cohortSet);
             }
         } else {
             if (state & Episode::DIRECT_DEATH) {
                 mon::recordEvent(mon::measure("nDirDeaths"), surveyPeriod, ageGroup, cohortSet);
-                if (state & Episode::EVENT_FIRST_DAY){
+                if (state & Episode::EVENT_FIRST_DAY) {
                     mon::recordEvent(mon::measure("Clinical_FirstDayDeaths"), surveyPeriod, ageGroup, cohortSet);
                 }
-            }
-            else if (state & Episode::SEQUELAE){
+            } else if (state & Episode::SEQUELAE) {
                 mon::recordEvent(mon::measure("nSeq"), surveyPeriod, ageGroup, cohortSet);
             }
             // Don't care about out-of-hospital recoveries
@@ -124,7 +117,7 @@ void Episode::report () {
     }
 }
 
-void Episode::operator& (istream& stream) {
+void Episode::operator&(istream& stream) {
     time & stream;
     if (time > sim::zero()) {
         surveyPeriod & stream;
@@ -135,7 +128,7 @@ void Episode::operator& (istream& stream) {
         state = Episode::State(s);
     }
 }
-void Episode::operator& (ostream& stream) {
+void Episode::operator&(ostream& stream) {
     time & stream;
     if (time >= sim::zero()) {
         surveyPeriod & stream;

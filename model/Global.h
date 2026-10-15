@@ -27,7 +27,7 @@
 #define Hmod_Global
 
 #ifdef _MSC_VER
-#pragma warning(disable: 4290)  // disable some warnings on MSVC
+#pragma warning(disable : 4290) // disable some warnings on MSVC
 // Avoid min/max as macros on windows (breaks numeric_limits<T>::max())
 #define NOMINMAX
 #endif
@@ -38,12 +38,12 @@
 #include <cmath>
 
 // Checkpointing and time-step operations are used _everywhere_:
-#include "sim.h"    // includes util/checkpoint.h and util/mod.h
+#include "sim.h" // includes util/checkpoint.h and util/mod.h
 
 #define PI 3.14159265358979323846
 
 namespace OM {
-	
+
 using namespace util::checkpoint;
 using util::mod;
 using util::mod_nn;

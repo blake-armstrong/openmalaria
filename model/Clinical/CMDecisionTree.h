@@ -30,32 +30,30 @@
 
 namespace OM {
 namespace WithinHost {
-    class WHInterface;
+class WHInterface;
 }
 namespace Clinical {
 using WithinHost::WHInterface;
 
 /** All data which needs to be passed to the decision tree evaluators. */
-struct  CMHostData {
+struct CMHostData {
     /** Initialise, from a human h with age aY (years), and pathogenesis state
      * pS. Note that pS is only needed for uncomplicated trees
      * (see CMDecisionTree::create()). */
-    CMHostData (Host::Human& h, double aY, Episode::State pS) :
-        human(h), ageYears(aY), pgState(pS) {}
+    CMHostData(Host::Human& h, double aY, Episode::State pS) : human(h), ageYears(aY), pgState(pS) {}
     Host::Human& human;
-    double ageYears;    // only cached to save recalculating
+    double ageYears; // only cached to save recalculating
     Episode::State pgState;
-    inline WHInterface& withinHost(){ return *human.withinHostModel; }
+    inline WHInterface& withinHost() { return *human.withinHostModel; }
 };
 /** All output data from the decision tree. */
 struct CMDTOut {
     CMDTOut() : treated(false), screened(false) {}
     explicit CMDTOut(bool t) : treated(t), screened(false) {}
-    CMDTOut(bool t, bool s): treated(t), screened(s) {}
-    bool treated;       // true iff some blood-stage treatment was administered
-    bool screened;  // true iff some diagnostic was used
+    CMDTOut(bool t, bool s) : treated(t), screened(s) {}
+    bool treated;  // true iff some blood-stage treatment was administered
+    bool screened; // true iff some diagnostic was used
 };
-
 
 /**
  * Decision tree node abstraction.
@@ -66,7 +64,7 @@ struct CMDTOut {
 class CMDecisionTree {
 public:
     virtual ~CMDecisionTree() {}
-    
+
     /** Create a user-configured decision from an XML node.
      * 
      * Memory management is handled internally (statically).
@@ -76,22 +74,21 @@ public:
      *  xml_scenario_error exception is thrown. CMHostData::pgState is only
      *  used by the "case type" decision, so if isUC is false when creating the
      *  tree, pgState does not need to be set when executing the tree. */
-    static const CMDecisionTree& create( const ::scnXml::DecisionTree& node, bool isUC );
-    
+    static const CMDecisionTree& create(const ::scnXml::DecisionTree& node, bool isUC);
+
     /** Test for equivalence in two decision trees. Nodes are equivalent if
      * they have the same type, same deployments and treatments, and their
      * sub-nodes are equivalent. */
-    virtual bool operator==( const CMDecisionTree& that ) const =0;
-    inline bool operator!=( const CMDecisionTree& that ) const{
-        return !(*this == that);
-    }
-    
+    virtual bool operator==(const CMDecisionTree& that) const = 0;
+    inline bool operator!=(const CMDecisionTree& that) const { return !(*this == that); }
+
     /** Execute the decision tree.
      * 
      * Reporting: use of diagnostics is reported. Treatment is not, but the
      * output may be used to determine whether any treatment took place. */
-    virtual CMDTOut exec( CMHostData hostData ) const =0;
+    virtual CMDTOut exec(CMHostData hostData) const = 0;
 };
 
-} }
+}
+}
 #endif

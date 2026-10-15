@@ -32,47 +32,46 @@ namespace WithinHost {
 
 vector<Treatments> Treatments::treatments;
 
-TreatmentId Treatments::addTreatment( const scnXml::TreatmentOption& desc ){
-    Treatments treatment( desc );
-    TreatmentId id( treatments.size() );
-    treatments.push_back( std::move(treatment) );
+TreatmentId Treatments::addTreatment(const scnXml::TreatmentOption& desc) {
+    Treatments treatment(desc);
+    TreatmentId id(treatments.size());
+    treatments.push_back(std::move(treatment));
     return id;
 }
 
-
 // ———   non-static  ———
 
-Treatments::Stages stageFromString( const std::string& str ){
-    if( str == "liver" ) return Treatments::LIVER;
-    if( str == "blood" ) return Treatments::BLOOD;
-    if( str == "both" ) return Treatments::BOTH;
-    throw util::format_error( std::string("stage must be liver, blood or both, not ").append(str) );
+Treatments::Stages stageFromString(const std::string& str) {
+    if (str == "liver")
+        return Treatments::LIVER;
+    if (str == "blood")
+        return Treatments::BLOOD;
+    if (str == "both")
+        return Treatments::BOTH;
+    throw util::format_error(std::string("stage must be liver, blood or both, not ").append(str));
 }
-Treatments::Treatments( const scnXml::TreatmentOption& elt ) :
-    TriggeredDeployments(elt), timeLiver(sim::zero()), timeBlood(sim::zero())
-{
-    for( auto it = elt.getClearInfections().begin(), end = elt.getClearInfections().end();
-        it != end; ++it )
-    {
-        try{
+Treatments::Treatments(const scnXml::TreatmentOption& elt)
+    : TriggeredDeployments(elt), timeLiver(sim::zero()), timeBlood(sim::zero()) {
+    for (auto it = elt.getClearInfections().begin(), end = elt.getClearInfections().end(); it != end; ++it) {
+        try {
             //NOTE: if changing XSD, this should not be called "timesteps" or have a default unit
-            SimTime len = UnitParse::readShortDuration( it->getTimesteps(), UnitParse::STEPS );
-            if( len < -sim::oneTS() || len == sim::zero() ){ 
-                throw util::format_error( "timesteps must be ≥ 1 or have special value -1" );
+            SimTime len = UnitParse::readShortDuration(it->getTimesteps(), UnitParse::STEPS);
+            if (len < -sim::oneTS() || len == sim::zero()) {
+                throw util::format_error("timesteps must be ≥ 1 or have special value -1");
             }
-            Stages stage = stageFromString( it->getStage() );
-            if( stage & LIVER ){
-                if( timeLiver != sim::zero() )   // existing treatment configuration
-                    throw util::format_error( "multiple specification of liver stage effect" );
+            Stages stage = stageFromString(it->getStage());
+            if (stage & LIVER) {
+                if (timeLiver != sim::zero()) // existing treatment configuration
+                    throw util::format_error("multiple specification of liver stage effect");
                 timeLiver = len;
             }
-            if( stage & BLOOD ){
-                if( timeBlood != sim::zero() )   // existing treatment configuration
-                    throw util::format_error( "multiple specification of blood stage effect" );
+            if (stage & BLOOD) {
+                if (timeBlood != sim::zero()) // existing treatment configuration
+                    throw util::format_error("multiple specification of blood stage effect");
                 timeBlood = len;
             }
-        }catch( const util::format_error& e ){
-            throw util::xml_scenario_error( string(".../clearInfections/timesteps: ").append(e.message()) );
+        } catch (const util::format_error& e) {
+            throw util::xml_scenario_error(string(".../clearInfections/timesteps: ").append(e.message()));
         }
     }
 }

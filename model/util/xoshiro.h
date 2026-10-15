@@ -34,32 +34,25 @@
 class Xoshiro256P {
 public:
     typedef uint64_t result_type;
-    
+
     Xoshiro256P(uint64_t a, uint64_t b = 0x220b5e8d, uint64_t c = 0x712a58a2, uint64_t d = 0x712a58a2) {
         this->seed(a, b, c, d);
     }
 
-//     template<class Sseq>
-//     explicit Xoshiro256P(Sseq& seq);
-    
-    template<typename R>
-    explicit Xoshiro256P(R& source) {
-        seed(source);
-    }
+    //     template<class Sseq>
+    //     explicit Xoshiro256P(Sseq& seq);
+
+    template <typename R> explicit Xoshiro256P(R& source) { seed(source); }
 
     // Disable copying
     Xoshiro256P(const Xoshiro256P&) = delete;
     Xoshiro256P& operator=(const Xoshiro256P&) = delete;
 
     /// Allow moving, with explicit functions
-    Xoshiro256P(Xoshiro256P&& other) {
-        memcpy(s, other.s, sizeof s);
-    }
-    void operator=(Xoshiro256P&& other) {
-        memcpy(s, other.s, sizeof s);
-    }
+    Xoshiro256P(Xoshiro256P&& other) { memcpy(s, other.s, sizeof s); }
+    void operator=(Xoshiro256P&& other) { memcpy(s, other.s, sizeof s); }
 
-//     template<class Sseq> void seed(Sseq& seq);
+    //     template<class Sseq> void seed(Sseq& seq);
 
     void seed(uint64_t a, uint64_t b = 0x220b5e8d, uint64_t c = 0x712a58a2, uint64_t d = 0x712a58a2) {
         s[0] = a;
@@ -68,8 +61,7 @@ public:
         s[3] = d;
     }
 
-    template<typename R>
-    void seed(R& source) {
+    template <typename R> void seed(R& source) {
         s[0] = source.gen_u64();
         s[1] = source.gen_u64();
         s[2] = source.gen_u64();
@@ -83,19 +75,17 @@ public:
     friend bool operator==(const Xoshiro256P& lhs, const Xoshiro256P& rhs);
     friend bool operator!=(const Xoshiro256P& lhs, const Xoshiro256P& rhs);
 
-//     template<typename CharT, typename Traits>
-//     friend std::basic_ostream<CharT, Traits>& operator<<(std::basic_ostream<CharT, Traits>& os, const Xoshiro256P& rng);
-// 
-//     template<typename CharT, typename Traits>
-//     friend std::basic_istream<CharT, Traits>& operator>>(std::basic_istream<CharT, Traits>& is, Xoshiro256P& rng);
+    //     template<typename CharT, typename Traits>
+    //     friend std::basic_ostream<CharT, Traits>& operator<<(std::basic_ostream<CharT, Traits>& os, const Xoshiro256P& rng);
+    //
+    //     template<typename CharT, typename Traits>
+    //     friend std::basic_istream<CharT, Traits>& operator>>(std::basic_istream<CharT, Traits>& is, Xoshiro256P& rng);
 
-    void binary_checkpoint(ostream& stream) {
-        stream.write (reinterpret_cast<char*>(&s[0]), sizeof(s));
-    }
+    void binary_checkpoint(ostream& stream) { stream.write(reinterpret_cast<char*>(&s[0]), sizeof(s)); }
     void binary_checkpoint(istream& stream) {
-        stream.read (reinterpret_cast<char*>(&s[0]), sizeof(s));
+        stream.read(reinterpret_cast<char*>(&s[0]), sizeof(s));
         if (!stream || stream.gcount() != sizeof(s))
-            throw runtime_error ("Xoshiro256P::binary_checkpoint: stream read error");
+            throw runtime_error("Xoshiro256P::binary_checkpoint: stream read error");
     }
 
     static constexpr uint64_t min() { return std::numeric_limits<uint64_t>::min(); }
@@ -108,20 +98,17 @@ private:
     uint64_t s[4];
 };
 
-// template<class Sseq> 
+// template<class Sseq>
 // inline Xoshiro256P::Xoshiro256P(Sseq& seq) {
 //     seed(seq);
 // }
-// 
+//
 // template<class Sseq>
 // inline void Xoshiro256P::seed(Sseq& seq) {
 //     seq.generate(s, s + 4);
 // }
 
-
-static inline uint64_t rotl(const uint64_t x, int k) {
-    return (x << k) | (x >> (64 - k));
-}
+static inline uint64_t rotl(const uint64_t x, int k) { return (x << k) | (x >> (64 - k)); }
 
 inline uint64_t Xoshiro256P::operator()() {
     const uint64_t result = s[0] + s[3];
@@ -153,11 +140,11 @@ inline double Xoshiro256P::gen_double() {
     return (x >> 11) * v;
 }
 
-
 // Implement <random> interface.
 inline bool operator==(const Xoshiro256P& lhs, const Xoshiro256P& rhs) {
     for (int i = 0; i < 4; ++i) {
-        if (lhs.s[i] != rhs.s[i]) return false;
+        if (lhs.s[i] != rhs.s[i])
+            return false;
     }
 
     return true;
@@ -170,29 +157,29 @@ inline bool operator!=(const Xoshiro256P& lhs, const Xoshiro256P& rhs) { return 
 //     // Serialize.
 //     for (int i = 0; i < 4; ++i) os << rng.s[i] << space;
 //     os << rng.ctr;
-// 
+//
 //     // Sestore old state.
 //     os.flags(flags);
 //     os.fill(fill);
-// 
+//
 //     return os;
 // }
-// 
+//
 // template<typename CharT, typename Traits>
 // inline std::basic_istream<CharT, Traits>& operator>>(std::basic_istream<CharT, Traits>& is, Xoshiro256P& rng) {
 //     typedef typename std::basic_istream<CharT, Traits> ::ios_base ios_base;
-// 
+//
 //     // Save old flags and set ours.
 //     auto flags = is.flags();
 //     is.flags(ios_base::dec);
-// 
+//
 //     // Deserialize.
 //     for (int i = 0; i < 10; ++i) is >> rng.keysetup[i];
 //     is >> rng.ctr;
-// 
+//
 //     // Restore old flags.
 //     is.flags(flags);
-// 
+//
 //     return is;
 // }
 

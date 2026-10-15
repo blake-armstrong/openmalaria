@@ -32,115 +32,103 @@
 namespace OM {
 namespace util {
 namespace checkpoint {
-    ///@brief Operator& for smart pointers
-    //@{
-    template<class T>
-    void operator& (unique_ptr<T> & x, ostream& stream) {
-        (*x) & stream;
-    }
+///@brief Operator& for smart pointers
+//@{
+template <class T> void operator&(unique_ptr<T>& x, ostream& stream) { (*x) & stream; }
 
-    template<class T>
-    void operator& (unique_ptr<T>& x, istream& stream) {
-        (*x) & stream;
-    }
-    //@}
-    
-    ///@brief Operator& for stl containers
-    //@{
-    template<class U, class V, class S>
-    void operator& (pair<U,V> x, S& stream) {
-        x.first & stream;
-        x.second & stream;
-    }
-    
-    template<class T>
-    void operator& (vector<T>& x, ostream& stream) {
-        x.size() & stream;
-        for (T& y : x) {
-            y & stream;
-        }
-    }
+template <class T> void operator&(unique_ptr<T>& x, istream& stream) { (*x) & stream; }
+//@}
 
-    template<class T>
-    void operator& (vector<T>& x, istream& stream) {
-        size_t l;
-        l & stream;
-        validateListSize (l);
-        x.resize (l);
-        for (T& y : x) {
-            y & stream;
-        }
-    }
+///@brief Operator& for stl containers
+//@{
+template <class U, class V, class S> void operator&(pair<U, V> x, S& stream) {
+    x.first & stream;
+    x.second & stream;
+}
 
-    /// Version of above taking an element to initialize each element from.
-    template<class T>
-    void checkpoint (vector<T>& x, istream& stream, T templateInstance) {
-        size_t l;
-        l & stream;
-        validateListSize (l);
-        x.resize (l, templateInstance);
-        for (T& y : x) {
-            y & stream;
-        }
+template <class T> void operator&(vector<T>& x, ostream& stream) {
+    x.size() & stream;
+    for (T& y : x) {
+        y & stream;
     }
-    
-    template<class T>
-    void operator& (list<T> x, ostream& stream) {
-        x.size() & stream;
-        for (T& y : x) {
-            y & stream;
-        }
-    }
-    template<class T>
-    void operator& (list<T>& x, istream& stream) {
-        size_t l;
-        l & stream;
-        validateListSize (l);
-        x.resize (l);
-        for (T& y : x) {
-            y & stream;
-        }
-    }
+}
 
-    template<class K, class V>
-    void operator& (std::map<K,V> const& m, std::ostream& stream) {
-        size_t n = m.size();
-        n & stream; // write count
-        for (auto const& kv : m) {
-            kv.first  & stream;
-            kv.second & stream;
-        }
+template <class T> void operator&(vector<T>& x, istream& stream) {
+    size_t l;
+    l & stream;
+    validateListSize(l);
+    x.resize(l);
+    for (T& y : x) {
+        y & stream;
     }
+}
 
-    template<class K, class V>
-    void operator& (std::map<K,V>& m, std::istream& stream) {
-        size_t n;
-        n & stream; // read count
-        validateListSize(n);
-        m.clear();
-        for (size_t i = 0; i < n; ++i) {
-            K key{stream};
-            V val;
-            val & stream;
-            m.emplace(std::move(key), std::move(val));
-        }
+/// Version of above taking an element to initialize each element from.
+template <class T> void checkpoint(vector<T>& x, istream& stream, T templateInstance) {
+    size_t l;
+    l & stream;
+    validateListSize(l);
+    x.resize(l, templateInstance);
+    for (T& y : x) {
+        y & stream;
     }
-    
-    void operator& (const set<interventions::ComponentId>&x, ostream& stream);
-    void operator& (set<interventions::ComponentId>& x, istream& stream);
-    
-    void operator& (const map<string,double>& x, ostream& stream);
-    void operator& (map<string, double >& x, istream& stream);
-    
-    void operator& (const map<double,double>& x, ostream& stream);
-    void operator& (map<double, double>& x, istream& stream);
-    
-    void operator& (const map<interventions::ComponentId,SimTime>& x, ostream& stream);
-    void operator& (map<interventions::ComponentId,SimTime>& x, istream& stream);
-    
-    void operator& (const multimap<double,double>& x, ostream& stream);
-    void operator& (multimap<double, double>& x, istream& stream);
-    //@}
-    
-} } }   // end of namespaces
+}
+
+template <class T> void operator&(list<T> x, ostream& stream) {
+    x.size() & stream;
+    for (T& y : x) {
+        y & stream;
+    }
+}
+template <class T> void operator&(list<T>& x, istream& stream) {
+    size_t l;
+    l & stream;
+    validateListSize(l);
+    x.resize(l);
+    for (T& y : x) {
+        y & stream;
+    }
+}
+
+template <class K, class V> void operator&(std::map<K, V> const& m, std::ostream& stream) {
+    size_t n = m.size();
+    n & stream; // write count
+    for (auto const& kv : m) {
+        kv.first & stream;
+        kv.second & stream;
+    }
+}
+
+template <class K, class V> void operator&(std::map<K, V>& m, std::istream& stream) {
+    size_t n;
+    n & stream; // read count
+    validateListSize(n);
+    m.clear();
+    for (size_t i = 0; i < n; ++i) {
+        K key{stream};
+        V val;
+        val & stream;
+        m.emplace(std::move(key), std::move(val));
+    }
+}
+
+void operator&(const set<interventions::ComponentId>& x, ostream& stream);
+void operator&(set<interventions::ComponentId>& x, istream& stream);
+
+void operator&(const map<string, double>& x, ostream& stream);
+void operator&(map<string, double>& x, istream& stream);
+
+void operator&(const map<double, double>& x, ostream& stream);
+void operator&(map<double, double>& x, istream& stream);
+
+void operator&(const map<interventions::ComponentId, SimTime>& x, ostream& stream);
+void operator&(map<interventions::ComponentId, SimTime>& x, istream& stream);
+
+void operator&(const multimap<double, double>& x, ostream& stream);
+void operator&(multimap<double, double>& x, istream& stream);
+//@}
+
+}
+}
+} // end of namespaces
 #endif

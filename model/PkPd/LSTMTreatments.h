@@ -27,11 +27,12 @@
 
 using namespace std;
 
-namespace scnXml{
-    class Treatments;
+namespace scnXml {
+class Treatments;
 }
-namespace OM { namespace PkPd {
-    
+namespace OM {
+namespace PkPd {
+
 /** Information about treatment courses: schedules and dosage tables.
  * 
  * A schedule is a list of times to administrer a drug, along with base drug
@@ -43,19 +44,20 @@ public:
     /** Load treatment data from XML.
      * 
      * Load drug data (LSTMDrugType::init()) first. */
-    static void init (const scnXml::Treatments& data);
+    static void init(const scnXml::Treatments& data);
     /** Clear previous data. Only needed for testing. */
     static void clear();
-    
+
     /** Get the index of a named schedule. */
-    static size_t findSchedule( const string& name );
-    
+    static size_t findSchedule(const string& name);
+
     /** Get the index of a named dosage table. */
-    static size_t findDosages( const string& name );
-    
+    static size_t findDosages(const string& name);
+
 private:
-    LSTMTreatments();  // not constructible
+    LSTMTreatments(); // not constructible
 };
 
-} }
+}
+}
 #endif

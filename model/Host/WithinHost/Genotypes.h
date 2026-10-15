@@ -28,7 +28,8 @@
 #include <iostream>
 #include <set>
 
-namespace OM { namespace WithinHost {
+namespace OM {
+namespace WithinHost {
 
 using util::LocalRng;
 
@@ -36,58 +37,57 @@ using util::LocalRng;
 class Genotypes {
 public:
     /// Represent a combination of alleles, each from a different locus
-    struct Genotype{
-        Genotype( uint32_t allele, double iFreq, double fit, bool hrp2_del ):
-            init_freq(iFreq), fitness(fit), hrp2_deficient(hrp2_del)
-        {
+    struct Genotype {
+        Genotype(uint32_t allele, double iFreq, double fit, bool hrp2_del)
+            : init_freq(iFreq), fitness(fit), hrp2_deficient(hrp2_del) {
             alleles.insert(allele);
         }
-        Genotype cross( const Genotype& that )const;
-        std::set<uint32_t> alleles;      // set of codes of all alleles
+        Genotype cross(const Genotype& that) const;
+        std::set<uint32_t> alleles; // set of codes of all alleles
         double init_freq;
         double fitness;
         bool hrp2_deficient;
     };
-    
+
     /** Initialise with a single genotype. */
     static void initSingle();
-    
+
     /** Initialise from XML data. Call this before other static methods are
      * used (from PK/PD code). */
-    static void init( const scnXml::Scenario& scenario );
-    
+    static void init(const scnXml::Scenario& scenario);
+
     /** Switch to whichever mode has been enabled for the main simulation. */
     static void preMainSimInit();
-    
+
     /** Map a locus name and allele name to an allele code.
      * 
      * Note that two alleles from different loci will always have different
      * codes.
      * 
      * Returns max value when no match is found. */
-    static uint32_t findAlleleCode( const string& locus, const string& allele );
-    
+    static uint32_t findAlleleCode(const string& locus, const string& allele);
+
     /** Get a reference to the list of all genotypes. */
     static const vector<Genotype>& getGenotypes();
-    
+
     /** Sample the genotype using the configured approach.
      * 
      * @param genotype_weights When in tracking mode, this vector gives the
      *  weights of each genotype for use in sampling. Total need not be one.
      *  Also, passing a zero-length vector is a signal to use initial
      *  frequencies in sampling. */
-    static uint32_t sampleGenotype( LocalRng& rng, std::vector<double>& genotype_weights );
-    
+    static uint32_t sampleGenotype(LocalRng& rng, std::vector<double>& genotype_weights);
+
     /** Get the number of genotypes. Functions like sampleGenotype use values
      * from 0 to one less than this. */
-    inline static size_t N(){ return N_genotypes; }
-    
+    inline static size_t N() { return N_genotypes; }
+
     /** Get the initial frequency of some genotype. */
-    static double initialFreq( size_t genotype );
-    
-    static void staticCheckpoint( std::ostream& stream );
-    static void staticCheckpoint( std::istream& stream );
-    
+    static double initialFreq(size_t genotype);
+
+    static void staticCheckpoint(std::ostream& stream);
+    static void staticCheckpoint(std::istream& stream);
+
 private:
     static size_t N_genotypes;
 };

@@ -26,17 +26,14 @@
 #include "Global.h"
 #include <schema/scenario.h>
 
-namespace OM
-{
-    namespace util
-    {
-        class XMLChecker
-        {
-        public:
-            XMLChecker(){}
-            ~XMLChecker(){}
+namespace OM {
+namespace util {
+class XMLChecker {
+public:
+    XMLChecker() {}
+    ~XMLChecker() {}
 
-            /*
+    /*
             * Should be called after the input XML has been loaded and before all subsequent
             * initialisation. I.e. well before the simulation starts running.
             *
@@ -52,30 +49,25 @@ namespace OM
             *  - identify certain problems in the input XML as early as possible, and
             *  - enable the user to obtain a more informative error message.
             */
-            void PerformPostValidationChecks(const scnXml::Scenario& scenario)
-            {
-                CheckModelOptionsAndParams(scenario);
-            }
-        private:
+    void PerformPostValidationChecks(const scnXml::Scenario& scenario) { CheckModelOptionsAndParams(scenario); }
 
-            /*
+private:
+    /*
             * Verifies that, if no model name is written in input XML, then both parameters and
             * model options and written explicitly.
             */
-            void CheckModelOptionsAndParams(const scnXml::Scenario& scenario)
-            {
-                // For each relevant element, determine whether it's specified explicitly in XML.
-                const bool modelName = scenario.getModel().getModelName().present();
-                const bool parameters = scenario.getModel().getParameters().present();
-                const bool modelOptions = scenario.getModel().getModelOptions().present();
-                if (!modelName && (!parameters || !modelOptions))
-                {
-                    throw util::xml_scenario_error(
-                        "If a model name is not specified then both <ModelOptions> and <parameters> must be specified");
-                }
-            }
-        };
+    void CheckModelOptionsAndParams(const scnXml::Scenario& scenario) {
+        // For each relevant element, determine whether it's specified explicitly in XML.
+        const bool modelName = scenario.getModel().getModelName().present();
+        const bool parameters = scenario.getModel().getParameters().present();
+        const bool modelOptions = scenario.getModel().getModelOptions().present();
+        if (!modelName && (!parameters || !modelOptions)) {
+            throw util::xml_scenario_error(
+                "If a model name is not specified then both <ModelOptions> and <parameters> must be specified");
+        }
     }
+};
+}
 }
 
 #endif

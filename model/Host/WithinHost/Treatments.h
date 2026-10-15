@@ -45,49 +45,44 @@ public:
     //@{
     /** Configure a new treatment option, and return the code used to select
      * that option later. */
-    static TreatmentId addTreatment( const scnXml::TreatmentOption& desc );
-    
+    static TreatmentId addTreatment(const scnXml::TreatmentOption& desc);
+
     /** Return the corresponding treatment description. */
-    static inline const Treatments& select( TreatmentId treatId ){
-        assert( treatId.id < treatments.size() );
+    static inline const Treatments& select(TreatmentId treatId) {
+        assert(treatId.id < treatments.size());
         return treatments[treatId.id];
     }
     //@}
-    
+
     /// @brief Types used by the non-static methods
     //@{
     /// Stages effected
-    enum Stages{
-        NONE /*i.e. no effect*/,
-        LIVER = 1,
-        BLOOD = 2,
-        BOTH = LIVER | BLOOD
-    };
+    enum Stages { NONE /*i.e. no effect*/, LIVER = 1, BLOOD = 2, BOTH = LIVER | BLOOD };
     //@}
-    
+
     /// @brief Non-static methods
     //@{
     /** Get the liver stage action.
      *
      * 0 implies no action, <0 implies retrospective action, and n>0
      * implies treatment for next n time steps. */
-    inline SimTime liverEffect()const{ return timeLiver; }
+    inline SimTime liverEffect() const { return timeLiver; }
     /** Get the blood stage action.
      *
      * 0 implies no action, <0 implies retrospective action, and n>0
      * implies treatment for next n time steps. */
-    inline SimTime bloodEffect()const{ return timeBlood; }
+    inline SimTime bloodEffect() const { return timeBlood; }
     //@}
-    
+
 private:
     // static:
     static vector<Treatments> treatments;
-    
+
     // non-static:
-    Treatments( const scnXml::TreatmentOption& elt );
-    
+    Treatments(const scnXml::TreatmentOption& elt);
+
     SimTime timeLiver, timeBlood;
-    
+
     friend class ::UnittestUtil;
 };
 

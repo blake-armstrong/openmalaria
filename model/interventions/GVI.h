@@ -29,11 +29,12 @@
 #include "util/sampler.h"
 #include "schema/interventions.h"
 
-namespace OM { namespace interventions {
-    using util::DecayFunction;
-    using util::LognormalSampler;
-    using util::LocalRng;
-    using Transmission::PerHostInterventionData;
+namespace OM {
+namespace interventions {
+using Transmission::PerHostInterventionData;
+using util::DecayFunction;
+using util::LocalRng;
+using util::LognormalSampler;
 
 /** Constant parameters for generic vector intervention model. */
 class GVIComponent : public Transmission::HumanVectorInterventionComponent {
@@ -43,54 +44,50 @@ public:
      * @param elt Component description from XML
      * @param species_name_map Map of species names to indices.
      */
-    GVIComponent( ComponentId, const scnXml::GVIDescription& elt,
-               const map<string,size_t>& species_name_map );
-    
-    void deploy( Host::Human& human, mon::Deploy::Method method, VaccineLimits )const;
-    
+    GVIComponent(ComponentId, const scnXml::GVIDescription& elt, const map<string, size_t>& species_name_map);
+
+    void deploy(Host::Human& human, mon::Deploy::Method method, VaccineLimits) const;
+
     virtual Component::Type componentType() const;
-    
-    virtual void print_details( std::ostream& out )const;
-    
+
+    virtual void print_details(std::ostream& out) const;
+
     virtual unique_ptr<PerHostInterventionData> makeHumanPart(LocalRng& rng) const;
-    virtual unique_ptr<PerHostInterventionData> makeHumanPart( istream& stream, ComponentId ) const;
-    
+    virtual unique_ptr<PerHostInterventionData> makeHumanPart(istream& stream, ComponentId) const;
+
 private:
     /** Per mosquito-species parameters for generic vector intervention model. */
     class GVIAnopheles {
     public:
-        GVIAnopheles() :
-            proportionProtected( numeric_limits<double>::signaling_NaN() ),
-            proportionUnprotected( numeric_limits<double>::signaling_NaN() ),
-            deterrency( numeric_limits<double>::signaling_NaN() ),
-            preprandialKilling( numeric_limits<double>::signaling_NaN() ),
-            postprandialKilling( numeric_limits<double>::signaling_NaN() ),
-            fecundityReduction( numeric_limits<double>::signaling_NaN() )
-        {}
+        GVIAnopheles()
+            : proportionProtected(numeric_limits<double>::signaling_NaN()),
+              proportionUnprotected(numeric_limits<double>::signaling_NaN()),
+              deterrency(numeric_limits<double>::signaling_NaN()),
+              preprandialKilling(numeric_limits<double>::signaling_NaN()),
+              postprandialKilling(numeric_limits<double>::signaling_NaN()),
+              fecundityReduction(numeric_limits<double>::signaling_NaN()) {}
         void init(const scnXml::GVIDescription::AnophelesParamsType& elt, double proportionUse);
-        
+
         /// Return x*proportionProtected + proportionUnprotected
-        inline double byProtection(double x) const{
-            return x*proportionProtected + proportionUnprotected;
-        }
-        
+        inline double byProtection(double x) const { return x * proportionProtected + proportionUnprotected; }
+
         double proportionProtected;
         double proportionUnprotected;
         double deterrency;
         double preprandialKilling;
         double postprandialKilling;
         double fecundityReduction;
-        
+
         friend class HumanGVI;
     };
-    
+
     unique_ptr<DecayFunction> decay;
-    vector<GVIAnopheles> species;  // vector specific params
-    
+    vector<GVIAnopheles> species; // vector specific params
+
     // This is sparse vector: only indexes corresponding to a GVI component are used
     // No memory management
     static vector<GVIComponent*> componentsByIndex;
-    
+
     friend class HumanGVI;
 };
 
@@ -101,19 +98,19 @@ private:
  */
 class HumanGVI : public PerHostInterventionData {
 public:
-    HumanGVI( LocalRng& rng, const GVIComponent& params );
-    HumanGVI( istream& stream, ComponentId );
-    
-    virtual void redeploy( LocalRng& rng, const Transmission::HumanVectorInterventionComponent& );
-    
+    HumanGVI(LocalRng& rng, const GVIComponent& params);
+    HumanGVI(istream& stream, ComponentId);
+
+    virtual void redeploy(LocalRng& rng, const Transmission::HumanVectorInterventionComponent&);
+
     /** This is the survival factor of the effect. */
-    inline double getEffectSurvival(const GVIComponent& params)const{
-        SimTime age = sim::nowOrTs1() - deployTime;  // implies age 1 TS on first use
-        return decayHet->eval( age );
+    inline double getEffectSurvival(const GVIComponent& params) const {
+        SimTime age = sim::nowOrTs1() - deployTime; // implies age 1 TS on first use
+        return decayHet->eval(age);
     }
-    
+
     virtual void update(Host::Human& human);
-    
+
     /// Get deterrency. See ComponentParams::effect for a more detailed description.
     virtual double relativeAttractiveness(size_t speciesIndex) const;
     /// Get killing effect on mosquitoes before they've eaten.
@@ -124,15 +121,16 @@ public:
     virtual double postprandialSurvivalFactor(size_t speciesIndex) const;
     /// Get the mosquito fecundity multiplier (1 for no effect).
     virtual double relFecundity(size_t speciesIndex) const;
-    
+
 protected:
-    virtual void checkpoint( ostream& stream );
-    
+    virtual void checkpoint(ostream& stream);
+
 private:
     // this parameter is sampled on first deployment, but never resampled for the same human:
     unique_ptr<DecayFunction> decayHet;
 };
 
-} }
+}
+}
 
 #endif

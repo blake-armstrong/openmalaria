@@ -29,38 +29,36 @@
 #include "Transmission/Anopheles/EmergenceRateEstimator.h"
 #include "Host/Human.h"
 
-namespace scnXml
-{
+namespace scnXml {
 class Vector;
 }
 
-namespace OM
-{
+namespace OM {
 class Population;
-namespace Transmission
-{
+namespace Transmission {
 
 /** Transmission models, Chitnis et al.
  *
  * This class contains code for species-independent components. Per-species
  * code is in the Anopheles directory and namespace. */
-class VectorModel : public TransmissionModel
-{
+class VectorModel : public TransmissionModel {
 public:
     /// Get the map of species names to indicies.
-    const map<string, size_t> &getSpeciesIndexMap() { return speciesIndex; }
+    const map<string, size_t>& getSpeciesIndexMap() { return speciesIndex; }
 
-    VectorModel(vector<double> initEIR, int interventionMode, vector<std::unique_ptr<Anopheles::AnophelesModel>> speciesList,
-                vector<std::unique_ptr<Anopheles::EmergenceRateEstimator>> emergenceRateEstimatorsList, map<string, size_t> speciesIndexList,
-                int populationSize);
+    VectorModel(vector<double> initEIR, int interventionMode,
+                vector<std::unique_ptr<Anopheles::AnophelesModel>> speciesList,
+                vector<std::unique_ptr<Anopheles::EmergenceRateEstimator>> emergenceRateEstimatorsList,
+                map<string, size_t> speciesIndexList, int populationSize);
 
     virtual ~VectorModel();
 
     /** Extra initialisation when not loading from a checkpoint, requiring
      * information from the human population structure. */
-    virtual void init2(const vector<Host::Human> &population);
+    virtual void init2(const vector<Host::Human>& population);
 
-    virtual void initVectorInterv(const scnXml::Description::AnophelesSequence &list, size_t instance, const string &name);
+    virtual void initVectorInterv(const scnXml::Description::AnophelesSequence& list, size_t instance,
+                                  const string& name);
     virtual void initVectorTrap(const scnXml::VectorTrap::DescriptionSequence list, size_t instance,
                                 const scnXml::VectorTrap::NameOptional name);
 
@@ -68,42 +66,42 @@ public:
 
     virtual SimTime initIterate();
 
-    virtual void vectorUpdate(const vector<Host::Human> &population);
+    virtual void vectorUpdate(const vector<Host::Human>& population);
 
-    virtual void calculateEIR(Host::Human &human, double ageYears, vector<double> &EIR_i, vector<double> &EIR_l) const;
+    virtual void calculateEIR(Host::Human& human, double ageYears, vector<double>& EIR_i, vector<double>& EIR_l) const;
 
     virtual void deployVectorPopInterv(size_t instance);
     virtual void deployVectorTrap(size_t instance, double popSize, SimTime lifespan);
 
-    virtual void changeEIRIntervention(const scnXml::NonVector &nonVectorData);
+    virtual void changeEIRIntervention(const scnXml::NonVector& nonVectorData);
 
     virtual void uninfectVectors();
 
     virtual void summarize();
 
 protected:
-    virtual void checkpoint(istream &stream);
-    virtual void checkpoint(ostream &stream);
+    virtual void checkpoint(istream& stream);
+    virtual void checkpoint(ostream& stream);
 
 private:
-    void ctsCbN_v0(ostream &stream);
-    void ctsCbP_A(ostream &stream);
-    void ctsCbP_Amu(ostream &stream);
-    void ctsCbP_A1(ostream &stream);
-    void ctsCbP_Ah(ostream &stream);
-    void ctsCbP_df(ostream &stream);
-    void ctsCbP_dif(ostream &stream);
-    void ctsCbN_v(ostream &stream);
-    void ctsCbO_v(ostream &stream);
-    void ctsCbS_v(ostream &stream);
-    void ctsCbAlpha(const vector<Host::Human> &population, ostream &stream);
-    void ctsCbP_B(const vector<Host::Human> &population, ostream &stream);
-    void ctsCbP_CD(const vector<Host::Human> &population, ostream &stream);
-    void ctsNetInsecticideContent(const vector<Host::Human> &population, ostream &stream);
-    void ctsIRSInsecticideContent(const vector<Host::Human> &population, ostream &stream);
-    void ctsIRSEffects(const vector<Host::Human> &population, ostream &stream);
-    void ctsCbResAvailability(ostream &stream);
-    void ctsCbResRequirements(ostream &stream);
+    void ctsCbN_v0(ostream& stream);
+    void ctsCbP_A(ostream& stream);
+    void ctsCbP_Amu(ostream& stream);
+    void ctsCbP_A1(ostream& stream);
+    void ctsCbP_Ah(ostream& stream);
+    void ctsCbP_df(ostream& stream);
+    void ctsCbP_dif(ostream& stream);
+    void ctsCbN_v(ostream& stream);
+    void ctsCbO_v(ostream& stream);
+    void ctsCbS_v(ostream& stream);
+    void ctsCbAlpha(const vector<Host::Human>& population, ostream& stream);
+    void ctsCbP_B(const vector<Host::Human>& population, ostream& stream);
+    void ctsCbP_CD(const vector<Host::Human>& population, ostream& stream);
+    void ctsNetInsecticideContent(const vector<Host::Human>& population, ostream& stream);
+    void ctsIRSInsecticideContent(const vector<Host::Human>& population, ostream& stream);
+    void ctsIRSEffects(const vector<Host::Human>& population, ostream& stream);
+    void ctsCbResAvailability(ostream& stream);
+    void ctsCbResRequirements(ostream& stream);
 
 public:
     /// RNG used by the transmission model
@@ -135,7 +133,7 @@ public:
     map<string, size_t> speciesIndex;
 
     bool opt_vaccine_genotype = false;
-    
+
     friend class PerHost;
     friend class AnophelesModelSuite;
 };

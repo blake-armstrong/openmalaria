@@ -31,23 +31,22 @@
 using namespace OM::util;
 using OM::sim;
 
-class UtilVectorsSuite : public CxxTest::TestSuite
-{
+class UtilVectorsSuite : public CxxTest::TestSuite {
 public:
     void testInversion() {
         // Some test data. Could be any sequence.
-        const double data[] = { 10, 8, 6, 6, 4, 3, 2, 1, 1, 1, 1, 1 };
-        vector<double> input( data, data+6 );
-//         cout << '\n' << input << endl;
-        vector<double> freqDomain( input.size() * 2 - 1 );
-        vectors::logDFT( input, freqDomain );
-        std::vector<double> result( input.size() );
-        vectors::expIDFT( result, freqDomain, 0 );
-//         cout << freqDomain << endl;
-//         cout << result << endl;
-        ETS_ASSERT_EQUALS( input.size(), result.size() );
-        for( size_t i=0; i<result.size(); ++i )
-            TS_ASSERT_APPROX( input[i], result[i] );
+        const double data[] = {10, 8, 6, 6, 4, 3, 2, 1, 1, 1, 1, 1};
+        vector<double> input(data, data + 6);
+        //         cout << '\n' << input << endl;
+        vector<double> freqDomain(input.size() * 2 - 1);
+        vectors::logDFT(input, freqDomain);
+        std::vector<double> result(input.size());
+        vectors::expIDFT(result, freqDomain, 0);
+        //         cout << freqDomain << endl;
+        //         cout << result << endl;
+        ETS_ASSERT_EQUALS(input.size(), result.size());
+        for (size_t i = 0; i < result.size(); ++i)
+            TS_ASSERT_APPROX(input[i], result[i]);
     }
 };
 

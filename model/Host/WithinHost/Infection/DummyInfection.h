@@ -25,10 +25,11 @@
 
 #include "Host/WithinHost/Infection/CommonInfection.h"
 
-namespace OM { namespace WithinHost {
+namespace OM {
+namespace WithinHost {
 
 //! Create a dummy infection (used directly by unit test).
-CommonInfection* createDummyInfection (LocalRng& rng, uint32_t protID, int origin);
+CommonInfection* createDummyInfection(LocalRng& rng, uint32_t protID, int origin);
 
 //!  Models of infection.
 /*!
@@ -37,16 +38,17 @@ CommonInfection* createDummyInfection (LocalRng& rng, uint32_t protID, int origi
 class DummyInfection : public CommonInfection {
 public:
     /// For checkpointing (don't use for anything else)
-    DummyInfection (istream& stream);
+    DummyInfection(istream& stream);
     //! Constructor
-    DummyInfection (LocalRng& rng, uint32_t protID, int origin);
-    
-    virtual ~DummyInfection () {}
-    
-    static void init ();
-    
-    virtual bool updateDensity( LocalRng& rng, double survivalFactor, SimTime bsAge, double );
+    DummyInfection(LocalRng& rng, uint32_t protID, int origin);
+
+    virtual ~DummyInfection() {}
+
+    static void init();
+
+    virtual bool updateDensity(LocalRng& rng, double survivalFactor, SimTime bsAge, double);
 };
 
-} }
+}
+}
 #endif

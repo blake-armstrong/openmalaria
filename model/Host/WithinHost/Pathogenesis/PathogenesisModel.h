@@ -28,14 +28,17 @@
 #include "Host/WithinHost/Pathogenesis/State.h"
 #include "util/random.h"
 
-namespace scnXml{
-    class HSESNMF;
-    class Clinical;
+namespace scnXml {
+class HSESNMF;
+class Clinical;
 }
 
 namespace OM {
-    namespace Host { class Human; }
-    namespace WithinHost { namespace Pathogenesis {
+namespace Host {
+class Human;
+}
+namespace WithinHost {
+namespace Pathogenesis {
 
 using util::LocalRng;
 
@@ -45,52 +48,50 @@ using util::LocalRng;
 class PathogenesisModel {
 public:
     /// Calls static init on correct PathogenesisModel.
-    static void init( const Parameters& parameters, const scnXml::Clinical& clinical, bool nmfOnly );
+    static void init(const Parameters& parameters, const scnXml::Clinical& clinical, bool nmfOnly);
 
     /** Create a sub-class instance, dependant on global options.
     *
     * @param cF = Comorbidity factor (currently set in Human). */
     static PathogenesisModel* createPathogenesisModel(double cF);
-    
-    
+
     virtual ~PathogenesisModel() {}
 
     /** Determines the health of the individual based on his/her parasitemia.
      *
      * May introduce severe or uncomplicated cases of malaria, as well as non-
      * malaria fevers. */
-    StatePair determineState( Host::Human& human, double ageYears,
-            double timeStepMaxDensity, double endDensity, bool isDoomed );
-    
+    StatePair determineState(Host::Human& human, double ageYears, double timeStepMaxDensity, double endDensity,
+                             bool isDoomed);
+
     /** For Vivax: determine the chance of a NMF and sample, returning either
      * NONE or STATE_NMF. */
-    static Pathogenesis::State sampleNMF( LocalRng& rng, double ageYears );
-    
+    static Pathogenesis::State sampleNMF(LocalRng& rng, double ageYears);
+
     /** Summarize PathogenesisModel details
      *
      * Only PyrogenPathogenesis implements this; other models don't have anything
      * to add to the summary. */
-    virtual void summarize (const Host::Human& human) {}
+    virtual void summarize(const Host::Human& human) {}
 
     /// Checkpointing
-    template<class S>
-    void operator& (S& stream) {
-        checkpoint (stream);
-    }
+    template <class S> void operator&(S& stream) { checkpoint(stream); }
 
 protected:
     /** Create a PathogenesisModel. */
     PathogenesisModel(double cF);
 
-    virtual void checkpoint (istream& stream);
-    virtual void checkpoint (ostream& stream);
+    virtual void checkpoint(istream& stream);
+    virtual void checkpoint(ostream& stream);
 
 protected:
-    virtual double getPEpisode(double timeStepMaxDensity, double totalDensity)=0;
+    virtual double getPEpisode(double timeStepMaxDensity, double totalDensity) = 0;
 
     //! comorbidity factor for heterogeneity
     double _comorbidityFactor;
 };
 
-} } }
+}
+}
+}
 #endif

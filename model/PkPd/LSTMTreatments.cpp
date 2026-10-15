@@ -28,35 +28,35 @@
 namespace OM {
 namespace PkPd {
 
-void MedicateData::load( const scnXml::PKPDMedication& med ){
-    drug = LSTMDrugType::findDrug( med.getDrug() );
+void MedicateData::load(const scnXml::PKPDMedication& med) {
+    drug = LSTMDrugType::findDrug(med.getDrug());
     qty = med.getMg();
     time = med.getHour() / 24.0; // convert from hours to days
 }
 
-void Schedule::load( const scnXml::PKPDSchedule::MedicateSequence& seq ){
-    medications.resize( seq.size() );
+void Schedule::load(const scnXml::PKPDSchedule::MedicateSequence& seq) {
+    medications.resize(seq.size());
     size_t i = 0;
-    for( const scnXml::PKPDMedication& med : seq ){
-        medications[i].load( med );
+    for (const scnXml::PKPDMedication& med : seq) {
+        medications[i].load(med);
         i += 1;
     }
 }
 
 vector<Schedule> schedules;
-map<string,size_t> scheduleNames;
+map<string, size_t> scheduleNames;
 
-void DosageTable::load( const xsd::cxx::tree::sequence<scnXml::PKPDDosageRange>& seq, bool isBodyMass ){
+void DosageTable::load(const xsd::cxx::tree::sequence<scnXml::PKPDDosageRange>& seq, bool isBodyMass) {
     useMass = isBodyMass;
     multMassKg = false;
     double lastMult = 0.0, lastAge = numeric_limits<double>::quiet_NaN();
-    for( const scnXml::PKPDDosageRange& age : seq ){
-        if( lastAge != lastAge ){
-            if( age.getLowerbound() != 0.0 )
-                throw util::xml_scenario_error( "dosage table must have first lower bound equal 0" );
-        }else{
-            if( age.getLowerbound() <= lastAge ){
-                throw util::xml_scenario_error( "dosage table must list age groups in increasing order" );
+    for (const scnXml::PKPDDosageRange& age : seq) {
+        if (lastAge != lastAge) {
+            if (age.getLowerbound() != 0.0)
+                throw util::xml_scenario_error("dosage table must have first lower bound equal 0");
+        } else {
+            if (age.getLowerbound() <= lastAge) {
+                throw util::xml_scenario_error("dosage table must list age groups in increasing order");
             }
             table[age.getLowerbound()] = lastMult;
         }
@@ -67,30 +67,32 @@ void DosageTable::load( const xsd::cxx::tree::sequence<scnXml::PKPDDosageRange>&
 }
 
 vector<DosageTable> dosages;
-map<string,size_t> dosagesNames;
+map<string, size_t> dosagesNames;
 
-void LSTMTreatments::init(const scnXml::Treatments& data){
-    schedules.resize( data.getSchedule().size() );
+void LSTMTreatments::init(const scnXml::Treatments& data) {
+    schedules.resize(data.getSchedule().size());
     size_t i = 0;
-    for( const scnXml::PKPDSchedule& schedule : data.getSchedule() ){
-        schedules[i].load( schedule.getMedicate() );
+    for (const scnXml::PKPDSchedule& schedule : data.getSchedule()) {
+        schedules[i].load(schedule.getMedicate());
         scheduleNames[schedule.getName()] = i;
         i += 1;
     }
-    
-    dosages.resize( data.getDosages().size() );
+
+    dosages.resize(data.getDosages().size());
     i = 0;
-    for( const scnXml::PKPDDosages& elt : data.getDosages() ){
-        if( elt.getAge().size() ) dosages[i].load( elt.getAge(), false );
-        else if( elt.getBodymass().size() ) dosages[i].load( elt.getBodymass(), true );
-        else{
-            if( !elt.getMultiply().present() ) {
-                throw util::xml_scenario_error( "dosages table does not "
-                        "include age, bodymass or multiply element" );
+    for (const scnXml::PKPDDosages& elt : data.getDosages()) {
+        if (elt.getAge().size())
+            dosages[i].load(elt.getAge(), false);
+        else if (elt.getBodymass().size())
+            dosages[i].load(elt.getBodymass(), true);
+        else {
+            if (!elt.getMultiply().present()) {
+                throw util::xml_scenario_error("dosages table does not "
+                                               "include age, bodymass or multiply element");
             }
-            if( elt.getMultiply().get().getBy() != "kg" ){
-                throw util::xml_scenario_error( "dosages table \"multipy by\" "
-                        "option is not \"kg\"" );
+            if (elt.getMultiply().get().getBy() != "kg") {
+                throw util::xml_scenario_error("dosages table \"multipy by\" "
+                                               "option is not \"kg\"");
             }
             dosages[i].useMass = true;
             dosages[i].multMassKg = true;
@@ -100,32 +102,33 @@ void LSTMTreatments::init(const scnXml::Treatments& data){
     }
 }
 
-void LSTMTreatments::clear(){
+void LSTMTreatments::clear() {
     schedules.clear();
     scheduleNames.clear();
     dosages.clear();
     dosagesNames.clear();
 }
 
-inline void invalidModel(){
-    throw util::xml_scenario_error( "use of PK/PD treatment requires use of a compatible infection model and specification of pharmacology/treatments" );
+inline void invalidModel() {
+    throw util::xml_scenario_error("use of PK/PD treatment requires use of a compatible infection model and "
+                                   "specification of pharmacology/treatments");
 }
-size_t LSTMTreatments::findSchedule(const string& name){
-    if( scheduleNames.size() == 0 ) invalidModel();
-    auto iter = scheduleNames.find( name );
-    if( iter == scheduleNames.end() ){
-        throw util::xml_scenario_error(string("no treatment schedule with this name: ")
-            .append(name));
+size_t LSTMTreatments::findSchedule(const string& name) {
+    if (scheduleNames.size() == 0)
+        invalidModel();
+    auto iter = scheduleNames.find(name);
+    if (iter == scheduleNames.end()) {
+        throw util::xml_scenario_error(string("no treatment schedule with this name: ").append(name));
     }
     return iter->second;
 }
 
-size_t LSTMTreatments::findDosages(const string& name){
-    if( dosagesNames.size() == 0 ) invalidModel();
-    auto iter = dosagesNames.find( name );
-    if( iter == dosagesNames.end() ){
-        throw util::xml_scenario_error(string("no dosage table with this name: ")
-            .append(name));
+size_t LSTMTreatments::findDosages(const string& name) {
+    if (dosagesNames.size() == 0)
+        invalidModel();
+    auto iter = dosagesNames.find(name);
+    if (iter == dosagesNames.end()) {
+        throw util::xml_scenario_error(string("no dosage table with this name: ").append(name));
     }
     return iter->second;
 }

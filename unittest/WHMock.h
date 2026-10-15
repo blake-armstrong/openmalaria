@@ -32,7 +32,7 @@ using namespace std;
 namespace OM {
 namespace WithinHost {
 namespace Pathogenesis {
-    class PathogenesisModel;
+class PathogenesisModel;
 }
 }
 
@@ -46,18 +46,20 @@ class WHMock : public WHInterface {
 public:
     WHMock();
     virtual ~WHMock();
-    
-    virtual double probTransmissionToMosquito(vector<double> &probTransGenotype_i, vector<double> &probTransGenotype_l) const;
-    virtual bool summarize(Host::Human& human)const;
+
+    virtual double probTransmissionToMosquito(vector<double>& probTransGenotype_i,
+                                              vector<double>& probTransGenotype_l) const;
+    virtual bool summarize(Host::Human& human) const;
     virtual void importInfection(LocalRng& rng);
-    virtual void treatment( Host::Human& human, TreatmentId treatId );
-    virtual void optionalPqTreatment( Host::Human& human );
-    virtual bool treatSimple( Host::Human& human, SimTime timeLiver, SimTime timeBlood );
+    virtual void treatment(Host::Human& human, TreatmentId treatId);
+    virtual void optionalPqTreatment(Host::Human& human);
+    virtual bool treatSimple(Host::Human& human, SimTime timeLiver, SimTime timeBlood);
     virtual void treatPkPd(size_t schedule, size_t dosages, double age, double delay_d);
-    virtual void update(Host::Human &human, LocalRng& rng, int &nNewInfs_i, int &nNewInfs_l, vector<double>& genotype_weights_i, vector<double>& genotype_weights_l, double ageInYears);
+    virtual void update(Host::Human& human, LocalRng& rng, int& nNewInfs_i, int& nNewInfs_l,
+                        vector<double>& genotype_weights_i, vector<double>& genotype_weights_l, double ageInYears);
     virtual double getTotalDensity() const;
-    virtual bool diagnosticResult( LocalRng& rng, const Diagnostic& diagnostic ) const;
-    virtual Pathogenesis::StatePair determineMorbidity( Host::Human& human, double ageYears, bool isDoomed );
+    virtual bool diagnosticResult(LocalRng& rng, const Diagnostic& diagnostic) const;
+    virtual Pathogenesis::StatePair determineMorbidity(Host::Human& human, double ageYears, bool isDoomed);
     virtual void clearImmunity();
     virtual double getCumulative_h() const;
     virtual double getCumulative_Y() const;
@@ -65,19 +67,19 @@ public:
 
     // This mock class does not have actual infections. Just set this as you please.
     double totalDensity;
-    
+
     // This mock class counts the number of times treatment() was called. Read/write this as you like.
     int nTreatments;
-    
+
     // The last treatment time-spans used by the simple treatment model. sim::never() if not used.
     SimTime lastTimeLiver, lastTimeBlood;
-    
+
     // Lists medications and drugs in the body
     PkPd::LSTMModel pkpd;
 
 protected:
-    virtual void checkpoint (istream& stream);
-    virtual void checkpoint (ostream& stream);
+    virtual void checkpoint(istream& stream);
+    virtual void checkpoint(ostream& stream);
 };
 
 }

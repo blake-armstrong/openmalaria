@@ -26,7 +26,8 @@
 #include "Host/WithinHost/Infection/Infection.h"
 #include "util/random.h"
 
-namespace OM { namespace WithinHost {
+namespace OM {
+namespace WithinHost {
 
 using util::LocalRng;
 
@@ -43,33 +44,28 @@ public:
     /// @brief Construction and destruction
     //@{
     /// For checkpointing (don't use for anything else)
-    CommonInfection(istream& stream) :
-        Infection(stream)
-    {}
+    CommonInfection(istream& stream) : Infection(stream) {}
     /// Per instance initialisation; create new inf.
-    CommonInfection(uint32_t genotype, int origin) :
-	Infection(genotype, origin)
-    {}
+    CommonInfection(uint32_t genotype, int origin) : Infection(genotype, origin) {}
     virtual ~CommonInfection();
     //@}
-    
-    
+
     /** Update: calculate new density. Call this once per day.
      * 
      * @param survivalFactor Density multiplier to introduce drug & vaccine effects
      * @param now The simulation time. Use this instead of sim::ts1().
      * @param body_mass Body mass of host in kg
      * @returns True when the infection goes extinct. */
-    inline bool update( LocalRng& rng, double survivalFactor, SimTime now, double body_mass ){
-	SimTime bsAge = now - m_startDate - s_latentP;	// age of post-latent-period blood stage
-	if( bsAge < sim::zero() )
-	    return false;	// latent period (liver stage) — don't do anything
-	else
-	    return updateDensity( rng, survivalFactor, bsAge, body_mass );
+    inline bool update(LocalRng& rng, double survivalFactor, SimTime now, double body_mass) {
+        SimTime bsAge = now - m_startDate - s_latentP; // age of post-latent-period blood stage
+        if (bsAge < sim::zero())
+            return false; // latent period (liver stage) — don't do anything
+        else
+            return updateDensity(rng, survivalFactor, bsAge, body_mass);
     }
-    
+
     map<size_t, double> Kn; // IC50^slope per drug type, if sampled
-    
+
 protected:
     /** Update: calculate new density.
      *
@@ -80,10 +76,11 @@ protected:
      *  this, but this function is not called during those stages.
      * @param body_mass Body mass of host in kg
      * @returns True when the infection goes extinct. */
-    virtual bool updateDensity( LocalRng& rng, double survivalFactor, SimTime bsAge, double body_mass ) =0;
-    
-    virtual void checkpoint (ostream& stream);
+    virtual bool updateDensity(LocalRng& rng, double survivalFactor, SimTime bsAge, double body_mass) = 0;
+
+    virtual void checkpoint(ostream& stream);
 };
 
-} }
+}
+}
 #endif

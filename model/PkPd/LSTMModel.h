@@ -25,46 +25,42 @@
 
 #include "PkPd/Drug/LSTMDrug.h"
 
-namespace scnXml{
-    class PKPDMedication;
+namespace scnXml {
+class PKPDMedication;
 }
 namespace OM {
-namespace Host{
-    class Human;
+namespace Host {
+class Human;
 }
 namespace WithinHost {
-    class CommonInfection;
+class CommonInfection;
 }
 namespace PkPd {
 
 struct MedicateData {
-    MedicateData () :
-        drug(0),
-        qty(numeric_limits< double >::signaling_NaN()),
-        time(numeric_limits< double >::signaling_NaN())
-    {}
-    
+    MedicateData()
+        : drug(0), qty(numeric_limits<double>::signaling_NaN()), time(numeric_limits<double>::signaling_NaN()) {}
+
     /// Checkpointing
-    template<class S>
-    void operator& (S& stream) {
+    template <class S> void operator&(S& stream) {
         drug & stream;
         qty & stream;
         time & stream;
     }
-    
+
 private:
-    void load( const scnXml::PKPDMedication& med );
-    
-    inline MedicateData multiplied( double doseMult ){
-        MedicateData r( *this );
+    void load(const scnXml::PKPDMedication& med);
+
+    inline MedicateData multiplied(double doseMult) {
+        MedicateData r(*this);
         r.qty *= doseMult;
         return r;
     }
-    
-    size_t drug;      /// Drug type index
-    double qty;         /// Quantity of drug prescribed in mg
-    double time;        /// Time to medicate at, in days (0 means start of time step, may be >= 1 (thus not today))
-    
+
+    size_t drug; /// Drug type index
+    double qty;  /// Quantity of drug prescribed in mg
+    double time; /// Time to medicate at, in days (0 means start of time step, may be >= 1 (thus not today))
+
     friend struct Schedule;
     friend class LSTMModel;
     friend class ::UnittestUtil;
@@ -85,14 +81,11 @@ private:
 class LSTMModel {
 public:
     /// Static initialisation
-    static void init ( const scnXml::Scenario& scenario );
-    
+    static void init(const scnXml::Scenario& scenario);
+
     /// Checkpointing
-    template<class S>
-    void operator& (S& stream) {
-        checkpoint (stream);
-    }
-    
+    template <class S> void operator&(S& stream) { checkpoint(stream); }
+
     /** Prescribe a patient a course of drugs, via the Pk/Pd model
      * 
      * Note: doses sizes are modified according to age via the dosage
@@ -105,7 +98,7 @@ public:
      * @param delay_d Delay of treatment in days
      */
     void prescribe(size_t schedule, size_t dosages, double age, double body_mass, double delay_d);
-    
+
     /** Medicate drugs: human takes prescribed drugs which are to be taken this
      * day.
      * 
@@ -113,28 +106,28 @@ public:
      * model, prescribe with a "poor adherence" schedule.
      */
     void medicate(LocalRng& rng);
-    
+
     /** Get concentration of the drug at the beginning of the day.
      * 
      * For unit testing. Not optimised. */
-    double getDrugConc (size_t drug_index) const;
-    
+    double getDrugConc(size_t drug_index) const;
+
     /** This is how drugs act on infections.
      *
      * Each time step, on each infection, the parasite density is multiplied by
      * the return value of this infection. The WithinHostModels are responsible
      * for clearing infections once the parasite density is negligible. */
-    double getDrugFactor (LocalRng& rng, WithinHost::CommonInfection *inf, double body_mass) const;
-    
+    double getDrugFactor(LocalRng& rng, WithinHost::CommonInfection* inf, double body_mass) const;
+
     /** After any resident infections have been reduced by getDrugFactor(),
      * this function is called to update drug levels to their effective level
      * at the end of the day, as well as clear data once drug concentrations
      * become negligible. */
-    void decayDrugs (double body_mass);
-    
+    void decayDrugs(double body_mass);
+
     /** Make summaries of drug concentration data. */
-    void summarize( const Host::Human& human ) const;
-    
+    void summarize(const Host::Human& human) const;
+
 private:
     /** Medicate drugs to an individual, which act on infections the following
      * time steps, until rendered ineffective by decayDrugs().
@@ -151,18 +144,19 @@ private:
      * called after getDrugFactor in a time step, and a time of zero means the
      * dose has effect from the start of the following time step. */
     void medicateDrug(LocalRng& rng, size_t typeIndex, double qty, double time);
-  
-    void checkpoint (istream& stream);
-    void checkpoint (ostream& stream);
-    
+
+    void checkpoint(istream& stream);
+    void checkpoint(ostream& stream);
+
     /// Drugs with non-zero blood concentrations:
     vector<unique_ptr<LSTMDrug>> m_drugs;
-    
+
     /// All pending medications
     list<MedicateData> medicateQueue;
-    
+
     friend class ::UnittestUtil;
 };
 
-} }
+}
+}
 #endif

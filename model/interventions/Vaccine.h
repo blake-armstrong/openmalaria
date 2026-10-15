@@ -28,11 +28,11 @@
 
 namespace OM {
 namespace Host {
-    class Human;
+class Human;
 }
 namespace interventions {
 using util::LocalRng;
-    
+
 /** Vaccine intervention parameters.
  *
  * Used to represent PEV, BSV and TBV vaccines.
@@ -43,28 +43,28 @@ using util::LocalRng;
  * All parameters (inc. non-static) are only set by initParameters(). */
 class VaccineComponent : public HumanInterventionComponent {
 public:
-    VaccineComponent( ComponentId id, const scnXml::VaccineDescription& seq, Vaccine::Types type );
-    
-    void deploy( Host::Human& human, mon::Deploy::Method method, VaccineLimits vaccLimits )const;
-    
+    VaccineComponent(ComponentId id, const scnXml::VaccineDescription& seq, Vaccine::Types type);
+
+    void deploy(Host::Human& human, mon::Deploy::Method method, VaccineLimits vaccLimits) const;
+
     virtual Component::Type componentType() const;
-    
-    virtual void print_details( std::ostream& out )const;
-    
+
+    virtual void print_details(std::ostream& out) const;
+
 private:
     /** Get the initial efficacy of the vaccine.
      *
      * @param numPrevDoses The number of prior vaccinations of the individual. */
-    double getInitialEfficacy (LocalRng& rng, size_t numPrevDoses, uint32_t genotype ) const;
+    double getInitialEfficacy(LocalRng& rng, size_t numPrevDoses, uint32_t genotype) const;
 
-    inline static const VaccineComponent& getParams( ComponentId component ){
-        assert( component.id < params.size() && params[component.id] != 0 );
+    inline static const VaccineComponent& getParams(ComponentId component) {
+        assert(component.id < params.size() && params[component.id] != 0);
         return *params[component.id];
     }
-    
+
     /// Vaccine component type
     Vaccine::Types type;
-    
+
     /// Function representing decay of effect
     unique_ptr<util::DecayFunction> decayFunc;
 
@@ -77,7 +77,7 @@ private:
 
     // VACCINE_GENOTYPE option
     bool opt_vaccine_genotype = false;
-    
+
     /** @brief Vaccine static parameters
      * 
      * Each instance is either null or points to data for the vaccine component
@@ -85,7 +85,7 @@ private:
      *
      * No memory management (only leak is at exit which OS deals with). */
     static vector<VaccineComponent*> params;
-    
+
     //TODO(monitoring):
     /** Until the monitoring system is updated, only one type of vaccination
      * delivery can be reported. This is whichever is first configured. */

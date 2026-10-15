@@ -31,14 +31,12 @@
 #include <string>
 #include <memory>
 
-namespace OM
-{ 
-    namespace util
-    {
-        static const int SCHEMA_VERSION = 50;
+namespace OM {
+namespace util {
+static const int SCHEMA_VERSION = 50;
 
-        std::unique_ptr<scnXml::Scenario> loadScenario(std::string lXmlFile);
-    }
+std::unique_ptr<scnXml::Scenario> loadScenario(std::string lXmlFile);
+}
 }
 
 #endif

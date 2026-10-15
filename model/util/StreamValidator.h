@@ -29,23 +29,24 @@
 #include <deque>
 #endif
 
-namespace OM { namespace util {
-    typedef uint32_t SVType;
-    
-    // ———  Our cross-platform consistent-result hasing functions  ——
-    namespace CPCH {
-        SVType toSVType(uint32_t x);
-        SVType toSVType(int32_t x);
-        SVType toSVType(uint64_t x);
-        SVType toSVType(int64_t x);
-        SVType toSVType(float x);
-        SVType toSVType(double x);
-    }
+namespace OM {
+namespace util {
+typedef uint32_t SVType;
+
+// ———  Our cross-platform consistent-result hasing functions  ——
+namespace CPCH {
+SVType toSVType(uint32_t x);
+SVType toSVType(int32_t x);
+SVType toSVType(uint64_t x);
+SVType toSVType(int64_t x);
+SVType toSVType(float x);
+SVType toSVType(double x);
+}
 
 // Compile-time optional
 #ifdef OM_STREAM_VALIDATOR
 
-    /** @brief StreamValidator implementation.
+/** @brief StreamValidator implementation.
      *
      * Aim: help tracking down difficult checkpointing problems.
      * 
@@ -75,61 +76,55 @@ namespace OM { namespace util {
      * extra calls to the "streamValidate()" macro in strategic code locations
      * and repeat steps 2-4.
      */
-    class StreamValidatorType {
-    public:
-	/// Create. Use store-mode unless loadStream() is called.
-	StreamValidatorType () : storeMode(true) {}
-	
-	/// Save stream or confirm at end.
-	void saveStream();
-	
-	/// Load a reference stream from file and switch to validation mode.
-	void loadStream( const string& path );
-	
-	/** Templated function to take a value, hash it, and call handle. */
-	template<class T>
-	void operator() (T value){
-            handle( CPCH::toSVType( value ) );
-        }
-	
-	/// Either store in reference stream or validate against reference stream.
-	void handle( SVType value );
-	
-	/// Checkpointing
-	template<class S>
-	void operator& (S& cp_str) {
-	    checkpoint( cp_str );
-	}
-	
-    private:
-	void checkpoint ( istream& cp_str );
-	void checkpoint ( ostream& cp_str ) const;
-	
-	// True: read and store a reference value stream.
-	// False: validate against a reference stream.
-	bool storeMode;
-	
-	// Next position in the stream to read from (validation mode only).
-	deque<SVType>::iterator readIt;
-	
-	// Essentially we want to store a massive sequence of data in-memory
-	// (simplist with regard to checkpointing.) std::deque is probably an
-	// efficient way of doing this.
-	deque<SVType> stream;
-    };
-    extern StreamValidatorType StreamValidator;
+class StreamValidatorType {
+public:
+    /// Create. Use store-mode unless loadStream() is called.
+    StreamValidatorType() : storeMode(true) {}
 
-#endif	//OM_STREAM_VALIDATOR
-    
-    /// Use this function at validation points in code. If validator is not compile-
-    /// time enabled, it will have no effect and should be optimised out.
-    template<class T>
-    inline T streamValidate (T x){
-# ifdef OM_STREAM_VALIDATOR
-        StreamValidator( x );
-# endif
-        return std::move(x);
-    }
-    
-} }
-#endif	//Hmod_StreamValidator
+    /// Save stream or confirm at end.
+    void saveStream();
+
+    /// Load a reference stream from file and switch to validation mode.
+    void loadStream(const string& path);
+
+    /** Templated function to take a value, hash it, and call handle. */
+    template <class T> void operator()(T value) { handle(CPCH::toSVType(value)); }
+
+    /// Either store in reference stream or validate against reference stream.
+    void handle(SVType value);
+
+    /// Checkpointing
+    template <class S> void operator&(S& cp_str) { checkpoint(cp_str); }
+
+private:
+    void checkpoint(istream& cp_str);
+    void checkpoint(ostream& cp_str) const;
+
+    // True: read and store a reference value stream.
+    // False: validate against a reference stream.
+    bool storeMode;
+
+    // Next position in the stream to read from (validation mode only).
+    deque<SVType>::iterator readIt;
+
+    // Essentially we want to store a massive sequence of data in-memory
+    // (simplist with regard to checkpointing.) std::deque is probably an
+    // efficient way of doing this.
+    deque<SVType> stream;
+};
+extern StreamValidatorType StreamValidator;
+
+#endif //OM_STREAM_VALIDATOR
+
+/// Use this function at validation points in code. If validator is not compile-
+/// time enabled, it will have no effect and should be optimised out.
+template <class T> inline T streamValidate(T x) {
+#ifdef OM_STREAM_VALIDATOR
+    StreamValidator(x);
+#endif
+    return std::move(x);
+}
+
+}
+}
+#endif //Hmod_StreamValidator

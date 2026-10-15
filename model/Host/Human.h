@@ -31,13 +31,13 @@
 
 namespace OM {
 namespace Clinical {
-    class ClinicalModel;
+class ClinicalModel;
 }
 namespace WithinHost {
-    class WHInterface;
+class WHInterface;
 }
 namespace Transmission {
-    class TransmissionModel;
+class TransmissionModel;
 }
 
 namespace Host {
@@ -61,10 +61,10 @@ public:
     Human& operator=(const Human&) = delete;
 
     /** Get human's age with respect to some time. */
-    inline SimTime age( SimTime time ) const;
+    inline SimTime age(SimTime time) const;
 
     /** Return true if human is a member of the sub-population. */
-    inline bool isInSubPop( interventions::ComponentId id ) const;
+    inline bool isInSubPop(interventions::ComponentId id) const;
 
     inline uint32_t getCohortSet() const;
 
@@ -92,10 +92,10 @@ public:
     void updateCohortSet();
 
     /** Checkpoint (read) */
-    void checkpoint(istream &stream);
+    void checkpoint(istream& stream);
 
     /** Checkpoint (write) */
-    void checkpoint(ostream &stream);
+    void checkpoint(ostream& stream);
 
     /** Contains per-species vector data (VectorModel only). */
     Transmission::PerHost perHostTransmission;
@@ -123,7 +123,7 @@ public:
     uint32_t nextCtsDist = 0;
 
 private:
-    SimTime dateOfBirth = sim::never();        // date of birth; humans are always born at the end of a time step
+    SimTime dateOfBirth = sim::never(); // date of birth; humans are always born at the end of a time step
 
     /** Cache, updated when human is added to or removed from a sub-population */
     uint32_t cohortSet = 0;
@@ -144,38 +144,31 @@ private:
     * 1 human update (the next). */
     //TODO(optimisation): it might be better to instead store for each
     // ComponentId of interest the set of humans who are members
-    std::map<interventions::ComponentId,SimTime> subPopExp;
+    std::map<interventions::ComponentId, SimTime> subPopExp;
 };
 
-void summarize(Human &human, bool surveyOnlyNewEp);
+void summarize(Human& human, bool surveyOnlyNewEp);
 
-void update(Human &human, Transmission::TransmissionModel& transmission);
+void update(Human& human, Transmission::TransmissionModel& transmission);
 
-inline SimTime Human::age( SimTime time ) const { 
-    return time - dateOfBirth; 
+inline SimTime Human::age(SimTime time) const { return time - dateOfBirth; }
+
+inline bool Human::isInSubPop(interventions::ComponentId id) const {
+    auto it = subPopExp.find(id);
+    if (it == subPopExp.end())
+        return false; // no history of membership
+    else
+        return it->second >= sim::nowOrTs0(); // added: has expired?
 }
 
-inline bool Human::isInSubPop( interventions::ComponentId id ) const {
-    auto it = subPopExp.find( id );
-    if( it == subPopExp.end() ) return false;   // no history of membership
-    else return it->second >= sim::nowOrTs0();   // added: has expired?
-}
+inline uint32_t Human::getCohortSet() const { return cohortSet; }
 
-inline uint32_t Human::getCohortSet() const { 
-    return cohortSet; 
-}
+inline SimTime Human::getDOB() const { return dateOfBirth; }
 
-inline SimTime Human::getDOB() const {
-    return dateOfBirth;
-}
+inline bool Human::isDead() const { return dead; }
 
-inline bool Human::isDead() const {
-    return dead;
-}
+inline void Human::kill() { dead = true; }
 
-inline void Human::kill() {
-    dead = true;
 }
-
-} }
+}
 #endif

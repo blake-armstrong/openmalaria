@@ -26,20 +26,17 @@
 #include <schema/scenario.h>
 #include "util/errors.h"
 
-namespace OM
-{
-    namespace util
-    {
-        /*
+namespace OM {
+namespace util {
+/*
         * It is intended that this holds the entire collection of named models.
         */
-        enum class ModelNames
-        {
-            none, // Represents the case where input XML contains no model name.
-            base
-        };
+enum class ModelNames {
+    none, // Represents the case where input XML contains no model name.
+    base
+};
 
-        /*
+/*
         * Stores model name (if any) specified in XML at initialization time
         * then exposes it as an enum class.  This is exists so that clients
         * don't have to hardcode strings referring (or possibly, erroneously,
@@ -48,34 +45,28 @@ namespace OM
         * If new named models are added, support for them should be added to
         * this class.
         */
-        class ModelNameProvider
-        {
-        public:
-            ModelNameProvider(const scnXml::Model& model)
-            {
-                const bool useNamedModel = model.getModelName().present();
-                if (useNamedModel)
-                {
-                    const std::string nameFromXML = model.getModelName().get().getName();
-                    if (nameFromXML == "base")
-                    {
-                        modelInUse = ModelNames::base;
-                    }
-                    else
-                    {
-                        throw util::xml_scenario_error("Unrecognized model name: " + nameFromXML);
-                    }
-                }
+class ModelNameProvider {
+public:
+    ModelNameProvider(const scnXml::Model& model) {
+        const bool useNamedModel = model.getModelName().present();
+        if (useNamedModel) {
+            const std::string nameFromXML = model.getModelName().get().getName();
+            if (nameFromXML == "base") {
+                modelInUse = ModelNames::base;
+            } else {
+                throw util::xml_scenario_error("Unrecognized model name: " + nameFromXML);
             }
-
-            ~ModelNameProvider(){}
-
-            ModelNames GetModelName() { return modelInUse; }
-
-        private:
-            ModelNames modelInUse = ModelNames::none;
-        };
+        }
     }
+
+    ~ModelNameProvider() {}
+
+    ModelNames GetModelName() { return modelInUse; }
+
+private:
+    ModelNames modelInUse = ModelNames::none;
+};
+}
 }
 
 #endif

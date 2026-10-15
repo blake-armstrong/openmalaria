@@ -28,7 +28,8 @@
 
 using namespace std;
 
-namespace OM { namespace WithinHost {
+namespace OM {
+namespace WithinHost {
 
 /** Within-host model class for the original (descriptive) infection model.
  *
@@ -40,41 +41,42 @@ class DescriptiveWithinHostModel : public WHFalciparum {
 public:
     /// Must run after monitoring is set up.
     static void initDescriptive();
-    
+
     /// Create a new WHM
-    DescriptiveWithinHostModel( LocalRng& rng, double comorbidityFactor );
+    DescriptiveWithinHostModel(LocalRng& rng, double comorbidityFactor);
     virtual ~DescriptiveWithinHostModel();
-    
+
     virtual void importInfection(LocalRng& rng);
-    
+
     /// load an infection from a checkpoint
     virtual void loadInfection(istream& stream);
     virtual void clearImmunity();
-    
-    virtual void update(Host::Human &human, LocalRng& rng, int &nNewInfs_i, int &nNewInfs_l, 
-        vector<double>& genotype_weights_i, vector<double>& genotype_weights_l, double ageInYears);
-    
+
+    virtual void update(Host::Human& human, LocalRng& rng, int& nNewInfs_i, int& nNewInfs_l,
+                        vector<double>& genotype_weights_i, vector<double>& genotype_weights_l, double ageInYears);
+
     virtual InfectionOrigin getInfectionOrigin() const;
 
-    virtual bool summarize( Host::Human& human ) const;
-    
+    virtual bool summarize(Host::Human& human) const;
+
 protected:
-    virtual void clearInfections( Treatments::Stages stage );
-    
-    virtual void checkpoint (istream& stream);
-    virtual void checkpoint (ostream& stream);
-    
+    virtual void clearInfections(Treatments::Stages stage);
+
+    virtual void checkpoint(istream& stream);
+    virtual void checkpoint(ostream& stream);
+
     // Doesn't do anything in this model:
     virtual void treatPkPd(size_t schedule, size_t dosages, double age, double delay_d);
-    
+
     /** The list of all infections this human has.
      * 
      * Since infection models and within host models are very much intertwined,
      * the idea is that each WithinHostModel has its own list of infections. */
-     std::list<DescriptiveInfection*> infections;
+    std::list<DescriptiveInfection*> infections;
 
-     bool opt_vaccine_genotype = false;
+    bool opt_vaccine_genotype = false;
 };
 
-} }
+}
+}
 #endif

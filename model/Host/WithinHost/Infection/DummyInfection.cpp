@@ -28,33 +28,30 @@
 #include <sstream>
 #include <string.h>
 
-namespace OM { namespace WithinHost {
-    
-CommonInfection* createDummyInfection (LocalRng& rng, uint32_t protID, int origin) {
-    return new DummyInfection (rng, protID, origin);
-}
-CommonInfection* checkpointedDummyInfection (istream& stream) {
-    return new DummyInfection (stream);
-}
+namespace OM {
+namespace WithinHost {
 
-void DummyInfection::init () {
+CommonInfection* createDummyInfection(LocalRng& rng, uint32_t protID, int origin) {
+    return new DummyInfection(rng, protID, origin);
+}
+CommonInfection* checkpointedDummyInfection(istream& stream) { return new DummyInfection(stream); }
+
+void DummyInfection::init() {
     CommonWithinHost::createInfection = &createDummyInfection;
     CommonWithinHost::checkpointedInfection = &checkpointedDummyInfection;
 }
 
-DummyInfection::DummyInfection (LocalRng& rng, uint32_t protID, int origin) :
-    CommonInfection(protID, origin)
-{
-    m_density=16;	// increased by DH to avoid zeros in initialKappa
+DummyInfection::DummyInfection(LocalRng& rng, uint32_t protID, int origin) : CommonInfection(protID, origin) {
+    m_density = 16; // increased by DH to avoid zeros in initialKappa
 }
 
-bool DummyInfection::updateDensity( LocalRng& rng, double survivalFactor, SimTime, double ){
+bool DummyInfection::updateDensity(LocalRng& rng, double survivalFactor, SimTime, double) {
     const double GROWTH_RATE = 8.0;
     const double PARASITE_THRESHOLD = 1;
-    
-    m_density = (mod_nn(int(m_density*GROWTH_RATE), 20000)) * survivalFactor;
+
+    m_density = (mod_nn(int(m_density * GROWTH_RATE), 20000)) * survivalFactor;
     m_cumulativeExposureJ += m_density;
-    
+
     if (m_density < PARASITE_THRESHOLD) {
         return true;
     } else {
@@ -62,9 +59,7 @@ bool DummyInfection::updateDensity( LocalRng& rng, double survivalFactor, SimTim
     }
 }
 
+DummyInfection::DummyInfection(istream& stream) : CommonInfection(stream) {}
 
-DummyInfection::DummyInfection (istream& stream) :
-    CommonInfection (stream)
-{}
-
-} }
+}
+}

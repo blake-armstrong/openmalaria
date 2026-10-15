@@ -42,21 +42,20 @@ using util::AgeGroupInterpolator;
  * bout. It's possible that memory usage could be reduced by storing them
  * externally in a temporary object during episodes (but unlikely worth doing).
  */
-class ClinicalEventScheduler : public ClinicalModel
-{
+class ClinicalEventScheduler : public ClinicalModel {
 public:
-    static void init (const OM::Parameters& parameters, const scnXml::Clinical& clinical);
-    static void setParameters (const scnXml::HSEventScheduler& esData);
+    static void init(const OM::Parameters& parameters, const scnXml::Clinical& clinical);
+    static void setParameters(const scnXml::HSEventScheduler& esData);
 
-    ClinicalEventScheduler (double tSF);
-    
+    ClinicalEventScheduler(double tSF);
+
     virtual bool isExistingCase();
 
 protected:
-    virtual void doClinicalUpdate (Human& human, double ageYears, WithinHost::Pathogenesis::StatePair &pg);
+    virtual void doClinicalUpdate(Human& human, double ageYears, WithinHost::Pathogenesis::StatePair& pg);
 
-    virtual void checkpoint (istream& stream);
-    virtual void checkpoint (ostream& stream);
+    virtual void checkpoint(istream& stream);
+    virtual void checkpoint(ostream& stream);
 
 private:
     /// Maximum number of time steps (including first of case) an individual
@@ -78,7 +77,7 @@ private:
     static double neg_v;
     /// Parameter
     static double alpha;
-    
+
     /** Base log odds of treatment of non-malarial fevers in absense of a
      * malaria diagnostic and irrespective of whether treatment is needed.
      * 
@@ -103,7 +102,7 @@ private:
     /** Case fatality rate of non-malaria fevers requiring treatment given that
      * the case is not treated. */
     static AgeGroupInterpolator severeNmfMortality;
-    
+
     /// Probability that an NMF needs antibiotic treatment and could lead to death.
     static AgeGroupInterpolator NMF_need_antibiotic;
     /** Probability that a malarial fever classified as uncomplicated requires
@@ -111,7 +110,7 @@ private:
      * Unclear whether using this at the same time as comorbidity parameters
      * makes any sense. */
     static AgeGroupInterpolator MF_need_antibiotic;
-    
+
     // Note on memory usage: Pathogenesis::State is and enum (an int), so we
     // have a vtable followed by 3 ints, a double and a list. Alignment probably
     // wastes some space.

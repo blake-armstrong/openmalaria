@@ -36,23 +36,23 @@
 using namespace std;
 
 namespace OM {
-namespace interventions{
-    struct ComponentId;
+namespace interventions {
+struct ComponentId;
 }
 namespace util {
 namespace checkpoint {
-    
-    const long DEFAULT_MAX_LENGTH = 2000;
-    
-    ///@brief Utility functions
-    //@{
-    /** Perform important checks on checkpoint file format.
+
+const long DEFAULT_MAX_LENGTH = 2000;
+
+///@brief Utility functions
+//@{
+/** Perform important checks on checkpoint file format.
      *
      * Call at beginning of read/write. */
-    void header (ostream& stream);
-    void header (istream& stream);	///< ditto
-    
-  /** For checking the number of elements in a list is sensible when loading
+void header(ostream& stream);
+void header(istream& stream); ///< ditto
+
+/** For checking the number of elements in a list is sensible when loading
    * checkpoints.
    *
    * While loading checkpoints, if memory is allocated in a loop using a
@@ -64,55 +64,55 @@ namespace checkpoint {
    * variables often get completely wrong values which can cause memory
    * allocation to grind the computer to a halt. In this case the values are
    * usually bad enough that a lenient check will still catch them. */
-    void validateListSize (long length, long max = DEFAULT_MAX_LENGTH);
-    //@}
-    
-    ///@brief Operator& for simple data-types
-    //@{
-    void operator& (bool x, ostream& stream);
-    void operator& (bool& x, istream& stream);
-    
-    void operator& (signed char x, ostream& stream);
-    void operator& (signed char& x, istream& stream);
-    
-    void operator& (short x, ostream& stream);
-    void operator& (short& x, istream& stream);
-    
-    void operator& (int x, ostream& stream);
-    void operator& (int& x, istream& stream);
-    
-    void operator& (long x, ostream& stream);
-    void operator& (long& x, istream& stream);
-    
-    void operator& (long long x, ostream& stream);
-    void operator& (long long& x, istream& stream);
-    
-    void operator& (unsigned char x, ostream& stream);
-    void operator& (unsigned char& x, istream& stream);
-    
-    void operator& (unsigned short x, ostream& stream);
-    void operator& (unsigned short& x, istream& stream);
-    
-    void operator& (unsigned int x, ostream& stream);
-    void operator& (unsigned int& x, istream& stream);
-    
-    void operator& (unsigned long x, ostream& stream);
-    void operator& (unsigned long& x, istream& stream);
-    
-    void operator& (unsigned long long x, ostream& stream);
-    void operator& (unsigned long long& x, istream& stream);
-    
-    void operator& (float x, ostream& stream);
-    void operator& (float& x, istream& stream);
-    
-    void operator& (double x, ostream& stream);
-    void operator& (double& x, istream& stream);
-    
-    void operator& (long double x, ostream& stream);
-    void operator& (long double& x, istream& stream);
-    //@}
-    
-    /** @brief Operator& for pointers
+void validateListSize(long length, long max = DEFAULT_MAX_LENGTH);
+//@}
+
+///@brief Operator& for simple data-types
+//@{
+void operator&(bool x, ostream& stream);
+void operator&(bool& x, istream& stream);
+
+void operator&(signed char x, ostream& stream);
+void operator&(signed char& x, istream& stream);
+
+void operator&(short x, ostream& stream);
+void operator&(short& x, istream& stream);
+
+void operator&(int x, ostream& stream);
+void operator&(int& x, istream& stream);
+
+void operator&(long x, ostream& stream);
+void operator&(long& x, istream& stream);
+
+void operator&(long long x, ostream& stream);
+void operator&(long long& x, istream& stream);
+
+void operator&(unsigned char x, ostream& stream);
+void operator&(unsigned char& x, istream& stream);
+
+void operator&(unsigned short x, ostream& stream);
+void operator&(unsigned short& x, istream& stream);
+
+void operator&(unsigned int x, ostream& stream);
+void operator&(unsigned int& x, istream& stream);
+
+void operator&(unsigned long x, ostream& stream);
+void operator&(unsigned long& x, istream& stream);
+
+void operator&(unsigned long long x, ostream& stream);
+void operator&(unsigned long long& x, istream& stream);
+
+void operator&(float x, ostream& stream);
+void operator&(float& x, istream& stream);
+
+void operator&(double x, ostream& stream);
+void operator&(double& x, istream& stream);
+
+void operator&(long double x, ostream& stream);
+void operator&(long double& x, istream& stream);
+//@}
+
+/** @brief Operator& for pointers
      *
      * These could be implemented for pointers but require reading objects in the opposite order to
      * writing them.
@@ -121,14 +121,16 @@ namespace checkpoint {
      * challanging though.
      * 
      * Can't really deal with referenced objects properly. */
-    //@{
-    //@}
-    
-    /** @brief Operator& for std::string */
-    //@{
-    void operator& (string x, ostream& stream);
-    void operator& (string& x, istream& stream);
-    //@}
-    
-} } }	// end of namespaces
+//@{
+//@}
+
+/** @brief Operator& for std::string */
+//@{
+void operator&(string x, ostream& stream);
+void operator&(string& x, istream& stream);
+//@}
+
+}
+}
+} // end of namespaces
 #endif

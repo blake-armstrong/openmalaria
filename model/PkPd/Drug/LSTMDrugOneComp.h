@@ -45,25 +45,25 @@ namespace PkPd {
 class LSTMDrugOneComp : public LSTMDrug {
 public:
     /** Create a new instance. */
-    LSTMDrugOneComp (const LSTMDrugType&, LocalRng& rng);
-    
+    LSTMDrugOneComp(const LSTMDrugType&, LocalRng& rng);
+
     virtual size_t getIndex() const;
     virtual double getConcentration(size_t index) const;
-    
-    virtual double calculateDrugFactor(LocalRng& rng, WithinHost::CommonInfection *inf, double body_mass) const;
-    virtual void updateConcentration (double body_mass);
-    
+
+    virtual double calculateDrugFactor(LocalRng& rng, WithinHost::CommonInfection* inf, double body_mass) const;
+    virtual void updateConcentration(double body_mass);
+
 protected:
-    virtual void checkpoint (istream& stream);
-    virtual void checkpoint (ostream& stream);
-    
+    virtual void checkpoint(istream& stream);
+    virtual void checkpoint(ostream& stream);
+
     /// Always links a drug instance to its drug-type data
     //TODO: does it still make sense to link this?
     const LSTMDrugType& typeData;
-    
+
     /// Concentration in blood; units: mg / l.
     double concentration;
-    
+
     /// Sampled elimination rate constant
     double neg_elim_sample;
 };

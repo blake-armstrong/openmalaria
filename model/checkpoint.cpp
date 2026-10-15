@@ -33,135 +33,131 @@
 
 #include "checkpoint.h"
 
-namespace OM
-{
+namespace OM {
 
 /** @brief checkpointing functions
 *
 * readCheckpoint/writeCheckpoint prepare to read/write the file,
 * and read/write read and write the actual data. */
 //@{
-int readCheckpointNum (const string &checkpointFileName)
-{
+int readCheckpointNum(const string& checkpointFileName) {
     ifstream checkpointFile;
     checkpointFile.open(checkpointFileName, fstream::in);
-    int checkpointNum=0;
+    int checkpointNum = 0;
     checkpointFile >> checkpointNum;
     checkpointFile.close();
     if (!checkpointFile)
-        throw util::checkpoint_error ("error reading from file \"checkpoint\"");
+        throw util::checkpoint_error("error reading from file \"checkpoint\"");
     return checkpointNum;
 }
 
-void checkpoint (istream& stream, SimTime &endTime, SimTime &estEndTime, Population &population, Transmission::TransmissionModel &transmission)
-{
-    try
-    {
-        util::checkpoint::header (stream);
-        util::CommandLine::staticCheckpoint (stream);
-        Host::NeonatalMortality::staticCheckpoint (stream);
-        Host::InfectionIncidenceModel::staticCheckpoint (stream);
+void checkpoint(istream& stream, SimTime& endTime, SimTime& estEndTime, Population& population,
+                Transmission::TransmissionModel& transmission) {
+    try {
+        util::checkpoint::header(stream);
+        util::CommandLine::staticCheckpoint(stream);
+        Host::NeonatalMortality::staticCheckpoint(stream);
+        Host::InfectionIncidenceModel::staticCheckpoint(stream);
         Clinical::InfantMortality::staticCheckpoint(stream);
         WithinHost::Genotypes::staticCheckpoint(stream);
         mon::Continuous::checkpoint(stream);
-        mon::checkpoint( stream );
-#       ifdef OM_STREAM_VALIDATOR
-        util::StreamValidator & stream;
-#       endif
-        
-        sim::s_interv & stream;
+        mon::checkpoint(stream);
+#ifdef OM_STREAM_VALIDATOR
+        util::StreamValidator& stream;
+#endif
+
+        sim::s_interv& stream;
         endTime & stream;
         estEndTime & stream;
         transmission & stream;
         population.checkpoint(stream);
         interventions::InterventionManager::checkpoint(stream);
         interventions::InterventionManager::loadFromCheckpoint(population.humans, transmission);
-        
+
         // read last, because other loads may use random numbers or expect time
         // to be negative
-        sim::s_t0 & stream;
-        sim::s_t1 & stream;
+        sim::s_t0& stream;
+        sim::s_t1& stream;
         util::master_RNG.checkpoint(stream);
     } catch (const util::checkpoint_error& e) { // append " (pos X of Y bytes)"
         ostringstream pos;
-        pos<<" (pos "<<stream.tellg()<<" of ";
-        stream.ignore (numeric_limits<streamsize>::max()-1);    // skip to end of file
-        pos<<stream.tellg()<<" bytes)";
-        throw util::checkpoint_error( e.what() + pos.str() );
+        pos << " (pos " << stream.tellg() << " of ";
+        stream.ignore(numeric_limits<streamsize>::max() - 1); // skip to end of file
+        pos << stream.tellg() << " bytes)";
+        throw util::checkpoint_error(e.what() + pos.str());
     }
-    
-    
-    stream.ignore (numeric_limits<streamsize>::max()-1);        // skip to end of file
-    if (stream.gcount () != 0) {
+
+    stream.ignore(numeric_limits<streamsize>::max() - 1); // skip to end of file
+    if (stream.gcount() != 0) {
         ostringstream msg;
         msg << "Checkpointing file has " << stream.gcount() << " bytes remaining." << endl;
-        throw util::checkpoint_error (msg.str());
+        throw util::checkpoint_error(msg.str());
     } else if (stream.fail())
-        throw util::checkpoint_error ("stream read error");
+        throw util::checkpoint_error("stream read error");
 }
 
-void checkpoint (ostream& stream, SimTime &endTime, SimTime &estEndTime, Population &population, Transmission::TransmissionModel &transmission) {
-    util::checkpoint::header (stream);
+void checkpoint(ostream& stream, SimTime& endTime, SimTime& estEndTime, Population& population,
+                Transmission::TransmissionModel& transmission) {
+    util::checkpoint::header(stream);
     if (!stream.good())
-        throw util::checkpoint_error ("Unable to write to file");
+        throw util::checkpoint_error("Unable to write to file");
 
-    util::CommandLine::staticCheckpoint (stream);
-    Host::NeonatalMortality::staticCheckpoint (stream);
-    Host::InfectionIncidenceModel::staticCheckpoint (stream);
+    util::CommandLine::staticCheckpoint(stream);
+    Host::NeonatalMortality::staticCheckpoint(stream);
+    Host::InfectionIncidenceModel::staticCheckpoint(stream);
     Clinical::InfantMortality::staticCheckpoint(stream);
     WithinHost::Genotypes::staticCheckpoint(stream);
     mon::Continuous::checkpoint(stream);
-    mon::checkpoint( stream );
-# ifdef OM_STREAM_VALIDATOR
-    util::StreamValidator & stream;
-# endif
-    
-    sim::s_interv & stream;
+    mon::checkpoint(stream);
+#ifdef OM_STREAM_VALIDATOR
+    util::StreamValidator& stream;
+#endif
+
+    sim::s_interv& stream;
     endTime & stream;
     estEndTime & stream;
     transmission & stream;
     population.checkpoint(stream);
-    interventions::InterventionManager::checkpoint( stream );
-    
-    sim::s_t0 & stream;
-    sim::s_t1 & stream;
+    interventions::InterventionManager::checkpoint(stream);
+
+    sim::s_t0& stream;
+    sim::s_t1& stream;
     util::master_RNG.checkpoint(stream);
-    
+
     if (stream.fail())
-        throw util::checkpoint_error ("stream write error");
+        throw util::checkpoint_error("stream write error");
 }
 
-void writeCheckpoint(const bool startedFromCheckpoint, const string &checkpointFileName, SimTime &endTime, SimTime &estEndTime, Population &population, Transmission::TransmissionModel &transmission)
-{
+void writeCheckpoint(const bool startedFromCheckpoint, const string& checkpointFileName, SimTime& endTime,
+                     SimTime& estEndTime, Population& population, Transmission::TransmissionModel& transmission) {
     // We alternate between two checkpoints, in case program is closed while writing.
     const int NUM_CHECKPOINTS = 2;
-    
+
     int oldCheckpointNum = 0, checkpointNum = 0;
-    if (startedFromCheckpoint)
-    {
+    if (startedFromCheckpoint) {
         oldCheckpointNum = readCheckpointNum(checkpointFileName);
         checkpointNum = mod_nn(oldCheckpointNum + 1, NUM_CHECKPOINTS); // Get next checkpoint number:
     }
-    
-    {   // Open the next checkpoint file for writing:
+
+    { // Open the next checkpoint file for writing:
         ostringstream name;
         name << checkpointFileName << checkpointNum << ".gz";
         ogzstream out(name.str().c_str(), ios::out | ios::binary);
-        checkpoint (out, endTime, estEndTime, population, transmission);
+        checkpoint(out, endTime, estEndTime, population, transmission);
         out.close();
     }
-    
-    {   // Indicate which is the latest checkpoint file.
+
+    { // Indicate which is the latest checkpoint file.
         ofstream checkpointFile;
-        checkpointFile.open(checkpointFileName,ios::out);
+        checkpointFile.open(checkpointFileName, ios::out);
         checkpointFile << checkpointNum;
         checkpointFile.close();
         if (!checkpointFile)
-            throw util::checkpoint_error ("error writing to file \"checkpoint\"");
+            throw util::checkpoint_error("error writing to file \"checkpoint\"");
     }
 
     // Truncate the old checkpoint to save disk space, when it existed
-    if( oldCheckpointNum != checkpointNum ){
+    if (oldCheckpointNum != checkpointNum) {
         ostringstream name;
         name << checkpointFileName << oldCheckpointNum << ".gz";
         ofstream out(name.str().c_str(), ios::out | ios::binary);
@@ -169,20 +165,20 @@ void writeCheckpoint(const bool startedFromCheckpoint, const string &checkpointF
     }
 }
 
-void readCheckpoint(const string &checkpointFileName, SimTime &endTime, SimTime &estEndTime, Population &population, Transmission::TransmissionModel &transmission)
-{
+void readCheckpoint(const string& checkpointFileName, SimTime& endTime, SimTime& estEndTime, Population& population,
+                    Transmission::TransmissionModel& transmission) {
     int checkpointNum = readCheckpointNum(checkpointFileName);
-    
+
     // Open the latest file
     ostringstream name;
     name << checkpointFileName << checkpointNum << ".gz";
     igzstream in(name.str().c_str(), ios::in | ios::binary);
     //Note: gzstreams are considered "good" when file not open!
-    if ( !( in.good() && in.rdbuf()->is_open() ) )
-        throw util::checkpoint_error ("Unable to read file");
-    checkpoint (in, endTime, estEndTime, population, transmission);
+    if (!(in.good() && in.rdbuf()->is_open()))
+        throw util::checkpoint_error("Unable to read file");
+    checkpoint(in, endTime, estEndTime, population, transmission);
     in.close();
-  
+
     cerr << sim::inSteps(sim::now()) << "t loaded checkpoint" << endl;
 }
 

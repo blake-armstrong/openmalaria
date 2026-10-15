@@ -117,20 +117,20 @@ void initMainSim();
 void concludeSurvey();
 void writeSurveyData();
 
-template <typename Stream>
-void checkpoint(Stream& stream);
+template <typename Stream> void checkpoint(Stream& stream);
 extern template void checkpoint<std::ostream>(std::ostream& stream);
 extern template void checkpoint<std::istream>(std::istream& stream);
 
 // ----- direct recording API -----
 
 void recordStat(Measure measure, double val, size_t species = 0, size_t genotype = 0);
-void recordStat(Measure measure, const Host::Human& human, double val = 1.0, size_t species = 0, size_t genotype = 0, size_t drug = 0);
+void recordStat(Measure measure, const Host::Human& human, double val = 1.0, size_t species = 0, size_t genotype = 0,
+                size_t drug = 0);
 void recordEvent(Measure measure, size_t survey, size_t age, uint32_t cohort);
 void recordEvent(Measure measure, const Host::Human& human, double val = 1.0, int outId = 0);
-void recordDeploy(Measure timedMeasure, Measure ctsMeasure, const Host::Human& human, Deploy::Method method, double val = 1.0);
-inline bool isUsed(Measure measure)
-{
+void recordDeploy(Measure timedMeasure, Measure ctsMeasure, const Host::Human& human, Deploy::Method method,
+                  double val = 1.0);
+inline bool isUsed(Measure measure) {
     assert(measure < MeasureCount);
     return !internal::runtime.storesByMeasure[measure].empty();
 }

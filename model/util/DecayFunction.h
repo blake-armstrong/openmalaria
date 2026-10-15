@@ -39,17 +39,15 @@ namespace util {
  * Heterogeneity is implemented by passing a DecayFunction object to the eval
  * function; this should be sampled by the same DecayFunction.
  *****************************************************************************/
-class DecayFunction
-{
+class DecayFunction {
 public:
-    DecayFunction(bool increasing = false, double initialEfficacy = 1.0, double CV = 0.0) : 
-        increasing(increasing), initialEfficacy(initialEfficacy), het(std::move(LognormalSampler::fromMeanCV(1.0, CV))) {}
+    DecayFunction(bool increasing = false, double initialEfficacy = 1.0, double CV = 0.0)
+        : increasing(increasing), initialEfficacy(initialEfficacy),
+          het(std::move(LognormalSampler::fromMeanCV(1.0, CV))) {}
 
-    DecayFunction(const DecayFunction& other) : 
-        increasing(other.increasing),
-        initialEfficacy(other.initialEfficacy),
-        het(other.het ? other.het->clone() : nullptr),
-        hetFactor(other.hetFactor) {}
+    DecayFunction(const DecayFunction& other)
+        : increasing(other.increasing), initialEfficacy(other.initialEfficacy),
+          het(other.het ? other.het->clone() : nullptr), hetFactor(other.hetFactor) {}
 
     virtual ~DecayFunction() {}
 
@@ -58,24 +56,18 @@ public:
      * @param elt XML element specifying which function to use and parameters
      * @param eltName Name of XML element (for reasonable error reporting)
      */
-    static unique_ptr<DecayFunction> makeObject(
-        const scnXml::DecayFunction& elt, const char* eltName
-    );
+    static unique_ptr<DecayFunction> makeObject(const scnXml::DecayFunction& elt, const char* eltName);
 
     /** Sample a DecayFunction value (should be stored per individual).
      * 
      * Note that a DecayFunction is needed to call eval() even if heterogeneity
      * is not wanted. If sigma = 0 then the random number stream will not be
      * touched. */
-    unique_ptr<DecayFunction> hetSample(LocalRng& rng) const {
-        return hetSample(het->sample(rng));
-    }
-    
+    unique_ptr<DecayFunction> hetSample(LocalRng& rng) const { return hetSample(het->sample(rng)); }
+
     /** Generate a DecayFunction value from an existing sample. */
-    std::unique_ptr<DecayFunction> hetSample(NormalSample sample) const {
-        return hetSample(het->sample(sample));
-    }
-    
+    std::unique_ptr<DecayFunction> hetSample(NormalSample sample) const { return hetSample(het->sample(sample)); }
+
     /** Generate a DecayFunction value from an existing sample. */
     unique_ptr<DecayFunction> hetSample(double factor) const {
         unique_ptr<DecayFunction> sample = makeHetSample(factor);
@@ -91,13 +83,13 @@ public:
      * This is only valid where mu and sigma parameters are zero.
      * 
      * @returns Age at which an object should decay. */
-    virtual SimTime sampleAgeOfDecay (LocalRng& rng) const =0;
-    
+    virtual SimTime sampleAgeOfDecay(LocalRng& rng) const = 0;
+
     inline double eval(double ageDays) const {
-        if(increasing)
-            return 1.0 - compute( ageDays ) * initialEfficacy;
+        if (increasing)
+            return 1.0 - compute(ageDays) * initialEfficacy;
         else
-            return compute( ageDays ) * initialEfficacy;
+            return compute(ageDays) * initialEfficacy;
     }
 
     virtual double compute(double ageDays) const = 0;
@@ -116,5 +108,6 @@ protected:
     double hetFactor = 0.0;
 };
 
-} }
+}
+}
 #endif

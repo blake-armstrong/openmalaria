@@ -30,33 +30,32 @@
 
 using namespace std;
 
-namespace OM { namespace WithinHost {
-    
+namespace OM {
+namespace WithinHost {
+
 /** Common within-host model functionality.
  *
  * This is not used by the old Descriptive within-host
  * models, but encapsulates nearly all the within-host (non-infection) code
  * required by the Dummy and Empirical within-host models.
  */
-class CommonWithinHost : public WHFalciparum
-{
+class CommonWithinHost : public WHFalciparum {
 public:
     static void init(const scnXml::Scenario& scenario);
-    
-    CommonWithinHost( LocalRng& rng, double comorbidityFactor );
+
+    CommonWithinHost(LocalRng& rng, double comorbidityFactor);
     virtual ~CommonWithinHost();
-    
-    
+
     virtual void importInfection(LocalRng& rng);
-    
+
     virtual void treatPkPd(size_t schedule, size_t dosage, double age, double delay_d);
     virtual void clearImmunity();
-    
-    virtual void update(Host::Human &human, LocalRng& rng, int &nNewInfs_i, int &nNewInfs_l, 
-        vector<double>& genotype_weights_i, vector<double>& genotype_weights_l, double ageInYears);
-    
+
+    virtual void update(Host::Human& human, LocalRng& rng, int& nNewInfs_i, int& nNewInfs_l,
+                        vector<double>& genotype_weights_i, vector<double>& genotype_weights_l, double ageInYears);
+
     virtual void addProphylacticEffects(const vector<double>& pClearanceByTime);
-    
+
     /** \brief Factory functions to create infections.
      *
      * These allow creation of the correct type of infection in a generic manner.
@@ -64,27 +63,27 @@ public:
      * The first variant is for creating a new infection, the second for loading
      * one from a checkpoint. */
     //@{
-    static CommonInfection* (* createInfection) (LocalRng& rng, uint32_t protID, int origin);
-    static CommonInfection* (* checkpointedInfection) (istream& stream);
+    static CommonInfection* (*createInfection)(LocalRng& rng, uint32_t protID, int origin);
+    static CommonInfection* (*checkpointedInfection)(istream& stream);
     //@}
 
     virtual InfectionOrigin getInfectionOrigin() const;
-    
-    virtual bool summarize( Host::Human& human )const;
-    
+
+    virtual bool summarize(Host::Human& human) const;
+
 protected:
-    virtual void clearInfections( Treatments::Stages stage );
-    
-    virtual void checkpoint (istream& stream);
-    virtual void checkpoint (ostream& stream);
-    
+    virtual void clearInfections(Treatments::Stages stage);
+
+    virtual void checkpoint(istream& stream);
+    virtual void checkpoint(ostream& stream);
+
 private:
     /// Multiplies the mean mass (for this age) as a heterogeneity factor.
     double hetMassMultiplier;
-    
+
     /// Encapsulates drug code for each human
     PkPd::LSTMModel pkpdModel;
-    
+
     /** The list of all infections this human has.
      *
      * Since infection models and within host models are very much intertwined,
@@ -95,5 +94,6 @@ private:
     bool opt_vaccine_genotype = false;
 };
 
-} }
+}
+}
 #endif

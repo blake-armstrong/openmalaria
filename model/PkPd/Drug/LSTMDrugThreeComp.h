@@ -48,49 +48,47 @@ struct Params_fC;
 class LSTMDrugThreeComp : public LSTMDrug {
 public:
     /** Create a new instance. */
-    LSTMDrugThreeComp (const LSTMDrugType&, LocalRng& rng);
-    
+    LSTMDrugThreeComp(const LSTMDrugType&, LocalRng& rng);
+
     virtual size_t getIndex() const;
     virtual double getConcentration(size_t index) const;
-    
-    virtual double calculateDrugFactor(LocalRng& rng, WithinHost::CommonInfection *inf, double body_mass) const;
-    virtual void updateConcentration (double body_mass);
-    
+
+    virtual double calculateDrugFactor(LocalRng& rng, WithinHost::CommonInfection* inf, double body_mass) const;
+    virtual void updateConcentration(double body_mass);
+
 protected:
-    virtual void checkpoint (istream& stream);
-    virtual void checkpoint (ostream& stream);
-    
-    inline double conc() const{
-        return concA + concB + concC - concABC;
-    }
-    
+    virtual void checkpoint(istream& stream);
+    virtual void checkpoint(ostream& stream);
+
+    inline double conc() const { return concA + concB + concC - concABC; }
+
     // Update constants. bm: body mass (kg)
     void updateCached(double bm) const;
-    
+
     /// Always links a drug instance to its drug-type data
     //TODO: does it still make sense to link this?
     const LSTMDrugType& typeData;
-    
+
     // Concentrations in the blood and other compartments
     // See "Permutation of the three-compartment equation",
     // Diggory Hardy, Swiss TPH, February 3, 2015
     double concA, concB, concC, concABC;
-    
+
     // Sampled constants
     double elim_sample;
     double k12, k21, k13, k31;
-    double nka;    // -k_a
-    
+    double nka; // -k_a
+
     // Computed parameters, constant except for dependence on body mass
     // (this is essentially a cache updated by updateCached())
-    mutable double last_bm;     // body mass at time of last calculation
-    mutable double na, nb, ng;      // -α, -β, -γ, -k_a
-    mutable double A, B, C;     // A, B, C
-    
+    mutable double last_bm;    // body mass at time of last calculation
+    mutable double na, nb, ng; // -α, -β, -γ, -k_a
+    mutable double A, B, C;    // A, B, C
+
 private:
     double calculateFactor(const Params_fC& p, double duration) const;
-    
-    friend double func_fC( double t, void* pp );        // function used in calculateFactor
+
+    friend double func_fC(double t, void* pp); // function used in calculateFactor
 };
 
 }

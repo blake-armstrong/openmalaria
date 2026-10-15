@@ -24,13 +24,13 @@
 #define Hmod_ESCaseManagement
 
 #include "Global.h"
-#include "Clinical/CMDecisionTree.h"    // needed for ESDecisionMap
+#include "Clinical/CMDecisionTree.h" // needed for ESDecisionMap
 #include "Host/WithinHost/WHInterface.h"
 #include "schema/pharmacology.h"
 
-namespace OM { namespace Clinical {
+namespace OM {
+namespace Clinical {
 using WithinHost::WHInterface;
-
 
 /** Tracks clinical status (sickness), does case management for new events,
  * medicates treatment, determines patient recovery, death and sequelae.
@@ -39,10 +39,11 @@ class ESCaseManagement {
 public:
     /** Load health system data from initial data or an intervention's data (both from XML).
     * (Re)loads all data affected by this healthSystem element. */
-    static void setHealthSystem (const scnXml::HSEventScheduler& esData);
-    
-    static CMDTOut execute( const CMHostData& hostData );
+    static void setHealthSystem(const scnXml::HSEventScheduler& esData);
+
+    static CMDTOut execute(const CMHostData& hostData);
 };
 
-} }
+}
+}
 #endif

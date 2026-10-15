@@ -36,22 +36,21 @@ using Host::Human;
 /**
  * Common parts of 5-day case management models.
  */
-class CM5DayCommon : public ClinicalModel
-{
+class CM5DayCommon : public ClinicalModel {
 public:
     static void init();
-    
+
     /** Construct an instance (per-human).
      * 
      * @param tSF Treatment-seeking factor. Normally 1 but allows simple heterogeneity.
      */
-    CM5DayCommon (double tSF);
-    
-    virtual bool isExistingCase () {
+    CM5DayCommon(double tSF);
+
+    virtual bool isExistingCase() {
         // If treated in the recent past:
         return sim::now() > m_tLastTreatment && sim::now() <= m_tLastTreatment + healthSystemMemory;
     }
-    
+
 protected:
     enum CaseType { FirstLine, SecondLine, NumCaseTypes };
     static mon::Measure measures[NumCaseTypes];
@@ -60,18 +59,18 @@ protected:
     static double accessSevere;
     static double cureRateSevere;
     static WithinHost::TreatmentId treatmentSevere;
-    
-    virtual void doClinicalUpdate (Human& human, double ageYears, WithinHost::Pathogenesis::StatePair &pg);
 
-    virtual void checkpoint (istream& stream);
-    virtual void checkpoint (ostream& stream);
+    virtual void doClinicalUpdate(Human& human, double ageYears, WithinHost::Pathogenesis::StatePair& pg);
+
+    virtual void checkpoint(istream& stream);
+    virtual void checkpoint(ostream& stream);
 
     /** Called when a non-severe/complicated malaria sickness occurs. */
-    virtual void uncomplicatedEvent(Human& human, Episode::State pgState) =0;
+    virtual void uncomplicatedEvent(Human& human, Episode::State pgState) = 0;
 
     //! treatment seeking for heterogeneity
     double m_treatmentSeekingFactor;
-    
+
 private:
     /** Called when a severe/complicated (with co-infection) malaria sickness occurs.
      *

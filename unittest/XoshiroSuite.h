@@ -26,28 +26,31 @@
 #include <cxxtest/TestSuite.h>
 #include "util/xoshiro.h"
 
-class XoshiroSuite : public CxxTest::TestSuite
-{
+class XoshiroSuite : public CxxTest::TestSuite {
 public:
-    XoshiroSuite () {
-    }
-    
-    void setUp () {
-    }
-    void tearDown () {
-    }
-    
-    void testXoshiro () {
+    XoshiroSuite() {}
+
+    void setUp() {}
+    void tearDown() {}
+
+    void testXoshiro() {
         // These values were produced with the reference implementation:
         // http://xoshiro.di.unimi.it/xoshiro256plus.c
         uint64_t vector[] = {
-            5ull, 211106232532999ull, 211106635186183ull, 9223759065350669058ull,
-            9250833439874351877ull, 13862484359527728515ull, 2346507365006083650ull,
-            1168864526675804870ull, 34095955243042024ull, 3466914240207415127ull,
+            5ull,
+            211106232532999ull,
+            211106635186183ull,
+            9223759065350669058ull,
+            9250833439874351877ull,
+            13862484359527728515ull,
+            2346507365006083650ull,
+            1168864526675804870ull,
+            34095955243042024ull,
+            3466914240207415127ull,
         };
-        
+
         Xoshiro256P rng(1, 2, 3, 4);
-        
+
         for (int n = 0; n < 10; n++) {
             uint64_t x = rng();
             TS_ASSERT_EQUALS(x, vector[n]);

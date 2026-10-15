@@ -31,24 +31,23 @@
 
 using namespace OM::WithinHost;
 
-class DescriptiveInfectionSuite : public CxxTest::TestSuite
-{
+class DescriptiveInfectionSuite : public CxxTest::TestSuite {
 public:
-    void setUp () {
-        UnittestUtil::initTime( 5 );
-	UnittestUtil::Infection_init ();
-	UnittestUtil::DescriptiveInfection_init ();
-	DescriptiveInfection::initParameters();	//FIXME: this gets data from InputData
-	gsl::setUp (83);	// seed is unimportant, but must be fixed
-	infection = new DescriptiveInfection ();
+    void setUp() {
+        UnittestUtil::initTime(5);
+        UnittestUtil::Infection_init();
+        UnittestUtil::DescriptiveInfection_init();
+        DescriptiveInfection::initParameters(); //FIXME: this gets data from InputData
+        gsl::setUp(83);                         // seed is unimportant, but must be fixed
+        infection = new DescriptiveInfection();
     }
-    void tearDown () {
-	delete infection;
-	gsl::tearDown ();
+    void tearDown() {
+        delete infection;
+        gsl::tearDown();
     }
-    
+
     // Should test DescriptiveInfection::determineDensities (and maybe others), but due to large number of inputs & 2 outputs isn't so easy.
-    
+
 private:
     DescriptiveInfection* infection;
 };

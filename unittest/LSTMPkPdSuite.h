@@ -36,69 +36,66 @@ using namespace OM;
 using namespace OM::PkPd;
 
 /// There is probably little value in this unit-test now that PkPdComplianceSuite exists
-class LSTMPkPdSuite : public CxxTest::TestSuite
-{
+class LSTMPkPdSuite : public CxxTest::TestSuite {
 public:
-    LSTMPkPdSuite() :
-            m_rng(0, 0), proxy(0)
-    {
+    LSTMPkPdSuite() : m_rng(0, 0), proxy(0) {
         // This is what a previously-used weight distribution gave us,
         // and is good enough for testing purposes:
         massAt21 = 55.4993;
     }
-    
-    void setUp () {
+
+    void setUp() {
         m_rng.seed(0, 721347520444481703);
         UnittestUtil::initTime(1);
-	UnittestUtil::PkPdSuiteSetup();
-	proxy = new LSTMModel ();
+        UnittestUtil::PkPdSuiteSetup();
+        proxy = new LSTMModel();
         inf = createDummyInfection(m_rng, 0, InfectionOrigin::Indigenous);
-        MQ_index = LSTMDrugType::findDrug( "MQ" );
+        MQ_index = LSTMDrugType::findDrug("MQ");
     }
-    void tearDown () {
+    void tearDown() {
         delete inf;
-	delete proxy;
+        delete proxy;
         LSTMDrugType::clear();
     }
-    
-    void testNone () {
-	TS_ASSERT_EQUALS (proxy->getDrugFactor (m_rng, inf, massAt21), 1.0);
+
+    void testNone() { TS_ASSERT_EQUALS(proxy->getDrugFactor(m_rng, inf, massAt21), 1.0); }
+
+    void testOral() {
+        UnittestUtil::medicate(m_rng, *proxy, MQ_index, 3000, 0);
+        TS_ASSERT_APPROX(proxy->getDrugFactor(m_rng, inf, massAt21), 0.03174563638523168);
     }
-    
-    void testOral () {
-	UnittestUtil::medicate( m_rng, *proxy, MQ_index, 3000, 0 );
-	TS_ASSERT_APPROX (proxy->getDrugFactor (m_rng, inf, massAt21), 0.03174563638523168);
+
+    void testOralHalves() { // the point being: check it can handle two doses at the same time-point correctly
+        UnittestUtil::medicate(m_rng, *proxy, MQ_index, 1500, 0);
+        UnittestUtil::medicate(m_rng, *proxy, MQ_index, 1500, 0);
+        TS_ASSERT_APPROX(proxy->getDrugFactor(m_rng, inf, massAt21), 0.03174563638523168);
     }
-    
-    void testOralHalves () {	// the point being: check it can handle two doses at the same time-point correctly
-	UnittestUtil::medicate( m_rng, *proxy, MQ_index, 1500, 0 );
-	UnittestUtil::medicate( m_rng, *proxy, MQ_index, 1500, 0 );
-	TS_ASSERT_APPROX (proxy->getDrugFactor (m_rng, inf, massAt21), 0.03174563638523168);
+
+    void testOralSplit() {
+        UnittestUtil::medicate(m_rng, *proxy, MQ_index, 3000, 0);
+        UnittestUtil::medicate(
+            m_rng, *proxy, MQ_index, 0,
+            0.5); // insert a second dose half way through the day: forces drug calculation to be split into half-days but shouldn't affect result
+        TS_ASSERT_APPROX(proxy->getDrugFactor(m_rng, inf, massAt21), 0.03174563639140275);
     }
-    
-    void testOralSplit () {
-	UnittestUtil::medicate( m_rng, *proxy, MQ_index, 3000, 0 );
-	UnittestUtil::medicate( m_rng, *proxy, MQ_index, 0, 0.5 );	// insert a second dose half way through the day: forces drug calculation to be split into half-days but shouldn't affect result
-	TS_ASSERT_APPROX (proxy->getDrugFactor (m_rng, inf, massAt21), 0.03174563639140275);
+
+    void testOralDecayed() {
+        UnittestUtil::medicate(m_rng, *proxy, MQ_index, 3000, 0);
+        proxy->decayDrugs(massAt21);
+        TS_ASSERT_APPROX(proxy->getDrugFactor(m_rng, inf, massAt21), 0.03174563639501896);
     }
-    
-    void testOralDecayed () {
-	UnittestUtil::medicate( m_rng, *proxy, MQ_index, 3000, 0 );
-	proxy->decayDrugs (massAt21);
-	TS_ASSERT_APPROX (proxy->getDrugFactor (m_rng, inf, massAt21), 0.03174563639501896);
+
+    void testOral2Doses() {
+        UnittestUtil::medicate(m_rng, *proxy, MQ_index, 3000, 0);
+        proxy->decayDrugs(massAt21);
+        UnittestUtil::medicate(m_rng, *proxy, MQ_index, 3000, 0);
+        TS_ASSERT_APPROX(proxy->getDrugFactor(m_rng, inf, massAt21), 0.03174563637686205);
     }
-    
-    void testOral2Doses () {
-	UnittestUtil::medicate( m_rng, *proxy, MQ_index, 3000, 0 );
-	proxy->decayDrugs (massAt21);
-	UnittestUtil::medicate( m_rng, *proxy, MQ_index, 3000, 0 );
-	TS_ASSERT_APPROX (proxy->getDrugFactor (m_rng, inf, massAt21), 0.03174563637686205);
-    }
-    
+
 private:
     LocalRng m_rng;
-    LSTMModel *proxy;
-    CommonInfection *inf;
+    LSTMModel* proxy;
+    CommonInfection* inf;
     double massAt21;
     size_t MQ_index;
 };

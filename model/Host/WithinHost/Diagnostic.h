@@ -28,12 +28,12 @@
 
 class UnittestUtil;
 namespace scnXml {
-    class Diagnostics;
-    class Diagnostic;
+class Diagnostics;
+class Diagnostic;
 }
 
 namespace OM {
-    class Parameters;
+class Parameters;
 namespace WithinHost {
 
 using util::LocalRng;
@@ -45,31 +45,30 @@ public:
      * @param dens Current parasite density in parasites per µL
      * @param densHRP2 Equivalent density for diagnostics dependent on HRP2
      * @returns True if outcome is positive. */
-    bool isPositive( LocalRng& rng, double dens, double densHRP2 ) const;
-    
-    inline bool operator!=( const Diagnostic& that )const{
-        return specificity != that.specificity ||
-            dens_lim != that.dens_lim;
+    bool isPositive(LocalRng& rng, double dens, double densHRP2) const;
+
+    inline bool operator!=(const Diagnostic& that) const {
+        return specificity != that.specificity || dens_lim != that.dens_lim;
     }
-    
+
     /// True if false positives are possible
     bool allowsFalsePositives() const;
-    
+
 private:
     /** Construct from XML parameters. */
-    Diagnostic( const Parameters& parameters, const scnXml::Diagnostic& elt );
+    Diagnostic(const Parameters& parameters, const scnXml::Diagnostic& elt);
     /** Construct as deterministic. */
-    explicit Diagnostic( double minDens );
-    
+    explicit Diagnostic(double minDens);
+
     // switch: either not-a-number indicating a deterministic test, or specificity
     double specificity;
     // depending on model, this is either the minimum detectible density
     // or the density at which test has half a chance of a positive outcome
     double dens_lim;
-    
+
     // if true, the diagnostic is dependent on the HRP2 antigen
     bool uses_hrp2;
-    
+
     friend class diagnostics;
 };
 
@@ -78,30 +77,30 @@ private:
 class diagnostics {
 public:
     /** Initialise from input data. */
-    static void init( const Parameters& parameters, const scnXml::Scenario& scenario );
-    
+    static void init(const Parameters& parameters, const scnXml::Scenario& scenario);
+
     /** Look up a diagnostic by name and get a reference to it.
      * 
      * @throws util::xml_scenario_error on failure
      */
-    static const Diagnostic& get( const std::string& name );
-    
+    static const Diagnostic& get(const std::string& name);
+
     /** Make a new diagnostic with deterministic density and return a reference. */
-    static const Diagnostic& make_deterministic( double minDens );
+    static const Diagnostic& make_deterministic(double minDens);
 
     /// Static access functions
 
-    static inline const Diagnostic& monitoringDiagnostic(){
-        assert( monitoring_diagnostic != 0 );
+    static inline const Diagnostic& monitoringDiagnostic() {
+        assert(monitoring_diagnostic != 0);
         return *monitoring_diagnostic;
     }
 
-    
 private:
-    static void clear();        // for unit tests
+    static void clear(); // for unit tests
     static const Diagnostic* monitoring_diagnostic;
     friend class ::UnittestUtil;
 };
 
-} }
+}
+}
 #endif

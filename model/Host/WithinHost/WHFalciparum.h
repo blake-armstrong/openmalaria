@@ -38,7 +38,7 @@ class InfectionImmunitySuite;
 namespace OM {
 namespace WithinHost {
 namespace Pathogenesis {
-    class PathogenesisModel;
+class PathogenesisModel;
 }
 
 /**
@@ -49,42 +49,39 @@ public:
     /// @brief Static methods
     //@{
     /// Initialise static parameters
-    static void init( const OM::Parameters& parameters, const scnXml::Model& model );
+    static void init(const OM::Parameters& parameters, const scnXml::Model& model);
     //@}
 
     /// @brief Constructors, destructors and checkpointing functions
     //@{
-    WHFalciparum( LocalRng& rng, double comorbidityFactor );
+    WHFalciparum(LocalRng& rng, double comorbidityFactor);
     virtual ~WHFalciparum();
     //@}
-    
-    virtual double probTransmissionToMosquito(vector<double> &probTransGenotype_i, vector<double> &probTransGenotype_l)const;
+
+    virtual double probTransmissionToMosquito(vector<double>& probTransGenotype_i,
+                                              vector<double>& probTransGenotype_l) const;
 
     // No PQ treatment for falciparum in current models:
-    virtual void optionalPqTreatment( Host::Human& human ){}
-    
-    virtual inline double getTotalDensity() const{ return totalDensity; }
-    
-    virtual bool diagnosticResult( LocalRng& rng, const Diagnostic& diagnostic ) const;
-    virtual void treatment( Host::Human& human, TreatmentId treatId );
-    virtual bool treatSimple( Host::Human& human, SimTime timeLiver, SimTime timeBlood );
-    
-    virtual Pathogenesis::StatePair determineMorbidity( Host::Human& human, double ageYears, bool isDoomed );
+    virtual void optionalPqTreatment(Host::Human& human) {}
 
-    inline double getCumulative_h() const {
-        return m_cumulative_h;
-    }
-    inline double getCumulative_Y() const {
-        return m_cumulative_Y;
-    }
-    
+    virtual inline double getTotalDensity() const { return totalDensity; }
+
+    virtual bool diagnosticResult(LocalRng& rng, const Diagnostic& diagnostic) const;
+    virtual void treatment(Host::Human& human, TreatmentId treatId);
+    virtual bool treatSimple(Host::Human& human, SimTime timeLiver, SimTime timeBlood);
+
+    virtual Pathogenesis::StatePair determineMorbidity(Host::Human& human, double ageYears, bool isDoomed);
+
+    inline double getCumulative_h() const { return m_cumulative_h; }
+    inline double getCumulative_Y() const { return m_cumulative_Y; }
+
 protected:
     /** Clear infections of the appropriate stages.
      * 
      * @param stage Which stages of the infection are affected
      */
-    virtual void clearInfections( Treatments::Stages stage ) =0;
-    
+    virtual void clearInfections(Treatments::Stages stage) = 0;
+
     ///@brief Immunity model parameters
     //@{
     /** Updates for the immunity model − assumes m_cumulative_h and m_cumulative_Y
@@ -100,8 +97,8 @@ protected:
      * new density has no effect on future densities, wheras the Empirical model
      * multiplies the actual density (which then affects density on the following
      * time step). */
-    double immunitySurvivalFactor (double ageInYears, double cumulativeExposureJ);
-    
+    double immunitySurvivalFactor(double ageInYears, double cumulativeExposureJ);
+
     //!innate ability to control parasite densities
     double _innateImmSurvFact;
 
@@ -112,40 +109,40 @@ protected:
     /// m_cumulative_Y from previous time step
     double m_cumulative_Y_lag;
     //@}
-    
+
     /// Total asexual blood stage density (sum of density of infections).
     double totalDensity;
     /// Density from the point of view of diagnostics dependent on HRP2
     double hrp2Density;
-    
+
     /** Maximum parasite density of any infection during the previous interval.
      *
      * With 5-day time steps, this is not just the maximum density of any infection
      * at the end of the time step, but something designed to emulate the maximum
      * of 5 daily samples. */
     double timeStepMaxDensity;
-    
+
     /** Total asexual blood stage density over last 20 days (uses samples from
     * 10, 15 and 20 days ago).
     *
     * m_y_lag[sim::ts0().moduloSteps(y_lag_len)] corresponds to the density
     * from the previous time step (once updateInfection has been called). */
     std::vector<double> m_y_lag_i, m_y_lag_l;
-    
+
     /// The PathogenesisModel introduces illness dependant on parasite density
     unique_ptr<Pathogenesis::PathogenesisModel> pathogenesisModel;
-    
+
     /// End of step on which treatment expires = start of first step after expiry
     SimTime treatExpiryLiver, treatExpiryBlood;
 
-    virtual void checkpoint (istream& stream);
-    virtual void checkpoint (ostream& stream);
+    virtual void checkpoint(istream& stream);
+    virtual void checkpoint(ostream& stream);
 
     /// Length of m_y_lag array. Wouldn't have to be dynamic if Global::interval was known at compile-time.
     /// set by initHumanParameters
     static int y_lag_len;
-    
-    static void setParams(double cumYStar, double cumHStar, double aM, double dM);   // for unit test only
+
+    static void setParams(double cumYStar, double cumHStar, double aM, double dM); // for unit test only
     friend class ::InfectionImmunitySuite;
 };
 

@@ -30,16 +30,16 @@
 
 namespace OM {
 namespace Host {
-    class Human;
+class Human;
 }
 namespace interventions {
-    class VaccineComponent;
-    using util::LocalRng;
+class VaccineComponent;
+using util::LocalRng;
 
 // ———  sub-population removal  ———
 
-namespace SubPopRemove{
-    /** Identifiers for types of sub-population removal option, followed by NUM
+namespace SubPopRemove {
+/** Identifiers for types of sub-population removal option, followed by NUM
      * in last place (as a counter).
      * 
      * ON_FIRST_BOUT: remove humans from some sub-populations at the start of
@@ -51,11 +51,7 @@ namespace SubPopRemove{
      * ON_FIRST_TREATMENT: remove humans from some sub-populations when
      * assigning each course of treatment.
      */
-    enum RemoveAtCode {
-        ON_FIRST_BOUT,
-        ON_FIRST_INFECTION,
-        ON_FIRST_TREATMENT,
-        NUM };
+enum RemoveAtCode { ON_FIRST_BOUT, ON_FIRST_INFECTION, ON_FIRST_TREATMENT, NUM };
 }
 
 /** For each RemoveAtCode (excluding NUM), this is a list of all sub-population
@@ -64,8 +60,8 @@ extern vector<ComponentId> removeAtIds[SubPopRemove::NUM];
 
 // ———  vaccines  ———
 
-namespace Vaccine{
-    enum Types { PEV, BSV, TBV, NumVaccineTypes };
+namespace Vaccine {
+enum Types { PEV, BSV, TBV, NumVaccineTypes };
 }
 
 /** Per vaccine effect (type), per human details. */
@@ -73,21 +69,20 @@ class PerEffectPerHumanVaccine {
 public:
     //Note: this constructor is only for checkpointing
     PerEffectPerHumanVaccine();
-    
+
     /// Checkpointing
-    template<class S>
-    void operator& (S& stream) {
+    template <class S> void operator&(S& stream) {
         component & stream;
         numDosesAdministered & stream;
         timeLastDeployment & stream;
         perGenotypeInitialEfficacy & stream;
         checkpointHet(stream);
     }
-    
+
 private:
-    PerEffectPerHumanVaccine( LocalRng& rng, ComponentId id, const VaccineComponent& params );
-    
-    ComponentId component;      // id of component (for finding parameters)
+    PerEffectPerHumanVaccine(LocalRng& rng, ComponentId id, const VaccineComponent& params);
+
+    ComponentId component; // id of component (for finding parameters)
     // Type of vaccine
     /** Number of vaccine doses this individual has received.
      *
@@ -103,7 +98,7 @@ private:
 
     void checkpointHet(ostream& stream);
     void checkpointHet(istream& stream);
-    
+
     friend class PerHumanVaccine;
 };
 
@@ -111,15 +106,14 @@ private:
 class PerHumanVaccine {
 public:
     PerHumanVaccine() {}
-    
+
     /** Get one minus the efficacy of the vaccine (1 for no effect, 0 for full effect). */
-    double getFactor( Vaccine::Types type, uint32_t genotype = 0) const;
-    
+    double getFactor(Vaccine::Types type, uint32_t genotype = 0) const;
+
     /** Vaccinate unless the passed VaccineLimits specify not to.
      * 
      * @returns true when the vaccine is administered */
-    bool possiblyVaccinate( Host::Human& human, ComponentId componentId,
-                           interventions::VaccineLimits vaccLimits );
+    bool possiblyVaccinate(Host::Human& human, ComponentId componentId, interventions::VaccineLimits vaccLimits);
 
 #if 0
     /// Hack for R_0 experiment: make current human the infection source
@@ -129,12 +123,9 @@ public:
         effects[R_0_TBV].initialEfficacy = 0.0;
     }
 #endif
-    
+
     /// Checkpointing
-    template<class S>
-    void operator& (S& stream) {
-        effects & stream;
-    }
+    template <class S> void operator&(S& stream) { effects & stream; }
 
 private:
     /// Details for each deployed vaccine for this human

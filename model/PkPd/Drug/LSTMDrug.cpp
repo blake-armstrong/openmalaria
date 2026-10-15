@@ -37,20 +37,18 @@ using namespace std;
 namespace OM {
 namespace PkPd {
 
-LSTMDrug::LSTMDrug(double Vd): vol_dist(Vd) {}
+LSTMDrug::LSTMDrug(double Vd) : vol_dist(Vd) {}
 LSTMDrug::~LSTMDrug() {}
 
-bool comp(pair<double,double> lhs, pair<double,double> rhs){
-    return lhs.first < rhs.first;
-}
+bool comp(pair<double, double> lhs, pair<double, double> rhs) { return lhs.first < rhs.first; }
 
 // Create our list of doses. Optimise for the case where we only have 1 or less
 // per day, but be able to handle more.
 // If two doses coincide, they can be combined but doing so is not essential.
 
-void LSTMDrug::medicate(double time, double qty){
+void LSTMDrug::medicate(double time, double qty) {
     // Insert in the right position to maintain sorting:
-    auto elt = make_pair (time, qty);
+    auto elt = make_pair(time, qty);
     auto pos = lower_bound(doses.begin(), doses.end(), elt, comp);
     doses.insert(pos, std::move(elt));
     assert(is_sorted(doses.begin(), doses.end(), comp));

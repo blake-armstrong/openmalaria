@@ -30,11 +30,11 @@
 #include "schema/interventions.h"
 
 namespace scnXml {
-    class Interventions;	// XML data passed to initParameters
+class Interventions; // XML data passed to initParameters
 }
 
-namespace OM { namespace WithinHost {
-    
+namespace OM {
+namespace WithinHost {
 
 /** IPT extension of DescriptiveInfection
  *
@@ -45,55 +45,56 @@ namespace OM { namespace WithinHost {
  * run. */
 class DescriptiveIPTInfection : public DescriptiveInfection {
 public:
-  ///@name Static init/cleanup
-  //@{
-  static void initParameters(const scnXml::IPTDescription& xmlIPTI);
-  //@}
-  
-  ///@name CTOR & DTOR
-  //@{
-  //! Constructor
-  /*! \param lastSPdose Time interval of last SP Dose. */
-  DescriptiveIPTInfection(TimeStep lastSPdose);
-  //@}
-  
-  /** The event that the last SP dose clears parasites. */
-  bool eventSPClears (TimeStep _lastSPDose);
-  
-  /// Return: _SPattenuate == 1. Name by DH.
-  bool doSPAttenuation () const { return _SPattenuate == 1; }
-  double asexualAttenuation ();
-  /// Extraction by DH; probably not most accurate name.
-  TimeStep getAsexualAttenuationEndDate () {
-      //NOTE: +1 added to _duration to keep same behaviour after adjusting
-      // value of _duration by one everywhere in a code review.
-      //NOTE: why does attenuation end date depend on the infection duration?
-    return _startdate + TimeStep(static_cast<int>((_duration.asInt() + 1) * genotypes[proteome_ID].atten));
-  }
-  
+    ///@name Static init/cleanup
+    //@{
+    static void initParameters(const scnXml::IPTDescription& xmlIPTI);
+    //@}
+
+    ///@name CTOR & DTOR
+    //@{
+    //! Constructor
+    /*! \param lastSPdose Time interval of last SP Dose. */
+    DescriptiveIPTInfection(TimeStep lastSPdose);
+    //@}
+
+    /** The event that the last SP dose clears parasites. */
+    bool eventSPClears(TimeStep _lastSPDose);
+
+    /// Return: _SPattenuate == 1. Name by DH.
+    bool doSPAttenuation() const { return _SPattenuate == 1; }
+    double asexualAttenuation();
+    /// Extraction by DH; probably not most accurate name.
+    TimeStep getAsexualAttenuationEndDate() {
+        //NOTE: +1 added to _duration to keep same behaviour after adjusting
+        // value of _duration by one everywhere in a code review.
+        //NOTE: why does attenuation end date depend on the infection duration?
+        return _startdate + TimeStep(static_cast<int>((_duration.asInt() + 1) * genotypes[proteome_ID].atten));
+    }
+
 private:
-  //! IPTi parameter (indicator for attenuation).
-  bool _SPattenuate;
-  
-  //!In order to save memory, we just define the ID of the genotype. Attributes of the
-  //!genotype can be accessed via arrays in mod_intervention.
-  //!(e.g. freq = mod_intervention.GenotypeFreq(iTemp%iData%gType%ID)
-  struct GenotypeData {
-    GenotypeData(scnXml::IPTDescription::InfGenotypeConstIterator iter, double& cumFreq);
-    //!freq: Probability of being infected by this specific genotype
-    double cumFreq;
-    //!tolperiod: time window of tolerance period
-    TimeStep tolPeriod;
-    //!proph: Prophylactic effect of SP (measured in time steps)
-    TimeStep proph;
-    //!ACR: Probability of being cured (due to SP)
-    double ACR;
-    //!SPattenuation: Factor of how parasites are attenuated  by SP (genotype specific)
-    double atten;
-  };
-  /// Per genotype data, set by initParameters
-  static vector<GenotypeData> genotypes;
+    //! IPTi parameter (indicator for attenuation).
+    bool _SPattenuate;
+
+    //!In order to save memory, we just define the ID of the genotype. Attributes of the
+    //!genotype can be accessed via arrays in mod_intervention.
+    //!(e.g. freq = mod_intervention.GenotypeFreq(iTemp%iData%gType%ID)
+    struct GenotypeData {
+        GenotypeData(scnXml::IPTDescription::InfGenotypeConstIterator iter, double& cumFreq);
+        //!freq: Probability of being infected by this specific genotype
+        double cumFreq;
+        //!tolperiod: time window of tolerance period
+        TimeStep tolPeriod;
+        //!proph: Prophylactic effect of SP (measured in time steps)
+        TimeStep proph;
+        //!ACR: Probability of being cured (due to SP)
+        double ACR;
+        //!SPattenuation: Factor of how parasites are attenuated  by SP (genotype specific)
+        double atten;
+    };
+    /// Per genotype data, set by initParameters
+    static vector<GenotypeData> genotypes;
 };
 
-} }
+}
+}
 #endif

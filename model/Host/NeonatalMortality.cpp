@@ -30,7 +30,8 @@
 
 #include <cmath>
 
-namespace OM { namespace Host {
+namespace OM {
+namespace Host {
 using namespace OM::util;
 
 //Goodman estimated for neonatal mortality due to malaria in pregnancy
@@ -59,81 +60,81 @@ SimTime ageLb = sim::fromYearsI(20), ageUb = sim::fromYearsI(25);
 // used for this may be important.
 const WithinHost::Diagnostic* neonatalDiagnostic = 0;
 
+void NeonatalMortality::init(const scnXml::Clinical& clinical) {
+    SimTime fiveMonths = sim::fromDays(5 * 30);
+    prevByGestationalAge.assign(sim::inSteps(fiveMonths), 0.0);
 
-void NeonatalMortality::init( const scnXml::Clinical& clinical ){
-    SimTime fiveMonths = sim::fromDays( 5 * 30 );
-    prevByGestationalAge.assign( sim::inSteps(fiveMonths), 0.0 );
-    
-    if( clinical.getNeonatalMortality().present() ){
-        neonatalDiagnostic = &WithinHost::diagnostics::get(
-            clinical.getNeonatalMortality().get().getDiagnostic() );
-    }else{
+    if (clinical.getNeonatalMortality().present()) {
+        neonatalDiagnostic = &WithinHost::diagnostics::get(clinical.getNeonatalMortality().get().getDiagnostic());
+    } else {
         //NOTE: this is a compatibility option for older scenarios
-        if( CommandLine::option( CommandLine::DEPRECATION_WARNINGS ) ){
+        if (CommandLine::option(CommandLine::DEPRECATION_WARNINGS)) {
             cerr << "Deprecation warning: specification of the diagnostic "
-                "used by the Neonatal Mortality model is recommended "
-                "(model/clinical/neonatalMortality)" << endl;
+                    "used by the Neonatal Mortality model is recommended "
+                    "(model/clinical/neonatalMortality)"
+                 << endl;
         }
         neonatalDiagnostic = &WithinHost::diagnostics::monitoringDiagnostic();
     }
 }
 
-void NeonatalMortality::staticCheckpoint (istream& stream) {
+void NeonatalMortality::staticCheckpoint(istream& stream) {
     riskFromMaternalInfection & stream;
     prevByGestationalAge & stream;
 }
-void NeonatalMortality::staticCheckpoint (ostream& stream) {
+void NeonatalMortality::staticCheckpoint(ostream& stream) {
     riskFromMaternalInfection & stream;
     prevByGestationalAge & stream;
 }
 
-bool NeonatalMortality::eventNeonatalMortality(LocalRng& rng) {
-  return rng.uniform_01() <= riskFromMaternalInfection;
-}
+bool NeonatalMortality::eventNeonatalMortality(LocalRng& rng) { return rng.uniform_01() <= riskFromMaternalInfection; }
 
-void NeonatalMortality::update (vector<Host::Human> &population) {
+void NeonatalMortality::update(vector<Host::Human>& population) {
     // ———  find potential mothers and their prevalence  ———
     // For individuals in the age range 20-25, we sum:
-    int nCounter=0;	// total number
-    int pCounter=0;	// number with patent infections, needed for prev in 20-25y
-    
-    for (Human& human : population){
+    int nCounter = 0; // total number
+    int pCounter = 0; // number with patent infections, needed for prev in 20-25y
+
+    for (Human& human : population) {
         // diagnosticDefault() gives patency after the last time step's
         // update, so it's appropriate to use age at the beginning of this step.
         SimTime age = human.age(sim::ts0());
-        
+
         // Note: since we're using a linked list, we have to iterate until we reach
         // the individuals we're interested in. Due to population structure, it's
         // probably quickest to start iterating from the oldest.
-        if( age >= ageUb ) continue;
-        if( age < ageLb ) break;	// Not interested in younger individuals.
-        
-        nCounter ++;
-        if( human.withinHostModel->diagnosticResult(human.rng, *neonatalDiagnostic) ){
-            pCounter ++;
+        if (age >= ageUb)
+            continue;
+        if (age < ageLb)
+            break; // Not interested in younger individuals.
+
+        nCounter++;
+        if (human.withinHostModel->diagnosticResult(human.rng, *neonatalDiagnostic)) {
+            pCounter++;
         }
     }
-    
+
     // ———  calculate risk of neonatal mortality  ———
     //default value for prev2025, for use when there are no 20-25 year olds
     double prev2025 = 0.25;
-    if( nCounter > 0 )
+    if (nCounter > 0)
         prev2025 = double(pCounter) / nCounter;
-    
+
     double maxPrev = prev2025;
     //update the vector containing the prevalence by gestational age
     size_t index = sim::moduloSteps(sim::ts0(), prevByGestationalAge.size());
     prevByGestationalAge[index] = prev2025;
-    for(size_t i = 0; i < prevByGestationalAge.size(); ++i) {
+    for (size_t i = 0; i < prevByGestationalAge.size(); ++i) {
         if (prevByGestationalAge[i] > maxPrev) {
             maxPrev = prevByGestationalAge[i];
         }
     }
-    
+
     // equation (2) p 75 AJTMH 75 suppl 2
-    double prevPG= maxPrev / (critPrevPrim + maxPrev);
+    double prevPG = maxPrev / (critPrevPrim + maxPrev);
     // equation (1) p 75 AJTMH 75 suppl 2 including 30% multiplier
-    riskFromMaternalInfection = y * (1.0-exp(prevPG * z));
+    riskFromMaternalInfection = y * (1.0 - exp(prevPG * z));
 }
 
-} }
+}
+}

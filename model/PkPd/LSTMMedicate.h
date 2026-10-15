@@ -35,43 +35,46 @@
 #include <vector>
 #include <map>
 
+using std::map;
 using std::size_t;
 using std::vector;
-using std::map;
 
 class UnittestUtil;
-namespace OM { namespace PkPd {
+namespace OM {
+namespace PkPd {
 
 struct Schedule {
-    void load( const scnXml::PKPDSchedule::MedicateSequence& seq );
-    
+    void load(const scnXml::PKPDSchedule::MedicateSequence& seq);
+
     vector<MedicateData> medications;
 };
 
 struct DosageTable {
-    void load( const xsd::cxx::tree::sequence<scnXml::PKPDDosageRange>& seq, bool isBodyMass );
-    
+    void load(const xsd::cxx::tree::sequence<scnXml::PKPDDosageRange>& seq, bool isBodyMass);
+
     /** Get dosage multilier from age or body mass.
      * 
      * Dosings may be given as a table using age or body mass as the key (first
      * column), or dose may be specified as mg drug / kg body mass. */
-    double getMultiplier( double key ){
-        if( multMassKg ) return key;
-        else{
-            auto iter = table.upper_bound( key );
-            if( iter == table.end() )
-                throw TRACED_EXCEPTION( "bad age/dosage table", util::Error::PkPd );
+    double getMultiplier(double key) {
+        if (multMassKg)
+            return key;
+        else {
+            auto iter = table.upper_bound(key);
+            if (iter == table.end())
+                throw TRACED_EXCEPTION("bad age/dosage table", util::Error::PkPd);
             return iter->second;
         }
     }
-    
-    bool useMass;       // false: dosing by age; true: dosing by body mass
-    bool multMassKg;    // multiply by mass instead of using table
-    map<double,double> table;
+
+    bool useMass;    // false: dosing by age; true: dosing by body mass
+    bool multMassKg; // multiply by mass instead of using table
+    map<double, double> table;
 };
 
 extern vector<Schedule> schedules;
 extern vector<DosageTable> dosages;
 
-} }
+}
+}
 #endif

@@ -32,8 +32,7 @@
 namespace OM {
 
 /** The simulated human population. */
-class Population
-{
+class Population {
 public:
     Population(size_t size);
 
@@ -65,7 +64,7 @@ public:
 private:
     /** Size of the human population */
     size_t size = 0;
-    
+
     /** Births count since last continuous output */
     int recentBirths = 0;
 };
@@ -73,36 +72,30 @@ private:
 void registerContinousPopulationCallbacks();
 
 /// Delegate to print the number of hosts
-void ctsHosts (Population &population, ostream& stream);
+void ctsHosts(Population& population, ostream& stream);
 /// Delegate to print cumulative numbers of hosts under various age limits
-void ctsHostDemography (Population &population, ostream& stream);
+void ctsHostDemography(Population& population, ostream& stream);
 /// Delegate to print the number of births since last count
-void ctsRecentBirths (Population &population, ostream& stream);
+void ctsRecentBirths(Population& population, ostream& stream);
 /// Delegate to print the number of patent hosts
-void ctsPatentHosts (Population &population, ostream& stream);
+void ctsPatentHosts(Population& population, ostream& stream);
 /// Delegate to print immunity's cumulativeh parameter
-void ctsImmunityh (Population &population, ostream& stream);
+void ctsImmunityh(Population& population, ostream& stream);
 /// Delegate to print immunity's cumulativeY parameter (mean across population)
-void ctsImmunityY (Population &population, ostream& stream);
+void ctsImmunityY(Population& population, ostream& stream);
 /// Delegate to print immunity's cumulativeY parameter (median across population)
-void ctsMedianImmunityY (Population &population, ostream& stream);
+void ctsMedianImmunityY(Population& population, ostream& stream);
 /// Delegate to print the mean age-based availability reduction of each human relative to an adult
-void ctsMeanAgeAvailEffect (Population &population, ostream& stream);
-void ctsITNCoverage (Population &population, ostream& stream);
-void ctsIRSCoverage (Population &population, ostream& stream);
-void ctsGVICoverage (Population &population, ostream& stream);
+void ctsMeanAgeAvailEffect(Population& population, ostream& stream);
+void ctsITNCoverage(Population& population, ostream& stream);
+void ctsIRSCoverage(Population& population, ostream& stream);
+void ctsGVICoverage(Population& population, ostream& stream);
 
-inline size_t Population::getSize() const {
-    return size;
-}
+inline size_t Population::getSize() const { return size; }
 
-inline int Population::getRecentBirths() const {
-    return recentBirths;
-}
+inline int Population::getRecentBirths() const { return recentBirths; }
 
-inline void Population::resetRecentBirths() {
-    recentBirths = 0;
-}
+inline void Population::resetRecentBirths() { recentBirths = 0; }
 
 }
 #endif

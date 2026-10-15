@@ -19,9 +19,9 @@
 
 /* This file should contain the headers of all routines that we write in the C
  * program.
- */ 
+ */
 
-/* We also include library headers here. */ 
+/* We also include library headers here. */
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -30,36 +30,35 @@
 
 #include <vector>
 
-double CalcInitMosqEmergeRate(
-	std::vector<double> &mosqEmergeRateVector, // output vector
-	int thetap, // $\theta_p$: daysInYear
-	int tau, // $\tau$: mosqRestDuration
-	int thetas, // $\theta_s$: EIPDuration
-	int n, // $n$: nHostTypes
-	int m, // $m$: nMalHostTypes
-	const std::vector<double> &Ni, // $N_i$: popSize (length n)
-	const std::vector<double> &alphai, // $\alpha_i$: hostAvailabilityRate	(length n)
-	double muvA, // $\mu_{vA}: mosqSeekingDeathRate
-	double thetad, // $\theta_d$: mosqSeekingDuration
-	const std::vector<double> &PBi, // $P_{B_i}$: mosqProbBiting (length n)
-	const std::vector<double> &PCi, // $P_{C_i}$: mosqProbFindRestSite (length n)
-	const std::vector<double> &PDi, // $P_{D_i}$: mosqProbResting (length n)
-	const std::vector<double> &PEi, // $P_{E_i}$: mosqProbOvipositing -- assumed not affected by nhh
-	const std::vector<double> KviInit, // Kvi (size n * thetap)
-	const std::vector<double> SvInit // Sv (length n)
+double
+CalcInitMosqEmergeRate(std::vector<double>& mosqEmergeRateVector, // output vector
+                       int thetap,                                // $\theta_p$: daysInYear
+                       int tau,                                   // $\tau$: mosqRestDuration
+                       int thetas,                                // $\theta_s$: EIPDuration
+                       int n,                                     // $n$: nHostTypes
+                       int m,                                     // $m$: nMalHostTypes
+                       const std::vector<double>& Ni,             // $N_i$: popSize (length n)
+                       const std::vector<double>& alphai,         // $\alpha_i$: hostAvailabilityRate	(length n)
+                       double muvA,                               // $\mu_{vA}: mosqSeekingDeathRate
+                       double thetad,                             // $\theta_d$: mosqSeekingDuration
+                       const std::vector<double>& PBi,            // $P_{B_i}$: mosqProbBiting (length n)
+                       const std::vector<double>& PCi,            // $P_{C_i}$: mosqProbFindRestSite (length n)
+                       const std::vector<double>& PDi,            // $P_{D_i}$: mosqProbResting (length n)
+                       const std::vector<double>& PEi, // $P_{E_i}$: mosqProbOvipositing -- assumed not affected by nhh
+                       const std::vector<double> KviInit, // Kvi (size n * thetap)
+                       const std::vector<double> SvInit   // Sv (length n)
 );
 
-void CalcUpsilon(std::vector<gsl_matrix*> &Upsilon, double &PA,
-	double &PAi, int thetap, int eta, int mt, int tau,
-	int thetas, int n, int m, const double* Ni, const double* alphai,
-	double muvA, double thetad, const double* PBi, const double* PCi, const double* PDi,
-	const double* PEi, const gsl_matrix* Kvi);
+void CalcUpsilon(std::vector<gsl_matrix*>& Upsilon, double& PA, double& PAi, int thetap, int eta, int mt, int tau,
+                 int thetas, int n, int m, const double* Ni, const double* alphai, double muvA, double thetad,
+                 const double* PBi, const double* PCi, const double* PDi, const double* PEi, const gsl_matrix* Kvi);
 
-void CalcSvJacobian(gsl_matrix* J, const std::vector<gsl_matrix*> &Upsilon, gsl_matrix* inv1Xtp, int eta, int mt, int thetap);
+void CalcSvJacobian(gsl_matrix* J, const std::vector<gsl_matrix*>& Upsilon, gsl_matrix* inv1Xtp, int eta, int mt,
+                    int thetap);
 
-void CalcPSTS(double &sumkplus, double* sumklplus, int thetas, int tau, double PA, double Pdf);
+void CalcPSTS(double& sumkplus, double* sumklplus, int thetas, int tau, double PA, double Pdf);
 
-void FuncX(gsl_matrix* X, const std::vector<gsl_matrix*> &Upsilon, int t, int s, int n);
+void FuncX(gsl_matrix* X, const std::vector<gsl_matrix*>& Upsilon, int t, int s, int n);
 
 double CalcSpectralRadius(gsl_matrix* A, int n);
 

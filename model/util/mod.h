@@ -32,8 +32,8 @@ namespace util {
 // "a + n mod n = a mod n" even where a is negative).
 // General form as follows (don't use templates because implicit casts don't
 // work with them).
-inline int mod (int a, int b) {
-    assert (b>0);
+inline int mod(int a, int b) {
+    assert(b > 0);
     // http://stackoverflow.com/questions/12089514/real-modulo-operator-in-c-c
     const int result = a % b;
     return result >= 0 ? result : result + b;
@@ -43,8 +43,8 @@ inline int mod (int a, int b) {
 // release mode. In RelWithRelease (-O2 -g) mode it's 0.03% slower on this
 // scenario and 0.015% slower on the Penny scenario (less usage).
 // Not highly significant, but the optimisation is implemented so it can stay.
-inline int mod_nn (int a, int b) {
-    assert (a>=0 && b>0);
+inline int mod_nn(int a, int b) {
+    assert(a >= 0 && b > 0);
     return a % b;
 }
 
