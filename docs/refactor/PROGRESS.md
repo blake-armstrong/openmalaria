@@ -20,7 +20,7 @@ See `PLAN.md` for the session protocol, chunks and gates. Append one log entry p
 | S4 | todo | |
 | S5 | todo | |
 | S6 | todo | |
-| C1 | todo | |
+| C1 | done | b02303db, (this log entry) |
 | C2 | todo | |
 | D1 | todo | |
 | D2 | todo | |
@@ -278,3 +278,25 @@ See `PLAN.md` for the session protocol, chunks and gates. Append one log entry p
   - f8b4be86: `.gitignore` gains `*.un~` (as on `core-only`) and `.cache/` (clangd index). `.README.md.un~` and `.cache/` stay on disk, ignored.
   - db00bd3b: `.claude/settings.json` committed. It registers the B3 format-on-edit hook (`.claude/hooks/format-cpp.sh`), so that hook is now active for Claude Code sessions in this repo.
   - `python/` was **deleted** (user's choice). It held `examples/` (`plot_outputs.py`, `scenario1.xml`, `densities.csv`, `scenario_50.xsd`, which were in no commit on any branch) plus `__pycache__`/`.pytest_cache` left over from the bindings work on `main`/`wasm-python-packages`. Stage J's question about the untracked `python/` directory no longer applies. The tracked bindings on `main` are untouched.
+
+### C1: Move the initialisation into `Simulation` (done, 2026-10-16)
+- Base: 6441f0fc.
+- Commit b02303db: new `model/Simulation.{h,cpp}` (added to `Model_CPP`), and `main.cpp` now constructs a `Simulation`.
+  - `Simulation(std::unique_ptr<scnXml::Scenario>)` takes ownership of the parsed scenario and runs the init chain from `Genotypes::init` through the warmup-length calculation, in the original order. It owns the scenario, the `Population` and the `TransmissionModel`, declared in that order, so they are destroyed in the same order as main's old locals (transmission, population, scenario).
+  - Accessors for C2 to absorb: `scenario()`, `population()`, `transmission()`, `human_warmup_length()`, `survey_only_new_ep()`.
+  - Left in `main()`: GSL handler, `CommandLine::parse`, `loadScenario`, `XMLChecker` (input handling, done before construction), plus everything from the checkpoint-name lookup on (C2's scope).
+  - `ModelNameProvider` and `Parameters` are locals of the constructor, as they were locals of `main()`. Nothing keeps a reference to either after init (grepped), so their earlier destruction is unobservable.
+- Deviations from a pure cut-paste, all to pass G-style on the moved lines, none observable:
+  - `only_new_episode` (the `getOnlyNewEpisode()` read) moved into the member initializer list, i.e. before `Genotypes::init` instead of after `mon::initCohorts`. It is a side-effect-free generated getter (tidy `prefer-member-initializer`).
+  - The warmup length is computed in a local, then assigned once. Assigning the member step by step tripped `prefer-member-initializer`, which can't be followed: the value needs `sim::init` and the transmission model.
+  - `static_cast<int>(pop_size)` makes the existing implicit `size_t` → `int` narrowing into `createTransmissionModel` explicit.
+  - `std::make_unique<Population>` instead of `unique_ptr(new …)`.
+  - New locals in `main()` (`population`, `transmission`, `human_warmup_length`, `survey_only_new_ep`) are snake_case references into the `Simulation`.
+- Gates (at b02303db):
+  - G-exact / G-unit: 52/52, 13.0 s at `-j10` under `caffeinate -i`. Only the baseline build warnings.
+  - G-style: `OM_BUILD_DIR=build-rework util/style.sh check HEAD` (base 6441f0fc) clean. The commit's pre-commit clang-format hook also passed, so the hook is now installed in this clone.
+  - G-perf: `util/bench.sh --compare ../om-bench-base/build-rework` (base worktree moved to 6441f0fc and rebuilt): median per-pair ratio 1.0028 (+0.28%), ok. Load average was ~7 at the start.
+- Follow-ups:
+  - C2: main still includes headers only the init chain needed (`ModelNameProvider.h`, `ModelOptions.h`, …). Trim them when the phases move out.
+  - C2: the default member initializer `only_new_episode = false` is now redundant with the constructor's initializer list; tidy it up when the class grows.
+- Next: C2.
