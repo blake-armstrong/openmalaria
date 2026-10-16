@@ -17,7 +17,7 @@ See `PLAN.md` for the session protocol, chunks and gates. Append one log entry p
 | S1 | done | b372c2f6, (this log entry) |
 | S2 | done | 841b2a9f, 720c0f09, 3c40c24b, (this log entry) |
 | S3 | done | 46cef63b, e61e95d4, 2b6281d6, 5384584d, 012e38d8, ed38bba4, 7472b8b5, fcbfc337, (this log entry) |
-| S4 | todo | |
+| S4 | done | 507b5b58, (this log entry) |
 | S5 | todo | |
 | S6 | todo | |
 | C1 | done | b02303db, (this log entry) |
@@ -540,3 +540,21 @@ See `PLAN.md` for the session protocol, chunks and gates. Append one log entry p
   - S5: references must use N ≥ 100 (F20); 500 is planned. Format 2 holds N counts in one metadata line, about 2.5 kB at N = 500. ModelName* still needs a decision (F16); a crashed rerun seed is an error for now.
   - S6: measure per-run rates on more scenarios (F18). Use power perturbations that aren't echoed into the output (F19). Tune α, K and the rerun rule if needed.
 - Next: S4.
+
+### S4: CTest integration (done, 2026-10-16)
+- Base: 5c7cd82e.
+- Commit 507b5b58: `test/CMakeLists.txt`.
+  - `stat_<NAME>` for every name in `OM_BOXTEST_NAMES` (and `OM_BOXTEST_NC_NAMES`, empty today), with label `statistical`. Command: `${PYTHON_EXECUTABLE} test/stats/check_scenario.py --build-dir ${CMAKE_BINARY_DIR} <NAME>`, so the default rerun rule applies and the checker's exit codes (1 fail, 2 error) make the test fail.
+  - **Skipping:** a scenario with no `test/reference/scenario<NAME>.csv` is still registered, but `DISABLED`, so ctest lists it under "did not run". Configure prints one `STATUS` line naming all of them (50 today). The reference list comes from `file(GLOB … CONFIGURE_DEPENDS)`, so a CSV added in S5 enables its test on the next `cmake --build`, with no manual reconfigure (tried with a temporary `scenario4.csv`, then removed).
+  - The S3 follow-up's unit-test scripts, label `statistical` too, so `-LE statistical` stays exactly the old tests: `stats_tool_check_scenario` (`python3`, stdlib only) and `stats_tool_generate_reference` (`uv run --script`, for numpy). The second is registered only if `uv` is found; otherwise configure says so.
+- Done criteria:
+  - `ctest -L statistical`: `stat_1` passes in 0.37 s (run seed 1: pass), both tool tests pass, the other 50 `stat_*` are reported as disabled.
+  - `ctest -N -LE statistical`: the same 53 tests as before S4.
+- Extra check: scenario1 temporarily scaled to EIR × 1.5 (853 `EIRDaily` values), then restored from a copy: `stat_1` fails under ctest (run 1 and all 5 reruns fail).
+- Gates: G-exact / G-unit / G-stat: plain `ctest -j10` under `caffeinate -i` passes 56/56 (53 old + `stat_1` + 2 tool tests) in 12.8 s. No C++ changed, so G-style and G-perf don't apply.
+- Notes for later chunks:
+  - **Plain `ctest` now runs the statistical tests too**, so it checks G-exact and G-stat together, and until S5 it ends with a list of 50 disabled tests. Use `ctest -LE statistical` for the byte-for-byte tests alone. The statistical label currently adds under 1 s.
+  - When run 1 of a `stat_*` test fails, the checker runs its 5 reruns with `-j` = all cores. Under `ctest -j10` that can oversubscribe the CPU, but it only happens on failures, so it isn't worth a `PROCESSORS` property yet. Revisit in S5 if many slow scenarios get references.
+- Follow-ups:
+  - S5: each new CSV under `test/reference/` turns its `stat_*` test on. The four ModelName* scenarios stay disabled until F16 is decided.
+- Next: S5 (a long compute job; see the recommended-order note) or D1.
