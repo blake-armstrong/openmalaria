@@ -272,3 +272,9 @@ See `PLAN.md` for the session protocol, chunks and gates. Append one log entry p
   - Every bulk mechanical commit (renames, reformats) must have its `.git-blame-ignore-revs` entry in the same push, or CI's tidy half will report the legacy hits on its lines.
   - The format-on-edit hook script (`.claude/hooks/format-cpp.sh`) now formats the whole edited file through `format-changed`. Its behaviour for tracked files changed with dcae0a40, and its `settings.json` entry is still the user's call (B3).
 - Next: C1.
+
+### Untracked-file cleanup (2026-10-16, after B5)
+- At the user's request, every untracked file was either committed, ignored or deleted. `git status` is now clean.
+  - f8b4be86: `.gitignore` gains `*.un~` (as on `core-only`) and `.cache/` (clangd index). `.README.md.un~` and `.cache/` stay on disk, ignored.
+  - db00bd3b: `.claude/settings.json` committed. It registers the B3 format-on-edit hook (`.claude/hooks/format-cpp.sh`), so that hook is now active for Claude Code sessions in this repo.
+  - `python/` was **deleted** (user's choice). It held `examples/` (`plot_outputs.py`, `scenario1.xml`, `densities.csv`, `scenario_50.xsd`, which were in no commit on any branch) plus `__pycache__`/`.pytest_cache` left over from the bindings work on `main`/`wasm-python-packages`. Stage J's question about the untracked `python/` directory no longer applies. The tracked bindings on `main` are untouched.
