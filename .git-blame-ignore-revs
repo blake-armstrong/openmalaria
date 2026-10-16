@@ -6,3 +6,6 @@
 
 # B4: rename model/PkPd identifiers (util/style.sh rename)
 cae5d3b565df2668f9754d203afa036ca4a59e15
+
+# B5: realign trailing comments left by the model/PkPd rename (whitespace only)
+16851d2056bdf880fc3c62d7f0b4e1d3c245d9eb
