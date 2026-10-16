@@ -10,7 +10,7 @@ See `PLAN.md` for the session protocol, chunks and gates. Append one log entry p
 | A2 | done | (this log entry) |
 | B1 | done | b7991e9f, 35450066, 8c4dc9b1, dec06531, 2205f6e8, ddc959a8, (this log entry) |
 | B2 | done | 0bf623e3, 4882b106, b7052696, (this log entry) |
-| B3 | done | 1b9b22f6, 06642bf8, 5efb309c, 1d56c288, db529f37, (this log entry) |
+| B3 | done | 1b9b22f6, 06642bf8, 5efb309c, 1d56c288, db529f37, 5dc5baab, b3685dfe, (this log entry) |
 | B4 | todo | |
 | B5 | todo | |
 | P1 | done | f29d38e3, 81a14090, b0309128, 6bfcf8c0, 4b803c7f, (this log entry) |
@@ -179,7 +179,7 @@ See `PLAN.md` for the session protocol, chunks and gates. Append one log entry p
 - **New `util/style.sh` commands**, so that the skills call the script rather than raw tools (B1 follow-up):
   - `format-changed` runs `git-clang-format --force <base>`, which formats exactly the lines `check` verifies. A first version ran whole-file `clang-format -i`. On a function appended before a namespace's closing `}`, it kept a blank line that `check`'s line-range format then flagged. So the B2 note "whole-file and changed-lines give the same verdict" has at least this exception. `git-clang-format` exits 1 when it changed something, and the script treats that as success.
   - `fix` applies fix-its on changed lines only, for a safe list (`nullptr`, `override`, `= default`/`= delete`, `using`, redundant `void`, bool literals, `init-variables`, `for-range-copy`, `unnecessary-copy-initialization`). `clang-tidy-diff.py` runs one clang-tidy per changed file in parallel (`-j` defaults to all cores), so a `.cpp` fix that also edits its header could race with the header's own run. Fixes are therefore exported (`-export-fixes`) and applied once with `clang-apply-replacements`. Then it runs `format-changed`.
-- **Hook not added.** The optional `PostToolUse` format-on-edit hook (`.claude/settings.json` plus a script calling `util/style.sh format-changed HEAD <file>`) was blocked by the Claude Code auto-mode classifier as self-modification of agent settings. It was not worked around; it is left for the user to add if wanted.
+- **Hook not added.** The optional `PostToolUse` format-on-edit hook (`.claude/settings.json` plus a script calling `util/style.sh format-changed HEAD <file>`) was blocked by the Claude Code auto-mode classifier as self-modification of agent settings. It was not worked around; it is left for the user to add if wanted. At the user's request the script alone was then added (b3685dfe, `.claude/hooks/format-cpp.sh`). It was tested with hook-style JSON: a tracked file got its changed lines formatted, an untracked new header was formatted whole, and paths outside `model/` and `unittest/` were skipped (all exit 0). The `settings.json` entry is still up to the user.
 - **Trials** (the new skills are not loadable in the session that created them, so their steps were followed by hand; both edits reverted):
   - cpp-style, `model/util/AgeGroupInterpolation.cpp`: a new `final` subclass written to the rules (snake_case method and member, `explicit`, `override` on the legacy `firstGlobalMaximum`), deliberately badly indented. `check` flagged only formatting, so a legacy-named override is not flagged by `readability-identifier-naming`. `format-changed`, then `check`: clean. Built.
   - cpp-lint, same file: a new `CountAbove(std::vector<double>, const double*)` with `NULL`, an uninitialised `int`, a narrowing `size()` → `int` and a by-value vector, plus a touched legacy line (`virtual double eval(double ageYears)`).
