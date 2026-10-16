@@ -213,36 +213,33 @@ def parse_args(argv):
     return args
 
 
-def main(argv):
-    args = parse_args(argv)
-    try:
-        run_py = load_run_py(args.build_dir)
-        scenario, prefix = resolve_scenario(run_py, args.scenario)
-        schema = resolve_schema(run_py, scenario)
-        scenario_bytes = scenario.read_bytes()
-        with_seed(scenario_bytes, 0)
-        commit, dirty = source_revision(run_py.testSrcDir)
-        args.out.mkdir(parents=True, exist_ok=True)
-        write_meta(args.out, {
-            "scenario": str(scenario),
-            "scenario_sha256": hashlib.sha256(scenario_bytes).hexdigest(),
-            "schema": schema.name,
-            "binary": run_py.openMalariaExec,
-            "binary_sha256": sha256(run_py.openMalariaExec),
-            "commit": commit,
-            "dirty": dirty,
-            "output_format": "bin" if args.binary else "txt",
-            "created": datetime.datetime.now(datetime.UTC).isoformat(timespec="seconds"),
-        })
-    except (ReplicateError, OSError) as e:
-        print(f"error: {e}", file=sys.stderr)
-        return 2
+def prepare(build_dir, scenario_name, out, binary=False):
+    run_py = load_run_py(build_dir)
+    scenario, prefix = resolve_scenario(run_py, scenario_name)
+    schema = resolve_schema(run_py, scenario)
+    scenario_bytes = scenario.read_bytes()
+    with_seed(scenario_bytes, 0)
+    commit, dirty = source_revision(run_py.testSrcDir)
+    out.mkdir(parents=True, exist_ok=True)
+    write_meta(out, {
+        "scenario": str(scenario),
+        "scenario_sha256": hashlib.sha256(scenario_bytes).hexdigest(),
+        "schema": schema.name,
+        "binary": run_py.openMalariaExec,
+        "binary_sha256": sha256(run_py.openMalariaExec),
+        "commit": commit,
+        "dirty": dirty,
+        "output_format": "bin" if binary else "txt",
+        "created": datetime.datetime.now(datetime.UTC).isoformat(timespec="seconds"),
+    })
+    return Job(run_py, scenario_bytes, schema, prefix, out.resolve(), binary)
 
-    job = Job(run_py, scenario_bytes, schema, prefix, args.out.resolve(), args.binary)
+
+def run_seeds(job, seeds, jobs, quiet=False):
     failed = []
     done = 0
-    with concurrent.futures.ThreadPoolExecutor(max_workers=args.jobs) as pool:
-        futures = {pool.submit(run_seed, job, seed): seed for seed in args.seeds}
+    with concurrent.futures.ThreadPoolExecutor(max_workers=jobs) as pool:
+        futures = {pool.submit(run_seed, job, seed): seed for seed in seeds}
         try:
             for future in concurrent.futures.as_completed(futures):
                 seed = futures[future]
@@ -253,14 +250,25 @@ def main(argv):
                     failed.append(seed)
                     print(f"[{done}/{len(futures)}] error: {e}", file=sys.stderr)
                     continue
-                if not args.quiet:
+                if not quiet:
                     status = "exists, skipped" if elapsed is None else f"done in {elapsed:.1f} s"
                     print(f"[{done}/{len(futures)}] seed {seed} {status}", file=sys.stderr)
         except KeyboardInterrupt:
             pool.shutdown(cancel_futures=True)
             raise
+    return sorted(failed)
+
+
+def main(argv):
+    args = parse_args(argv)
+    try:
+        job = prepare(args.build_dir, args.scenario, args.out, args.binary)
+    except (ReplicateError, OSError) as e:
+        print(f"error: {e}", file=sys.stderr)
+        return 2
+    failed = run_seeds(job, args.seeds, args.jobs, args.quiet)
     if failed:
-        print(f"{len(failed)} of {len(futures)} seeds failed: {sorted(failed)}", file=sys.stderr)
+        print(f"{len(failed)} of {len(args.seeds)} seeds failed: {failed}", file=sys.stderr)
         return 1
     return 0
 
