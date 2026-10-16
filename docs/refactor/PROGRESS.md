@@ -14,7 +14,7 @@ See `PLAN.md` for the session protocol, chunks and gates. Append one log entry p
 | B4 | done | 57afa057, e7074755, cae5d3b5, f82cb9a5, ee7e0471, (this log entry) |
 | B5 | done | 16851d20, 65710e16, dcae0a40, 6b870e04, 658cf62b, ab06df46, 8ca36c75, (this log entry) |
 | P1 | done | f29d38e3, 81a14090, b0309128, 6bfcf8c0, 4b803c7f, (this log entry) |
-| S1 | todo | |
+| S1 | done | b372c2f6, (this log entry) |
 | S2 | todo | |
 | S3 | todo | |
 | S4 | todo | |
@@ -439,3 +439,25 @@ See `PLAN.md` for the session protocol, chunks and gates. Append one log entry p
   - The tool keeps fixes inside the module. A fix that spans two modules (e.g. `performance-unnecessary-value-param` with the declaration in one and the definition in the other) is listed under "reaches outside the module" and is never applied by the tool from either side. Do those by hand in the hand commit. PkPd had none.
   - `ParamsConvFactor` (≈20 doubles) is passed by value to four file-local helpers in `LSTMDrugConversion.cpp`. `const&` would be cheaper; left for D5, which owns PkPd's hot path, with G-perf.
 - Next: S1 (recommended order item 7b).
+
+### S1: Seeded replicate runner (done, 2026-10-16)
+- Base: 9b3372f5.
+- Commit b372c2f6: `test/stats/run_replicates.py`.
+  - Usage: `OM_BUILD_DIR=build-rework test/stats/run_replicates.py <NAME|path.xml> -o OUT [-n N | --seeds S...] [--first-seed 1001] [-j JOBS] [-b] [-q]`. The default seeds are 1001…1000+N, as in § Statistical tests.
+  - Each seed runs in its own temporary directory on a byte copy of the scenario with only the `iseed` value changed. The regex allows `iseed ="1"`, which the two GaussianCopula scenarios use. The scenario must contain exactly one `iseed`, or the runner exits 2. The run is plain, with no checkpoint flags.
+  - Output layout: `OUT/<seed>/output.txt`, plus `OUT/<seed>/ctsout.txt` when the scenario writes one. `.gz` outputs are decompressed. `OUT/meta.json` records the scenario path and SHA256, the schema name, the binary path and SHA256, the source commit and dirty flag of the build's source tree, the output format, and the creation time. This is S2's metadata source.
+  - **Resumable:** seeds that already have `output.txt` are skipped. Each seed is written to `<seed>.partial` and renamed when complete. On a rerun into an existing `OUT`, a changed scenario hash, binary hash or output format is refused (exit 2), so one directory never mixes builds.
+  - Reuse of `test/run.py`: the runner loads the CMake-configured `<build>/test/run.py` as a module (`getSchemaName`, `linkOrCopy`, `binaryToText`, `openMalariaExec`, `testSrcDir`). It restores `sys.path` afterwards, because `run.py` overwrites `sys.path[0]`. `run.py` itself is unchanged.
+  - Exit codes: 0 if every seed succeeded; 1 if any seed failed (the other seeds still run, and the failure prints the tail of openMalaria's stderr); 2 for usage or setup errors.
+- Done criterion, on `scenario1`:
+  - Seeds 1001–1020 were run into two directories, at `-j10` and at `-j3`. `diff -r` shows only `meta.json`'s `created` line; the 40 `output.txt`/`ctsout.txt` files are byte-identical.
+  - The 20 seeds give 20 distinct `output.txt` files. 1001 vs 1002: `compareOutput.py` reports 507 significant differences.
+  - Extra check: `--seeds 1` (the scenario's own `iseed`) reproduces `test/expected/output1.txt` and `ctsout1.txt` byte for byte. So the copy, rewrite and run path matches what ctest runs.
+- Other checks: resume (`-n 5` over 4 existing seeds runs only 1005); meta mismatch refused; missing scenario, missing build dir, no `iseed`, out-of-range seed (all exit 2); a scenario that makes openMalaria fail (exit 1, stderr shown); the temp dirs are removed. `scenarioBench.xml` by path: 2 seeds in 16 s at `-j2`. `uvx ruff check` is clean.
+- Gates: G-exact / G-unit 53/53, 13.1 s at `-j10` under `caffeinate -i`. No C++ changed, so G-style and G-perf don't apply.
+- Surprise: **binary mode output is not line-identical to text output.** `run.py`'s `binaryToText` writes all integer measures before the double ones, so `-b` on seed 1 gives the same 792 rows as `expected/output1.txt` in a different order (`compareOutput.py`: no differences). S2 and S3 must key cells by (survey, group, measure), not by line. The `-b` help says so.
+- Follow-ups:
+  - S2: read `OUT/*/output.txt` and `OUT/meta.json`. `meta.json` has the commit, but not the schema *version* that § Statistical tests (1) asks for: take it from the `schemaVersion` attribute of the scenario, or from `meta["schema"]`.
+  - S5: run one `OUT` per scenario. `--first-seed` and `--seeds` let a slow scenario be split across sessions, and the skip-existing behaviour makes reruns safe.
+  - I1: switch from rewriting `iseed` to the new `--seed` flag (already in the plan).
+- Next: S2.
