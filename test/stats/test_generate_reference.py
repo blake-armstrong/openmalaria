@@ -79,6 +79,11 @@ class LeaveOneOutTests(unittest.TestCase):
                 np.testing.assert_allclose(fast[i], np.quantile(np.delete(x, i, axis=0), p, axis=0),
                                            rtol=0, atol=1e-12)
 
+    def test_constant_cells_have_sd_zero(self):
+        x = np.full((7, 2), 3.0425)
+        x[:, 1] = 0.1
+        np.testing.assert_array_equal(gen.cell_statistics(x, 0.025, 0.975).stats["sd"], [0.0, 0.0])
+
     def test_constant_cells_never_miss(self):
         x = np.full((20, 5), 3.0)
         self.assertEqual(misses(x, 0.025, 0.975).sum(), 0)

@@ -108,7 +108,7 @@ def cell_statistics(x, p_lo, p_hi, chunk=CHUNK_CELLS):
         s = np.sort(block, axis=0)
         rank = ranks(block)
         with np.errstate(invalid="ignore"):
-            result.stats["sd"][part] = block.std(axis=0, ddof=1)
+            result.stats["sd"][part] = np.where(s[0] == s[-1], 0.0, block.std(axis=0, ddof=1))
         result.stats["mean"][part] = block.mean(axis=0)
         result.stats["min"][part] = s[0]
         result.stats["max"][part] = s[-1]
