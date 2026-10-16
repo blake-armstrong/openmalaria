@@ -45,7 +45,6 @@ set (OM_CXXTEST_HEADERS
   PennyInfectionSuite.h
   MolineauxInfectionSuite.h
   #MosqLifeCycleSuite.h
-  UtilVectorsSuite.h
   PkPdComplianceSuite.h
   ChaChaSuite.h
   XoshiroSuite.h
@@ -108,6 +107,35 @@ if (MSVC)
 endif (MSVC)
 
 add_test (unittest unittest)
+
+om_dependency (Catch2 VERSION 3.16.0
+  URL https://github.com/catchorg/Catch2/archive/refs/tags/v3.16.0.tar.gz
+  SHA256 0957cae5821b17ce07f0833aaa52b5137643a8382203221f363a8303c109af34
+)
+
+add_executable (unittest-catch2
+  UtilVectorsTests.cpp
+)
+target_link_libraries (unittest-catch2
+  Catch2::Catch2WithMain
+  model
+  schema
+  contrib
+  ${GSL_LIBRARIES}
+  ${XERCESC_LIBRARIES}
+  ${Z_LIBRARIES}
+  ${PTHREAD_LIBRARIES}
+  ${OM_STD_LIBS}
+)
+
+if (MSVC)
+  set_target_properties (unittest-catch2 PROPERTIES
+    LINK_FLAGS "${OM_LINK_FLAGS}"
+    COMPILE_FLAGS "${OM_COMPILE_FLAGS}"
+  )
+endif (MSVC)
+
+add_test (NAME unittest-catch2 COMMAND unittest-catch2 --warn NoAssertions)
 
 mark_as_advanced (
   OM_CXXTEST_OPTIONS
