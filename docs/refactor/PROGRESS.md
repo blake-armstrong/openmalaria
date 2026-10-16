@@ -21,7 +21,7 @@ See `PLAN.md` for the session protocol, chunks and gates. Append one log entry p
 | S5 | todo | |
 | S6 | todo | |
 | C1 | done | b02303db, (this log entry) |
-| C2 | todo | |
+| C2 | done | 20e8bf39, (this log entry) |
 | D1 | todo | |
 | D2 | todo | |
 | D2b | todo | |
@@ -300,3 +300,28 @@ See `PLAN.md` for the session protocol, chunks and gates. Append one log entry p
   - C2: main still includes headers only the init chain needed (`ModelNameProvider.h`, `ModelOptions.h`, …). Trim them when the phases move out.
   - C2: the default member initializer `only_new_episode = false` is now redundant with the constructor's initializer list; tidy it up when the class grows.
 - Next: C2.
+
+### C2: Move the phases and the step loop (done, 2026-10-16)
+- Base: 60678ae9.
+- Commit 20e8bf39: the warmup, EIR calibration, pre-main-phase init, checkpoint write/resume, intervention period and final flush moved from `main()` into `Simulation`.
+  - Public: `run(const CheckpointOptions&)` (the whole program after construction), `run_phase(name, end)` (the verbose Starting/Finishing lines around `run_until`), `run_until(end)`, `step()` (the old loop body).
+  - Private: `start_new()` (fresh start up to the checkpoint write and the `--checkpoint-stop` throw), `resume(file)`, `finish()`.
+  - `CheckpointOptions { file_name = "checkpoint", enabled, stop_after_write }` is built in `main.cpp` from `CommandLine`. Simulation still reads `CommandLine` for `VERBOSE`/`PROGRESS` (globals stay until D).
+  - `end_time`, `est_end_time` and the old `static int lastPercent` are now members. `checkpoint.{h,cpp}` is unchanged; `Simulation` passes its members to `readCheckpoint`/`writeCheckpoint` by reference as main did with its locals.
+  - `main.cpp`: 303 → 123 lines (101 without the licence header). What's left is includes, `checkpoint_options()`, parse/load/`XMLChecker`/construct/`run`, and the unchanged catch chain (~50 lines). The done criterion says "under ~100"; the remaining bulk is the exception → exit-code mapping, which belongs to the CLI and is left for stage I.
+  - C1 follow-ups done: main's init-only includes are trimmed; the redundant `only_new_episode = false` default is gone.
+- Deviations from a pure cut-paste, none observable:
+  - `print_errno` builds its `perror` prefix with `std::string` + `std::to_string` instead of `sprintf` into `char[256]` (tidy: C arrays, varargs, array decay, C-style cast). It saves `errno` before the allocation and restores it before `perror`, so the text is the same. This also removes the baseline `sprintf` deprecation warning from A2.
+  - The three moved verbose `cout ... << endl` lines carry `// NOLINT(performance-avoid-endl)`. Changing them to `'\n'` would change stdout flush timing relative to stderr. `performance-avoid-endl` is in STYLE.md's "kept on, with expected legacy hits" list, so the NOLINT is the sanctioned route. The `cerr << "In: " ...` line in main (touched only by the local rename) uses `'\n'`, since `cerr` is unbuffered.
+  - `~Simulation()` is defined out of line (`= default` in the .cpp) so `main.cpp` doesn't need `Clinical/ClinicalModel.h` for `unique_ptr<ClinicalModel>` inside `Human`. Copy and move are `= delete` (rule of five; nothing needs to move a `Simulation` yet).
+  - main's locals `exitStatus`/`scenarioFile` became `exit_status`/`scenario_file` (declarations on changed lines).
+- Gates (at 20e8bf39):
+  - G-exact / G-unit: 52/52, 12.0 s at `-j10` under `caffeinate -i`. Build warnings: only the duplicate `-lc++`.
+  - G-style: `OM_BUILD_DIR=build-rework util/style.sh check HEAD` (before commit, base 60678ae9) clean; the pre-commit clang-format hook passed.
+  - G-perf: `util/bench.sh --compare ../om-bench-base/build-rework` (base worktree moved to 60678ae9 and rebuilt): median per-pair ratio 1.0031 (+0.31%), ok. Load average ~2.6 at the start.
+  - Extra A/B check beyond G-exact (stdout and stderr aren't covered by ctest): `scenario5.xml` and `scenarioVecTest.xml`, each with `--verbose --progress`, `--checkpoint-stop --verbose --progress` and `--checkpoint --verbose --progress`, run twice in the same dir (so the second run resumes from the checkpoint where one was written). Base (60678ae9) and candidate gave byte-identical stdout, stderr, `output.txt`, `checkpoint`, `checkpoint0.gz` and exit codes for all 12 runs.
+- Surprises / follow-ups:
+  - **Pre-existing bug, kept as is:** `print_progress(int last_percent, ...)` takes `last_percent` by value, so the caller's value never changes (it was a function-static `-1` in main, now a member). With `--progress`, every step prints a `\r N%` line (~40 KB of stderr on scenario5) instead of one per percent. The fix is to pass it by reference; it only changes `--progress` stderr. Left for the user to approve as a separate behaviour change.
+  - The C1 accessors `population()`, `transmission()`, `scenario()`, `human_warmup_length()`, `survey_only_new_ep()` now have no callers. Kept as the start of the public surface; D/H decide which stay.
+  - `step()` still reaches the old globals (`sim::`, `InterventionManager`, `mon::`, `CommandLine`). That is stage D's job.
+- Next: S1 (recommended order item 7).
