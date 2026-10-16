@@ -58,7 +58,7 @@ See `PLAN.md` for the session protocol, chunks and gates. Append one log entry p
 | J2 | todo | |
 | J3 | todo | |
 | J4 | todo | |
-| M0 | todo | |
+| M0 | done | e5205c8a, 331463a7, 45d57ba3, (this log entry) |
 | M1 | todo | |
 | M2 | todo | |
 | M3 | todo | |
@@ -343,3 +343,32 @@ See `PLAN.md` for the session protocol, chunks and gates. Append one log entry p
 - New open decisions 5 (how dependencies are obtained, before M0), 6 (oneTBB's Apache-2.0 licence vs GPLv2, before M7) and 7 (how far to replace GSL, before M5).
 - Recommended order changes: M0 → M2 come next, before S1 (so D1 can use them). M4 follows D2b, so `test/expected/` is regenerated once. M3/M7 come after D9, M5/M6 after F6, and M8 after G3. D chunks now also need M2.
 - Next: M0 (ask Decision 5 first).
+
+### M0: Dependency mechanism (done, 2026-10-16)
+- **Decision 5 (asked at the start of this chunk): FetchContent with `FIND_PACKAGE_ARGS`**, the recommended option: an installed package first, otherwise a pinned, hash-checked fetch.
+- Base: 3b19a607.
+- Commits:
+  - e5205c8a: `cmake_minimum_required` 3.15 → 3.24
+  - 331463a7: `cmake/Dependencies.cmake` with `om_dependency(<name> VERSION URL SHA256 [FIND_PACKAGE_ARGS ...])`, included from the root `CMakeLists.txt`. No dependency is declared yet.
+  - 45d57ba3: `docs/refactor/DEPENDENCIES.md`
+- **`om_dependency`** calls `FetchContent_Declare(URL, URL_HASH SHA256=, FIND_PACKAGE_ARGS <VERSION> GLOBAL ...)`, then `FetchContent_MakeAvailable`, and prints whether the dependency was found installed or fetched. `GLOBAL` makes an installed package's imported targets visible tree-wide, whichever directory calls it. The overrides (`FETCHCONTENT_TRY_FIND_PACKAGE_MODE=NEVER`, `FETCHCONTENT_FULLY_DISCONNECTED`, `FETCHCONTENT_SOURCE_DIR_<NAME>`) are documented in DEPENDENCIES.md.
+- Mechanism test: a scratch project with `fmt` 12.2.0, which Homebrew has installed.
+  - default: used the installed copy
+  - `TRY_FIND_PACKAGE_MODE=NEVER`: fetched, built and linked statically
+  - a minimum version above the installed one: fell back to the fetch
+  - a wrong SHA256: configure failed with "Hash mismatch"
+- **Policy check for 3.15 → 3.24.** Fresh configures of the base and the candidate (both Release with tests, paths normalised) give identical `compile_commands.json`. The rebuilt `openMalaria` (sha1 `7a934957…`) and `unittest` (`ae86e04e…`) are byte-identical to the base build, both after the bump and after the include.
+- **CI style job's install step: no change needed in M0.** Ubuntu 24.04's apt CMake is 3.28, which meets 3.24, and GitHub runners also preinstall a newer CMake. No library is fetched yet. `util/ci-style.sh upstream/main` from a fresh `build-style/` is clean.
+- Gates (at 45d57ba3):
+  - G-exact / G-unit: 52/52, 11.1 s at `-j10` under `caffeinate -i`
+  - G-style: `OM_BUILD_DIR=build-rework util/style.sh check 3b19a607` reports no changed C++ files
+  - G-perf: not a gate here. The binaries are byte-identical anyway.
+- Surprises, recorded in DEPENDENCIES.md:
+  - **Licences: GSL is GPL-3.0-or-later and Xerces-C is Apache-2.0**, so a distributed `openMalaria` binary is already GPLv3-only in effect. Decision 6's concern (oneTBB's Apache-2.0 vs GPLv2) therefore does not narrow today's binaries. It matters only for a future build without GSL and Xerces-C. Mention this when asking Decision 6.
+  - `contrib/README.txt` is stale. It says CxxTest 3.10.1 under LGPL-2.1, but the tree has CxxTest 4.4 under LGPL-3.0 (826bd5a8, refreshed in #398). Left as is; DEPENDENCIES.md is now the source of truth.
+  - `docker/Dockerfile` uses Ubuntu 22.04's apt CMake (3.22), which is below the new minimum. It builds upstream's `schema-50` branch, not this tree, so it is unaffected for now.
+- Follow-ups:
+  - M1: declare Catch2 through `om_dependency` and pin a release tarball plus SHA256. Add the Catch2 apt package to the CI install step only if the style job's configure would otherwise fetch it on every run. Ubuntu 24.04 ships Catch2 3.4.0, so the pinned `VERSION` decides whether that copy is accepted.
+  - If headers from fetched libraries start producing compiler warnings, `FetchContent_Declare(SYSTEM)` needs CMake 3.25.
+  - H2 (install/export): fetched projects bring their own `install()` rules into ours. Turn them off per dependency (e.g. `CATCH_INSTALL_DOCS`/`..._INSTALL` options) or use `EXCLUDE_FROM_ALL`.
+- Next: M1.
