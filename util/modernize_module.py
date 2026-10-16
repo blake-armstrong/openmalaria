@@ -151,7 +151,24 @@ class Modernizer:
                 return True
         return False
 
+    @staticmethod
+    def drop_existing_includes(diags):
+        includes = {}
+        for d in diags:
+            kept = []
+            for rep in d["reps"]:
+                path, _, length, text = rep
+                if length == 0 and INCLUDE_RE.fullmatch(text):
+                    if path not in includes:
+                        with open(path, encoding="utf-8") as fh:
+                            includes[path] = {m.group().strip() for m in INCLUDE_RE.finditer(fh.read())}
+                    if text.strip() in includes[path]:
+                        continue
+                kept.append(rep)
+            d["reps"] = tuple(kept)
+
     def select(self, diags):
+        self.drop_existing_includes(diags)
         taken = collections.defaultdict(set)
         accepted, deferred, crossing, nofix = [], [], [], []
         for d in diags:
