@@ -72,14 +72,29 @@ need a newer CMake before it builds code from this branch.
 | R nmath `qnorm` | from R, in tree (`contrib/R_nmath/`) | GPL-2.0-or-later | vendored | `model/interventions/ITN.cpp`, `IRS.cpp` | Boost.Math → M6, then removed |
 | ChaCha RNG | in tree (`contrib/chacha.h`), modified (see its header) | Zlib | vendored | `model/util/random.h`, `unittest/ChaChaSuite.h` | stays; per-human streams in M8 |
 | xoshiro | in-tree port (`model/util/xoshiro.h`) of the Blackman/Vigna reference generator | reference code public domain (CC0); port GPL-2.0-or-later as part of OpenMalaria | in tree | `model/util/random.h`, `unittest/XoshiroSuite.h` | stays |
-| CxxTest | 4.4, in tree (`contrib/cxxtest/`), modified | LGPL-3.0 | vendored | `unittest/` only (`cxxtestgen` needs Python) | Catch2 from M1; removed in M9 |
+| CxxTest | 4.4, in tree (`contrib/cxxtest/`), modified | LGPL-3.0 | vendored | `unittest/*Suite.h` only (`cxxtestgen` needs Python) | new tests are Catch2 since M1; removed in M9 |
 
 `contrib/README.txt` still says CxxTest 3.10.1 under LGPL-2.1. The tree has had 4.4,
 under LGPL-3.0, since 826bd5a8 (2019; refreshed in #398, 58dae029), and `contrib/cxxtest/COPYING` is LGPL-3.0.
 
 ## Fetched libraries (`om_dependency`)
 
-None yet. M1 adds Catch2.
+| Library | Pinned | Licence | Declared in | Used by | Notes |
+|---|---|---|---|---|---|
+| Catch2 | 3.16.0 (2026-08-25), `catchorg/Catch2` tag tarball, SHA256 `0957cae5821b17ce07f0833aaa52b5137643a8382203221f363a8303c109af34` | BSL-1.0 | `unittest/CMakeLists.txt` (only with `OM_CXXTEST_ENABLE`) | the `unittest-catch2` test executable (`Catch2::Catch2WithMain`) | since M1; replaces CxxTest in M9 |
+
+Catch2 notes:
+- An installed Catch2 is accepted from 3.16.0 up within major version 3 (Catch2's own
+  `SameMajorVersion` rule). Ubuntu 24.04's apt package is 3.4.0 and Homebrew has none
+  installed here, so both the CI style job and local builds fetch it. That is one
+  1.2 MB download per fresh build dir, at configure time. CI's install step is
+  unchanged.
+- Tested both ways: fetched (default here) and installed into a scratch prefix
+  (`-DCMAKE_PREFIX_PATH=<prefix>`). Both build and pass.
+- As a subproject Catch2 installs nothing (its `install()` rules need it to be the
+  top-level project), so it does not leak into H2's install rules.
+- `catch_user_config.hpp` is generated at configure time, so clang-tidy can parse the
+  tests after a configure plus the `schema` build, which is what `util/ci-style.sh` does.
 
 ## Licence summary
 
@@ -92,4 +107,5 @@ So oneTBB (Apache-2.0, Decision 6) would not narrow the licence of today's binar
 would matter only for a build without GSL and Xerces-C, e.g. a Python wheel after M6
 whose XML layer is optional. Record this when Decision 6 is asked.
 
-CxxTest (LGPL-3.0) links only into the test binary, which is not distributed.
+CxxTest (LGPL-3.0) and Catch2 (BSL-1.0) link only into the test binaries, which are not
+distributed.
