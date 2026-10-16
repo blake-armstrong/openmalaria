@@ -15,7 +15,7 @@ See `PLAN.md` for the session protocol, chunks and gates. Append one log entry p
 | B5 | done | 16851d20, 65710e16, dcae0a40, 6b870e04, 658cf62b, ab06df46, 8ca36c75, (this log entry) |
 | P1 | done | f29d38e3, 81a14090, b0309128, 6bfcf8c0, 4b803c7f, (this log entry) |
 | S1 | done | b372c2f6, (this log entry) |
-| S2 | todo | |
+| S2 | done | 841b2a9f, 720c0f09, 3c40c24b, (this log entry) |
 | S3 | todo | |
 | S4 | todo | |
 | S5 | todo | |
@@ -465,3 +465,37 @@ See `PLAN.md` for the session protocol, chunks and gates. Append one log entry p
 ### Plan amendment: findings register (2026-10-16, after S1)
 - At the user's request, bugs, surprises and strange design decisions now go in a new register, `docs/refactor/FINDINGS.md`, with stable IDs (`F<n>`). Before this, they were only in the per-chunk log entries. PLAN.md § Session protocol gains step 8 (record findings as you go; don't fix output-changing ones inside a refactor chunk without asking), and step 2 now reads the open entries for the modules a chunk touches.
 - Seeded with F1–F14, gathered from earlier log entries plus four new ones from S1: F2 (stale `errno` printed after errors), F3 (bad input reported as a C++ bug), F4 and F5 (dead or wrong code in `test/run.py`).
+
+### S2: Reference builder (done, 2026-10-16)
+- Base: 17935594.
+- Commits:
+  - 841b2a9f: `test/stats/generate_reference.py`, `test/stats/stats_io.py`, `test/stats/test_generate_reference.py`
+  - 720c0f09: `test/reference/scenario1.csv`, a provisional reference at N = 50 (seeds 1001–1050, built at 17935594) for S3 and S4 to work against. S5 replaces it.
+  - 3c40c24b: findings F15–F17
+- **Usage:** `test/stats/generate_reference.py <run_replicates OUT dir> [-o file.csv] [--allow-dirty]`. The default output is `test/reference/<scenario file stem>.csv`, e.g. `scenario1.csv`. It refuses replicates from a dirty tree unless `--allow-dirty` is passed, and needs at least 10 replicates. Exit 2 on errors.
+- **numpy through uv.** The system Python has no numpy, and pure Python would be too slow at 190k cells × 500 replicates. Both new scripts have a `uv run --script` shebang with PEP 723 metadata (`numpy>=2,<3`; uv picked 2.5.2), so running them directly is enough. `stats_io.py` is stdlib only, so S3's checker can run under ctest without numpy.
+- **What the reference holds** (format in `stats_io.py`):
+  - Cells keyed by `(file, survey, group, measure)`: `survey` rows from `output.txt` (by key, not line, per F7); `ctsout` rows keyed by the row's first column and the column header (repeated headers get `#2`, …); `aggregate` rows.
+  - Columns `mean, sd, min, max, lo, hi`. Cells: `lo`/`hi` are the 2.5%/97.5% quantiles. Aggregates: `lo`/`hi` are Bonferroni-widened over the aggregates present (e.g. 0.5%/99.5% for 5). Floats are written with `repr`, so they read back exactly. A cell is zero-width when `min == max`, or when it is NaN in every replicate.
+  - Quantiles are Hyndman–Fan type 7 (numpy's default), computed from sorted arrays. The unit tests check them against `np.quantile`.
+  - **Leave-one-out threshold:** each replicate's miss count against the interval of the other N − 1, using the same rule S3 will use (`v < lo or v > hi`). The threshold is `ceil` of the 99.9th percentile. The LOO quantiles come from the full sort plus each replicate's rank, with no recomputation. The unit tests check them against brute force, with ties.
+  - **Aggregates** (`stats_io.AGGREGATES`), using whole-population rows only (group < 1000, i.e. no cohort or genotype split): `clinical_episodes` (measure 14), `severe_episodes` (15), `deaths` (18 + 19), `mean_prevalence` (Σ nPatent / Σ nHost), `mean_eir` (mean of measure 36, or else the mean of ctsout's `simulated EIR` without NaNs). An aggregate is included only if every replicate has it. scenario1 has only `mean_prevalence` and `mean_eir`.
+  - Metadata header: format version, scenario and SHA256, schema, schema version (from the scenario's `schemaVersion`, only if its hash still matches `meta.json`; S1 follow-up), commit, dirty, binary SHA256, output format, N, seeds, dates, quantile method, cell counts, zero-width count, LOO miss summary and threshold, `loo_zero_width_failures`, aggregates and their interval.
+  - A cell that is NaN in some replicates but not all is an error. No such cell has turned up yet; S5 will show whether one does.
+- Done criterion:
+  - scenario1 at N = 50: 1036 cells (792 survey, 244 ctsout), 198 of them zero-width. LOO misses: min 5, median 46, mean 50.8, max 99. Threshold 99.
+  - Unit tests: 22 pass (`test/stats/test_generate_reference.py`), on synthetic data: quantiles, LOO against brute force, zero-width failures, NaN handling, parsers, aggregates, and end to end (metadata, known statistics, reordered binary-style output, exact round trip, mismatched cells, dirty tree, too few replicates, changed scenario).
+  - Preview for S3: the scenario's own seed 1 (`test/expected/output1.txt`, `ctsout1.txt`) has 26 interval misses (threshold 99), no zero-width mismatches, and both aggregates inside their intervals.
+  - `uvx ruff check test/stats/` is clean.
+- Scale: ModelNameNoOverrides, 189,800 cells × 38 replicates: 3.9 s, 337 MB peak. The work is done in column chunks of 16k cells, so N = 500 needs ~0.8 GB for the data matrix plus small per-chunk buffers.
+- Gates: G-exact / G-unit 53/53, 13.6 s at `-j10` under `caffeinate -i`. No C++ changed, so G-style and G-perf don't apply.
+- Surprises (in FINDINGS.md):
+  - **F15:** the plan's exact-match rule for zero-width cells would give many false failures. Rare events, such as an `nTreatments` cell that is 0 in 49 of 50 runs, look zero-width. In leave-one-out on scenario1, 19 of 50 replicates would fail that rule. Each reference records this as `loo_zero_width_failures`.
+  - **F16:** all four `ModelName*` scenarios abort with `Transmission warmup exceeded 30 iterations!` (exit 76) for 40–80% of seeds 1001+. The scenarios' own seed works.
+  - **F17:** for strongly correlated outputs the LOO miss counts are heavy-tailed, so the 99.9% threshold is near the maximum and gives little power.
+- Follow-ups:
+  - S3: settle the zero-width rule (F15) first. The data suggests counting a zero-width mismatch as an ordinary miss, since the LOO threshold already includes such misses, with exact match only for cells known to be deterministic. That changes the plan's § Statistical tests (2), so **ask the user**. Use `stats_io.read_reference`, `read_run` and `aggregates`, so the cell keys and aggregate definitions can't drift from the generator.
+  - S4: register `test/stats/test_generate_reference.py` with ctest under the `statistical` label. It needs uv (and numpy, fetched on first use).
+  - S5: the `ModelName*` scenarios need a decision (F16): skip them, use only seeds that converge (which biases the reference), or fix the model. Failed seeds leave no directory, so the generator just sees fewer replicates. Choose `-n` so that enough seeds succeed.
+  - S6: F17 bears on the power study.
+- Next: S3.
