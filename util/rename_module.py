@@ -116,6 +116,7 @@ class Renamer:
             str(self.args.j),
             "-quiet",
             "-checks=-*,readability-identifier-naming",
+            "-extra-arg=-UNDEBUG",
             "-export-fixes",
             out_dir + "/",
         ]
@@ -246,6 +247,11 @@ class Renamer:
             old = re.escape(e["old"].encode())
             if e["kind"] == "method" and classes:
                 pattern = re.compile(rb"\b(?:" + qualifier + rb")\s*::\s*(" + old + rb")\b")
+                for path, (_, code) in sources.items():
+                    for m in pattern.finditer(code):
+                        e["reps"].setdefault((path, m.start(1), len(e["old"])), path)
+            elif e["kind"] in ("class", "struct"):
+                pattern = re.compile(rb"\b(" + old + rb")\s*::")
                 for path, (_, code) in sources.items():
                     for m in pattern.finditer(code):
                         e["reps"].setdefault((path, m.start(1), len(e["old"])), path)
