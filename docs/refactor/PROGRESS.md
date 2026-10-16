@@ -22,7 +22,7 @@ See `PLAN.md` for the session protocol, chunks and gates. Append one log entry p
 | S6 | todo | |
 | C1 | done | b02303db, (this log entry) |
 | C2 | done | 20e8bf39, (this log entry) |
-| D1 | todo | |
+| D1 | done | 2e2cac5a, 72e14d9c, bda40963, 4252cba1, 1a0c0b58, 48d3476c, 186d32f5, 21e09c0d, (this log entry) |
 | D2 | todo | |
 | D2b | todo | |
 | D3 | todo | |
@@ -433,6 +433,7 @@ See `PLAN.md` for the session protocol, chunks and gates. Append one log entry p
   | Module | Rename | Modernise |
   |---|---|---|
   | `model/PkPd` | cae5d3b5 (B4) | a0f1112c + 7b330170 (M2) |
+  | `model/` root: `sim.h`, `Clock.{h,cpp}`, `Simulation.{h,cpp}`, `checkpoint.{h,cpp}` | 4252cba1 (D1) | 48d3476c + 21e09c0d (D1) |
 
 - Follow-ups:
   - D chunks: run `/rename-module` then `/modernize-module` on each module the chunk owns, and add a row to the table above.
@@ -574,3 +575,33 @@ See `PLAN.md` for the session protocol, chunks and gates. Append one log entry p
   - Discarded, to be rerun in the worktree: 12 (its `meta.json` said `dirty: true`, F22) and a partial Genotypes.
   - Not started: the other 33, from Genotypes on in `OM_BOXTEST_NAMES` order.
 - Still to do: finish the replicates; in the worktree, `test/stats/generate_reference.py build-rework/stats-replicates/<NAME> -o /Users/blaarm/git/openmalaria-fork/test/reference/scenario<NAME>.csv.gz` for each, then commit the 46 `.csv.gz` files in the main tree; G-exact, G-unit and G-stat; record each reference's N, cell counts and `loo_run_failures` here. When S5 is committed, remove the worktree (`git worktree remove /Users/blaarm/git/om-s5`).
+
+### D1: `sim::` time statics → `Clock` owned by `Simulation` (done, 2026-10-16)
+- Base: d02e1d8d. The S5 replicate job was paused throughout (see S5); its pinned worktree `/Users/blaarm/git/om-s5` is separate from this tree.
+- Commits:
+  - 2e2cac5a: **logic.** New `OM::Clock` (`model/Clock.{h,cpp}`; `sim.cpp` was git-moved to `Clock.cpp`). It holds what were `SimData`'s and `sim`'s statics: interval, steps per year, years per step, start/end dates, maximum human age, `t0`/`t1`/intervention time, and the debug-only `in_update`. `Clock::init` is the old `sim::init`, called at the same point in the init chain.
+    - `Simulation` owns `Clock clock` as its first member, then `ClockBinding clock_binding{clock}`, so the clock exists and is current before the init chain and is unbound after everything else is destroyed.
+    - **Bridge:** `sim`'s stateful statics keep their signatures, declared in `sim.h` and defined inline in `Clock.h` as `bridge::clock().x()`. `bridge::current_clock` is a plain pointer (`NOLINT`ed global, removed in D9); `bridge::clock()` asserts it is set. `sim`'s pure functions (`zero`, `never`, `from_days`, `one_year`, …) stay as they were: they hold no state. PLAN.md § Stage D now records this per-family-pointer form of the bridge.
+    - Call sites migrated: `Simulation.cpp` (all stateful uses, including `print_progress`/`print_errno`, which now take `now`) and `checkpoint.{h,cpp}` (the read/write functions take `Clock&`; `checkpoint_interv_time` and `checkpoint_step_times` write the same ints in the same places). The other ~70 files still go through the bridge; their D chunks (or D9) migrate them.
+    - `UnittestUtil::initTime` binds its own function-static `Clock` (friend access, as `sim` had).
+    - Header changes: `sim.h` no longer `#error`s without `Global.h`. It needed `util/checkpoint.h` and `util/mod.h` only for the old inline bodies, so `Global.h` now includes those itself, then `sim.h`, then `Clock.h`. `Clock.h` includes `Global.h`. `UnittestUtil.h` includes `cxxtest/TestSuite.h` for `ETS_ASSERT`, so it can be checked on its own (the B4 parse error).
+  - 72e14d9c: `util/style.sh rename` and `modernize` take a list of files as the module, as well as a directory. D1's files share the `model/` root with Population and others, and a directory prefix of `model/` would be the whole tree. The PkPd dry runs are unchanged.
+  - bda40963: rename-tool fix for **F23** (assert bodies and disabled blocks were invisible to the Release compile database).
+  - 4252cba1 + 1a0c0b58: **rename**, 57 renames, no maps or skips. `sim` → `Sim`, its methods to snake_case (`oneTS` → `one_ts`, …), `DAYS_IN_YEAR` → `DaysInYear`, `floorToInt` → `floor_to_int`, `readCheckpoint`/`writeCheckpoint` → `read_checkpoint`/`write_checkpoint`, header guards. 76 files. The `Sim::` methods now share their names with the `Clock` methods they delegate to, so a later migration only swaps `Sim::x()` for `clock.x()`.
+  - 48d3476c + 186d32f5: **modernise, tool:** 1 `modernize-use-using` (`SimTime`).
+  - 21e09c0d: **modernise, hand:** drop the 8 no-op `SimTime(…)` casts; the 5 `ostringstream` formattings in `checkpoint.cpp` → `std::format`; 2 `const`s. Nothing from the report left.
+- Gates:
+  - G-exact / G-unit: 53/53 (plus `stat_1` and the 2 tool tests, 56/56), `-j10` under `caffeinate -i`, after every commit.
+  - **Debug build** (new, `build-debug/`, Debug, same options): builds, and `ctest -LE statistical` passes 53/53, so the `in_update` asserts and `bridge::clock()`'s null check hold. This is what exposed F23 before the rename was committed.
+  - G-style: `util/style.sh check d02e1d8d` clean. The rename and modernise tool commits also passed their skill-specific checks (clang-format half clean, a second dry run applies nothing, the token check passed).
+  - G-perf: `util/bench.sh --compare ../om-bench-base/build-rework` (base worktree moved to d02e1d8d and rebuilt). After the logic commit: median per-pair ratio 1.0041 (+0.41%), spreads 0.7%. At the end: 1.0023 (+0.23%), with load ~7 from other work (spreads 5.1% / 3.3%). Both ok.
+  - G-stat: `stat_1` passes. The other references are still waiting on S5.
+  - Extra console A/B (base d02e1d8d vs candidate, `scenario5.xml --checkpoint`): a truncated `checkpoint0.gz` (`… (pos -1 of -1 bytes)`) and one with 9 trailing bytes (`… 9 bytes remaining.`) give byte-identical stdout, stderr and exit code 68.
+- Surprises:
+  - F23 (above): the rename tool's first apply passed the token check and the Release build, but left `sim::` qualifiers inside 22 asserts and 1 `#ifdef WHVivaxSamples` line. Reverted, tool fixed, re-applied.
+  - The bridge costs about +0.2–0.4% on the benchmark, from the extra pointer load in `sim::ts0()` and friends on the per-human path. It disappears when the call sites hold a `Clock&` directly.
+- Follow-ups:
+  - Later D chunks: migrate their modules' `Sim::` stateful calls to a `const Clock&` (constructor-injected or passed down), so D9 can drop `bridge::current_clock`. The pure `Sim::` functions can stay, or become free functions in a time namespace at F0.
+  - Population (`model/Population.cpp`, `PopulationAgeStructure.cpp`) shares the `model/` root but was not renamed or modernised here. It goes with E4, or with the pre-F0 sweep.
+  - F1 (`print_progress` takes `last_percent` by value) is unchanged; it still needs the user's go-ahead.
+- Next: D2 (the RNG into `Simulation`), or S5 if the user wants the replicate job resumed (4 cores, in the worktree).

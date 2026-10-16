@@ -311,6 +311,7 @@ Each chunk has the same fields:
 **Bridge pattern used by every D chunk**, so that each chunk stays small:
 - Each global family moves into an object owned by `Simulation`.
 - The old static accessors are kept temporarily. They delegate through a single "current simulation" pointer, so call sites can migrate gradually.
+  - As built in D1: one pointer per family in `namespace bridge` (`bridge::current_clock`), set for `Simulation`'s lifetime by a binding member (`ClockBinding`) declared right after the family's object. A single `Simulation*` would need `Simulation`'s full definition in every inline accessor, which `Global.h` can't include. Later D chunks add their pointer and binding next to it; `Simulation` sets them all, so they still act as one current simulation.
 - Each chunk:
   1. converts one family
   2. migrates the call sites in the modules it owns
