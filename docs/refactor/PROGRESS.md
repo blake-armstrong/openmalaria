@@ -59,7 +59,7 @@ See `PLAN.md` for the session protocol, chunks and gates. Append one log entry p
 | J3 | todo | |
 | J4 | todo | |
 | M0 | done | e5205c8a, 331463a7, 45d57ba3, (this log entry) |
-| M1 | todo | |
+| M1 | done | de71bd96, c7293e4e, 80034802, 941c2e77, (this log entry) |
 | M2 | todo | |
 | M3 | todo | |
 | M4 | todo | |
@@ -372,3 +372,29 @@ See `PLAN.md` for the session protocol, chunks and gates. Append one log entry p
   - If headers from fetched libraries start producing compiler warnings, `FetchContent_Declare(SYSTEM)` needs CMake 3.25.
   - H2 (install/export): fetched projects bring their own `install()` rules into ours. Turn them off per dependency (e.g. `CATCH_INSTALL_DOCS`/`..._INSTALL` options) or use `EXCLUDE_FROM_ALL`.
 - Next: M1.
+
+### M1: Catch2 as a second unit-test target (done, 2026-10-16)
+- Base: 053b4d56.
+- Commits:
+  - de71bd96: `.clang-tidy` sets `cppcoreguidelines-avoid-do-while.IgnoreMacros: true` (recorded in STYLE.md § Options)
+  - c7293e4e: Catch2 3.16.0 through `om_dependency` in `unittest/CMakeLists.txt`; new `unittest-catch2` executable (`Catch2::Catch2WithMain` plus the same libraries as `unittest`), registered as ctest test `unittest-catch2` with `--warn NoAssertions`; `UtilVectorsSuite.h` ported to `unittest/UtilVectorsTests.cpp` and removed from the CxxTest list (git records it as a rename)
+  - 80034802: cpp-style skill gains § Unit tests (new tests are Catch2, anonymous namespace, tags, `WithinRel || WithinAbs` with named tolerances)
+  - 941c2e77: DEPENDENCIES.md records Catch2 (pin, hash, licence, notes)
+- **Pin:** v3.16.0 (released 2026-08-25). v3.16.1 (2026-10-08) was skipped as under two weeks old. Tarball SHA256 `0957cae5…af34`.
+- **Pilot:** `UtilVectorsSuite` (one test, `logDFT` → `expIDFT` round trip). Chosen because it links `model`, needs approximate comparison (as every G-diff test will), and covers `util/vectors.h`, which M5 replaces. Same 6 inputs. CxxTest's `TS_ASSERT_APPROX` passes when `|x/y − 1| < 1e-7` or `|x − y| ≤ 1e-7`. The port uses `WithinRel(1e-7) || WithinAbs(1e-7)`; Catch2's relative test is `|x − y| ≤ ε·max(|x|, |y|)`, which is equivalent to first order. Mutation check: shifting the expected values by a relative 2e-7 makes the test fail; reverted.
+- **Installed vs fetched, both tested:** the default here fetches (no Homebrew Catch2). A Catch2 3.16.0 installed into a scratch prefix and passed with `-DCMAKE_PREFIX_PATH` was picked up (`using installed 3.16.0`), built and passed.
+- **CI:** no change to the install step. Ubuntu 24.04's Catch2 3.4.0 is below the pin, so the job fetches 1.2 MB at configure time. `util/ci-style.sh upstream/main` from a fresh `build-style/`: Catch2 fetched, G-style clean, 10 s wall. `catch_user_config.hpp` is generated at configure time, so clang-tidy parses the test without building Catch2.
+- Gates (at 941c2e77):
+  - G-exact / G-unit: 53/53 (51 scenarios, `unittest`, `unittest-catch2`), 11.8 s at `-j10` under `caffeinate -i`. CxxTest now runs 65 tests (one fewer); Catch2 runs 7 assertions in 1 test case.
+  - G-style: `OM_BUILD_DIR=build-rework util/style.sh check 053b4d56` clean.
+  - G-perf: not a gate here; no `model/` code changed.
+- Surprises / deviations:
+  - **Catch2 v3 dropped `--warn NoTests`** (an unknown warning name makes the binary exit 1). v3 already fails a run that matches no tests, so only `--warn NoAssertions` is passed.
+  - **Every Catch2 assertion hit `cppcoreguidelines-avoid-do-while`**, because the macros wrap their bodies in `do { } while (false)`. Fixed tree-wide with `IgnoreMacros: true` rather than per-line NOLINTs. It also hides any legacy macro hits in `model/`, which are the same idiom.
+  - Nothing else in Catch2's macros (`TEST_CASE` registrars, `CAPTURE`) tripped the enabled checks, once the test cases are in an anonymous namespace.
+  - Catch2 as a subproject has no `install()` rules (they need it to be top level), so M0's H2 follow-up does not apply to Catch2.
+  - The configure option is still called `OM_CXXTEST_ENABLE` and now covers both frameworks. Rename it (e.g. `OM_UNITTEST_ENABLE`) in M9 when CxxTest goes; `build.sh` and `util/ci-style.sh` pass it.
+- Follow-ups:
+  - M9: port the remaining 14 compiled CxxTest suites (+ 4 disabled ones, plus `ExtraAsserts.h`/`UnittestUtil.h` helpers), then fold `unittest-catch2` into `unittest` and rename the option.
+  - If the per-case granularity of `catch_discover_tests` is wanted (one ctest test per `TEST_CASE`), it needs `include(Catch)` from `${catch2_SOURCE_DIR}/extras` or the installed config dir. Left out to keep one registration that works both ways.
+- Next: M2 (`modernize-module` skill, pilot on `model/PkPd/`).
