@@ -52,7 +52,7 @@ namespace OM {
 namespace {
 
 void print_progress(int last_percent, SimTime now, SimTime est_end_time) {
-    int percent = (now * 100) / est_end_time;
+    const int percent = (now * 100) / est_end_time;
     if (percent != last_percent) { // avoid huge amounts of output for performance/log-file size reasons
         last_percent = percent;
         cerr << "\r" << percent << "%\t" << flush;

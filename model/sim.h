@@ -73,25 +73,25 @@ public:
     static inline int modulo_year_steps(SimTime d);
 
     /** Duration zero and the time at the start of the simulation. */
-    static inline SimTime zero() { return SimTime(0); }
+    static inline SimTime zero() { return 0; }
 
-    static inline SimTime origin() { return SimTime(0); }
+    static inline SimTime origin() { return 0; }
 
     /** Special value representing a time point always in the past, such that
      * never() + x < zero() and x - never() will not to overflow for all valid
      * simulation times x (including any value now() may take as well as
      * never() and future()). */
-    static inline SimTime never() { return SimTime(-0x3FFFFFFF); }
+    static inline SimTime never() { return -0x3FFFFFFF; }
 
     /** Special value representing a time point always in the future, such that
      * now() < future() and now() + future() does not overflow. */
-    static inline SimTime future() { return SimTime(0x3FFFFFFF); }
+    static inline SimTime future() { return 0x3FFFFFFF; }
 
     /** One day. */
-    static inline SimTime one_day() { return SimTime(1); }
+    static inline SimTime one_day() { return 1; }
 
     /** One year. See DAYS_IN_YEAR. */
-    static inline SimTime one_year() { return SimTime(DaysInYear); }
+    static inline SimTime one_year() { return DaysInYear; }
 
     /** One time step (currently either one or five days). */
     static inline SimTime one_ts();
@@ -103,10 +103,10 @@ public:
     static inline SimTime from_ts(int ts);
 
     /** Duration in days. Should be fast (currently no conversion required). */
-    static inline SimTime from_days(int days) { return SimTime(days); }
+    static inline SimTime from_days(int days) { return days; }
 
     /** Convert from a whole number of years. */
-    static inline SimTime from_years_i(int years) { return SimTime(DaysInYear * years); }
+    static inline SimTime from_years_i(int years) { return DaysInYear * years; }
 
     /** Convert from years to nearest time step. */
     static inline SimTime from_years_n(double years);

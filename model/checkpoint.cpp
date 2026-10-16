@@ -21,6 +21,7 @@
  */
 
 #include <iostream>
+#include <format>
 #include <fstream>
 #include <gzstream/gzstream.h>
 
@@ -79,18 +80,15 @@ void checkpoint(istream& stream, Clock& clock, SimTime& end_time, SimTime& est_e
         clock.checkpoint_step_times(stream);
         util::master_RNG.checkpoint(stream);
     } catch (const util::checkpoint_error& e) { // append " (pos X of Y bytes)"
-        ostringstream pos;
-        pos << " (pos " << stream.tellg() << " of ";
+        const streamoff pos = stream.tellg();
         stream.ignore(numeric_limits<streamsize>::max() - 1); // skip to end of file
-        pos << stream.tellg() << " bytes)";
-        throw util::checkpoint_error(e.what() + pos.str());
+        const streamoff size = stream.tellg();
+        throw util::checkpoint_error(std::format("{} (pos {} of {} bytes)", e.what(), pos, size));
     }
 
     stream.ignore(numeric_limits<streamsize>::max() - 1); // skip to end of file
     if (stream.gcount() != 0) {
-        ostringstream msg;
-        msg << "Checkpointing file has " << stream.gcount() << " bytes remaining." << endl;
-        throw util::checkpoint_error(msg.str());
+        throw util::checkpoint_error(std::format("Checkpointing file has {} bytes remaining.\n", stream.gcount()));
     } else if (stream.fail())
         throw util::checkpoint_error("stream read error");
 }
@@ -139,9 +137,8 @@ void write_checkpoint(const bool started_from_checkpoint, const string& checkpoi
     }
 
     { // Open the next checkpoint file for writing:
-        ostringstream name;
-        name << checkpoint_file_name << checkpoint_num << ".gz";
-        ogzstream out(name.str().c_str(), ios::out | ios::binary);
+        const string name = std::format("{}{}.gz", checkpoint_file_name, checkpoint_num);
+        ogzstream out(name.c_str(), ios::out | ios::binary);
         checkpoint(out, clock, end_time, est_end_time, population, transmission);
         out.close();
     }
@@ -157,21 +154,19 @@ void write_checkpoint(const bool started_from_checkpoint, const string& checkpoi
 
     // Truncate the old checkpoint to save disk space, when it existed
     if (old_checkpoint_num != checkpoint_num) {
-        ostringstream name;
-        name << checkpoint_file_name << old_checkpoint_num << ".gz";
-        ofstream out(name.str().c_str(), ios::out | ios::binary);
+        const string name = std::format("{}{}.gz", checkpoint_file_name, old_checkpoint_num);
+        ofstream out(name, ios::out | ios::binary);
         out.close();
     }
 }
 
 void read_checkpoint(const string& checkpoint_file_name, Clock& clock, SimTime& end_time, SimTime& est_end_time,
                      Population& population, Transmission::TransmissionModel& transmission) {
-    int checkpoint_num = read_checkpoint_num(checkpoint_file_name);
+    const int checkpoint_num = read_checkpoint_num(checkpoint_file_name);
 
     // Open the latest file
-    ostringstream name;
-    name << checkpoint_file_name << checkpoint_num << ".gz";
-    igzstream in(name.str().c_str(), ios::in | ios::binary);
+    const string name = std::format("{}{}.gz", checkpoint_file_name, checkpoint_num);
+    igzstream in(name.c_str(), ios::in | ios::binary);
     //Note: gzstreams are considered "good" when file not open!
     if (!(in.good() && in.rdbuf()->is_open()))
         throw util::checkpoint_error("Unable to read file");
