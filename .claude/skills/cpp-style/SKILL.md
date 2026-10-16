@@ -85,9 +85,7 @@ util/style.sh format-changed <base>     # base: the chunk's base commit, or HEAD
 ```
 
 This runs `git-clang-format` on lines changed since `<base>`, which are exactly the lines
-the G-style gate checks. If the project's `PostToolUse` hook is active, each edited
-`*.cpp`/`*.h` under `model/` or `unittest/` is formatted on save. Run the command before
-committing anyway.
+the G-style gate checks. Pass paths after the base to limit it to those files.
 
 Then run `/cpp-lint` for the clang-tidy half of the gate.
 
