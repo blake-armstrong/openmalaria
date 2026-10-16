@@ -3,3 +3,6 @@
 
 # B2: whole-tree clang-format of model/ and unittest/
 0bf623e342fbbb0bc4541cc2309124811c34c499
+
+# B4: rename model/PkPd identifiers (util/style.sh rename)
+cae5d3b565df2668f9754d203afa036ca4a59e15
