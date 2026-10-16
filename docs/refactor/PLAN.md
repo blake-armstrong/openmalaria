@@ -29,6 +29,7 @@ The goal is a layered design like OpenMM's:
 - the scenario XML kept as one input format, not the internal data model
 - one enforced code style
 - statistical tests, so that changes which alter RNG draw order can still be verified
+- legacy C++ practices migrated to modern C++20, and hand-rolled or dated infrastructure replaced with maintained libraries where that pays off (Stage M, § Modernisation policy)
 
 The work is split into **small, self-contained chunks**. Each chunk fits in one Claude Code session and ends in a committed, tested state, so the context can be cleared between chunks.
 
@@ -75,8 +76,11 @@ The work is split into **small, self-contained chunks**. Each chunk fits in one 
 | **G-perf** | `OM_BUILD_DIR=build-rework util/bench.sh --compare <base build>`, where the base build is the chunk's base commit configured the same way (recipe in `util/bench.sh -h`): the median per-pair candidate/base wall-time ratio is ≤ 1.03. The stored baseline in `PROGRESS.md` is a sanity check only | P1 |
 | **G-stat** | `ctest -L statistical` passes | S4 (full coverage after S5) |
 | **G-two-sims** | two `Simulation`s in one process match two separate runs exactly | D9 |
+| **G-diff** | for a chunk that replaces a numerical routine (GSL, R_nmath, a distribution): a Catch2 differential test compares the new routine with the old one over a grid of inputs, within a tolerance stated in the test. The old routine stays callable from the test until the chunk ends | M1 |
+| **G-cli** | `util/ab_cli.sh <base build>`: a few scenarios run with default, `--verbose --progress`, `--checkpoint` and `--checkpoint-stop` flags (twice, so the second run resumes) give byte-identical stdout, stderr, outputs, checkpoint files and exit codes. Required for any chunk that touches console output or command-line handling | M3 |
+| **G-threads** | the parallel human update gives identical output for 1, 2 and all cores | M8 |
 
-Every chunk must pass every gate that is available at that point. One exception applies: a chunk whose *purpose* is to change RNG draw order may fail G-exact, but must then pass G-stat. It must say so in its commit message and in `PROGRESS.md`.
+Every chunk must pass every gate that is available at that point. One exception applies: a chunk whose *purpose* is to change RNG draw order or floating-point results (the numerical library swaps in stage M) may fail G-exact, but must then pass G-stat, plus G-diff where it applies. It must say so in its commit message and in `PROGRESS.md`. Batch such chunks where the order allows, so `test/expected/` is regenerated as few times as possible.
 
 ## Dependency overview
 
@@ -85,10 +89,12 @@ A1 → A2 ─┬─ B1 → B2 → B3 → B4 → B5
          ├─ P1
          ├─ S1 → S2 → S3 → S4 → S5 → S6
          └─ C1 → C2 → D1 … D9 → E1 … E6 → F0 … F6 → G1 … G3 → H1 … H3 → I1 … I3 → J1 … J4
+B5 → M0 → M1;  B4 → M2 (before D1);  D9 → M3, M7;  D2b + S6 → M4;  F6 → M5 → M6;  G3 + M4 + M7 → M8;  M1 → M9
 ```
 - The B, P and S tracks can run in any order relative to each other and to C/D.
 - D2b (splitting the RNG streams) is the first chunk allowed to change draw order, so it requires S6.
 - Every chunk from D onward requires B4, so that each module's rename can run right after it is refactored.
+- Every chunk from D onward also requires M2, so that each module's modernisation pass runs right after its rename.
 
 ## Recommended order
 
@@ -102,17 +108,22 @@ The dependency graph allows many orders. Follow this one unless the user says ot
 | 4 | **B3**, then **B4** | B4's pilot (`model/PkPd/`) shows the real cost of the `m_`/`_` member prefixes and header guards before the bigger modules are renamed. |
 | 5 | **B5** | So that pre-commit catches format slips throughout C and D. |
 | 6 | **C1**, then **C2** | The first structural refactor. Gates: G-exact, G-unit, G-style, G-perf. |
-| 7 | **S1 → S4** | Have the statistical tooling working before the D track gets going. |
+| 7 | **M0 → M2** | **First ask the user Decision 5.** Dependency mechanism, Catch2 and the `modernize-module` skill must exist before D1, so every D chunk can use them. |
+| 7b | **S1 → S4** | Have the statistical tooling working before the D track gets going. |
 | 8 | **S5** | A long compute job (≈1 h at `-j10` for N = 500 if every scenario is run; more with stragglers). Run it overnight or while no G-perf measurement is being taken, because it saturates the CPU. Every chunk up to D2 keeps outputs byte-identical, so it doesn't matter which commit generates the references. |
 | 9 | **D1**, **D2** | These can overlap with S5/S6 in calendar time, but don't take G-perf measurements while S5 is running. |
 | 10 | **S6** | Must be done before D2b. |
-| 11 | **D2b** | **First ask the user Decision 1.** The first chunk allowed to change draw order; it is gated by G-stat, not G-exact. |
+| 11 | **D2b**, then **M4** | **First ask the user Decision 1.** The first chunk allowed to change draw order; it is gated by G-stat, not G-exact. M4 also changes draws, so do it straight after and regenerate `test/expected/` once for both. |
 | 12 | **D3 → D9** | |
+| 12b | **M3**, **M7** | Logging and replicate-level parallelism, once `Simulation` owns all its state. **Ask the user Decision 6 before M7.** |
 | 13 | **E1 → E6** | **Ask the user Decision 3 before E1.** |
-| 14 | **F0 → F6**, **G1 → G3** | |
+| 14 | **F0 → F6** | |
+| 14b | **M5 → M6** | **Ask the user Decision 7 before M5.** Numerical code is now isolated in components, so each swap stays local. |
+| 14c | **G1 → G3**, then **M8** | M8 needs the per-`Simulation` `Monitor` from G1 for deterministic accumulation. |
 | 15 | **H1 → H3** | **Ask the user Decision 2 before H1.** If Python is a primary goal, do stage J immediately after H2 (before H3 and I). |
 | 16 | **I1 → I3** | **Ask the user Decision 4 before I2.** |
-| 17 | **J1 → J4** | Before J1, ask the user about the untracked `python/` directory (see Stage J). |
+| 17 | **J1 → J4** | |
+| 18 | **M9** | Any time after M1; at the latest here. |
 
 Practical notes for every chunk:
 - Use `build-rework/` as the build dir (see the A2 entry in `PROGRESS.md`). Set `OM_BUILD_DIR=build-rework` for `util/style.sh`.
@@ -301,9 +312,11 @@ Each chunk has the same fields:
   1. converts one family
   2. migrates the call sites in the modules it owns
   3. runs `/rename-module` on those modules as a separate commit
+  4. runs `/modernize-module` (from M2) on the same modules: a tool-made fix-it commit, then a hand commit for the judgement items (§ Modernisation policy)
 - D9 removes the bridge.
+- `PROGRESS.md` keeps a table of modules with their rename and modernisation status. Any module the D chunks did not reach is swept before F0.
 
-For each D chunk, **Needs:** the previous D chunk plus B4. **Gates:** G-exact, G-unit, G-style and G-perf, except where a chunk says otherwise.
+For each D chunk, **Needs:** the previous D chunk plus B4 and M2. **Gates:** G-exact, G-unit, G-style and G-perf, except where a chunk says otherwise.
 
 | Chunk | Global family → new owner |
 |---|---|
@@ -395,7 +408,24 @@ Before J1, ask the user what the existing untracked `python/` directory in the f
 
 **Gates:** all available gates, plus the Python smoke tests from J3 onward. Decision 2 (whether Python is a primary goal) may move this stage earlier, to directly after H2.
 
-**Later and optional:** a threaded "Platform" for human updates (this will need G-stat), R bindings, and Catch2/GoogleTest in place of CxxTest.
+**Later and optional:** R bindings. (The threaded "Platform" and the move off CxxTest are now M8 and M9.)
+
+## Stage M: Modernisation (libraries and practices)
+
+Read § Modernisation policy before any M chunk. Each library enters in its own chunk, behind a thin `om::` wrapper wherever its types would otherwise spread, and is recorded in `docs/refactor/DEPENDENCIES.md` (version, licence, reason, which layers may link it). Public headers (stage H) never expose a third-party type.
+
+| Chunk | Needs | Do | Gates |
+|---|---|---|---|
+| **M0** | B5, Decision 5 | Dependency mechanism: `cmake/Dependencies.cmake` using `FetchContent` with `FIND_PACKAGE_ARGS`, so an installed package is used first and a pinned tag and hash is fetched otherwise. Raise `cmake_minimum_required` to 3.24. Write `DEPENDENCIES.md`, listing the existing GSL, Xerces-C, xsd, zlib, gzstream, R_nmath and CxxTest too. Update the CI style job's install step. No new library is used yet. | G-exact, G-unit, G-style |
+| **M1** | M0 | Catch2 v3 as a second unit-test target, registered with ctest, so G-unit covers both. Port one small CxxTest suite as the pilot. From here on, new tests (F1, G3, every G-diff) are written in Catch2. | G-exact, G-unit, G-style |
+| **M2** | B4 | `.claude/skills/modernize-module/SKILL.md` plus `util/style.sh modernize <dir>`, modelled on `rename-module`: module-wide safe `modernize-*` and Core Guidelines fix-its as one tool-made commit (listed in `.git-blame-ignore-revs`), then a hand commit for the judgement items in § Modernisation policy. Pilot on `model/PkPd/`. | G-exact, G-unit, G-style, G-perf |
+| **M3** | D9, M0 | Logging on spdlog (with `SPDLOG_USE_STD_FORMAT`, so no separate fmt). `Simulation` owns an `om::Logger`, handed to components like the clock and RNG are after D. The CLI sink uses the pattern `%v`, so console text is unchanged; Python (J) can attach its own sink. Replace the ~130 `cout`/`cerr` diagnostics in ~32 files; survey and ctsout writers are not logging and stay. Compile out debug levels with `SPDLOG_ACTIVE_LEVEL`. Add `util/ab_cli.sh` (G-cli) first. Fix the `print_progress` bug noted in C2 here, if the user agrees. May split into M3a (infrastructure + G-cli) and M3b (call sites). | G-exact, G-unit, G-style, G-perf, G-cli |
+| **M4** | D2b, S6 | Portable random distributions. `random.h` wraps the RNG as a `gsl_rng` to use GSL's `gsl_ran_*` samplers. Replace them with in-tree samplers (or Boost.Random) on the `Simulation` RNG. **Not** the `std::` distributions, whose output differs between libc++, libstdc++ and MSVC, which would break cross-platform reproducibility. Changes draws on purpose. | G-stat, G-diff (moments and KS tests per distribution), G-unit, G-style, G-perf |
+| **M5** | F6, Decision 7 | Linear algebra on Eigen: `gsl_vector`, `gsl_matrix` and `gsl_blas` in `util/vectors.h`, `CalcNvO`, `TransmissionModel` and `PopulationAgeStructure`. Use fixed-size Eigen types where sizes are known (vector life-cycle matrices). | G-diff, G-stat, G-unit, G-style, G-perf |
+| **M6** | M5 | The rest of GSL and R_nmath: root finding, multiroot, minimisation, integration, CDFs and splines (`AnophelesModel`, `CalcNvO`, `WHFalciparum`, `AgeGroupInterpolation`, `sampler`, `LSTMDrug*`, `ITN`, `IRS`) on Boost.Math (header-only, BSL) or Eigen-based solvers. Split M6a (vector model calibration) and M6b (the rest) if needed. When the last use goes, drop GSL and `contrib/R_nmath` from the build. | G-diff, G-stat, G-unit, G-style, G-perf |
+| **M7** | D9, M0, Decision 6 | Replicate-level parallelism with oneTBB (or the Decision 6 alternative): an `om::run_replicates` batch API built on `task_group`, used by the S1 runner and later by Python. Extend G-two-sims: N simulations in parallel equal N serial runs. No change inside a simulation. | G-exact, G-unit, G-style, G-two-sims |
+| **M8** | G3, M4, M7 | Parallel human update, the OpenMM "Platform" (serial and threaded). Needs counter-based per-human RNG streams keyed by (human, step, purpose), using the ChaCha generator already in `contrib/`, so results do not depend on thread count; per-thread monitor accumulators reduced in a fixed order; no shared mutable state in `Host::update`. Changes draws on purpose. Record the speed-up curve in `PROGRESS.md`. | G-stat, G-threads, G-unit, G-style, G-perf (serial platform ≤ +3%) |
+| **M9** | M1 | Port the remaining CxxTest suites to Catch2, including the 4 suites that are not compiled today, or delete them with a reason. Remove `contrib/cxxtest`. | G-exact, G-unit, G-style |
 
 ---
 
@@ -431,6 +461,46 @@ bindings/python/       nanobind module + openmalaria.app   (name to be confirmed
 .claude/skills/        cpp-style, cpp-lint, rename-module
 ```
 Dependency rule: `components` → `core`. `io` → `core`, `components` and `schema`. CLI and Python → the public API only.
+Third-party libraries follow the same rule (§ Modernisation policy): only `io/xml` sees Xerces-C and `scnXml`; CLI11 only in `apps/cli`; nanobind only in `bindings/python`; spdlog, Eigen and Boost.Math stay inside `src/`; TBB only in the platform and batch code. No public header includes any of them.
+
+## Modernisation policy
+
+**Language baseline.** The tree already builds as C++20. Use it: `std::span` for array views, `std::format` (never `printf`), `std::numbers` for `M_PI` and friends, concepts in place of SFINAE, designated initializers for the E-stage config structs, `std::optional`/`std::variant` for optional or alternative XML elements. Move to C++23 (`std::expected`, `std::print`, `std::mdspan`) only when every CI toolchain, including the manylinux one for J4, supports what is used; revisit at H1.
+
+**Libraries.**
+
+| Need | Library | Licence | Replaces | Chunk |
+|---|---|---|---|---|
+| CLI | CLI11 | BSD-3-Clause | `util/CommandLine` | I1 |
+| Logging | spdlog (std::format backend) | MIT | `cout`/`cerr` diagnostics | M3 |
+| Linear algebra | Eigen 3.4 | MPL-2.0 | `gsl_vector`, `gsl_matrix`, `gsl_blas` | M5 |
+| Special functions, roots, quadrature, distributions | Boost.Math (standalone) | BSL-1.0 | the rest of GSL, `contrib/R_nmath` | M6 |
+| Random variates | in-tree samplers (or Boost.Random) | BSL-1.0 | `gsl_ran_*` via the `gsl_rng` adapter | M4 |
+| Parallelism | oneTBB (Decision 6) | Apache-2.0 | none (new) | M7, M8 |
+| Unit tests | Catch2 v3 | BSL-1.0 | CxxTest | M1, M9 |
+| Python | nanobind | BSD-3-Clause | none (new) | J1 |
+| Checkpoint format | decided in H3 (own versioned binary, or e.g. zpp_bits/cereal) | | `operator&` idiom | H3 |
+
+Licence notes: OpenMalaria is GPL-2.0-or-later. MIT, BSD, BSL and MPL-2.0 code may be combined with it. Apache-2.0 (oneTBB) is compatible with GPLv3 but not GPLv2, so a binary that links oneTBB can only be distributed under GPLv3. That is Decision 6. GSL is GPL, so dropping it is a packaging and API choice, not a licence one.
+
+**Rules for adding a library:**
+- One library per chunk, added through `cmake/Dependencies.cmake` (M0), pinned by tag and hash, and recorded in `DEPENDENCIES.md`.
+- Behind a thin `om::` wrapper wherever its types would otherwise spread through the model (logger, linear-algebra aliases, task API). Header-only numeric code can be used directly inside one component.
+- Swaps that change floating-point results or draws are gated by G-diff plus G-stat, never by "it looks the same".
+- G-perf applies. A library that is slower on the hot path is not adopted there.
+- Every new dependency must build in CI and, from J4, in cibuildwheel.
+
+**Practices the per-module pass (M2, `/modernize-module`) migrates:**
+- Tool-made fix-it commit: `nullptr`, `override`, `using` for `typedef`, `= default`/`= delete`, `make_unique`, range-for, default member initializers, `emplace`, redundant `void`, bool literals, `std::numbers`.
+- Hand commit (judgement):
+  - owning raw pointers and `new`/`delete` (~90 `new` sites in `model/`) → `std::unique_ptr` or values
+  - C arrays → `std::array`, and pointer + length → `std::span`
+  - `printf`-family and `ostringstream` formatting → `std::format`
+  - macros → `constexpr` or `inline` functions
+  - plain enums → `enum class`, except where the integer value is checkpointed or mapped from XML (keep those until H3/E)
+  - output parameters → return values or structs
+  - remaining `const` gaps (Con.1–4)
+- Not in this pass: the checkpoint `operator&` idiom (H3), `scnXml` uses (E), and file statics and globals (D).
 
 ## Code style
 - Follows the ISO C++ Core Guidelines (isocpp.github.io/CppCoreGuidelines).
@@ -484,3 +554,6 @@ Dependency rule: `components` → `core`. `io` → `core`, `components` and `sch
 2. **Before H1:** are Python bindings a primary goal? If so, move stage J to directly after H2.
 3. **Before E1:** does XML stay the primary user format, or is YAML/JSON or Python-built config added?
 4. **Before I2:** must the existing CLI flags stay backward compatible, and for how long?
+5. **Before M0:** how are third-party libraries obtained? (Recommended: CMake `FetchContent` with `FIND_PACKAGE_ARGS`, i.e. an installed package first, otherwise a pinned fetch. Alternatives: a vcpkg manifest, which also suits cibuildwheel and Windows; or system packages only.)
+6. **Before M7:** oneTBB is Apache-2.0, so binaries that link it can only be distributed under GPLv3, not GPLv2. Is that acceptable? (Alternatives with no such issue: Taskflow (MIT), or OpenMP through the compiler.)
+7. **Before M5:** how far does GSL go? (Recommended: all the way, i.e. Eigen + Boost.Math + in-tree samplers, then drop GSL, which simplifies wheels and a Windows build. Alternatives: only linear algebra; or keep GSL and only wrap it.)

@@ -58,6 +58,16 @@ See `PLAN.md` for the session protocol, chunks and gates. Append one log entry p
 | J2 | todo | |
 | J3 | todo | |
 | J4 | todo | |
+| M0 | todo | |
+| M1 | todo | |
+| M2 | todo | |
+| M3 | todo | |
+| M4 | todo | |
+| M5 | todo | |
+| M6 | todo | |
+| M7 | todo | |
+| M8 | todo | |
+| M9 | todo | |
 
 ## Log
 
@@ -325,3 +335,11 @@ See `PLAN.md` for the session protocol, chunks and gates. Append one log entry p
   - The C1 accessors `population()`, `transmission()`, `scenario()`, `human_warmup_length()`, `survey_only_new_ep()` now have no callers. Kept as the start of the public surface; D/H decide which stay.
   - `step()` still reaches the old globals (`sim::`, `InterventionManager`, `mon::`, `CommandLine`). That is stage D's job.
 - Next: S1 (recommended order item 7).
+
+### Plan amendment: Stage M, modernisation (2026-10-16, after C2)
+- At the user's request, the plan now covers migrating legacy C++ practices and adopting modern libraries. The new **Stage M** (M0–M9) adds: a dependency mechanism and `DEPENDENCIES.md` (M0), Catch2 (M1, M9), a `modernize-module` skill run on each module after its rename in D (M2), spdlog logging (M3), portable random distributions in place of `gsl_ran_*` (M4), Eigen (M5), and Boost.Math in place of the rest of GSL and R_nmath (M6). It also adds oneTBB for replicate-level (M7) and per-human (M8) parallelism.
+- New gates: G-diff (differential numeric tests, from M1), G-cli (byte-identical console I/O, formalising the C2 A/B check, from M3), G-threads (from M8). The draw-order exception now also covers deliberate floating-point changes.
+- New reference section: § Modernisation policy (C++20 usage, library/licence table, rules for adding a library, what the per-module pass migrates).
+- New open decisions 5 (how dependencies are obtained, before M0), 6 (oneTBB's Apache-2.0 licence vs GPLv2, before M7) and 7 (how far to replace GSL, before M5).
+- Recommended order changes: M0 → M2 come next, before S1 (so D1 can use them). M4 follows D2b, so `test/expected/` is regenerated once. M3/M7 come after D9, M5/M6 after F6, and M8 after G3. D chunks now also need M2.
+- Next: M0 (ask Decision 5 first).
