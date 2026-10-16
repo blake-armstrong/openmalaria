@@ -67,7 +67,7 @@ inline double findAngle(const double EIRRotageAngle, const std::vector<double>& 
 
         // Minimize l1-norm
         double sum = 0.0;
-        for (int i = 0; i < sim::oneYear(); i++) {
+        for (int i = 0; i < Sim::one_year(); i++) {
             double v = fabs(temp[i] - sim[i]);
             sum += v * v;
         }
@@ -110,9 +110,9 @@ public:
     }
 
     bool estimate(AnophelesModel& m, const std::vector<double>& laggedKappa, double meanAvail) override {
-        std::vector<double> avgAnnualS_v(sim::oneYear(), 0.0);
-        for (SimTime i = sim::fromYearsI(4); i < sim::fromYearsI(5); i = i + sim::oneDay()) {
-            avgAnnualS_v[mod_nn(i, sim::oneYear())] = m.quinquennialS_v[i];
+        std::vector<double> avgAnnualS_v(Sim::one_year(), 0.0);
+        for (SimTime i = Sim::from_years_i(4); i < Sim::from_years_i(5); i = i + Sim::one_day()) {
+            avgAnnualS_v[mod_nn(i, Sim::one_year())] = m.quinquennialS_v[i];
         }
 
         double factor = vectors::sum(m.forcedS_v) / vectors::sum(avgAnnualS_v);
@@ -174,7 +174,7 @@ public:
 
     bool estimate(AnophelesModel& m, const std::vector<double>& laggedKappa, double meanAvail) override {
         std::vector<double>& mosqEmergeRateVector = m.mosqEmergeRate;
-        int thetap = sim::DAYS_IN_YEAR;
+        int thetap = Sim::DaysInYear;
         int tau = m.mosq.restDuration;
         int thetas = m.mosq.EIPDuration;
         std::vector<double> Ni{static_cast<double>(populationSize)};

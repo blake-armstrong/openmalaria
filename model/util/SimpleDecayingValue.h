@@ -38,7 +38,7 @@ namespace util {
 class SimpleDecayingValue {
 public:
     /** Default construction: always return 0. */
-    SimpleDecayingValue() : initial(0.0), deploy_t(sim::never()) {}
+    SimpleDecayingValue() : initial(0.0), deploy_t(Sim::never()) {}
 
     /** Configure from an XML element. */
     inline void set(double initial_value, const scnXml::DecayFunction& elt, const char* name) {
@@ -86,7 +86,7 @@ private:
     unique_ptr<util::DecayFunction> het;
 
     /** Time of larviciding deployment. */
-    SimTime deploy_t = sim::never();
+    SimTime deploy_t = Sim::never();
 };
 
 }

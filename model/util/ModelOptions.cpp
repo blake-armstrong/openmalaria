@@ -264,7 +264,7 @@ void ModelOptions::init(scnXml::Model::ModelOptionsOptional& optionsElt, util::M
     if (!options[PENNY_WITHIN_HOST_MODEL] && (options[IMMUNE_THRESHOLD_GAMMA] || options[UPDATE_DENSITY_GAMMA]))
         throw xml_scenario_error("Penny model option used without PENNY_WITHIN_HOST_MODEL option");
 
-    if (sim::oneTS() == sim::fromDays(5)) {
+    if (Sim::one_ts() == Sim::from_days(5)) {
         // 5 day TS is okay; some tests specific to this TS:
         bitset<NUM_OPTIONS> require1DayTS;
         require1DayTS.set(CLINICAL_EVENT_SCHEDULER);
@@ -277,11 +277,11 @@ void ModelOptions::init(scnXml::Model::ModelOptionsOptional& optionsElt, util::M
                 throw xml_scenario_error(msg.str());
             }
         }
-    } else if (sim::oneTS() == sim::fromDays(1)) {
+    } else if (Sim::one_ts() == Sim::from_days(1)) {
         // 1 day TS is also okay
     } else {
         ostringstream msg;
-        msg << "Time step set to " << sim::oneTS() << " days but only 1 and 5 days are supported.";
+        msg << "Time step set to " << Sim::one_ts() << " days but only 1 and 5 days are supported.";
         throw xml_scenario_error(msg.str());
     }
 }

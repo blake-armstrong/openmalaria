@@ -32,17 +32,17 @@ namespace OM {
 
 void Clock::init(const scnXml::Scenario& scenario, const util::ModelNameProvider& mnp) {
     init_interval(scenario, mnp);
-    steps_in_year = in_steps(sim::oneYear());
+    steps_in_year = in_steps(Sim::one_year());
     years_in_step = 1.0 / static_cast<double>(steps_in_year);
     max_age = from_years_d(scenario.getDemography().getMaximumAgeYrs());
 
-    start = sim::origin();
+    start = Sim::origin();
     const auto& mon = scenario.getMonitoring();
     if (mon.getStartDate().present()) {
         try {
             // on failure, this throws or returns sim::never()
             start = UnitParse::parseDate(mon.getStartDate().get());
-            if (start == sim::never()) {
+            if (start == Sim::never()) {
                 throw util::format_error("invalid format (expected YYYY-MM-DD)");
             }
         } catch (const util::format_error& e) {
@@ -50,7 +50,7 @@ void Clock::init(const scnXml::Scenario& scenario, const util::ModelNameProvider
         }
     }
 
-    interv = sim::never(); // large negative number
+    interv = Sim::never(); // large negative number
     end = mon::readSurveyDates(mon);
 }
 

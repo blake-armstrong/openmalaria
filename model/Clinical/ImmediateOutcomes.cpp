@@ -179,7 +179,7 @@ void ImmediateOutcomes::setHealthSystem(const scnXml::HSImmediateOutcomes& hsDes
 void ImmediateOutcomes::uncomplicatedEvent(Human& human, Episode::State pgState) {
     // If last treatment prescribed was in recent memory, consider second line.
     CaseType regimen = FirstLine;
-    if (m_tLastTreatment + healthSystemMemory > sim::ts0()) {
+    if (m_tLastTreatment + healthSystemMemory > Sim::ts0()) {
         pgState = Episode::State(pgState | Episode::SECOND_CASE);
         regimen = SecondLine;
     }
@@ -198,7 +198,7 @@ void ImmediateOutcomes::uncomplicatedEvent(Human& human, Episode::State pgState)
                 return; // negative outcome: no treatment
         }
 
-        m_tLastTreatment = sim::ts0();
+        m_tLastTreatment = Sim::ts0();
         mon::recordEvent(measures[regimen], human);
 
         double p = (x < accessUCSelfTreat[regimen] * m_treatmentSeekingFactor) ? cureRateUCSelfTreat[regimen]

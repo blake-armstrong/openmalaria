@@ -105,7 +105,7 @@ HumanGVI::HumanGVI(LocalRng& rng, const GVIComponent& params) : PerHostIntervent
 }
 
 void HumanGVI::redeploy(LocalRng& rng, const Transmission::HumanVectorInterventionComponent&) {
-    deployTime = sim::nowOrTs1();
+    deployTime = Sim::now_or_ts1();
 }
 
 void HumanGVI::update(Host::Human& human) {}

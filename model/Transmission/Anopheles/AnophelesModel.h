@@ -126,14 +126,14 @@ struct MosquitoParams {
      * Set in initialise function from XML data; no need to checkpoint.
      * Duration of feeding cycle (equals duration of resting period) for mosquito (τ).
      * Units: days. */
-    SimTime restDuration = sim::never();
+    SimTime restDuration = Sim::never();
 
     /** Duration of the extrinsic incubation period (sporozoite development time)
     * (θ_s).
     * Units: Days.
     *
     * Doesn't need checkpointing. */
-    SimTime EIPDuration = sim::never();
+    SimTime EIPDuration = Sim::never();
 
     string name;
 };
@@ -153,7 +153,7 @@ struct Nhh {
     double P_C_I;
     double P_D_I;
     double rel_fecundity;
-    SimTime expiry = sim::never();
+    SimTime expiry = Sim::never();
 };
 
 struct TrapParams {
@@ -168,8 +168,8 @@ struct TrapData {
     size_t instance;                    // index in trapParams
     double initialAvail;                // initial availability (avail per trap * num traps)
     unique_ptr<DecayFunction> availHet; // parameter for decay of availability
-    SimTime deployTime = sim::never();  // deploy time (for decay function)
-    SimTime expiry = sim::never();      // date at which this intervention should be deleted
+    SimTime deployTime = Sim::never();  // deploy time (for decay function)
+    SimTime expiry = Sim::never();      // date at which this intervention should be deleted
 };
 
 class AnophelesModel {
@@ -184,9 +184,9 @@ public:
           initOvFromSv(numeric_limits<double>::quiet_NaN()), initNv0FromSv(numeric_limits<double>::quiet_NaN()),
           // MosqTransmission
           N_v_length(0), timeStep_N_v0(0.0) {
-        forcedS_v.resize(sim::oneYear());
-        quinquennialS_v.resize(sim::fromYearsI(5), 0.0);
-        mosqEmergeRate.resize(sim::oneYear(), 0.0);
+        forcedS_v.resize(Sim::one_year());
+        quinquennialS_v.resize(Sim::from_years_i(5), 0.0);
+        mosqEmergeRate.resize(Sim::one_year(), 0.0);
     }
 
     AnophelesModel(const AnophelesModel&) = delete;            //disable copy-constructor
@@ -281,7 +281,7 @@ public:
                        double sigma_dff, bool isDynamic);
 
     /// Intermediatary from vector model equations used to calculate EIR
-    inline double getInitPartialEIR() const { return partialInitEIR[sim::moduloYearSteps(sim::ts0())] / initAvail; }
+    inline double getInitPartialEIR() const { return partialInitEIR[Sim::modulo_year_steps(Sim::ts0())] / initAvail; }
     //@}
 
     /// Intermediatary from vector model equations used to calculate EIR
@@ -309,7 +309,7 @@ public:
 
     virtual double getEmergenceRate(const SimTime& d0, const std::vector<double>& mosqEmergeRate, double nOvipositing) {
         // Get emergence at start of step:
-        SimTime dYear1 = mod_nn(d0, sim::oneYear());
+        SimTime dYear1 = mod_nn(d0, Sim::one_year());
         // Simple model: fixed emergence scaled by larviciding
         return mosqEmergeRate[dYear1];
     }
@@ -330,7 +330,7 @@ public:
                 vector<double>& partialEIR_i, vector<double>& partialEIR_l, double EIR_factor);
 
     /// Intermediatary from vector model equations used to calculate EIR in intervention mode
-    inline double getInterventionEIR() const { return interventionEIR[sim::inSteps(sim::intervTime())] / initAvail; }
+    inline double getInterventionEIR() const { return interventionEIR[Sim::in_steps(Sim::interv_time())] / initAvail; }
     //@}
 
     void changeEIRIntervention(const scnXml::NonVector& nonVectorData);
@@ -348,7 +348,7 @@ public:
     inline void resetTSStats() { timeStep_N_v0 = 0.0; }
 
     /// Get mean emergence per day during last time-step
-    inline double getLastN_v0() const { return timeStep_N_v0 / sim::oneTS(); }
+    inline double getLastN_v0() const { return timeStep_N_v0 / Sim::one_ts(); }
 
     /// Get mean P_A/P_df/P_dif/N_v/O_v/S_v during last time-step
     /// @param vs PA, PDF, PDIF, NV, OV or SV

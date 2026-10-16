@@ -127,9 +127,9 @@ Simulation::Simulation(std::unique_ptr<scnXml::Scenario> scenario)
     // length required by vector warmup, and is a whole number of years.
     SimTime warmup = clock.max_human_age();
     if (transmission_model->interventionMode != Transmission::forcedEIR)
-        warmup = max(warmup, sim::fromYearsI(55)); // Data is summed over 5 years; add an extra 50 for stabilization.
+        warmup = max(warmup, Sim::from_years_i(55)); // Data is summed over 5 years; add an extra 50 for stabilization.
 
-    warmup_length = sim::fromYearsI(static_cast<int>(ceil(sim::inYears(warmup))));
+    warmup_length = Sim::from_years_i(static_cast<int>(ceil(Sim::in_years(warmup))));
 }
 
 Simulation::~Simulation() = default;
@@ -144,7 +144,7 @@ void Simulation::run(const CheckpointOptions& checkpointing) {
     }
 
     est_end_time = warmup_length + (clock.end_date() - clock.start_date()) + clock.one_ts();
-    assert(est_end_time + sim::never() < sim::zero());
+    assert(est_end_time + Sim::never() < Sim::zero());
 
     if (started_from_checkpoint)
         resume(checkpointing.file_name);
@@ -159,7 +159,7 @@ void Simulation::run(const CheckpointOptions& checkpointing) {
 
 void Simulation::resume(const std::string& checkpoint_file) {
     mon::Continuous::init(scenario_xml->getMonitoring(), true);
-    readCheckpoint(checkpoint_file, clock, end_time, est_end_time, *population_model, *transmission_model);
+    read_checkpoint(checkpoint_file, clock, end_time, est_end_time, *population_model, *transmission_model);
 
     /** Calculate ento availability percentiles **/
     Transmission::PerHostAnophParams::calcAvailabilityPercentiles();
@@ -183,7 +183,7 @@ void Simulation::start_new(const CheckpointOptions& checkpointing) {
     /** Transmission init phase:
      * Fit the emergence rate to the input EIR */
     SimTime iterate = transmission_model->initIterate();
-    while (iterate > sim::zero()) {
+    while (iterate > Sim::zero()) {
         end_time = end_time + iterate;
         // adjust estimation of final time step: end of current period + length of main phase
         est_end_time = end_time + (clock.end_date() - clock.start_date()) + clock.one_ts();
@@ -209,8 +209,8 @@ void Simulation::start_new(const CheckpointOptions& checkpointing) {
     mon::initMainSim();
 
     if (checkpointing.enabled) {
-        writeCheckpoint(false, checkpointing.file_name, clock, end_time, est_end_time, *population_model,
-                        *transmission_model);
+        write_checkpoint(false, checkpointing.file_name, clock, end_time, est_end_time, *population_model,
+                         *transmission_model);
         if (checkpointing.stop_after_write)
             throw util::cmd_exception("Checkpoint test: checkpoint written", util::Error::None);
     }

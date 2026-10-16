@@ -50,7 +50,7 @@ void DescriptiveWithinHostModel::initDescriptive() {
 
 DescriptiveWithinHostModel::DescriptiveWithinHostModel(LocalRng& rng, double comorbidityFactor)
     : WHFalciparum(rng, comorbidityFactor) {
-    assert(sim::oneTS() == sim::fromDays(5));
+    assert(Sim::one_ts() == Sim::from_days(5));
     opt_vaccine_genotype = util::ModelOptions::option(util::VACCINE_GENOTYPE);
 }
 
@@ -152,8 +152,8 @@ void DescriptiveWithinHostModel::update(Host::Human& human, LocalRng& rng, int& 
     hrp2Density = 0.0;
     timeStepMaxDensity = 0.0;
 
-    bool treatmentLiver = treatExpiryLiver > sim::ts0();
-    bool treatmentBlood = treatExpiryBlood > sim::ts0();
+    bool treatmentLiver = treatExpiryLiver > Sim::ts0();
+    bool treatmentBlood = treatExpiryBlood > Sim::ts0();
 
     for (auto inf = infections.begin(); inf != infections.end();) {
         //NOTE: it would be nice to combine this code with that in
@@ -196,14 +196,14 @@ void DescriptiveWithinHostModel::update(Host::Human& human, LocalRng& rng, int& 
     // As in AJTMH p22, cumulative_h (X_h + 1) doesn't include infections added
     // this time-step and cumulative_Y only includes past densities.
     m_cumulative_h += nNewInfs_i + nNewInfs_l;
-    m_cumulative_Y += sim::oneTS() * totalDensity;
+    m_cumulative_Y += Sim::one_ts() * totalDensity;
 
     util::streamValidate(totalDensity);
     util::streamValidate(hrp2Density);
     assert((std::isfinite)(totalDensity)); // inf probably wouldn't be a problem but NaN would be
 
     // Cache total density for infectiousness calculations
-    int y_lag_i = sim::moduloSteps(sim::ts1(), y_lag_len);
+    int y_lag_i = Sim::modulo_steps(Sim::ts1(), y_lag_len);
 
     for (size_t g = 0; g < Genotypes::N(); ++g) {
         m_y_lag_i[y_lag_i * Genotypes::N() + g] = 0.0;

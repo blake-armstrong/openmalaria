@@ -58,7 +58,7 @@ public:
      * @returns True when the infection goes extinct. */
     inline bool update(LocalRng& rng, double survivalFactor, SimTime now, double body_mass) {
         SimTime bsAge = now - m_startDate - s_latentP; // age of post-latent-period blood stage
-        if (bsAge < sim::zero())
+        if (bsAge < Sim::zero())
             return false; // latent period (liver stage) — don't do anything
         else
             return updateDensity(rng, survivalFactor, bsAge, body_mass);

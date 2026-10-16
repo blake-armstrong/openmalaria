@@ -20,8 +20,8 @@
  * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301, USA.
  */
 
-#ifndef Hmod_GeneralCheckpoint_H
-#define Hmod_GeneralCheckpoint_H
+#ifndef HMOD_GENERAL_CHECKPOINT_H
+#define HMOD_GENERAL_CHECKPOINT_H
 
 #include "Global.h"
 #include "Population.h"
@@ -32,11 +32,12 @@ namespace OM {
     *
     * readCheckpoint/writeCheckpoint prepare to read/write the file,
     * and read/write read and write the actual data. */
-void writeCheckpoint(const bool startedFromCheckpoint, const string& checkpointFileName, Clock& clock, SimTime& endTime,
-                     SimTime& estEndTime, Population& population, Transmission::TransmissionModel& transmission);
+void write_checkpoint(const bool started_from_checkpoint, const string& checkpoint_file_name, Clock& clock,
+                      SimTime& end_time, SimTime& est_end_time, Population& population,
+                      Transmission::TransmissionModel& transmission);
 
-void readCheckpoint(const string& checkpointFileName, Clock& clock, SimTime& endTime, SimTime& estEndTime,
-                    Population& population, Transmission::TransmissionModel& transmission);
+void read_checkpoint(const string& checkpoint_file_name, Clock& clock, SimTime& end_time, SimTime& est_end_time,
+                     Population& population, Transmission::TransmissionModel& transmission);
 }
 
 #endif

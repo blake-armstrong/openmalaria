@@ -75,7 +75,7 @@ public:
 
     /** Returns true when age reaches the pre-determined duration (i.e. when
     * this infection terminates). */
-    bool expired() { return sim::ts0() > m_startDate + m_duration; }
+    bool expired() { return Sim::ts0() > m_startDate + m_duration; }
 
     /** Determines parasite density of an individual infection (5-day time step
      * update)
@@ -108,7 +108,7 @@ protected:
     virtual void checkpoint(ostream& stream);
 
     // Arbitrary predetermined maximum duration of the infection
-    SimTime m_duration = sim::never();
+    SimTime m_duration = Sim::never();
 
     bool notPrintedMDWarning;
 

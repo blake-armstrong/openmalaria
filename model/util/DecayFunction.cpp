@@ -52,7 +52,7 @@ public:
         return 1.0;
     }
     SimTime sampleAgeOfDecay(LocalRng& rng) const {
-        return sim::
+        return Sim::
             future(); // decay occurs "in the future" (don't use sim::never() because that is interpreted as being in the past)
     }
 
@@ -75,7 +75,7 @@ public:
         }
     }
 
-    SimTime sampleAgeOfDecay(LocalRng& rng) const { return sim::roundToTSFromDays(1.0 / invL); }
+    SimTime sampleAgeOfDecay(LocalRng& rng) const { return Sim::round_to_ts_from_days(1.0 / invL); }
 
     unique_ptr<DecayFunction> makeHetSample(double) const {
         unique_ptr<StepDecayFunction> copy = make_unique<StepDecayFunction>(*this);
@@ -100,7 +100,7 @@ public:
 
     SimTime sampleAgeOfDecay(LocalRng& rng) const {
         // Note: rounds to nearest. Object may decay instantly or at time L.
-        return sim::roundToTSFromDays(rng.uniform_01() / invL);
+        return Sim::round_to_ts_from_days(rng.uniform_01() / invL);
     }
 
     unique_ptr<DecayFunction> makeHetSample(double) const {
@@ -120,7 +120,7 @@ public:
 
     double compute(double effectiveAge) const { return exp(-effectiveAge * invL * hetFactor); }
 
-    SimTime sampleAgeOfDecay(LocalRng& rng) const { return sim::roundToTSFromDays(-log(rng.uniform_01()) / invL); }
+    SimTime sampleAgeOfDecay(LocalRng& rng) const { return Sim::round_to_ts_from_days(-log(rng.uniform_01()) / invL); }
 
     unique_ptr<DecayFunction> makeHetSample(double) const {
         unique_ptr<ExponentialDecayFunction> copy = make_unique<ExponentialDecayFunction>(*this);
@@ -146,7 +146,7 @@ public:
     }
 
     SimTime sampleAgeOfDecay(LocalRng& rng) const {
-        return sim::roundToTSFromDays(pow(-log(rng.uniform_01()), 1.0 / k) / constOverLambda);
+        return Sim::round_to_ts_from_days(pow(-log(rng.uniform_01()), 1.0 / k) / constOverLambda);
     }
 
     unique_ptr<DecayFunction> makeHetSample(double) const {
@@ -167,7 +167,7 @@ public:
     double compute(double effectiveAge) const { return 1.0 / (1.0 + pow(effectiveAge * invL * hetFactor, k)); }
 
     SimTime sampleAgeOfDecay(LocalRng& rng) const {
-        return sim::roundToTSFromDays(pow(1.0 / rng.uniform_01() - 1.0, 1.0 / k) / invL);
+        return Sim::round_to_ts_from_days(pow(1.0 / rng.uniform_01() - 1.0, 1.0 / k) / invL);
     }
 
     unique_ptr<DecayFunction> makeHetSample(double) const {
@@ -193,7 +193,7 @@ public:
     }
 
     SimTime sampleAgeOfDecay(LocalRng& rng) const {
-        return sim::roundToTSFromDays(sqrt(1.0 - k / (k - log(rng.uniform_01()))) / invL);
+        return Sim::round_to_ts_from_days(sqrt(1.0 - k / (k - log(rng.uniform_01()))) / invL);
     }
 
     unique_ptr<DecayFunction> makeHetSample(double) const {
@@ -226,7 +226,7 @@ public:
     }
 
     SimTime sampleAgeOfDecay(LocalRng& rng) const {
-        return sim::roundToTSFromDays(max(f1->sampleAgeOfDecay(rng), f2->sampleAgeOfDecay(rng)));
+        return Sim::round_to_ts_from_days(max(f1->sampleAgeOfDecay(rng), f2->sampleAgeOfDecay(rng)));
     }
 
     unique_ptr<DecayFunction> makeHetSample(double hetFactor) const {
@@ -298,7 +298,7 @@ public:
         return std::max(std::min(efficacy, 1.0), 0.0);
     }
 
-    SimTime sampleAgeOfDecay(LocalRng& rng) const { return sim::roundToTSFromDays(f->sampleAgeOfDecay(rng)); }
+    SimTime sampleAgeOfDecay(LocalRng& rng) const { return Sim::round_to_ts_from_days(f->sampleAgeOfDecay(rng)); }
 
     std::unique_ptr<DecayFunction> makeHetSample(double hetFactor) const {
         std::unique_ptr<DecayFunction> fhetSample = f->hetSample(hetFactor);

@@ -48,9 +48,9 @@ public:
     inline static void init(SimTime latentP) { s_latentP = latentP; }
 
     Infection(uint32_t genotype, int origin)
-        : m_startDate(sim::nowOrTs0()), m_density(0.0), m_cumulativeExposureJ(0.0), m_genotype(genotype),
+        : m_startDate(Sim::now_or_ts0()), m_density(0.0), m_cumulativeExposureJ(0.0), m_genotype(genotype),
           m_origin(origin) {}
-    Infection(istream& stream) : m_startDate(sim::never()) {
+    Infection(istream& stream) : m_startDate(Sim::never()) {
         m_startDate & stream;
         m_density & stream;
         m_cumulativeExposureJ & stream;
@@ -76,7 +76,7 @@ public:
      * effect), clearance of blood stage infections can only happen after their
      * first update (though due to the latent period densities will still be
      * low). */
-    inline bool bloodStage() const { return sim::latestTs0() - m_startDate > sim::fromDays(5); }
+    inline bool bloodStage() const { return Sim::latest_ts0() - m_startDate > Sim::from_days(5); }
 
     /// Get the density of the infection as of the last update
     inline double getDensity() const { return m_density; }
@@ -111,7 +111,7 @@ protected:
 
     /// Date of inoculation of infection (start of liver stage)
     /// This is the step of inoculation (ts0()).
-    SimTime m_startDate = sim::never();
+    SimTime m_startDate = Sim::never();
 
     /// Current density of the infection
     double m_density;

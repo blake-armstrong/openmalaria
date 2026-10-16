@@ -72,18 +72,18 @@ public:
         MolineauxInfection* infection = new MolineauxInfection(m_rng, 0xFFFFFFFF, InfectionOrigin::Indigenous);
         bool extinct = false;
         size_t day = 0;
-        SimTime now = sim::ts0();
+        SimTime now = Sim::ts0();
         do {
             extinct = infection->update(m_rng, 1.0 /*no external immunity*/, now,
                                         71.43 /*adult body mass in kg to get 5l blood volume*/);
             SimTime age = now - infection->m_startDate - infection->s_latentP;
-            if (age >= sim::zero()) {
+            if (age >= Sim::zero()) {
                 ETS_ASSERT_LESS_THAN(day, dens.size());
                 TS_ASSERT_APPROX(infection->getDensity(), dens[day]);
                 //                 out << infection->getDensity() << endl;
                 day += 1;
             }
-            now = now + sim::oneDay();
+            now = now + Sim::one_day();
         } while (!extinct);
         TS_ASSERT_EQUALS(day, dens.size());
         delete infection;
@@ -294,12 +294,12 @@ private:
             for (size_t run = 0; run < N; ++run) {
                 dens.resize(0);
                 MolineauxInfection* infection = new MolineauxInfection(rng, 0xFFFFFFFF, InfectionOrigin::Indigenous);
-                SimTime now = sim::ts0();
+                SimTime now = Sim::ts0();
 
                 while (!infection->update(rng, 1.0 /*no external immunity*/, now,
                                           71.43 /*adult body mass in kg to get 5l blood volume*/)) {
                     dens.push_back(infection->getDensity());
-                    now = now + sim::oneDay();
+                    now = now + Sim::one_day();
                 }
                 delete infection;
                 calc(run, dens);

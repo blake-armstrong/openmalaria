@@ -225,7 +225,7 @@ public:
 
     inline double getHoleIndex() const { return holeIndex; }
     inline double getInsecticideContent(const ITNComponent& params) const {
-        SimTime age = sim::nowOrTs1() - deployTime; // implies age 1 TS on first use
+        SimTime age = Sim::now_or_ts1() - deployTime; // implies age 1 TS on first use
         double effectSurvival = insecticideDecayHet->eval(age);
         return initialInsecticide * effectSurvival;
     }
@@ -249,7 +249,7 @@ protected:
 
 private:
     // these parameters express the current state of the net:
-    SimTime disposalTime = sim::never(); // time at which net will be disposed of (if it's not already been replaced)
+    SimTime disposalTime = Sim::never(); // time at which net will be disposed of (if it's not already been replaced)
     int nHoles;                          // total number of holes
     double holeIndex;                    // a measure of both the number and size of holes
     double initialInsecticide;           // units: mg/m²

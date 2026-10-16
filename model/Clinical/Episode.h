@@ -82,7 +82,7 @@ public:
         RUN_CM_TREE = 0x10000, ///< Flag to indicate that CM tree should be run now or after a delay
     };
 
-    Episode() : time(sim::never()), surveyPeriod(mon::NOT_USED), ageGroup(0), cohortSet(0), state(NONE) {
+    Episode() : time(Sim::never()), surveyPeriod(mon::NOT_USED), ageGroup(0), cohortSet(0), state(NONE) {
         healthSystemMemoryFix = util::ModelOptions::option(util::HEALTH_SYSTEM_MEMORY_FIX);
     };
 
@@ -103,7 +103,7 @@ public:
     void operator&(ostream& stream); ///< ditto
 
     /// Time of event, potentially never
-    SimTime time = sim::never();
+    SimTime time = Sim::never();
     /// Survey during which the event occured
     size_t surveyPeriod;
     /// Age group of the individual when the episode's first bout occurred

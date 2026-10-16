@@ -43,7 +43,7 @@ void AgeGroupInterpolation::outputSamples(const string name) {
     }
     ofstream fstream((name + ".csv").c_str());
 
-    double max = sim::inYears(sim::maxHumanAge());
+    double max = Sim::in_years(Sim::max_human_age());
     for (double age = 0.0; age < max; age += 0.1) {
         fstream << age << "," << this->eval(age) << endl;
     }
@@ -156,7 +156,7 @@ public:
         }
 
         // add a point in middle of last age group (taking upper bound as max-age-years:
-        dataPoints[0.5 * (greatestLbound + sim::inYears(sim::maxHumanAge()))] = lastValue;
+        dataPoints[0.5 * (greatestLbound + Sim::in_years(Sim::max_human_age()))] = lastValue;
     }
 
     virtual void scale(double factor) {

@@ -55,7 +55,7 @@ inline NonVectorModel* createNonVectorModel(const scnXml::Entomology& entoData) 
     int eipDuration = nonVectorData.getEipDuration();
 
     vector<double> initialisationEIR;
-    initialisationEIR.assign(sim::stepsPerYear(), 0.0);
+    initialisationEIR.assign(Sim::steps_per_year(), 0.0);
 
     return new NonVectorModel(initialisationEIR, interventionMode, entoData, nonVectorData, eipDuration);
 }
@@ -88,8 +88,8 @@ inline Anopheles::AnophelesModel* createAnophelesModel(size_t i, const scnXml::A
 
         const scnXml::SimpleMPD& smpd = anoph.getSimpleMPD().get();
 
-        SimTime developmentDuration = sim::fromDays(smpd.getDevelopmentDuration().getValue());
-        if (!(developmentDuration > sim::zero()))
+        SimTime developmentDuration = Sim::from_days(smpd.getDevelopmentDuration().getValue());
+        if (!(developmentDuration > Sim::zero()))
             throw util::xml_scenario_error("entomology.vector.simpleMPD.developmentDuration: "
                                            "must be positive");
         double probPreadultSurvival = smpd.getDevelopmentSurvival().getValue();
@@ -132,7 +132,7 @@ inline Anopheles::AnophelesModel* createAnophelesModel(size_t i, const scnXml::A
             EIRRotateAngle = seasFC.getEIRRotateAngle().get();
 
         // EIR for this species, with index 0 refering to value over first interval
-        initEIR365.resize(sim::oneYear(), 0.0);
+        initEIR365.resize(Sim::one_year(), 0.0);
 
         // Now we rescale to get an EIR of targetEIR.
         // Calculate current sum as is usually done.
@@ -176,7 +176,7 @@ inline Anopheles::AnophelesModel* createAnophelesModel(size_t i, const scnXml::A
                 EIRRotateAngle = seasM.getEIRRotateAngle().get();
 
             // EIR for this species, with index 0 refering to value over first interval
-            initEIR365.resize(sim::oneYear());
+            initEIR365.resize(Sim::one_year());
 
             // Now we rescale to get an EIR of targetEIR.
             // Calculate current sum as is usually done.
@@ -211,21 +211,21 @@ inline Anopheles::AnophelesModel* createAnophelesModel(size_t i, const scnXml::A
         // The minimum EIR allowed in the array. The product of the average EIR and a constant.
         double minEIR = 0.01 * averageEIR(seasM);
 
-        if (daily.size() < static_cast<size_t>(sim::oneYear()))
+        if (daily.size() < static_cast<size_t>(Sim::one_year()))
             throw util::xml_scenario_error(
                 "entomology.anopheles.seasonality.dailyValues insufficient daily data for a year");
 
         // EIR for this species, with index 0 refering to value over first interval
-        initEIR365.resize(sim::oneYear(), 0.0);
-        vector<int> nDays(sim::oneYear(), 0.0);
+        initEIR365.resize(Sim::one_year(), 0.0);
+        vector<int> nDays(Sim::one_year(), 0.0);
 
-        for (SimTime d = sim::zero(), endDay = daily.size(); d < endDay; d = d + sim::oneDay()) {
+        for (SimTime d = Sim::zero(), endDay = daily.size(); d < endDay; d = d + Sim::one_day()) {
             double EIRdaily = std::max(static_cast<double>(daily[d]), minEIR);
 
             // Index 0 of initialisationEIR refers to the EIR affecting the
             // first day(s) of the year. Correspondingly, the first 1 or 5 values
             // of EIRDaily affect this (1- or 5-day) time-step.
-            size_t i = mod_nn(d, sim::oneYear());
+            size_t i = mod_nn(d, Sim::one_year());
 
             nDays[i] += 1;
             initEIR365[i] += EIRdaily;
@@ -233,7 +233,7 @@ inline Anopheles::AnophelesModel* createAnophelesModel(size_t i, const scnXml::A
 
         // Calculate total annual EIR
         // divide by number of records assigned to each interval (usually one per day)
-        for (SimTime d = sim::zero(); d < sim::oneYear(); d = d + sim::oneDay())
+        for (SimTime d = Sim::zero(); d < Sim::one_year(); d = d + Sim::one_day())
             initEIR365[d] *= 1.0 / static_cast<double>(nDays[d]);
     }
 
@@ -254,11 +254,11 @@ inline Anopheles::AnophelesModel* createAnophelesModel(size_t i, const scnXml::A
     mosqParams.probOvipositing = mosq.getMosqProbOvipositing().getValue();
     mosqParams.seekingDuration = mosq.getMosqSeekingDuration().getValue();
     mosqParams.probMosqSurvivalOvipositing = mosq.getMosqProbOvipositing().getValue();
-    mosqParams.restDuration = sim::fromDays(mosq.getMosqRestDuration().getValue());
-    mosqParams.EIPDuration = sim::fromDays(mosq.getExtrinsicIncubationPeriod().getValue());
+    mosqParams.restDuration = Sim::from_days(mosq.getMosqRestDuration().getValue());
+    mosqParams.EIPDuration = Sim::from_days(mosq.getExtrinsicIncubationPeriod().getValue());
     mosqParams.minInfectedThreshold = mosq.getMinInfectedThreshold();
 
-    if (sim::oneDay() > mosqParams.restDuration || mosqParams.restDuration * 2 >= mosqParams.EIPDuration) {
+    if (Sim::one_day() > mosqParams.restDuration || mosqParams.restDuration * 2 >= mosqParams.EIPDuration) {
         // TODO: limit was EIPDuration >= mosqRestDuration >= 1
         // but in usage of ftauArray this wasn't enough. Check why.
         throw util::xml_scenario_error("Code expects EIPDuration > 2*mosqRestDuration >= 2");
@@ -288,8 +288,8 @@ inline Anopheles::AnophelesModel* createAnophelesModel(size_t i, const scnXml::A
     anophModel->initAvailability(i, nhhs, populationSize);
     anophModel->initEIR(initEIR365, FSCoeffic, EIRRotateAngle, propInfectious, propInfected);
 
-    for (SimTime i = sim::zero(); i < sim::oneYear(); i = i + sim::oneDay())
-        initialisationEIR[mod_nn(sim::inSteps(i), sim::stepsPerYear())] += initEIR365[i];
+    for (SimTime i = Sim::zero(); i < Sim::one_year(); i = i + Sim::one_day())
+        initialisationEIR[mod_nn(Sim::in_steps(i), Sim::steps_per_year())] += initEIR365[i];
 
     return anophModel;
 }
@@ -301,7 +301,7 @@ inline VectorModel* createVectorModel(const scnXml::Entomology& entoData, int po
     int interventionMode = readMode(entoData.getMode());
 
     vector<double> initialisationEIR;
-    initialisationEIR.assign(sim::stepsPerYear(), 0.0);
+    initialisationEIR.assign(Sim::steps_per_year(), 0.0);
 
     vector<std::unique_ptr<Anopheles::AnophelesModel>> species;
     vector<std::unique_ptr<Anopheles::EmergenceRateEstimator>> emergenceRateEstimators;

@@ -238,7 +238,7 @@ protected:
 
         if (((hostData.pgState & Episode::SICK) && !(hostData.pgState & Episode::COMPLICATED)) ||
             (hostData.pgState & Episode::MALARIA)) {
-            if (latest.time + memory >= sim::nowOrTs0())
+            if (latest.time + memory >= Sim::now_or_ts0())
                 return positive.exec(hostData);
             else
                 return negative.exec(hostData);
@@ -503,13 +503,13 @@ private:
 class CMDTTreatSimple : public CMDecisionTree {
 public:
     CMDTTreatSimple(const scnXml::DecisionTree::TreatSimpleSequence& elt)
-        : timeLiver(sim::zero()), timeBlood(sim::zero()) {
+        : timeLiver(Sim::zero()), timeBlood(Sim::zero()) {
         for (const auto& treatElt : elt) {
             //NOTE: this code is currently identical to that in SimpleTreatComponent
             try {
                 SimTime durL = UnitParse::readShortDuration(treatElt.getDurationLiver(), UnitParse::NONE),
                         durB = UnitParse::readShortDuration(treatElt.getDurationBlood(), UnitParse::NONE);
-                SimTime neg1 = -sim::oneTS();
+                SimTime neg1 = -Sim::one_ts();
                 if (durL < neg1 || durB < neg1) {
                     throw util::xml_scenario_error(
                         "treatSimple: cannot have durationBlood or durationLiver less than -1");

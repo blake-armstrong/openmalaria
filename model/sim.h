@@ -20,8 +20,8 @@
  * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301, USA.
  */
 
-#ifndef Hmod_OM_SimTime
-#define Hmod_OM_SimTime
+#ifndef HMOD_OM_SIM_TIME
+#define HMOD_OM_SIM_TIME
 
 #include <cmath>
 #include <cstddef>
@@ -29,7 +29,7 @@
 
 namespace OM {
 
-inline int floorToInt(double x) { return static_cast<int>(std::floor(x)); }
+inline int floor_to_int(double x) { return static_cast<int>(std::floor(x)); }
 
 /******************************************************************************
  * Since version 43.1, SimTime is an integer instead of a class. Note: a 
@@ -50,27 +50,27 @@ inline int floorToInt(double x) { return static_cast<int>(std::floor(x)); }
 typedef int SimTime;
 
 /** Encapsulates static variables: sim time. */
-class sim {
+class Sim {
 public:
     ///@brief Simulation constants
     //@{
     /// Number of days in a year; defined as 365 (leap years are not simulated).
-    static const int DAYS_IN_YEAR = 365;
+    static const int DaysInYear = 365;
 
     ///@brief Conversions to other types/units
     //@{
     /// Convert to years
-    static inline double inYears(SimTime d) { return d * (1.0 / DAYS_IN_YEAR); }
+    static inline double in_years(SimTime d) { return d * (1.0 / DaysInYear); }
 
     /// Convert to time steps (rounding down)
-    static inline int inSteps(SimTime d);
+    static inline int in_steps(SimTime d);
     //@}
 
     /** Return this time in time steps modulo some positive integer. */
-    static inline int moduloSteps(SimTime d, int denominator);
+    static inline int modulo_steps(SimTime d, int denominator);
 
     /** Return this time in time steps modulo some positive integer. */
-    static inline int moduloYearSteps(SimTime d);
+    static inline int modulo_year_steps(SimTime d);
 
     /** Duration zero and the time at the start of the simulation. */
     static inline SimTime zero() { return SimTime(0); }
@@ -88,50 +88,50 @@ public:
     static inline SimTime future() { return SimTime(0x3FFFFFFF); }
 
     /** One day. */
-    static inline SimTime oneDay() { return SimTime(1); }
+    static inline SimTime one_day() { return SimTime(1); }
 
     /** One year. See DAYS_IN_YEAR. */
-    static inline SimTime oneYear() { return SimTime(DAYS_IN_YEAR); }
+    static inline SimTime one_year() { return SimTime(DaysInYear); }
 
     /** One time step (currently either one or five days). */
-    static inline SimTime oneTS();
+    static inline SimTime one_ts();
     //@}
 
     ///@brief Parameterised constructors
     //@{
     /** Convert. */
-    static inline SimTime fromTS(int ts);
+    static inline SimTime from_ts(int ts);
 
     /** Duration in days. Should be fast (currently no conversion required). */
-    static inline SimTime fromDays(int days) { return SimTime(days); }
+    static inline SimTime from_days(int days) { return SimTime(days); }
 
     /** Convert from a whole number of years. */
-    static inline SimTime fromYearsI(int years) { return SimTime(DAYS_IN_YEAR * years); }
+    static inline SimTime from_years_i(int years) { return SimTime(DaysInYear * years); }
 
     /** Convert from years to nearest time step. */
-    static inline SimTime fromYearsN(double years);
+    static inline SimTime from_years_n(double years);
 
     /** Convert from years, rounding down to the next time step. */
-    static inline SimTime fromYearsD(double years);
+    static inline SimTime from_years_d(double years);
 
     /** Round to the nearest time-step, where input is in days. */
-    static inline SimTime roundToTSFromDays(double days);
+    static inline SimTime round_to_ts_from_days(double days);
     //@}
 
     /** The number of time steps in one year. */
-    static inline size_t stepsPerYear();
+    static inline size_t steps_per_year();
 
     /** A cached value: one year divided by one time step. */
-    static inline double yearsPerStep();
+    static inline double years_per_step();
 
     /// Maximum possible age of a human.
-    static inline SimTime maxHumanAge();
+    static inline SimTime max_human_age();
 
     /// The starting date of the simulation
-    static inline SimTime startDate();
+    static inline SimTime start_date();
 
     /// The ending date of the simulation
-    static inline SimTime endDate();
+    static inline SimTime end_date();
     //@}
 
     ///@brief Access simulation time variables
@@ -155,11 +155,11 @@ public:
      */
     static inline SimTime now();
     /** During updates, this is ts0; between, this is now. */
-    static inline SimTime nowOrTs0();
+    static inline SimTime now_or_ts0();
     /** During updates, this is ts1; between, this is now. */
-    static inline SimTime nowOrTs1();
+    static inline SimTime now_or_ts1();
     /** During updates, this is ts0; between, it is now - 1. */
-    static inline SimTime latestTs0();
+    static inline SimTime latest_ts0();
     //@}
 
     ///@brief Access intervention-time variables
@@ -168,7 +168,7 @@ public:
     ///
     /// This equals (intervDate() - startDate()), but happens to be the most
     /// common way that intervention-period dates are used.
-    static inline SimTime intervTime();
+    static inline SimTime interv_time();
 
     /// The current date.
     ///
@@ -177,7 +177,7 @@ public:
     /// returns a large negative value.)
     ///
     /// Intervention deployment times are relative to this date.
-    static inline SimTime intervDate();
+    static inline SimTime interv_date();
     //@}
 };
 

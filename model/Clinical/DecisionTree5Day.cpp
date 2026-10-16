@@ -78,7 +78,7 @@ void DecisionTree5Day::setHealthSystem(const scnXml::HSDT5Day& hsDescription) {
 void DecisionTree5Day::uncomplicatedEvent(Human& human, Episode::State pgState) {
     // If last treatment prescribed was in recent memory, consider second line.
     CaseType regimen = FirstLine;
-    if (m_tLastTreatment + healthSystemMemory > sim::ts0()) {
+    if (m_tLastTreatment + healthSystemMemory > Sim::ts0()) {
         pgState = Episode::State(pgState | Episode::SECOND_CASE);
         regimen = SecondLine;
     }
@@ -87,14 +87,14 @@ void DecisionTree5Day::uncomplicatedEvent(Human& human, Episode::State pgState) 
 
     double x = human.rng.uniform_01();
     if (x < accessUCAny[regimen] * m_treatmentSeekingFactor) {
-        CMHostData hostData(human, sim::inYears(human.age(sim::ts0())), pgState);
+        CMHostData hostData(human, Sim::in_years(human.age(Sim::ts0())), pgState);
 
         // Run tree (which may deploy treatment)
         CMDTOut output = (x < accessUCSelfTreat[regimen] * m_treatmentSeekingFactor) ? treeUCSelfTreat->exec(hostData)
                                                                                      : treeUCOfficial->exec(hostData);
 
         if (output.treated) { // if any treatment or intervention deployed
-            m_tLastTreatment = sim::ts0();
+            m_tLastTreatment = Sim::ts0();
             mon::recordEvent(measures[regimen], human);
         }
         if (output.screened) {

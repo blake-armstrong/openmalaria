@@ -58,7 +58,7 @@ struct Condition {
 };
 
 struct SurveyDate {
-    SimTime date = sim::never();
+    SimTime date = Sim::never();
     size_t num = NOT_USED;
 
     bool isReported() const { return num != NOT_USED; }
@@ -104,7 +104,7 @@ inline size_t statSurveyNumber() {
 inline bool isReported() { return !internal::runtime.isInit || statSurveyNumber() != NOT_USED; }
 inline SimTime nextSurveyDate() {
     const auto& r = internal::runtime;
-    return r.isInit && r.surveyIndex < r.surveyDates.size() ? r.surveyDates[r.surveyIndex].date : sim::future();
+    return r.isInit && r.surveyIndex < r.surveyDates.size() ? r.surveyDates[r.surveyIndex].date : Sim::future();
 }
 size_t setupCondition(const std::string& measureName, double minValue, double maxValue, bool initialState);
 bool checkCondition(size_t conditionKey);

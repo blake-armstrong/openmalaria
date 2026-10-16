@@ -36,8 +36,8 @@ public:
     SimpleMPDAnophelesModel(SimTime developmentDuration, double probPreadultSurvival, double fEggsLaidByOviposit)
         : developmentDuration(developmentDuration), probPreadultSurvival(probPreadultSurvival),
           fEggsLaidByOviposit(fEggsLaidByOviposit) {
-        quinquennialOvipositing.resize(sim::fromYearsI(5), 0.0);
-        invLarvalResources.resize(sim::oneYear(), 0.0);
+        quinquennialOvipositing.resize(Sim::from_years_i(5), 0.0);
+        invLarvalResources.resize(Sim::one_year(), 0.0);
         nOvipositingDelayed.resize(developmentDuration, 0.0);
     }
 
@@ -68,7 +68,7 @@ public:
         double tsP_dff = sigma_dff * availDivisor * mosq.probMosqSurvivalOvipositing;
 
         // Initialise nOvipositingDelayed
-        int y1 = sim::oneYear();
+        int y1 = Sim::one_year();
         int tau = mosq.restDuration;
         for (int t = 0; t < developmentDuration; t++) {
             nOvipositingDelayed[util::mod_nn(t + tau, developmentDuration)] = tsP_dff * initNvFromSv * forcedS_v[t];
@@ -76,7 +76,7 @@ public:
 
         // Used when calculating invLarvalResources (but not a hard constraint):
         assert(tau + developmentDuration <= y1);
-        for (int t = 0; t < sim::oneYear(); t++) {
+        for (int t = 0; t < Sim::one_year(); t++) {
             double yt = fEggsLaidByOviposit * tsP_dff * initNvFromSv *
                         forcedS_v[util::mod_nn(t + y1 - tau - developmentDuration, y1)];
             invLarvalResources[t] = (probPreadultSurvival * yt - mosqEmergeRate[t]) / (mosqEmergeRate[t] * yt);
@@ -95,8 +95,8 @@ public:
     virtual bool initIterate() {
         bool fitted = AnophelesModel::initIterate();
 
-        int y1 = sim::oneYear(), y2 = sim::fromYearsI(2), y3 = sim::fromYearsI(3), y4 = sim::fromYearsI(4),
-            y5 = sim::fromYearsI(5);
+        int y1 = Sim::one_year(), y2 = Sim::from_years_i(2), y3 = Sim::from_years_i(3), y4 = Sim::from_years_i(4),
+            y5 = Sim::from_years_i(5);
 
         assert((int)mosqEmergeRate.size() == y1);
 
@@ -127,11 +127,11 @@ public:
         int d1 = d0 + 1;
 
         double yt = fEggsLaidByOviposit * nOvipositingDelayed[util::mod_nn(d1, developmentDuration)];
-        double emergence = probPreadultSurvival * yt / (1.0 + invLarvalResources[mod_nn(d0, sim::oneYear())] * yt);
+        double emergence = probPreadultSurvival * yt / (1.0 + invLarvalResources[mod_nn(d0, Sim::one_year())] * yt);
         nOvipositingDelayed[util::mod_nn(d1, developmentDuration)] = nOvipositing;
-        quinquennialOvipositing[util::mod_nn(d1, sim::fromYearsI(5))] = nOvipositing;
+        quinquennialOvipositing[util::mod_nn(d1, Sim::from_years_i(5))] = nOvipositing;
 
-        if (sim::intervTime() > 0 && emergence < 0) {
+        if (Sim::interv_time() > 0 && emergence < 0) {
             std::ostringstream oss;
             oss << "Error: SimpleMPD model: negative emergence at t=" << d0 << ": " << emergence << ". ";
             oss << "Check the seasonality and make sure it does not go too low. For monthly EIR values, the lowest "
@@ -147,13 +147,13 @@ public:
     virtual double getResAvailability() const {
         // TODO: why offset by one time step? This is effectively getting the resources available on the last time step
         // TODO: only have to add one year because of offset
-        SimTime start = sim::now() - sim::oneTS() + sim::oneYear();
+        SimTime start = Sim::now() - Sim::one_ts() + Sim::one_year();
         double total = 0;
-        for (SimTime i = start, end = start + sim::oneTS(); i < end; i = i + sim::oneDay()) {
-            SimTime dYear1 = mod_nn(i, sim::oneYear());
+        for (SimTime i = start, end = start + Sim::one_ts(); i < end; i = i + Sim::one_day()) {
+            SimTime dYear1 = mod_nn(i, Sim::one_year());
             total += 1.0 / invLarvalResources[dYear1];
         }
-        return total / sim::oneTS();
+        return total / Sim::one_ts();
     }
 
     virtual double getResRequirements() const { return numeric_limits<double>::quiet_NaN(); }
@@ -176,7 +176,7 @@ private:
     // -----  model parameters (loaded from XML)  -----
 
     /** Duration of development (time from egg laying to emergence) in days. */
-    SimTime developmentDuration = sim::never();
+    SimTime developmentDuration = Sim::never();
 
     /** Survival probability of a mosquito from egg to emergence in the absence
      * of density dependent mortality. */

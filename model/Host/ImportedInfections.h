@@ -38,7 +38,7 @@ namespace Host {
 
 class ImportedInfections {
 public:
-    ImportedInfections() : period(sim::zero()), lastIndex(0) {}
+    ImportedInfections() : period(Sim::zero()), lastIndex(0) {}
 
     /** Initialise, passing intervention description
          * 
@@ -50,7 +50,7 @@ public:
         try {
             //NOTE: if changing XSD, this should not have a default unit:
             period = UnitParse::readDuration(tElt.getPeriod(), UnitParse::STEPS);
-            if (period < sim::zero()) {
+            if (period < Sim::zero()) {
                 throw util::format_error("cannot be negative");
             }
         } catch (const util::format_error& e) {
@@ -63,12 +63,12 @@ public:
                 SimTime date =
                     UnitParse::readDate(it->getTime(), UnitParse::STEPS /*STEPS is only for backwards compatibility*/);
                 // convert to per-time-step, per-person
-                double rateVal = it->getValue() * sim::yearsPerStep() * (1.0 / 1000.0);
-                rate.push_back(Rate(date - sim::startDate(), rateVal));
+                double rateVal = it->getValue() * Sim::years_per_step() * (1.0 / 1000.0);
+                rate.push_back(Rate(date - Sim::start_date(), rateVal));
             }
             sort(rate.begin(), rate.end());
             if (rate.size() > 0) {
-                if (period != sim::zero() && rate[0].time != sim::zero()) {
+                if (period != Sim::zero() && rate[0].time != Sim::zero()) {
                     throw util::xml_scenario_error("must specify rate at time zero when period is not zero");
                 }
                 // remove useless repeated entries from list
@@ -99,9 +99,9 @@ public:
     void import(vector<Human>& population) {
         if (rate.size() == 0)
             return; // no imported infections
-        SimTime now = sim::intervTime();
-        assert(now >= sim::zero());
-        if (period > sim::zero()) {
+        SimTime now = Sim::interv_time();
+        assert(now >= Sim::zero());
+        if (period > Sim::zero()) {
             now = mod_nn(now, period);
         }
         if (rate[lastIndex].time > now) {
@@ -134,11 +134,11 @@ public:
     }
 
 private:
-    SimTime period = sim::never();
+    SimTime period = Sim::never();
     uint32_t lastIndex;
     struct Rate {
         Rate(SimTime t, double v) : time(t), value(v) {}
-        SimTime time = sim::never();
+        SimTime time = Sim::never();
         double value;
         inline bool operator<(const Rate& that) const { return time < that.time; }
     };

@@ -66,7 +66,7 @@ void CommonWithinHost::init(const scnXml::Scenario& scenario) {
 }
 
 CommonWithinHost::CommonWithinHost(LocalRng& rng, double comorbidityFactor) : WHFalciparum(rng, comorbidityFactor) {
-    assert(sim::oneTS() == sim::fromDays(1) || sim::oneTS() == sim::fromDays(5));
+    assert(Sim::one_ts() == Sim::from_days(1) || Sim::one_ts() == Sim::from_days(5));
 
     opt_vaccine_genotype = util::ModelOptions::option(util::VACCINE_GENOTYPE);
 
@@ -189,12 +189,12 @@ void CommonWithinHost::update(Host::Human& human, LocalRng& rng, int& nNewInfs_i
     hrp2Density = 0.0;
     timeStepMaxDensity = 0.0;
 
-    bool treatmentLiver = treatExpiryLiver > sim::ts0();
-    bool treatmentBlood = treatExpiryBlood > sim::ts0();
+    bool treatmentLiver = treatExpiryLiver > Sim::ts0();
+    bool treatmentBlood = treatExpiryBlood > Sim::ts0();
 
     double body_mass = massByAge.eval(ageInYears) * hetMassMultiplier;
 
-    for (SimTime now = sim::ts0(), end = sim::ts0() + sim::oneTS(); now < end; now = now + sim::oneDay()) {
+    for (SimTime now = Sim::ts0(), end = Sim::ts0() + Sim::one_ts(); now < end; now = now + Sim::one_day()) {
         // every day, medicate drugs, update each infection, then decay drugs
         pkpdModel.medicate(rng);
 
@@ -246,7 +246,7 @@ void CommonWithinHost::update(Host::Human& human, LocalRng& rng, int& nNewInfs_i
     assert((std::isfinite)(totalDensity)); // inf probably wouldn't be a problem but NaN would be
 
     // Cache total density for infectiousness calculations
-    int y_lag_i = sim::moduloSteps(sim::ts1(), y_lag_len);
+    int y_lag_i = Sim::modulo_steps(Sim::ts1(), y_lag_len);
     for (size_t g = 0; g < Genotypes::N(); ++g) {
         m_y_lag_i[y_lag_i * Genotypes::N() + g] = 0.0;
         m_y_lag_l[y_lag_i * Genotypes::N() + g] = 0.0;

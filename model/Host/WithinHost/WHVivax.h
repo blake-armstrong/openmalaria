@@ -88,7 +88,7 @@ public:
     /** Equivalent to a blood stage existing. We do not model incidence of
      * gametocytes independently, thus this also tests existance of
      * gametocytes. */
-    inline bool isPatent() const { return bloodStageClearDate > sim::latestTs0(); }
+    inline bool isPatent() const { return bloodStageClearDate > Sim::latest_ts0(); }
 
     /** Fully clear blood stage parasites. */
     void treatmentBS();
@@ -105,7 +105,7 @@ private:
 
     // Either sim::never() (no blood stage) or the start of the time step on
     // which the blood stage will clear.
-    SimTime bloodStageClearDate = sim::never();
+    SimTime bloodStageClearDate = Sim::never();
 
     // Whether the primary blood stage infection has started
     bool primaryHasStarted;

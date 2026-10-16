@@ -123,7 +123,7 @@ public:
     uint32_t nextCtsDist = 0;
 
 private:
-    SimTime dateOfBirth = sim::never(); // date of birth; humans are always born at the end of a time step
+    SimTime dateOfBirth = Sim::never(); // date of birth; humans are always born at the end of a time step
 
     /** Cache, updated when human is added to or removed from a sub-population */
     uint32_t cohortSet = 0;
@@ -158,7 +158,7 @@ inline bool Human::isInSubPop(interventions::ComponentId id) const {
     if (it == subPopExp.end())
         return false; // no history of membership
     else
-        return it->second >= sim::nowOrTs0(); // added: has expired?
+        return it->second >= Sim::now_or_ts0(); // added: has expired?
 }
 
 inline uint32_t Human::getCohortSet() const { return cohortSet; }

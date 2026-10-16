@@ -183,7 +183,7 @@ public:
     inline interventions::ComponentId id() const { return m_id; }
 
     /// Return true if this component is deployed (i.e. currently active)
-    inline bool isDeployed() const { return deployTime != sim::never(); }
+    inline bool isDeployed() const { return deployTime != Sim::never(); }
 
     /// Checkpointing (write only)
     void operator&(ostream& stream) {
@@ -194,12 +194,12 @@ public:
 
 protected:
     /// Set the component id
-    explicit PerHostInterventionData(interventions::ComponentId id) : deployTime(sim::now()), m_id(id) {}
+    explicit PerHostInterventionData(interventions::ComponentId id) : deployTime(Sim::now()), m_id(id) {}
 
     /// Checkpointing: write
     virtual void checkpoint(ostream& stream) = 0;
 
-    SimTime deployTime = sim::never(); // time of deployment or sim::never()
+    SimTime deployTime = Sim::never(); // time of deployment or sim::never()
     interventions::ComponentId m_id;   // component id; don't change
 };
 
@@ -315,7 +315,7 @@ public:
     //@{
     /** Get the age at which individuals are considered adults (i.e. where
      * availability to mosquitoes reaches its maximum). */
-    static inline SimTime adultAge() { return sim::fromYearsD(relAvailAge.firstGlobalMaximum()); }
+    static inline SimTime adultAge() { return Sim::from_years_d(relAvailAge.firstGlobalMaximum()); }
 
     /** Get whether the user has any active deployments of interventions of
      * the given type, where type is one of those interventions deriving the

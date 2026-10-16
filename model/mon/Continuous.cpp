@@ -47,7 +47,7 @@ map<string, tuple<string, std::function<void(Population&, ostream&)>>> registere
 // List that we report.
 vector<tuple<string, std::function<void(Population&, ostream&)>>> toReport;
 
-SimTime ctsPeriod = sim::zero();
+SimTime ctsPeriod = Sim::zero();
 
 bool duringInit = false;
 
@@ -56,14 +56,14 @@ bool duringInit = false;
 void init(const scnXml::Monitoring& monitoring, bool isCheckpoint) {
     const scnXml::Monitoring::ContinuousOptional& ctsOpt = monitoring.getContinuous();
     if (!ctsOpt.present()) {
-        ctsPeriod = sim::zero();
+        ctsPeriod = Sim::zero();
         return;
     }
     const auto& options = ctsOpt.get();
     try {
         //NOTE: if changing XSD, this should not have a default unit:
         ctsPeriod = UnitParse::readShortDuration(options.getPeriod(), UnitParse::STEPS);
-        if (ctsPeriod < sim::oneTS())
+        if (ctsPeriod < Sim::one_ts())
             throw util::format_error("must be >= 1 time step");
     } catch (const util::format_error& e) {
         throw xml_scenario_error(string("monitoring/continuous/period: ").append(e.message()));
@@ -103,13 +103,13 @@ void init(const scnXml::Monitoring& monitoring, bool isCheckpoint) {
 }
 
 void checkpoint(ostream& stream) {
-    if (ctsPeriod == sim::zero())
+    if (ctsPeriod == Sim::zero())
         return; // output disabled
 
     streamOffset & stream;
 }
 void checkpoint(istream& stream) {
-    if (ctsPeriod == sim::zero())
+    if (ctsPeriod == Sim::zero())
         return; // output disabled
 
     /* We attempt to resume output correctly after a reload by recording
@@ -146,23 +146,23 @@ void registerCallback(string optName, string titles, function<void(Population&, 
 }
 
 void update(Population& population) {
-    if (ctsPeriod == sim::zero())
+    if (ctsPeriod == Sim::zero())
         return; // output disabled
     if (!duringInit) {
-        if (sim::intervTime() < sim::zero() || mod_nn(sim::intervTime(), ctsPeriod) != sim::zero())
+        if (Sim::interv_time() < Sim::zero() || mod_nn(Sim::interv_time(), ctsPeriod) != Sim::zero())
             return;
     } else {
-        if (mod_nn(sim::now(), ctsPeriod) != sim::zero())
+        if (mod_nn(Sim::now(), ctsPeriod) != Sim::zero())
             return;
-        ctsOStream << sim::inSteps(sim::now()) << '\t';
+        ctsOStream << Sim::in_steps(Sim::now()) << '\t';
     }
 
-    if (duringInit && sim::intervTime() < sim::zero()) {
+    if (duringInit && Sim::interv_time() < Sim::zero()) {
         ctsOStream << "nan";
     } else {
         // NOTE: we could switch this to output dates, but (1) it would be
         // breaking change and (2) it may be harder to use.
-        ctsOStream << sim::inSteps(sim::intervTime());
+        ctsOStream << Sim::in_steps(Sim::interv_time());
     }
     for (const auto& report : toReport)
         std::get<1>(report)(population, ctsOStream);

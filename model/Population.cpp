@@ -62,7 +62,7 @@ void Population::createInitialHumans() {
          iage_prev = iage, iage -= 1) {
         int targetPop = AgeStructure::targetCumPop(iage, size);
         while (cumulativePop < targetPop) {
-            SimTime dob = sim::zero() - sim::fromTS(iage);
+            SimTime dob = Sim::zero() - Sim::from_ts(iage);
             util::streamValidate(dob);
             humans.push_back(Host::Human(dob));
             ++cumulativePop;
@@ -71,7 +71,7 @@ void Population::createInitialHumans() {
 
     // Vector setup dependant on human population structure (we *want* to
     // include all humans, whether they'll survive to vector init phase or not).
-    assert(sim::now() == sim::zero()); // assumed below
+    assert(Sim::now() == Sim::zero()); // assumed below
 }
 
 void Population::update() {
@@ -86,7 +86,7 @@ void Population::update() {
         // "outmigrate" some to maintain population shape
         //NOTE: better to use age(sim::ts0())? Possibly, but the difference will not be very significant.
         // Also see targetPop = ... comment above
-        bool outmigrate = cumPop >= AgeStructure::targetCumPop(sim::inSteps(it->age(sim::ts1())), size);
+        bool outmigrate = cumPop >= AgeStructure::targetCumPop(Sim::in_steps(it->age(Sim::ts1())), size);
 
         if (isDead || outmigrate) {
             it = humans.erase(it);
@@ -100,7 +100,7 @@ void Population::update() {
     recentBirths += (size - cumPop);
     while (cumPop < (int)size) {
         // humans born at end of this time step = beginning of next, hence ts1
-        humans.push_back(Host::Human(sim::ts1()));
+        humans.push_back(Host::Human(Sim::ts1()));
         ++cumPop;
     }
 }
@@ -110,7 +110,7 @@ void Population::checkpoint(istream& stream) {
     recentBirths & stream;
 
     for (size_t i = 0; i < size && !stream.eof(); ++i) {
-        humans.push_back(Host::Human(sim::zero()));
+        humans.push_back(Host::Human(Sim::zero()));
         humans.back().checkpoint(stream);
     }
     if (humans.size() != size)
@@ -151,7 +151,7 @@ void ctsHostDemography(Population& population, ostream& stream) {
     auto iter = population.humans.crbegin();
     int cumCount = 0;
     for (double ubound : ctsDemogAgeGroups) {
-        while (iter != population.humans.crend() && sim::inYears(iter->age(sim::now())) < ubound) {
+        while (iter != population.humans.crend() && Sim::in_years(iter->age(Sim::now())) < ubound) {
             ++cumCount;
             ++iter;
         }
@@ -215,7 +215,7 @@ void ctsMeanAgeAvailEffect(Population& population, ostream& stream) {
     for (Host::Human& human : population.humans) {
         if (!human.perHostTransmission.outsideTransmission) {
             ++nHumans;
-            avail += human.perHostTransmission.relativeAvailabilityAge(sim::inYears(human.age(sim::now())));
+            avail += human.perHostTransmission.relativeAvailabilityAge(Sim::in_years(human.age(Sim::now())));
         }
     }
     stream << '\t' << avail / nHumans;

@@ -262,7 +262,7 @@ bool MolineauxInfection::updateDensity(LocalRng&, double survival_factor, SimTim
     // ———  1. Update m_density (Pc), Pi and related  ———
     double Pi[v] = {0.0f};
 
-    if (age_BS == sim::zero()) {
+    if (age_BS == Sim::zero()) {
         // The first variant starts with a pre-set density (regardless of blood
         // volume; this is an assumption by DH; paper assumes fixed volume)
         variants.resize(1);

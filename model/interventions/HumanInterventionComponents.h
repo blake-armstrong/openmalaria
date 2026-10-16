@@ -155,12 +155,12 @@ void TriggeredDeployments::deploy(Human& human, mon::Deploy::Method method, Vacc
 }
 
 TriggeredDeployments::SubList::SubList(const scnXml::TriggeredDeployments::DeployType& elt)
-    : HumanIntervention(elt.getComponent()), minAge(sim::fromYearsN(elt.getMinAge())), maxAge(sim::future()),
+    : HumanIntervention(elt.getComponent()), minAge(Sim::from_years_n(elt.getMinAge())), maxAge(Sim::future()),
       coverage(elt.getP()) {
     if (elt.getMaxAge().present())
-        maxAge = sim::fromYearsN(elt.getMaxAge().get());
+        maxAge = Sim::from_years_n(elt.getMaxAge().get());
 
-    if (minAge < sim::zero() || maxAge < minAge) {
+    if (minAge < Sim::zero() || maxAge < minAge) {
         throw util::xml_scenario_error("triggered intervention must have 0 <= minAge <= maxAge");
     }
 
@@ -178,7 +178,7 @@ void TriggeredDeployments::SubList::deploy(Host::Human& human, mon::Deploy::Meth
     // the beginning of the step since this gives the expected result with age
     // limits of 0 to 1 time step.
     //TODO: why does the above contradict what we do? Is this due to a date being shifted later?
-    SimTime age = human.age(sim::nowOrTs1());
+    SimTime age = human.age(Sim::now_or_ts1());
     if (age >= minAge && age < maxAge) {
         if (coverage >= 1.0 || human.rng.bernoulli(coverage)) {
             HumanIntervention::deploy(human, method, vaccLimits);
@@ -235,12 +235,12 @@ public:
         try {
             SimTime durL = UnitParse::readShortDuration(elt.getDurationLiver(), UnitParse::NONE),
                     durB = UnitParse::readShortDuration(elt.getDurationBlood(), UnitParse::NONE);
-            SimTime neg1 = -sim::oneTS();
+            SimTime neg1 = -Sim::one_ts();
             if (durL < neg1 || durB < neg1) {
                 throw util::xml_scenario_error("treatSimple: cannot have durationBlood or durationLiver less than -1");
             }
             if (util::ModelOptions::option(util::VIVAX_SIMPLE_MODEL)) {
-                if (durL != sim::zero() || durB != neg1)
+                if (durL != Sim::zero() || durB != neg1)
                     throw util::unimplemented_exception(
                         "vivax model only supports timestepsLiver=0, timestepsBlood=-1");
                 // Actually, the model ignores these parameters; we just don't want somebody thinking it doesn't.
@@ -275,7 +275,7 @@ public:
 
     void deploy(Human& human, mon::Deploy::Method method, VaccineLimits) const {
         mon::recordDeploy(mon::measure("nMDAs"), mon::measure("nCtsMDA"), human, method);
-        double age = sim::inYears(human.age(sim::nowOrTs1()));
+        double age = Sim::in_years(human.age(Sim::now_or_ts1()));
         human.withinHostModel->treatPkPd(schedule, dosage, age, delay_d);
     }
 
@@ -295,7 +295,7 @@ public:
         : HumanInterventionComponent(id), tree(Clinical::CMDecisionTree::create(elt, false)) {}
 
     void deploy(Human& human, mon::Deploy::Method method, VaccineLimits) const {
-        Clinical::CMDTOut out = tree.exec(Clinical::CMHostData(human, sim::inYears(human.age(sim::nowOrTs1())),
+        Clinical::CMDTOut out = tree.exec(Clinical::CMHostData(human, Sim::in_years(human.age(Sim::now_or_ts1())),
                                                                human.clinicalModel->getLatestState()));
         if (out.treated) {
             mon::recordDeploy(mon::measure("nMDAs"), mon::measure("nCtsMDA"), human, method);

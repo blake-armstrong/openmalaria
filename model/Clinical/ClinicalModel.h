@@ -105,7 +105,7 @@ public:
     template <class S> void operator&(S& stream) { checkpoint(stream); }
 
     /** Time of the last treatment (sim::never() if never treated). */
-    SimTime m_tLastTreatment = sim::never();
+    SimTime m_tLastTreatment = Sim::never();
 
 protected:
     /// Constructor.

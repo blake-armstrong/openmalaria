@@ -91,7 +91,7 @@ private:
      * vaccination reintroduces them to the EPI schedule). */
     uint32_t numDosesAdministered;
     /// Time of last vaccination with this vaccine type
-    SimTime timeLastDeployment = sim::never();
+    SimTime timeLastDeployment = Sim::never();
     /// Efficacy at last deployment (undecayed)
     vector<double> perGenotypeInitialEfficacy;
     unique_ptr<util::DecayFunction> hetSample;

@@ -55,9 +55,9 @@ void initAgeGroups(const scnXml::Monitoring& monitoring) {
 
     runtime.ageGroupUpperBound.resize(groups.size() + 1);
     for (size_t i = 0; i < groups.size(); ++i) {
-        runtime.ageGroupUpperBound[i] = sim::fromYearsD(groups[i].getUpperbound());
+        runtime.ageGroupUpperBound[i] = Sim::from_years_d(groups[i].getUpperbound());
     }
-    runtime.ageGroupUpperBound[groups.size()] = sim::future();
+    runtime.ageGroupUpperBound[groups.size()] = Sim::future();
 }
 
 } // namespace
@@ -152,7 +152,7 @@ SimTime readSurveyDates(const scnXml::Monitoring& monitoring) {
             }
             if (surv.getRepeatStep().present()) {
                 const SimTime step = UnitParse::readDuration(surv.getRepeatStep().get(), UnitParse::NONE);
-                if (step < sim::oneTS()) {
+                if (step < Sim::one_ts()) {
                     throw util::xml_scenario_error("surveyTime: repeatStep must be >= 1");
                 }
                 const SimTime end = UnitParse::readDate(surv.getRepeatEnd().get(), UnitParse::NONE);
@@ -189,7 +189,7 @@ SimTime readSurveyDates(const scnXml::Monitoring& monitoring) {
         for (const SurveyDate& surveyDate : runtime.surveyDates) {
             if (!surveyDate.isReported())
                 continue;
-            std::cout << (surveyDate.num + 1) << '\t' << sim::inSteps(surveyDate.date - sim::startDate()) << '\t'
+            std::cout << (surveyDate.num + 1) << '\t' << Sim::in_steps(surveyDate.date - Sim::start_date()) << '\t'
                       << surveyDate.date << std::endl;
         }
     }

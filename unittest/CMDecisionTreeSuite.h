@@ -49,7 +49,7 @@ public:
 
         UnittestUtil::EmpiricalWHM_setup();
 
-        human.reset(UnittestUtil::createHuman(sim::nowOrTs0()).release());
+        human.reset(UnittestUtil::createHuman(Sim::now_or_ts0()).release());
 
         ETS_ASSERT(human.get() != 0);
         whm =
@@ -208,8 +208,8 @@ public:
     }
 
     void testSimpleTreat() {
-        TS_ASSERT_EQUALS(whm->lastTimeLiver, sim::never());
-        TS_ASSERT_EQUALS(whm->lastTimeBlood, sim::never());
+        TS_ASSERT_EQUALS(whm->lastTimeLiver, Sim::never());
+        TS_ASSERT_EQUALS(whm->lastTimeBlood, Sim::never());
 
         scnXml::DTTreatSimple treat1("0t", "1t"); // 0 time steps liver, 1 blood (using 1 day TS)
         scnXml::DecisionTree dt1;

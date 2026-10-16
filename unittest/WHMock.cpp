@@ -30,8 +30,8 @@ namespace OM {
 namespace UnitTest {
 
 WHMock::WHMock()
-    : totalDensity(numeric_limits<double>::quiet_NaN()), nTreatments(0), lastTimeLiver(sim::never()),
-      lastTimeBlood(sim::never()) {}
+    : totalDensity(numeric_limits<double>::quiet_NaN()), nTreatments(0), lastTimeLiver(Sim::never()),
+      lastTimeBlood(Sim::never()) {}
 WHMock::~WHMock() {}
 
 double WHMock::probTransmissionToMosquito(vector<double>&, vector<double>&) const {
@@ -48,7 +48,7 @@ bool WHMock::treatSimple(Host::Human& human, SimTime timeLiver, SimTime timeBloo
     nTreatments += 1;
     lastTimeLiver = timeLiver;
     lastTimeBlood = timeBlood;
-    return timeBlood != sim::zero();
+    return timeBlood != Sim::zero();
 }
 
 void WHMock::treatPkPd(size_t schedule, size_t dosages, double age, double delay_d) {

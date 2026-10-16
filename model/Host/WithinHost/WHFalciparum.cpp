@@ -77,7 +77,7 @@ static double alpha_m;
 /// decay rate of maternal protection in years^(-1).
 static double decayM;
 
-SimTime Infection::s_latentP = sim::never();
+SimTime Infection::s_latentP = Sim::never();
 int WHFalciparum::y_lag_len = 0;
 
 // -----  static functions  -----
@@ -94,7 +94,7 @@ void WHFalciparum::init(const OM::Parameters& parameters, const scnXml::Model& m
     alpha_m = 1.0 - exp(-parameters[Parameter::NEG_LOG_ONE_MINUS_ALPHA_M]);
     decayM = parameters[Parameter::DECAY_M];
 
-    y_lag_len = sim::inSteps(sim::fromDays(20)) + 1;
+    y_lag_len = Sim::in_steps(Sim::from_days(20)) + 1;
 
     //NOTE: should also call cleanup() on the PathogenesisModel, but it only frees memory which the OS does anyway
     Pathogenesis::PathogenesisModel::init(parameters, model.getClinical(), false);
@@ -174,9 +174,9 @@ inline double compute_y_lag(const vector<double>& y_lag, int y_lag_len, vector<d
 
     // Take weighted sum of total asexual blood stage density 10, 15 and 20 days
     // before. Add y_lag_len to index to ensure positive.
-    size_t d10 = mod_nn(y_lag_len + sim::inSteps(sim::ts1() - sim::fromDays(10)), y_lag_len);
-    size_t d15 = mod_nn(y_lag_len + sim::inSteps(sim::ts1() - sim::fromDays(15)), y_lag_len);
-    size_t d20 = mod_nn(y_lag_len + sim::inSteps(sim::ts1() - sim::fromDays(20)), y_lag_len);
+    size_t d10 = mod_nn(y_lag_len + Sim::in_steps(Sim::ts1() - Sim::from_days(10)), y_lag_len);
+    size_t d15 = mod_nn(y_lag_len + Sim::in_steps(Sim::ts1() - Sim::from_days(15)), y_lag_len);
+    size_t d20 = mod_nn(y_lag_len + Sim::in_steps(Sim::ts1() - Sim::from_days(20)), y_lag_len);
 
     double y10_sum = 0.0, y15_sum = 0.0, y20_sum = 0.0;
     for (size_t g = 0; g < n; ++g) {
@@ -246,18 +246,18 @@ void WHFalciparum::treatment(Host::Human& human, TreatmentId treatId) {
     treat.deploy(human, mon::Deploy::TREAT, interventions::VaccineLimits(/*default initialise: no limits*/));
 }
 bool WHFalciparum::treatSimple(Host::Human& human, SimTime timeLiver, SimTime timeBlood) {
-    if (timeLiver != sim::zero()) {
-        if (timeLiver < sim::zero())
+    if (timeLiver != Sim::zero()) {
+        if (timeLiver < Sim::zero())
             clearInfections(Treatments::LIVER);
         else
-            treatExpiryLiver = max(int(treatExpiryLiver), int(sim::nowOrTs1()) + timeLiver);
+            treatExpiryLiver = max(int(treatExpiryLiver), int(Sim::now_or_ts1()) + timeLiver);
         mon::recordEvent(mon::measure("nLiverStageTreatments"), human);
     }
-    if (timeBlood != sim::zero()) {
-        if (timeBlood < sim::zero())
+    if (timeBlood != Sim::zero()) {
+        if (timeBlood < Sim::zero())
             clearInfections(Treatments::BLOOD);
         else
-            treatExpiryBlood = max(int(treatExpiryBlood), int(sim::nowOrTs1()) + timeBlood);
+            treatExpiryBlood = max(int(treatExpiryBlood), int(Sim::now_or_ts1()) + timeBlood);
         return true; // blood stage treatment
     }
     return false; // no blood stage treatment

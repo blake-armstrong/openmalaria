@@ -173,11 +173,11 @@ double InfectionIncidenceModel::getModelExpectedInfections(LocalRng& rng, double
                                                            const Transmission::PerHost& phTrans) {
     // First two lines are availability adjustment: S_1(i,t) from AJTMH 75 (suppl 2) p12 eqn. (5)
     // Note that NegBinomMAII and LogNormalMAII supercede this model; see below
-    return (Sinf + (1 - Sinf) / (1 + effectiveEIR / sim::oneTS() * EstarInv)) * susceptibility() * effectiveEIR;
+    return (Sinf + (1 - Sinf) / (1 + effectiveEIR / Sim::one_ts() * EstarInv)) * susceptibility() * effectiveEIR;
 }
 double HeterogeneityWorkaroundII::getModelExpectedInfections(LocalRng& rng, double effectiveEIR,
                                                              const Transmission::PerHost& phTrans) {
-    return (Sinf + (1 - Sinf) / (1 + effectiveEIR / (sim::oneTS() * phTrans.relativeAvailabilityHet) * EstarInv)) *
+    return (Sinf + (1 - Sinf) / (1 + effectiveEIR / (Sim::one_ts() * phTrans.relativeAvailabilityHet) * EstarInv)) *
            susceptibility() * effectiveEIR;
 }
 double NegBinomMAII::getModelExpectedInfections(LocalRng& rng, double effectiveEIR, const Transmission::PerHost&) {

@@ -235,7 +235,7 @@ void operator&(map<interventions::ComponentId, SimTime>& x, istream& stream) {
     auto pos = x.begin();
     for (size_t i = 0; i < l; ++i) {
         interventions::ComponentId s(stream);
-        SimTime t = sim::never();
+        SimTime t = Sim::never();
         t & stream;
         pos = x.insert(pos, make_pair(s, t));
     }

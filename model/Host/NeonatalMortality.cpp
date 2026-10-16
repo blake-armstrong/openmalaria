@@ -54,15 +54,15 @@ double riskFromMaternalInfection = 0.0;
 std::vector<double> prevByGestationalAge;
 
 /// Lower and upper bounds for potential mothers (as in model description)
-SimTime ageLb = sim::fromYearsI(20), ageUb = sim::fromYearsI(25);
+SimTime ageLb = Sim::from_years_i(20), ageUb = Sim::from_years_i(25);
 
 // The model is parameterised based on patency levels; the diagnostic
 // used for this may be important.
 const WithinHost::Diagnostic* neonatalDiagnostic = 0;
 
 void NeonatalMortality::init(const scnXml::Clinical& clinical) {
-    SimTime fiveMonths = sim::fromDays(5 * 30);
-    prevByGestationalAge.assign(sim::inSteps(fiveMonths), 0.0);
+    SimTime fiveMonths = Sim::from_days(5 * 30);
+    prevByGestationalAge.assign(Sim::in_steps(fiveMonths), 0.0);
 
     if (clinical.getNeonatalMortality().present()) {
         neonatalDiagnostic = &WithinHost::diagnostics::get(clinical.getNeonatalMortality().get().getDiagnostic());
@@ -98,7 +98,7 @@ void NeonatalMortality::update(vector<Host::Human>& population) {
     for (Human& human : population) {
         // diagnosticDefault() gives patency after the last time step's
         // update, so it's appropriate to use age at the beginning of this step.
-        SimTime age = human.age(sim::ts0());
+        SimTime age = human.age(Sim::ts0());
 
         // Note: since we're using a linked list, we have to iterate until we reach
         // the individuals we're interested in. Due to population structure, it's
@@ -122,7 +122,7 @@ void NeonatalMortality::update(vector<Host::Human>& population) {
 
     double maxPrev = prev2025;
     //update the vector containing the prevalence by gestational age
-    size_t index = sim::moduloSteps(sim::ts0(), prevByGestationalAge.size());
+    size_t index = Sim::modulo_steps(Sim::ts0(), prevByGestationalAge.size());
     prevByGestationalAge[index] = prev2025;
     for (size_t i = 0; i < prevByGestationalAge.size(); ++i) {
         if (prevByGestationalAge[i] > maxPrev) {

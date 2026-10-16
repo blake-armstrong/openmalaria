@@ -48,7 +48,7 @@ public:
 
     virtual bool isExistingCase() {
         // If treated in the recent past:
-        return sim::now() > m_tLastTreatment && sim::now() <= m_tLastTreatment + healthSystemMemory;
+        return Sim::now() > m_tLastTreatment && Sim::now() <= m_tLastTreatment + healthSystemMemory;
     }
 
 protected:

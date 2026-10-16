@@ -241,7 +241,7 @@ public:
         clock.init(dummyXML::scenario, modelNameProvider);
 
         // we could just use zero, but we may spot more errors by using some weird number
-        clock.t0 = sim::fromYearsN(83.2591);
+        clock.t0 = Sim::from_years_n(83.2591);
         clock.t1 = clock.t0;
 #ifndef NDEBUG
         clock.in_update =
@@ -376,7 +376,7 @@ public:
 
     // For when infection parameters shouldn't be used; enforce by setting to NaNs.
     // But do set latentP.
-    static void Infection_init_latentP_and_NaN() { Infection::s_latentP = sim::fromDays(15); }
+    static void Infection_init_latentP_and_NaN() { Infection::s_latentP = Sim::from_days(15); }
 
     static void DescriptiveInfection_init() { ModelOptions::reset(); }
 

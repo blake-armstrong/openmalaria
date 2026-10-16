@@ -48,9 +48,11 @@ public:
     int modulo_steps(SimTime d, int denominator) const { return util::mod_nn(d / interval, denominator); }
     int modulo_year_steps(SimTime d) const { return util::mod_nn(d / interval, static_cast<int>(steps_in_year)); }
     SimTime from_ts(int ts) const { return interval * ts; }
-    SimTime from_years_n(double years) const { return round_to_ts_from_days(sim::DAYS_IN_YEAR * years); }
-    SimTime from_years_d(double years) const { return from_ts(floorToInt(static_cast<double>(steps_in_year) * years)); }
-    SimTime round_to_ts_from_days(double days) const { return from_ts(floorToInt((days / interval) + 0.5)); }
+    SimTime from_years_n(double years) const { return round_to_ts_from_days(Sim::DaysInYear * years); }
+    SimTime from_years_d(double years) const {
+        return from_ts(floor_to_int(static_cast<double>(steps_in_year) * years));
+    }
+    SimTime round_to_ts_from_days(double days) const { return from_ts(floor_to_int((days / interval) + 0.5)); }
     size_t steps_per_year() const { return steps_in_year; }
     double years_per_step() const { return years_in_step; }
 
@@ -77,10 +79,10 @@ public:
     SimTime interv_date() const { return start + interv; }
 
     void reset_time() {
-        t0 = sim::zero();
-        t1 = sim::zero();
+        t0 = Sim::zero();
+        t1 = Sim::zero();
     }
-    void start_intervention_period() { interv = sim::zero(); }
+    void start_intervention_period() { interv = Sim::zero(); }
 
     void start_update() {
         t1 = t1 + one_ts();
@@ -109,12 +111,12 @@ private:
     int interval = 0;
     size_t steps_in_year = 0;
     double years_in_step = 0.0;
-    SimTime start = sim::never();
-    SimTime end = sim::never();
-    SimTime max_age = sim::never();
-    SimTime t0 = sim::never();
-    SimTime t1 = sim::never();
-    SimTime interv = sim::never();
+    SimTime start = Sim::never();
+    SimTime end = Sim::never();
+    SimTime max_age = Sim::never();
+    SimTime t0 = Sim::never();
+    SimTime t1 = Sim::never();
+    SimTime interv = Sim::never();
 #ifndef NDEBUG
     bool in_update = false;
 #endif
@@ -144,27 +146,27 @@ private:
     Clock* previous;
 };
 
-inline int sim::inSteps(SimTime d) { return bridge::clock().in_steps(d); }
-inline int sim::moduloSteps(SimTime d, int denominator) { return bridge::clock().modulo_steps(d, denominator); }
-inline int sim::moduloYearSteps(SimTime d) { return bridge::clock().modulo_year_steps(d); }
-inline SimTime sim::oneTS() { return bridge::clock().one_ts(); }
-inline SimTime sim::fromTS(int ts) { return bridge::clock().from_ts(ts); }
-inline SimTime sim::fromYearsN(double years) { return bridge::clock().from_years_n(years); }
-inline SimTime sim::fromYearsD(double years) { return bridge::clock().from_years_d(years); }
-inline SimTime sim::roundToTSFromDays(double days) { return bridge::clock().round_to_ts_from_days(days); }
-inline size_t sim::stepsPerYear() { return bridge::clock().steps_per_year(); }
-inline double sim::yearsPerStep() { return bridge::clock().years_per_step(); }
-inline SimTime sim::maxHumanAge() { return bridge::clock().max_human_age(); }
-inline SimTime sim::startDate() { return bridge::clock().start_date(); }
-inline SimTime sim::endDate() { return bridge::clock().end_date(); }
-inline SimTime sim::ts0() { return bridge::clock().ts0(); }
-inline SimTime sim::ts1() { return bridge::clock().ts1(); }
-inline SimTime sim::now() { return bridge::clock().now(); }
-inline SimTime sim::nowOrTs0() { return bridge::clock().now_or_ts0(); }
-inline SimTime sim::nowOrTs1() { return bridge::clock().now_or_ts1(); }
-inline SimTime sim::latestTs0() { return bridge::clock().latest_ts0(); }
-inline SimTime sim::intervTime() { return bridge::clock().interv_time(); }
-inline SimTime sim::intervDate() { return bridge::clock().interv_date(); }
+inline int Sim::in_steps(SimTime d) { return bridge::clock().in_steps(d); }
+inline int Sim::modulo_steps(SimTime d, int denominator) { return bridge::clock().modulo_steps(d, denominator); }
+inline int Sim::modulo_year_steps(SimTime d) { return bridge::clock().modulo_year_steps(d); }
+inline SimTime Sim::one_ts() { return bridge::clock().one_ts(); }
+inline SimTime Sim::from_ts(int ts) { return bridge::clock().from_ts(ts); }
+inline SimTime Sim::from_years_n(double years) { return bridge::clock().from_years_n(years); }
+inline SimTime Sim::from_years_d(double years) { return bridge::clock().from_years_d(years); }
+inline SimTime Sim::round_to_ts_from_days(double days) { return bridge::clock().round_to_ts_from_days(days); }
+inline size_t Sim::steps_per_year() { return bridge::clock().steps_per_year(); }
+inline double Sim::years_per_step() { return bridge::clock().years_per_step(); }
+inline SimTime Sim::max_human_age() { return bridge::clock().max_human_age(); }
+inline SimTime Sim::start_date() { return bridge::clock().start_date(); }
+inline SimTime Sim::end_date() { return bridge::clock().end_date(); }
+inline SimTime Sim::ts0() { return bridge::clock().ts0(); }
+inline SimTime Sim::ts1() { return bridge::clock().ts1(); }
+inline SimTime Sim::now() { return bridge::clock().now(); }
+inline SimTime Sim::now_or_ts0() { return bridge::clock().now_or_ts0(); }
+inline SimTime Sim::now_or_ts1() { return bridge::clock().now_or_ts1(); }
+inline SimTime Sim::latest_ts0() { return bridge::clock().latest_ts0(); }
+inline SimTime Sim::interv_time() { return bridge::clock().interv_time(); }
+inline SimTime Sim::interv_date() { return bridge::clock().interv_date(); }
 
 }
 

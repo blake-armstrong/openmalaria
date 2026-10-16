@@ -40,7 +40,7 @@ bool opt_event_scheduler = false;
 bool opt_imm_outcomes = false;
 
 bool ClinicalModel::indirectMortBugfix;
-SimTime ClinicalModel::healthSystemMemory{sim::never()};
+SimTime ClinicalModel::healthSystemMemory{Sim::never()};
 
 //log odds ratio of case-fatality in community compared to hospital
 double oddsRatioThreshold;
@@ -130,14 +130,14 @@ ClinicalModel::~ClinicalModel() {
 // -----  other non-static methods  -----
 
 bool ClinicalModel::isDead(SimTime age) {
-    if (age >= sim::maxHumanAge()) // too old (reached age limit)
+    if (age >= Sim::max_human_age()) // too old (reached age limit)
         doomed = DOOMED_TOO_OLD;
     return doomed > NOT_DOOMED; // killed by some means
 }
 
 void ClinicalModel::update(Human& human, double ageYears, bool newBorn) {
     if (doomed < NOT_DOOMED) // Countdown to indirect mortality
-        doomed -= sim::oneTS();
+        doomed -= Sim::one_ts();
 
     //indirect death: if this human's about to die, don't worry about further episodes:
     if (doomed <= DOOMED_EXPIRED) { //clinical bout 6 intervals before
@@ -163,8 +163,8 @@ void ClinicalModel::update(Human& human, double ageYears, bool newBorn) {
 
 void ClinicalModel::updateInfantDeaths(SimTime age) {
     // update array for the infant death rates
-    if (age < sim::oneYear()) {
-        size_t index = age / sim::oneTS();
+    if (age < Sim::one_year()) {
+        size_t index = age / Sim::one_ts();
 
         // Testing doomed == DOOMED_NEXT_TS gives very slightly different results than
         // testing doomed == DOOMED_INDIRECT (due to above if(..))
@@ -193,8 +193,8 @@ vector<int> infantIntervalsAtRisk;
 double nonMalariaMortality;
 
 void InfantMortality::init(const OM::Parameters& parameters) {
-    infantDeaths.resize(sim::stepsPerYear());
-    infantIntervalsAtRisk.resize(sim::stepsPerYear());
+    infantDeaths.resize(Sim::steps_per_year());
+    infantIntervalsAtRisk.resize(Sim::steps_per_year());
     nonMalariaMortality = parameters[Parameter::NON_MALARIA_INFANT_MORTALITY];
 }
 
@@ -220,7 +220,7 @@ void InfantMortality::reportRisk(size_t index, bool isDoomed) {
 
 double InfantMortality::allCause() {
     double infantPropSurviving = 1.0; // use to calculate proportion surviving
-    for (size_t i = 0; i < sim::stepsPerYear(); i += 1) {
+    for (size_t i = 0; i < Sim::steps_per_year(); i += 1) {
         // multiply by proportion of infants surviving at each interval
         infantPropSurviving *= double(infantIntervalsAtRisk[i] - infantDeaths[i]) / double(infantIntervalsAtRisk[i]);
     }

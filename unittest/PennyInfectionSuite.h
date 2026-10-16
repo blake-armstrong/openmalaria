@@ -80,7 +80,7 @@ public:
 
         bool extinct = false;
         int iterations = 0;
-        SimTime now = sim::ts0();
+        SimTime now = Sim::ts0();
         do {
             extinct = infection->update(m_rng, 1.0, now, numeric_limits<double>::quiet_NaN());
             int ageDays = (now - infection->m_startDate - infection->s_latentP);
@@ -91,7 +91,7 @@ public:
             TS_ASSERT_APPROX(infection->seqDensity(ageDays), seqDens[iterations]);
             //             outCir << infection->getDensity() << endl;
             //             outSeq << infection->seqDensity(ageDays) << endl;
-            now = now + sim::oneDay();
+            now = now + Sim::one_day();
             iterations += 1;
         } while (!extinct);
         TS_ASSERT_EQUALS(iterations, cirDens.size());
