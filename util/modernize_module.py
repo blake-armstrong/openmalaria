@@ -280,12 +280,10 @@ class Modernizer:
         checks = "-readability-identifier-naming," + REPORT_EXTRA_CHECKS
         config_checks = self.config_checks()
         diags = self.diagnostics(f"{config_checks},{checks}")
-        safe = set(self.args.checks.split(",")) - {"-*"}
         by_check = collections.defaultdict(list)
         for d in diags:
-            if d["check"] not in safe:
-                by_check[d["check"]].append(d)
-        print(f"clang-tidy findings in {self.module} outside the safe fix-it list, by check:")
+            by_check[d["check"]].append(d)
+        print(f"clang-tidy findings in {self.module}, by check:")
         for check in sorted(by_check, key=lambda c: (-len(by_check[c]), c)):
             print(f"\n[{check}] {len(by_check[check])}")
             for d in by_check[check]:
