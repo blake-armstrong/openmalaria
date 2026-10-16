@@ -18,7 +18,7 @@ See `PLAN.md` for the session protocol, chunks and gates. Append one log entry p
 | S2 | done | 841b2a9f, 720c0f09, 3c40c24b, (this log entry) |
 | S3 | done | 46cef63b, e61e95d4, 2b6281d6, 5384584d, 012e38d8, ed38bba4, 7472b8b5, fcbfc337, (this log entry) |
 | S4 | done | 507b5b58, (this log entry) |
-| S5 | todo | |
+| S5 | in progress | c155c7fb, 7a28ca71, (this log entry) |
 | S6 | todo | |
 | C1 | done | b02303db, (this log entry) |
 | C2 | done | 20e8bf39, (this log entry) |
@@ -558,3 +558,17 @@ See `PLAN.md` for the session protocol, chunks and gates. Append one log entry p
 - Follow-ups:
   - S5: each new CSV under `test/reference/` turns its `stat_*` test on. The four ModelName* scenarios stay disabled until F16 is decided.
 - Next: S5 (a long compute job; see the recommended-order note) or D1.
+
+### S5: Generate the full references (in progress, 2026-10-16)
+- Base: 3f5c0bb3. Build `build-rework/` from 3f5c0bb3 (no C++ changed since, so the binary is the same at every later S5 commit).
+- **Decisions, made with the user before any references:**
+  - **ModelName\* (F16): skipped.** No reference, so the four `stat_ModelName*` tests stay disabled. F16 stays open as a model bug for its own task.
+  - **References are gzipped** (`test/reference/scenario<NAME>.csv.gz`). The six 189,800-cell scenarios (GaussianCopula ×2, ModelName ×4) give ~14 MB plain CSVs, about 110 MB for all references; gzip is ~3× smaller.
+- Commits:
+  - c155c7fb: `stats_io.write_reference` gzips when the path ends in `.gz` (`mtime=0`, so the bytes are reproducible); `read_reference` reads either form. The default reference path in the checker and generator, and the CTest glob, are now `.csv.gz`. New test: gzip round trip is exact and reproducible. Tool tests: 17 and 28 pass; `uvx ruff check test/stats/` is clean.
+  - 7a28ca71: `scenario1.csv` → `scenario1.csv.gz`, identical after decompression. `ctest -L statistical`: `stat_1` and both tool tests pass.
+- **Replicate job (paused at the user's request):** the driver is a small loop over `OM_BOXTEST_NAMES` minus `1` (already at N = 500 from S3) and `ModelName*`, which is 46 scenarios. Each one runs `OM_BUILD_DIR=build-rework test/stats/run_replicates.py <NAME> -o build-rework/stats-replicates/<NAME> -n 500 -j 10 -q` under `caffeinate -i`.
+  - Done (500 of 500 seeds, no failed seeds), with wall times at `-j10`: 4 116 s, 5 22 s, 6 20 s, 9 12 s, 10 5 s, 11 43 s, 12 79 s, 2ITNs 157 s, Cohort 93 s, EffectiveDrug 142 s, Empirical 121 s, ESTS 82 s.
+  - Not started or partial: the other 34, from Genotypes on in `OM_BOXTEST_NAMES` order. Rerunning the same command resumes; finished seeds are skipped.
+  - **Rerun scenario 12 from scratch** (`rm -r build-rework/stats-replicates/12`): its `meta.json` says `dirty: true` (F22). The scenarios started after c155c7fb record that commit or 7a28ca71 instead of 3f5c0bb3. That is harmless, because neither changes C++, and `binary_sha256` is the same.
+- Still to do: finish the replicates; `test/stats/generate_reference.py build-rework/stats-replicates/<NAME>` for each, then commit the 46 `.csv.gz` files; G-exact, G-unit and G-stat (`ctest -j10` under `caffeinate -i`); record each reference's N, cell counts and `loo_run_failures` here. Don't edit tracked files while the job runs (F22).
