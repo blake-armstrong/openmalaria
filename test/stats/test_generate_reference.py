@@ -5,6 +5,7 @@
 # ///
 """Unit tests for generate_reference.py and stats_io.py on synthetic replicate data."""
 
+import gzip
 import hashlib
 import io
 import json
@@ -296,6 +297,21 @@ class EndToEndTests(unittest.TestCase):
         copy = self.dir / "copy.csv"
         stats_io.write_reference(copy, ref.meta, list(ref.rows.items()))
         self.assertEqual(copy.read_text(), out.read_text())
+
+    def test_gzip_round_trip_is_exact_and_reproducible(self):
+        code, out, err = self.run_main()
+        self.assertEqual(code, 0, err)
+        ref = stats_io.read_reference(out)
+        packed = self.dir / "ref.csv.gz"
+        stats_io.write_reference(packed, ref.meta, list(ref.rows.items()))
+        self.assertEqual(gzip.decompress(packed.read_bytes()), out.read_bytes())
+        first = packed.read_bytes()
+        stats_io.write_reference(packed, ref.meta, list(ref.rows.items()))
+        self.assertEqual(packed.read_bytes(), first)
+        unpacked = stats_io.read_reference(packed)
+        self.assertEqual(unpacked.meta, ref.meta)
+        self.assertEqual(unpacked.loo_counts, ref.loo_counts)
+        self.assertEqual(unpacked.rows.keys(), ref.rows.keys())
 
     def test_differing_cells_are_an_error(self):
         (self.reps / "1005" / "output.txt").write_text("1\t1\t0\t100\n")

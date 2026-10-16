@@ -263,7 +263,7 @@ def parse_args(argv):
     parser = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
     parser.add_argument("replicates", type=Path, help="output dir of run_replicates.py")
     parser.add_argument("-o", "--out", type=Path,
-                        help="reference CSV to write (default: test/reference/<scenario file stem>.csv)")
+                        help="reference CSV to write, gzipped if it ends in .gz (default: test/reference/<scenario file stem>.csv.gz)")
     parser.add_argument("--allow-dirty", action="store_true",
                         help="accept replicates built from a source tree with uncommitted changes")
     return parser.parse_args(argv)
@@ -273,7 +273,7 @@ def main(argv):
     args = parse_args(argv)
     try:
         meta, rows = build(args.replicates, args.allow_dirty)
-        out = args.out or ROOT / "test" / "reference" / f"{meta['scenario']}.csv"
+        out = args.out or ROOT / "test" / "reference" / f"{meta['scenario']}{stats_io.REFERENCE_SUFFIX}"
         out.parent.mkdir(parents=True, exist_ok=True)
         stats_io.write_reference(out, meta, rows)
     except (ReferenceError, stats_io.FormatError, OSError, json.JSONDecodeError) as e:

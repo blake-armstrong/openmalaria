@@ -9,6 +9,7 @@ A cell is one value of one run, keyed by (file, survey, group, measure), all str
 - aggregates: ("aggregate", "", "", <aggregate name>)
 """
 
+import gzip
 import math
 from dataclasses import dataclass, field
 
@@ -18,6 +19,7 @@ AGGREGATE = "aggregate"
 FORMAT_VERSION = "2"
 RUN_ALPHA = 0.01
 LOO_COUNTS = "loo_miss_counts"
+REFERENCE_SUFFIX = ".csv.gz"
 COLUMNS = ("file", "survey", "group", "measure", "mean", "sd", "min", "max", "lo", "hi")
 STAT_COLUMNS = COLUMNS[4:]
 WHOLE_POPULATION_GROUP_LIMIT = 1000
@@ -158,24 +160,30 @@ def format_number(x):
     return repr(float(x))
 
 
+def is_gzip(path):
+    return str(path).endswith(".gz")
+
+
 def write_reference(path, meta, rows):
-    with open(path, "w", newline="\n") as f:
-        f.write("# OpenMalaria statistical reference\n")
-        for key, value in meta.items():
-            if "\n" in str(value) or ":" in key:
-                raise ValueError(f"bad metadata entry {key!r}")
-            f.write(f"# {key}: {value}\n")
-        f.write(",".join(COLUMNS) + "\n")
-        for key, stats in rows:
-            if any("," in part or "\n" in part for part in key):
-                raise ValueError(f"key {key!r} can't be written to CSV")
-            f.write(",".join([*key, *(format_number(stats[c]) for c in STAT_COLUMNS)]) + "\n")
+    lines = ["# OpenMalaria statistical reference\n"]
+    for key, value in meta.items():
+        if "\n" in str(value) or ":" in key:
+            raise ValueError(f"bad metadata entry {key!r}")
+        lines.append(f"# {key}: {value}\n")
+    lines.append(",".join(COLUMNS) + "\n")
+    for key, stats in rows:
+        if any("," in part or "\n" in part for part in key):
+            raise ValueError(f"key {key!r} can't be written to CSV")
+        lines.append(",".join([*key, *(format_number(stats[c]) for c in STAT_COLUMNS)]) + "\n")
+    data = "".join(lines).encode()
+    with open(path, "wb") as f:
+        f.write(gzip.compress(data, compresslevel=9, mtime=0) if is_gzip(path) else data)
 
 
 def read_reference(path):
     ref = Reference()
     header_seen = False
-    with open(path) as f:
+    with gzip.open(path, "rt") if is_gzip(path) else open(path) as f:
         for number, line in enumerate(f, 1):
             line = line.rstrip("\n")
             if line.startswith("#"):

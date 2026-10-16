@@ -162,8 +162,8 @@ class HelperTests(unittest.TestCase):
             chk.own_seed(b"<scenario/>")
 
     def test_default_reference(self):
-        self.assertEqual(chk.default_reference("1").name, "scenario1.csv")
-        self.assertEqual(chk.default_reference("/x/scenarioFoo.xml").name, "scenarioFoo.csv")
+        self.assertEqual(chk.default_reference("1").name, "scenario1.csv.gz")
+        self.assertEqual(chk.default_reference("/x/scenarioFoo.xml").name, "scenarioFoo.csv.gz")
 
 
 class OutputsModeTests(unittest.TestCase):

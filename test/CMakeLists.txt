@@ -80,13 +80,13 @@ foreach (TEST_NAME ${OM_BOXTEST_NC_NAMES})
 endforeach (TEST_NAME)
 
 set (OM_STATS_DIR ${CMAKE_CURRENT_SOURCE_DIR}/stats)
-file (GLOB OM_STAT_REFERENCES CONFIGURE_DEPENDS ${CMAKE_CURRENT_SOURCE_DIR}/reference/scenario*.csv)
+file (GLOB OM_STAT_REFERENCES CONFIGURE_DEPENDS ${CMAKE_CURRENT_SOURCE_DIR}/reference/scenario*.csv.gz)
 set (OM_STAT_MISSING)
 foreach (TEST_NAME ${OM_BOXTEST_NAMES} ${OM_BOXTEST_NC_NAMES})
     add_test (NAME stat_${TEST_NAME}
         COMMAND ${PYTHON_EXECUTABLE} ${OM_STATS_DIR}/check_scenario.py --build-dir ${CMAKE_BINARY_DIR} ${TEST_NAME})
     set_tests_properties (stat_${TEST_NAME} PROPERTIES LABELS statistical)
-    if (NOT "${CMAKE_CURRENT_SOURCE_DIR}/reference/scenario${TEST_NAME}.csv" IN_LIST OM_STAT_REFERENCES)
+    if (NOT "${CMAKE_CURRENT_SOURCE_DIR}/reference/scenario${TEST_NAME}.csv.gz" IN_LIST OM_STAT_REFERENCES)
         set_tests_properties (stat_${TEST_NAME} PROPERTIES DISABLED TRUE)
         list (APPEND OM_STAT_MISSING ${TEST_NAME})
     endif ()
@@ -94,7 +94,7 @@ endforeach (TEST_NAME)
 if (OM_STAT_MISSING)
     list (LENGTH OM_STAT_MISSING OM_STAT_MISSING_COUNT)
     list (JOIN OM_STAT_MISSING " " OM_STAT_MISSING_TEXT)
-    message (STATUS "Statistical tests: ${OM_STAT_MISSING_COUNT} scenarios have no test/reference/scenario<NAME>.csv, "
+    message (STATUS "Statistical tests: ${OM_STAT_MISSING_COUNT} scenarios have no test/reference/scenario<NAME>.csv.gz, "
         "so their stat_<NAME> tests are disabled: ${OM_STAT_MISSING_TEXT}")
 endif ()
 

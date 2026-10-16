@@ -197,7 +197,7 @@ def own_seed(scenario_bytes):
 def default_reference(scenario):
     path = Path(scenario)
     stem = path.stem if path.suffix == ".xml" else f"scenario{scenario}"
-    return ROOT / "test" / "reference" / f"{stem}.csv"
+    return ROOT / "test" / "reference" / f"{stem}{stats_io.REFERENCE_SUFFIX}"
 
 
 def run_and_judge(ref, job, seeds, jobs):
@@ -252,7 +252,7 @@ def parse_args(argv):
     parser = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
     parser.add_argument("scenario", help="NAME for test/scenarioNAME.xml, or a path to a scenario file")
     parser.add_argument("--reference", type=Path,
-                        help="reference CSV (default: test/reference/<scenario file stem>.csv)")
+                        help="reference CSV, gzipped if it ends in .gz (default: test/reference/<scenario file stem>.csv.gz)")
     parser.add_argument("--retry-seeds", type=int, nargs="+", default=list(RETRY_SEEDS),
                         help=f"seeds to rerun when run 1 fails (default: {' '.join(map(str, RETRY_SEEDS))})")
     mode = parser.add_mutually_exclusive_group()
