@@ -158,6 +158,10 @@ but new code must comply or carry a targeted `NOLINT(check)`.
   lone `virtual ~X() = default;` does not demand all five special members.
 - `cppcoreguidelines-non-private-member-variables-in-classes.IgnoreClassesWithAllMemberVariablesBeingPublic: true`:
   plain structs are fine.
+- `cppcoreguidelines-avoid-do-while.IgnoreMacros: true`: `do { ... } while (false)` is
+  the standard way to make a macro body one statement. Every Catch2 assertion
+  (`REQUIRE`, `CHECK_THAT`, ...) expands to it, so without this option every assertion
+  in a Catch2 test is a finding (M1).
 
 ### Naming (`readability-identifier-naming`)
 
