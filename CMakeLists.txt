@@ -122,6 +122,8 @@ if (NOT PYTHON_EXECUTABLE)
     message (SEND_ERROR "Unable to find a Python interpreter (required).")
 endif (NOT PYTHON_EXECUTABLE)
 
+include (Dependencies)
+
 # -----  Compile-time optional features  -----
 # (must come before add_subdirectory (model))
 
