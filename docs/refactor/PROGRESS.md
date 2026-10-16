@@ -16,7 +16,7 @@ See `PLAN.md` for the session protocol, chunks and gates. Append one log entry p
 | P1 | done | f29d38e3, 81a14090, b0309128, 6bfcf8c0, 4b803c7f, (this log entry) |
 | S1 | done | b372c2f6, (this log entry) |
 | S2 | done | 841b2a9f, 720c0f09, 3c40c24b, (this log entry) |
-| S3 | todo | |
+| S3 | done | 46cef63b, e61e95d4, 2b6281d6, 5384584d, 012e38d8, ed38bba4, 7472b8b5, fcbfc337, (this log entry) |
 | S4 | todo | |
 | S5 | todo | |
 | S6 | todo | |
@@ -499,3 +499,44 @@ See `PLAN.md` for the session protocol, chunks and gates. Append one log entry p
   - S5: the `ModelName*` scenarios need a decision (F16): skip them, use only seeds that converge (which biases the reference), or fix the model. Failed seeds leave no directory, so the generator just sees fewer replicates. Choose `-n` so that enough seeds succeed.
   - S6: F17 bears on the power study.
 - Next: S3.
+
+### S3: Checker with reruns (done, 2026-10-16)
+- Base: 0f1faa5d.
+- **Method changed with the user before any code.** The plan's exact-match rule for zero-width cells would fail about 1 in 3 correct runs (F15). The user proposed per-run probabilities plus automatic reruns. The method now in PLAN.md § Statistical tests (2):
+  - One run fails if (a) its miss count has p ≤ 1% against the stored leave-one-out counts, (b) an aggregate is outside its 99%-family interval, or (c) a fixed cell differs. A fixed cell is constant at a non-zero value (or NaN) in every replicate, in practice the echoed input EIR. Cells that were 0 in every replicate are ordinary misses.
+  - Run 1 uses the scenario's own `iseed`. If it fails, seeds 2001–2005 run, and the check fails if any of them also fails.
+  - `--replicates K` runs K seeds up front and fails on a binomial tail ≤ 0.1% at a 2% per-run rate.
+  - Distributions are empirical, not fitted (the user's first idea), because many cells are small counts that are mostly 0.
+- Commits:
+  - 46cef63b: PLAN.md, the method above (S3 and S6 chunk text, § Statistical tests (1), (2) and (4))
+  - e61e95d4: `run_replicates.py` `main` split into `prepare` and `run_seeds` for reuse, no behaviour change. Seed 1 still reproduces `test/expected/output1.txt` and `ctsout1.txt`, and resume still works.
+  - 2b6281d6: reference **format 2**. It adds `loo_miss_counts` (all N counts), `run_alpha`, `max_passing_misses` (replaces `miss_threshold`) and `loo_run_failures` (leave-one-out estimate of the per-run failure rate under (a)–(c)). The aggregate family moves from 95% to 99%. `stats_io` gains `RUN_ALPHA`, `run_p_value`, `is_fixed_cell`, `is_miss` and `same_value`.
+  - 5384584d, then ed38bba4: `test/reference/scenario1.csv` at **N = 500** (seeds 1001–1500), regenerated after the SD fix
+  - 012e38d8: SD 0 for constant cells (F21)
+  - 7472b8b5: `test/stats/check_scenario.py`, `test/stats/test_check_scenario.py`
+  - fcbfc337: findings
+- **Usage:** `OM_BUILD_DIR=build-rework test/stats/check_scenario.py <NAME|path.xml> [--reference CSV] [--retry-seeds S...] [--replicates K | --outputs DIR] [--work-dir DIR] [-j N] [-v]`.
+  - The default reference is `test/reference/<scenario file stem>.csv`.
+  - `--outputs` judges existing `DIR/<seed>` run directories without running anything. `--work-dir` keeps run outputs and reuses those already there.
+  - The checker refuses seeds that are in the reference's seed range. It warns if the scenario's hash differs from the reference's.
+  - Exit 0 pass, 1 statistical fail, 2 error. A crashed run, missing or extra cells, and a wrong format version are errors.
+  - Stdlib only, so ctest needs no numpy.
+- Done criteria, scenario1:
+  - Unchanged build: passes (run seed 1: 13 misses, p = 0.74; both aggregates inside; 62 fixed cells equal).
+  - EIR × 1.5 (all 853 `EIRDaily` values scaled): fails. Run 1 fails (a), (b) and (c) (150 misses, p = 0.004), and so do all 5 reruns.
+- Extra evidence:
+  - Leave-one-out at N = 500: 10 of 500 replicates fail per run (5 on misses, 7 on aggregates, 0 on fixed cells), 2.0%.
+  - 1600 fresh seeds (2001–3600, via `--replicates 1600`): 31 runs fail (1.9%): 8 on misses, 23 on aggregates (F18), 0 on fixed cells. The implied false-failure rate of the whole procedure is 0.019 × (1 − 0.981⁵) ≈ 0.18% (target ≤ 0.5%).
+  - EIR × 1.1: fails in both modes (rerun mode 6/6 runs; `--replicates 20` 20/20). This is mainly through the fixed `input EIR` cells; on miss count alone, 3 of 6 runs fail (F19).
+- Tests: `test_generate_reference.py` 27 pass, `test_check_scenario.py` 17 pass. `uvx ruff check test/stats/` is clean.
+- Gates: G-exact / G-unit 53/53, 15.2 s at `-j10` under `caffeinate -i`. No C++ changed, so G-style and G-perf don't apply.
+- Deviations from the approved S3 plan:
+  - The planned extra finding (a single wrong fixed cell would not trigger reruns) went into F15's closing note instead.
+  - `max_passing_misses` replaces `miss_threshold` instead of keeping it: under the p-value rule, a fixed threshold would mislead.
+  - The planned "50 fresh seeds" check became 1600 fresh seeds.
+- Bug found on the way: `binomial_tail` overflowed for K ≈ 1600 (`math.comb` × float). It now works in log space.
+- Follow-ups:
+  - S4: register `stat_<scenario>` as `check_scenario.py <NAME>` with label `statistical`. Register the two unit-test scripts too: `test_check_scenario.py` needs only python3, `test_generate_reference.py` needs uv. Every run writes to a temp dir, so `-j` is safe.
+  - S5: references must use N ≥ 100 (F20); 500 is planned. Format 2 holds N counts in one metadata line, about 2.5 kB at N = 500. ModelName* still needs a decision (F16); a crashed rerun seed is an error for now.
+  - S6: measure per-run rates on more scenarios (F18). Use power perturbations that aren't echoed into the output (F19). Tune α, K and the rerun rule if needed.
+- Next: S4.
