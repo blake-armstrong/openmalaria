@@ -18,7 +18,8 @@ project .clang-format and .clang-tidy.
   tidy [args...]        clang-tidy -p \$OM_BUILD_DIR with the given args
   check [base]          G-style gate on changes since base (default HEAD):
                         clang-format on the changed files, then clang-tidy-diff on
-                        the changed lines
+                        the changed lines, skipping lines that only commits in
+                        .git-blame-ignore-revs touched (fix does the same)
   changed [base]        list model/ and unittest/ C++ files changed since base
   format-changed [base [paths...]]
                         clang-format -i the files changed since base, optionally
@@ -75,6 +76,7 @@ tidy_diff() {
     shift
     compile_db
     git -C "$ROOT" diff -U0 "$base" -- $(changed_files "$base") |
+        python3 "$ROOT/util/tidy_diff_filter.py" "$base" |
         uvx --from "clang-tidy==$LLVM_VERSION" clang-tidy-diff.py -p1 -quiet \
             -path "$ROOT/$BUILD_DIR" -clang-tidy-binary clang-tidy $(sysroot_args) \
             -regex '(model|unittest)/.*\.(cpp|h)' "$@"
