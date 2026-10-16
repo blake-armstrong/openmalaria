@@ -16,6 +16,8 @@ import tempfile
 import yaml
 
 REPORT_EXTRA_CHECKS = "misc-const-correctness"
+REQUIRED_HEADERS = {"std::numbers::": "numbers"}
+INCLUDE_RE = re.compile(r"^[ \t]*#[ \t]*include[ \t]*[<\"][^\n]*\n", re.MULTILINE)
 CODE_NOISE_RE = re.compile(r'//[^\n]*|/\*.*?\*/|"(?:\\.|[^"\\\n])*"|\'(?:\\.|[^\'\\\n])*\'', re.DOTALL)
 PATTERNS = (
     ("owning raw pointer: new", re.compile(r"\bnew\b")),
@@ -195,6 +197,23 @@ class Modernizer:
                 check=True,
             )
 
+    def add_missing_headers(self, taken):
+        added = collections.Counter()
+        for path in taken:
+            with open(path, encoding="utf-8") as fh:
+                text = fh.read()
+            code = CODE_NOISE_RE.sub(lambda m: re.sub(r"[^\n]", " ", m.group()), text)
+            for token, header in REQUIRED_HEADERS.items():
+                if token not in code or re.search(rf"#\s*include\s*<{header}>", text):
+                    continue
+                includes = list(INCLUDE_RE.finditer(text))
+                at = includes[-1].end() if includes else 0
+                text = f"{text[:at]}#include <{header}>\n{text[at:]}"
+                added[f"#include <{header}>"] += 1
+            with open(path, "w", encoding="utf-8") as fh:
+                fh.write(text)
+        return added
+
     def print_diags(self, title, diags):
         if diags:
             print(f"\n{title}:")
@@ -216,10 +235,15 @@ class Modernizer:
                 break
             applied.update(d["check"] for d in accepted)
             self.apply(taken)
+            applied.update(self.add_missing_headers(taken))
         else:
             print(f"\nstopped after {self.args.passes} passes with fixes still pending", file=sys.stderr)
         if not self.args.dry_run:
-            outside = [f for f in self.git("diff", "--name-only", "HEAD").split() if not f.startswith(self.module)]
+            outside = [
+                f
+                for f in self.git("diff", "--name-only", "HEAD", "--", "model", "unittest").split()
+                if not f.startswith(self.module)
+            ]
             if outside:
                 sys.exit("changed files outside the module: " + ", ".join(outside))
             if applied:
