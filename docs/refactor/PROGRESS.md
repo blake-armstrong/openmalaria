@@ -10,7 +10,7 @@ See `PLAN.md` for the session protocol, chunks and gates. Append one log entry p
 | A2 | done | (this log entry) |
 | B1 | done | b7991e9f, 35450066, 8c4dc9b1, dec06531, 2205f6e8, ddc959a8, (this log entry) |
 | B2 | done | 0bf623e3, 4882b106, b7052696, (this log entry) |
-| B3 | todo | |
+| B3 | done | 1b9b22f6, 06642bf8, 5efb309c, 1d56c288, db529f37, (this log entry) |
 | B4 | todo | |
 | B5 | todo | |
 | P1 | done | f29d38e3, 81a14090, b0309128, 6bfcf8c0, 4b803c7f, (this log entry) |
@@ -168,3 +168,32 @@ See `PLAN.md` for the session protocol, chunks and gates. Append one log entry p
     - Known regression: candidate built with `-DCMAKE_CXX_FLAGS_RELEASE=-O1`, 2 pairs: median ratio 1.0409 (+4.09%), per-pair 1.039–1.043, exit 1.
     - Usage errors (missing `--compare` argument, missing dir, unknown flag) exit 2; plain mode still works.
 - Next: B3.
+
+### B3: `cpp-style` and `cpp-lint` skills (done, 2026-10-16)
+- Commits:
+  - 1b9b22f6: `util/style.sh` gains `changed [base]`, `format-changed [base [paths...]]` and `fix [base] [checks]`
+  - 06642bf8: `.claude/skills/cpp-style/SKILL.md`
+  - 5efb309c: `.claude/skills/cpp-lint/SKILL.md`
+  - 1d56c288: cpp-style: drop the reference to the hook (see below)
+  - db529f37: STYLE.md documents the new commands and the skills
+- **New `util/style.sh` commands**, so that the skills call the script rather than raw tools (B1 follow-up):
+  - `format-changed` runs `git-clang-format --force <base>`, which formats exactly the lines `check` verifies. A first version ran whole-file `clang-format -i`. On a function appended before a namespace's closing `}`, it kept a blank line that `check`'s line-range format then flagged. So the B2 note "whole-file and changed-lines give the same verdict" has at least this exception. `git-clang-format` exits 1 when it changed something, and the script treats that as success.
+  - `fix` applies fix-its on changed lines only, for a safe list (`nullptr`, `override`, `= default`/`= delete`, `using`, redundant `void`, bool literals, `init-variables`, `for-range-copy`, `unnecessary-copy-initialization`). `clang-tidy-diff.py` runs one clang-tidy per changed file in parallel (`-j` defaults to all cores), so a `.cpp` fix that also edits its header could race with the header's own run. Fixes are therefore exported (`-export-fixes`) and applied once with `clang-apply-replacements`. Then it runs `format-changed`.
+- **Hook not added.** The optional `PostToolUse` format-on-edit hook (`.claude/settings.json` plus a script calling `util/style.sh format-changed HEAD <file>`) was blocked by the Claude Code auto-mode classifier as self-modification of agent settings. It was not worked around; it is left for the user to add if wanted.
+- **Trials** (the new skills are not loadable in the session that created them, so their steps were followed by hand; both edits reverted):
+  - cpp-style, `model/util/AgeGroupInterpolation.cpp`: a new `final` subclass written to the rules (snake_case method and member, `explicit`, `override` on the legacy `firstGlobalMaximum`), deliberately badly indented. `check` flagged only formatting, so a legacy-named override is not flagged by `readability-identifier-naming`. `format-changed`, then `check`: clean. Built.
+  - cpp-lint, same file: a new `CountAbove(std::vector<double>, const double*)` with `NULL`, an uninitialised `int`, a narrowing `size()` → `int` and a by-value vector, plus a touched legacy line (`virtual double eval(double ageYears)`).
+    - `fix` applied `use-override`, `init-variables` and `use-nullptr`.
+    - `check` then left 4 findings: naming of `ageYears` (legacy parameter) and of `CountAbove`, `unnecessary-value-param`, and narrowing. All four were fixed by hand per the skill's triage table, and the redundant `count = 0` that `init-variables` left was restructured.
+    - **Surprise:** the rebuild showed `-Winconsistent-missing-override` on the class's two other overrides, because `use-override` had marked only the changed line. The skill now says to mark the rest of the class.
+    - Final `check`: clean. ctest 52/52.
+  - Skill change made from the trial: legacy *parameters and locals* of an edited function are renamed by hand, because the rename stays local. Other legacy names on touched lines are not renamed in a logic commit and not `NOLINT`ed: either run `/rename-module` first, or report them to the user.
+- Gates (clean HEAD db529f37, rebuilt):
+  - G-exact / G-unit: 52/52, 13.0 s at `-j10`.
+  - G-style: `util/style.sh check 86f8196c` reports no changed C++ files.
+  - G-perf: not run. No C++, CMake or test file differs from 86f8196c, so the binary is unchanged.
+- Follow-ups:
+  - B4: `rename-module` should reuse `util/style.sh fix <base> '-*,readability-identifier-naming'` only for single-TU symbols. For a whole module it needs run-clang-tidy over every TU that uses the module, with exported fixes merged by `clang-apply-replacements`, the same dedup reason as `fix`. Strip `m_`/`_` separately (B1 note).
+  - B5: CI should call `util/style.sh check <merge-base>`. A pre-commit hook could call `util/style.sh format-changed HEAD` on staged files.
+  - The user may want to add the format-on-edit hook by hand (above).
+- Next: B4.
