@@ -26,18 +26,18 @@
 #include "util/StreamValidator.h"
 
 #include <gsl/gsl_integration.h>
+#include <cmath>
 #include <limits>
+#include <numbers>
 
 using namespace std;
 
-namespace OM {
-namespace pk_pd {
+namespace OM::pk_pd {
 
 LSTMDrugThreeComp::LSTMDrugThreeComp(const LSTMDrugType& type, LocalRng& rng)
-    : LSTMDrug(type.sample_vd(rng)), type_data(type), conc_a(0.0), conc_b(0.0), conc_c(0.0), conc_abc(0.0),
-      elim_sample(type.sample_elim_rate(rng)), k12(type.sample_k12(rng)), k21(type.sample_k21(rng)),
-      k13(type.sample_k13(rng)), k31(type.sample_k31(rng)), nka(-type.sample_ka(rng)),
-      last_bm(numeric_limits<double>::quiet_NaN()), na(numeric_limits<double>::quiet_NaN()),
+    : LSTMDrug(type.sample_vd(rng)), type_data(type), elim_sample(type.sample_elim_rate(rng)),
+      k12(type.sample_k12(rng)), k21(type.sample_k21(rng)), k13(type.sample_k13(rng)), k31(type.sample_k31(rng)),
+      nka(-type.sample_ka(rng)), last_bm(numeric_limits<double>::quiet_NaN()), na(numeric_limits<double>::quiet_NaN()),
       nb(numeric_limits<double>::quiet_NaN()), ng(numeric_limits<double>::quiet_NaN()),
       a(numeric_limits<double>::quiet_NaN()), b(numeric_limits<double>::quiet_NaN()),
       c(numeric_limits<double>::quiet_NaN()) {
@@ -71,7 +71,7 @@ void LSTMDrugThreeComp::update_cached(double body_mass) const {
     const double r2 = 2.0 * sqrt(rt);
 
     const double phi = acos(-q / (rt * r2)) * third;
-    const double pi23 = (2.0 / 3.0) * PI;
+    const double pi23 = (2.0 / 3.0) * std::numbers::pi;
 
     // negative alpha, beta, gamma:
     na = r2 * cos(phi) - at;
@@ -131,7 +131,7 @@ double LSTMDrugThreeComp::calculate_factor(const ParamsFC& p, double duration) c
     const double abs_eps = 1e-4, rel_eps = 1e-4;
     // NOTE: 1 through 6 are different algorithms of increasing complexity
     const int qag_rule = 1; // alg 1 seems to be good enough
-    double intf_c, err_eps;
+    double intf_c = NAN, err_eps = NAN;
 
     int r = gsl_integration_qag(&f, 0.0, duration, abs_eps, rel_eps, GslIntgMaxIter, qag_rule, gsl_intgr_wksp, &intf_c,
                                 &err_eps);
@@ -156,7 +156,7 @@ double LSTMDrugThreeComp::calculate_drug_factor(LocalRng& rng, WithinHost::Commo
         return 1.0; // nothing to do
     update_cached(body_mass);
 
-    ParamsFC p;
+    ParamsFC p{};
     p.c_a = conc_a;
     p.c_b = conc_b;
     p.c_c = conc_c;
@@ -173,7 +173,7 @@ double LSTMDrugThreeComp::calculate_drug_factor(LocalRng& rng, WithinHost::Commo
     double time = 0.0;         // time since start of day
     double total_factor = 1.0; // survival factor for whole day
 
-    typedef pair<double, double> TimeConc;
+    using TimeConc = pair<double, double>;
     for (const TimeConc& time_conc : doses) {
         // we iteratate through doses in time order (since doses are sorted)
         if (time_conc.first < 1.0 /*i.e. today*/) {
@@ -218,7 +218,7 @@ void LSTMDrugThreeComp::update_concentration(double body_mass) {
     conc_abc *= exp(nka);
 
     size_t doses_taken = 0;
-    typedef pair<double, double> TimeConc;
+    using TimeConc = pair<double, double>;
     for (TimeConc& time_conc : doses) {
         // we iteratate through doses in time order (since doses are sorted)
         if (time_conc.first < 1.0 /*i.e. today*/) {
@@ -286,5 +286,4 @@ void LSTMDrugThreeComp::checkpoint(istream& stream) {
     c & stream;
 }
 
-}
 }

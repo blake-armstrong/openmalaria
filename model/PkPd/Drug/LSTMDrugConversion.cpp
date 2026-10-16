@@ -27,18 +27,17 @@
 #include "util/vectors.h"
 
 #include <gsl/gsl_integration.h>
+#include <cmath>
 #include <limits>
 
 using namespace std;
 
-namespace OM {
-namespace pk_pd {
+namespace OM::pk_pd {
 
 LSTMDrugConversion::LSTMDrugConversion(const LSTMDrugType& parent, const LSTMDrugType& metabolite, LocalRng& rng)
-    : LSTMDrug(parent.sample_vd(rng)), parent_type(parent), metabolite_type(metabolite), qty_g(0.0), qty_p(0.0),
-      qty_m(0.0), nka(-parent.sample_ka(rng)), nk_p_sample(-parent.sample_elim_rate(rng)),
-      nconv_sample(-parent.sample_conv_rate(rng)), nk_m_sample(-metabolite.sample_elim_rate(rng)),
-      vol_dist_metabolite(metabolite.sample_vd(rng)) {}
+    : LSTMDrug(parent.sample_vd(rng)), parent_type(parent), metabolite_type(metabolite), nka(-parent.sample_ka(rng)),
+      nk_p_sample(-parent.sample_elim_rate(rng)), nconv_sample(-parent.sample_conv_rate(rng)),
+      nk_m_sample(-metabolite.sample_elim_rate(rng)), vol_dist_metabolite(metabolite.sample_vd(rng)) {}
 
 //LSTMDrugConversion::~LSTMDrugConversion(){}
 
@@ -131,8 +130,8 @@ double LSTMDrugConversion::calculate_factor(const ParamsConvFactor& p, double du
     // using smaller abs_eps is cheap). We likely don't need high rel precision.
     const double abs_eps = 1e-5, rel_eps = 1e-2;
     // NOTE: 1 through 6 are different algorithms of increasing complexity
-    const int qag_rule = 1; // alg 1 seems to be good enough
-    double intf_c, err_eps; // intfC will carry our result; err_eps is a measure of accuracy of the result
+    const int qag_rule = 1;             // alg 1 seems to be good enough
+    double intf_c = NAN, err_eps = NAN; // intfC will carry our result; err_eps is a measure of accuracy of the result
 
     //     intg_steps = 0;
     int r = gsl_integration_qag(&f, 0.0, duration, abs_eps, rel_eps, GslIntgConvMaxIter, qag_rule, gsl_intgr_conv_wksp,
@@ -205,14 +204,14 @@ double LSTMDrugConversion::calculate_drug_factor(LocalRng& rng, WithinHost::Comm
         return 1.0; // nothing to do
     }
 
-    ParamsConvFactor p;
+    ParamsConvFactor p{};
     set_conversion_parameters(p, body_mass);
     set_killing_parameters(rng, p, inf);
 
     double time = 0.0;         // time since start of day
     double total_factor = 1.0; // survival factor for whole day
 
-    typedef pair<double, double> TimeConc;
+    using TimeConc = pair<double, double>;
     for (const TimeConc& time_conc : doses) {
         // we iterate through doses in time order (since doses are sorted)
         if (time_conc.first < 1.0 /*i.e. today*/) {
@@ -246,12 +245,12 @@ void LSTMDrugConversion::update_concentration(double body_mass) {
     }
     last_bm = body_mass;
 
-    ParamsConvFactor p;
+    ParamsConvFactor p{};
     set_conversion_parameters(p, body_mass);
 
-    double time = 0.0, duration;
+    double time = 0.0, duration = NAN;
     size_t doses_taken = 0;
-    typedef pair<double, double> TimeConc;
+    using TimeConc = pair<double, double>;
     for (TimeConc& time_conc : doses) {
         // we iteratate through doses in time order (since doses are sorted)
         if (time_conc.first < 1.0 /*i.e. today*/) {
@@ -313,5 +312,4 @@ void LSTMDrugConversion::checkpoint(istream& stream) {
     nk_m_sample & stream;
 }
 
-}
 }

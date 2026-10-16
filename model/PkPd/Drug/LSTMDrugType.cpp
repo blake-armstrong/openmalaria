@@ -32,11 +32,11 @@
 
 #include <cmath>
 #include <iomanip>
+#include <numbers>
 
 using namespace std;
 
-namespace OM {
-namespace pk_pd {
+namespace OM::pk_pd {
 using namespace OM::util;
 using WithinHost::Genotypes;
 
@@ -48,10 +48,10 @@ map<string, size_t> drug_type_names;
 // List of all indices of drugs being used
 vector<size_t> drugs_in_use;
 
-LSTMDrugPD::LSTMDrugPD(const scnXml::Phenotype& phenotype) {
-    n = phenotype.getSlope();
+LSTMDrugPD::LSTMDrugPD(const scnXml::Phenotype& phenotype)
+    : n(phenotype.getSlope()), v(phenotype.getMax_killing_rate()) {
+
     ic50 = util::createSampler(phenotype.getIC50());
-    v = phenotype.getMax_killing_rate();
 }
 
 double LSTMDrugPD::calc_factor(double kn, double neg_elim_rate, double* conc, double duration) const {
@@ -70,7 +70,7 @@ double LSTMDrugPD::calc_factor(double kn, double neg_elim_rate, double* conc, do
 }
 
 double LSTMDrugPD::ic50_pow_slope(LocalRng& rng, size_t index, WithinHost::CommonInfection* inf) const {
-    double kn; // gets sampled once per infection
+    double kn = NAN; // gets sampled once per infection
     if (inf->Kn.count(index) != 0) {
         kn = inf->Kn.at(index);
     } else {
@@ -108,7 +108,7 @@ void drug_is_used(size_t index) {
     }
     drugs_in_use.push_back(index);
 }
-size_t LSTMDrugType::find_drug(string abbreviation) {
+size_t LSTMDrugType::find_drug(const string& abbreviation) {
     auto iter = drug_type_names.find(abbreviation);
     if (iter == drug_type_names.end())
         throw util::xml_scenario_error(string("attempt to use drug without description: ").append(abbreviation));
@@ -147,7 +147,7 @@ unique_ptr<LSTMDrug> LSTMDrugType::create_instance(LocalRng& rng, size_t index) 
 // -----  Non-static LSTMDrugType functions  -----
 
 LSTMDrugType::LSTMDrugType(size_t index, const scnXml::PKPDDrug& drug_data)
-    : index(index), metabolite(0), negligible_concentration(numeric_limits<double>::quiet_NaN()),
+    : index(index), negligible_concentration(numeric_limits<double>::quiet_NaN()),
       neg_m_exp(numeric_limits<double>::quiet_NaN()), mwr(numeric_limits<double>::quiet_NaN()),
       ic50_log_corr(numeric_limits<double>::quiet_NaN()), ic50_corr_factor(numeric_limits<double>::quiet_NaN()) {
     // ———  PK parameters  ———
@@ -158,7 +158,7 @@ LSTMDrugType::LSTMDrugType(size_t index, const scnXml::PKPDDrug& drug_data)
             throw util::xml_scenario_error(
                 "PK data must specify one of half_life or (k, m_exponent); it specifies both");
         }
-        elimination_rate = LognormalSampler::fromMeanCV(log(2.0) / pk.getHalf_life().get(), 0.0);
+        elimination_rate = LognormalSampler::fromMeanCV(std::numbers::ln2 / pk.getHalf_life().get(), 0.0);
         neg_m_exp = 0.0; // no dependence on body mass
     } else {
         if (!(pk.getK().present() && pk.getM_exponent().present())) {
@@ -284,13 +284,13 @@ LSTMDrugType::LSTMDrugType(size_t index, const scnXml::PKPDDrug& drug_data)
             auto iter = loci.find(restriction.getOnLocus());
             if (iter == loci.end()) {
                 loci[restriction.getOnLocus()] = loc_alleles.size();
-                loc_alleles.push_back(vector<uint32_t>(1, allele));
+                loc_alleles.emplace_back(1, allele);
             } else {
                 loc_alleles[iter->second].push_back(allele);
             }
         }
         phenotype_restrictions.push_back(loc_alleles);
-        pd_params.push_back(LSTMDrugPD(pd[i]));
+        pd_params.emplace_back(pd[i]);
     }
 
     if (loci_per_phenotype.size() == 0) {
@@ -354,12 +354,12 @@ LSTMDrugType::LSTMDrugType(size_t index, const scnXml::PKPDDrug& drug_data)
 
             uint32_t genotype = 0;
             stringstream phenotype_name;
-            for (auto phen = genotype_mapping.begin(); phen != genotype_mapping.end(); ++phen) {
+            for (unsigned int& phen : genotype_mapping) {
                 phenotype_name.str("");
-                if (pd[*phen].getName().present()) {
-                    phenotype_name << pd[*phen].getName().get();
+                if (pd[phen].getName().present()) {
+                    phenotype_name << pd[phen].getName().get();
                 } else {
-                    phenotype_name << "no: " << *phen;
+                    phenotype_name << "no: " << phen;
                 }
                 cout << "|" << setw(8) << (genotype * 100000) << "|" << setw(14) << phenotype_name.str() << "|" << endl;
                 genotype += 1;
@@ -367,9 +367,8 @@ LSTMDrugType::LSTMDrugType(size_t index, const scnXml::PKPDDrug& drug_data)
         }
     }
 }
-LSTMDrugType::~LSTMDrugType() {}
+LSTMDrugType::~LSTMDrugType() = default;
 
 const LSTMDrugPD& LSTMDrugType::get_pd(uint32_t genotype) const { return pd_params[genotype_mapping[genotype]]; }
 
-}
 }

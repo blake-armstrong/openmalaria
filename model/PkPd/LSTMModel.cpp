@@ -33,8 +33,7 @@
 
 #include <cassert>
 
-namespace OM {
-namespace pk_pd {
+namespace OM::pk_pd {
 
 // ———  static  ———
 
@@ -52,11 +51,11 @@ void LSTMModel::checkpoint(istream& stream) {
     // anyway. Hacky solution: create a local RNG.
     LocalRng rng(0, 0);
 
-    size_t num_drugs; // type must be same as m_drugs.size()
+    size_t num_drugs = 0; // type must be same as m_drugs.size()
     num_drugs & stream;
     util::checkpoint::validateListSize(num_drugs);
     for (size_t i = 0; i < num_drugs; ++i) {
-        size_t index;
+        size_t index = 0;
         index & stream;
         drugs.push_back(LSTMDrugType::create_instance(rng, index));
         drugs.back() & stream;
@@ -138,8 +137,8 @@ double LSTMModel::get_drug_conc(size_t drug_index) const {
 double LSTMModel::get_drug_factor(LocalRng& rng, WithinHost::CommonInfection* inf, double body_mass) const {
     double factor = 1.0; //no effect
 
-    for (auto drug = drugs.begin(), end = drugs.end(); drug != end; ++drug) {
-        double drug_factor = (*drug)->calculate_drug_factor(rng, inf, body_mass);
+    for (const auto& drug : drugs) {
+        double drug_factor = drug->calculate_drug_factor(rng, inf, body_mass);
         factor *= drug_factor;
     }
     return factor;
@@ -166,5 +165,4 @@ void LSTMModel::summarize(const Host::Human& human) const {
     }
 }
 
-}
 }

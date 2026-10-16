@@ -25,8 +25,7 @@
 #include "PkPd/Drug/LSTMDrugType.h"
 #include "PkPd/LSTMModel.h"
 
-namespace OM {
-namespace pk_pd {
+namespace OM::pk_pd {
 
 void MedicateData::load(const scnXml::PKPDMedication& med) {
     drug = LSTMDrugType::find_drug(med.getDrug());
@@ -133,5 +132,4 @@ size_t LSTMTreatments::find_dosages(const string& name) {
     return iter->second;
 }
 
-}
 }

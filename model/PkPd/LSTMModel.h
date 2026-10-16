@@ -38,8 +38,7 @@ class CommonInfection;
 namespace pk_pd {
 
 struct MedicateData {
-    MedicateData()
-        : drug(0), qty(numeric_limits<double>::signaling_NaN()), time(numeric_limits<double>::signaling_NaN()) {}
+    MedicateData() : qty(numeric_limits<double>::signaling_NaN()), time(numeric_limits<double>::signaling_NaN()) {}
 
     /// Checkpointing
     template <class S> void operator&(S& stream) {
@@ -57,9 +56,9 @@ private:
         return r;
     }
 
-    size_t drug; /// Drug type index
-    double qty;  /// Quantity of drug prescribed in mg
-    double time; /// Time to medicate at, in days (0 means start of time step, may be >= 1 (thus not today))
+    size_t drug{0}; /// Drug type index
+    double qty;     /// Quantity of drug prescribed in mg
+    double time;    /// Time to medicate at, in days (0 means start of time step, may be >= 1 (thus not today))
 
     friend struct Schedule;
     friend class LSTMModel;

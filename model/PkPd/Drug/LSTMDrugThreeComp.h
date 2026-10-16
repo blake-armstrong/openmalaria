@@ -50,15 +50,15 @@ public:
     /** Create a new instance. */
     LSTMDrugThreeComp(const LSTMDrugType&, LocalRng& rng);
 
-    virtual size_t get_index() const;
-    virtual double get_concentration(size_t index) const;
+    size_t get_index() const override;
+    double get_concentration(size_t index) const override;
 
-    virtual double calculate_drug_factor(LocalRng& rng, WithinHost::CommonInfection* inf, double body_mass) const;
-    virtual void update_concentration(double body_mass);
+    double calculate_drug_factor(LocalRng& rng, WithinHost::CommonInfection* inf, double body_mass) const override;
+    void update_concentration(double body_mass) override;
 
 protected:
-    virtual void checkpoint(istream& stream);
-    virtual void checkpoint(ostream& stream);
+    void checkpoint(istream& stream) override;
+    void checkpoint(ostream& stream) override;
 
     inline double conc() const { return conc_a + conc_b + conc_c - conc_abc; }
 
@@ -72,7 +72,7 @@ protected:
     // Concentrations in the blood and other compartments
     // See "Permutation of the three-compartment equation",
     // Diggory Hardy, Swiss TPH, February 3, 2015
-    double conc_a, conc_b, conc_c, conc_abc;
+    double conc_a{0.0}, conc_b{0.0}, conc_c{0.0}, conc_abc{0.0};
 
     // Sampled constants
     double elim_sample;

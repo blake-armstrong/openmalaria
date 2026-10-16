@@ -96,7 +96,7 @@ protected:
 
     /// First is time (days), second is additional concentration (mg / l; for
     /// one- and three-compartment models) or quantity (mg; for conversion model)
-    typedef std::vector<std::pair<double, double>> DoseVec;
+    using DoseVec = std::vector<std::pair<double, double>>;
     /** List of each dose given today (and possibly tomorrow), ordered by time.
      * First parameter (key) is time in days, second is the dose concentration (mg/l).
      *

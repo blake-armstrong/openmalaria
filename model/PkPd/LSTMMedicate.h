@@ -40,8 +40,8 @@ using std::size_t;
 using std::vector;
 
 class UnittestUtil;
-namespace OM {
-namespace pk_pd {
+
+namespace OM::pk_pd {
 
 struct Schedule {
     void load(const scnXml::PKPDSchedule::MedicateSequence& seq);
@@ -67,8 +67,8 @@ struct DosageTable {
         }
     }
 
-    bool use_mass;     // false: dosing by age; true: dosing by body mass
-    bool mult_mass_kg; // multiply by mass instead of using table
+    bool use_mass{};     // false: dosing by age; true: dosing by body mass
+    bool mult_mass_kg{}; // multiply by mass instead of using table
     map<double, double> table;
 };
 
@@ -76,5 +76,5 @@ extern vector<Schedule> schedules;
 extern vector<DosageTable> dosages;
 
 }
-}
+
 #endif

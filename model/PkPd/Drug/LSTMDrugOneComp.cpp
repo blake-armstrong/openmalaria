@@ -28,12 +28,10 @@
 
 using namespace std;
 
-namespace OM {
-namespace pk_pd {
+namespace OM::pk_pd {
 
 LSTMDrugOneComp::LSTMDrugOneComp(const LSTMDrugType& type, LocalRng& rng)
-    : LSTMDrug(type.sample_vd(rng)), type_data(type), concentration(0.0), neg_elim_sample(-type.sample_elim_rate(rng)) {
-}
+    : LSTMDrug(type.sample_vd(rng)), type_data(type), neg_elim_sample(-type.sample_elim_rate(rng)) {}
 
 //LSTMDrugOneComp::~LSTMDrugOneComp(){}
 
@@ -64,7 +62,7 @@ double LSTMDrugOneComp::calculate_drug_factor(LocalRng& rng, WithinHost::CommonI
     const double kn = drug_pd.ic50_pow_slope(rng, type_data.get_index(), inf);
 
     double time = 0.0;
-    typedef pair<double, double> TimeConc;
+    using TimeConc = pair<double, double>;
     for (TimeConc time_conc : doses) {
         // we iteratate through doses in time order (since doses are sorted)
         if (time_conc.first < 1.0 /*i.e. today*/) {
@@ -97,7 +95,7 @@ void LSTMDrugOneComp::update_concentration(double body_mass) {
     double neg_elim_rate = neg_elim_sample * pow(body_mass, type_data.neg_m_exponent());
     concentration *= exp(neg_elim_rate);
     size_t doses_taken = 0;
-    typedef pair<double, double> TimeConc;
+    using TimeConc = pair<double, double>;
     for (TimeConc& time_conc : doses) {
         // we iteratate through doses in time order (since doses are sorted)
         if (time_conc.first < 1.0 /*i.e. today*/) {
@@ -128,5 +126,4 @@ void LSTMDrugOneComp::checkpoint(istream& stream) {
     neg_elim_sample & stream;
 }
 
-}
 }

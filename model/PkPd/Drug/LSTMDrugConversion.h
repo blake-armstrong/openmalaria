@@ -49,17 +49,17 @@ public:
     /** Create a new instance. */
     LSTMDrugConversion(const LSTMDrugType& parent, const LSTMDrugType& metabolite, LocalRng& rng);
 
-    virtual size_t get_index() const;
-    virtual double get_concentration(size_t index) const;
+    size_t get_index() const override;
+    double get_concentration(size_t index) const override;
 
-    virtual double calculate_drug_factor(LocalRng& rng, WithinHost::CommonInfection* inf, double body_mass) const;
-    virtual void update_concentration(double body_mass);
+    double calculate_drug_factor(LocalRng& rng, WithinHost::CommonInfection* inf, double body_mass) const override;
+    void update_concentration(double body_mass) override;
     double get_metabolite_concentration() const;
     double get_parent_concentration() const;
 
 protected:
-    virtual void checkpoint(istream& stream);
-    virtual void checkpoint(ostream& stream);
+    void checkpoint(istream& stream) override;
+    void checkpoint(ostream& stream) override;
 
     double calculate_factor(const ParamsConvFactor& p, double duration) const;
 
@@ -69,7 +69,7 @@ protected:
     /// Amount of parent drug in gut, parent drug in circulation and metabolite
     // in circulation; units: mg. In the paper, these are labelled A, B, C.
     //TODO: move metabolite data to a separate class object? Or not?
-    double qty_g, qty_p, qty_m;
+    double qty_g{0.0}, qty_p{0.0}, qty_m{0.0};
 
     /// @brief Sampled elimination and conversion rate constants
     //@{
@@ -84,7 +84,7 @@ protected:
     /// Volume of distribution of metabolite (parent's Vd uses vol_dist)
     double vol_dist_metabolite;
     /// Last body mass (kg)
-    double last_bm;
+    double last_bm{};
     //@}
 
 private:

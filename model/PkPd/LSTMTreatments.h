@@ -30,8 +30,8 @@ using namespace std;
 namespace scnXml {
 class Treatments;
 }
-namespace OM {
-namespace pk_pd {
+
+namespace OM::pk_pd {
 
 /** Information about treatment courses: schedules and dosage tables.
  * 
@@ -55,9 +55,9 @@ public:
     static size_t find_dosages(const string& name);
 
 private:
-    LSTMTreatments(); // not constructible
+    LSTMTreatments() = delete; // not constructible
 };
 
 }
-}
+
 #endif

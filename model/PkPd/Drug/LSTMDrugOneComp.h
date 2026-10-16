@@ -47,22 +47,22 @@ public:
     /** Create a new instance. */
     LSTMDrugOneComp(const LSTMDrugType&, LocalRng& rng);
 
-    virtual size_t get_index() const;
-    virtual double get_concentration(size_t index) const;
+    size_t get_index() const override;
+    double get_concentration(size_t index) const override;
 
-    virtual double calculate_drug_factor(LocalRng& rng, WithinHost::CommonInfection* inf, double body_mass) const;
-    virtual void update_concentration(double body_mass);
+    double calculate_drug_factor(LocalRng& rng, WithinHost::CommonInfection* inf, double body_mass) const override;
+    void update_concentration(double body_mass) override;
 
 protected:
-    virtual void checkpoint(istream& stream);
-    virtual void checkpoint(ostream& stream);
+    void checkpoint(istream& stream) override;
+    void checkpoint(ostream& stream) override;
 
     /// Always links a drug instance to its drug-type data
     //TODO: does it still make sense to link this?
     const LSTMDrugType& type_data;
 
     /// Concentration in blood; units: mg / l.
-    double concentration;
+    double concentration{0.0};
 
     /// Sampled elimination rate constant
     double neg_elim_sample;

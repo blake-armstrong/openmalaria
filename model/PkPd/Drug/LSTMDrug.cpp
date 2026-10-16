@@ -25,7 +25,7 @@
 #include "util/StreamValidator.h"
 #include "util/vectors.h"
 
-#include <assert.h>
+#include <cassert>
 #include <cmath>
 #include <algorithm>
 #include <stdexcept>
@@ -34,11 +34,10 @@
 
 using namespace std;
 
-namespace OM {
-namespace pk_pd {
+namespace OM::pk_pd {
 
 LSTMDrug::LSTMDrug(double vd) : vol_dist(vd) {}
-LSTMDrug::~LSTMDrug() {}
+LSTMDrug::~LSTMDrug() = default;
 
 bool comp(pair<double, double> lhs, pair<double, double> rhs) { return lhs.first < rhs.first; }
 
@@ -49,10 +48,9 @@ bool comp(pair<double, double> lhs, pair<double, double> rhs) { return lhs.first
 void LSTMDrug::medicate(double time, double qty) {
     // Insert in the right position to maintain sorting:
     auto elt = make_pair(time, qty);
-    auto pos = lower_bound(doses.begin(), doses.end(), elt, comp);
+    auto pos = std::ranges::lower_bound(doses, elt, comp);
     doses.insert(pos, std::move(elt));
     assert(is_sorted(doses.begin(), doses.end(), comp));
 }
 
-}
 }

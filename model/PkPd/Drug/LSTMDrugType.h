@@ -116,7 +116,7 @@ public:
      *
      * Throws if the drug isn't found, so you can rely on it returning a valid
      * index if it doesn't throw. */
-    static size_t find_drug(string abbreviation);
+    static size_t find_drug(const string& abbreviation);
 
     /** Get a reference to drug type data for some index. This can't be used
      * to change the data. */
@@ -175,7 +175,7 @@ private:
     size_t index;
 
     /// Index of metabolite
-    size_t metabolite;
+    size_t metabolite{0};
 
     /** A mapping from genotype codes to phenotypes for this drug. */
     vector<uint32_t> genotype_mapping;
