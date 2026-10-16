@@ -23,8 +23,8 @@ util/style.sh check [base]              # G-style gate, lines changed since base
 util/style.sh changed [base]            # model/ and unittest/ C++ files changed since base
 util/style.sh format-changed [base [paths...]]  # clang-format -i the changed files
 util/style.sh fix [base] [checks]       # apply clang-tidy fix-its on changed lines
-util/style.sh rename <dir> [--dry-run] [--map OLD=NEW] [--skip OLD]  # rename one module
-util/style.sh modernize <dir> [--dry-run | --report]  # safe fix-its over one module
+util/style.sh rename <dir|files...> [--dry-run] [--map OLD=NEW] [--skip OLD]  # rename one module
+util/style.sh modernize <dir|files...> [--dry-run | --report]  # safe fix-its over one module
 util/ci-style.sh [base-ref]             # the CI job: check against the merge base with base-ref
 ```
 

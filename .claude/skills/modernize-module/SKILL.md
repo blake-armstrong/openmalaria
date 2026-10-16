@@ -5,6 +5,9 @@ description: Modernise one C++ module directory (e.g. model/PkPd) to C++20 pract
 
 # Modernise one module
 
+A module that shares its directory with others (e.g. the `model/` root files) is given as a
+list of files instead of `<dir>`; everything below then applies to those files.
+
 Two commits, in this order, after the module's rename (`/rename-module`):
 
 1. **Tool commit.** `util/style.sh modernize <dir>` applies the fix-its of a fixed list of

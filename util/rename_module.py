@@ -34,7 +34,11 @@ MEMBER_KINDS = (
 
 def parse_args():
     p = argparse.ArgumentParser(prog="util/style.sh rename", description=__doc__)
-    p.add_argument("module", help="module directory, e.g. model/PkPd")
+    p.add_argument(
+        "module",
+        nargs="+",
+        help="module directory, e.g. model/PkPd; or the files of a module that shares its directory with others",
+    )
     p.add_argument(
         "--map",
         action="append",
@@ -63,9 +67,15 @@ class Renamer:
     def __init__(self, args):
         self.args = args
         self.root = subprocess.check_output(["git", "rev-parse", "--show-toplevel"], text=True).strip()
-        self.module = os.path.normpath(args.module).rstrip("/") + "/"
-        if not os.path.isdir(os.path.join(self.root, self.module)):
-            sys.exit(f"no such directory: {self.module}")
+        self.paths = []
+        for m in args.module:
+            path = os.path.normpath(m)
+            if os.path.isdir(os.path.join(self.root, path)):
+                path += "/"
+            elif not os.path.isfile(os.path.join(self.root, path)):
+                sys.exit(f"no such directory or file: {path}")
+            self.paths.append(path)
+        self.module = " ".join(self.paths)
         build = args.build_dir
         self.build = build if os.path.isabs(build) else os.path.join(self.root, build)
         if not os.path.isfile(os.path.join(self.build, "compile_commands.json")):
@@ -78,7 +88,8 @@ class Renamer:
         return os.path.relpath(path, self.root)
 
     def in_module(self, path):
-        return self.rel(path).startswith(self.module)
+        rel = self.rel(os.path.join(self.root, path))
+        return any(rel.startswith(p) if p.endswith("/") else rel == p for p in self.paths)
 
     def is_source(self, path):
         rel = self.rel(path)
@@ -313,7 +324,7 @@ class Renamer:
         counts = collections.Counter(e["kind"] for e in entries)
         for e in sorted(entries, key=lambda e: (self.rel(e["decl"]), e["offset"])):
             files = sorted({self.rel(p) for p, _, _ in e["reps"]})
-            outside = [f for f in files if not f.startswith(self.module)]
+            outside = [f for f in files if not self.in_module(f)]
             how = "map" if e["old"] in self.overrides else ("strip" if e["prefix"] else "tool")
             note = f"  [+{len(outside)} outside: {', '.join(outside)}]" if outside else ""
             nofix = "  NO FIX-IT (used in a macro or conflicts)" if e["nofix"] else ""

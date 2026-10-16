@@ -27,13 +27,16 @@ project .clang-format and .clang-tidy.
                         only the given paths
   fix [base] [checks]   apply clang-tidy fix-its on lines changed since base, for
                         the given -checks filter (default: the safe list below)
-  rename <dir> [opts]   rename the identifiers declared in one module directory
-                        to the naming rules, at every use in every TU, then
-                        format-changed (util/rename_module.py; -h for options)
-  modernize <dir> [opts]
+  rename <dir|files...> [opts]
+                        rename the identifiers declared in one module directory
+                        (or a list of files, for a module that shares its
+                        directory) to the naming rules, at every use in every
+                        TU, then format-changed (util/rename_module.py; -h)
+  modernize <dir|files...> [opts]
                         apply the module-wide fix-its below to one module
-                        directory until none is left, then format-changed;
-                        --report lists what is left for the hand commit
+                        directory (or list of files) until none is left, then
+                        format-changed; --report lists what is left for the
+                        hand commit
                         (util/modernize_module.py; -h for options)
 
 Safe fix-it checks (fix):

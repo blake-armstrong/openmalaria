@@ -9,6 +9,9 @@ The rename is mechanical and must stay that way: the commit contains only rename
 the formatting they cause, and is made by the tool, not by hand. Naming rules:
 `/cpp-style`. Tool: `util/style.sh rename` (`util/rename_module.py`).
 
+A module that shares its directory with others (e.g. the `model/` root files) is given as a
+list of files instead of `<dir>`; everything below then applies to those files.
+
 ## What the tool does
 
 - Runs `readability-identifier-naming` over every TU in `$OM_BUILD_DIR/compile_commands.json`,

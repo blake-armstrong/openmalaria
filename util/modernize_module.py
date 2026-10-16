@@ -30,7 +30,11 @@ PATTERNS = (
 
 def parse_args():
     p = argparse.ArgumentParser(prog="util/style.sh modernize", description=__doc__)
-    p.add_argument("module", help="module directory, e.g. model/PkPd")
+    p.add_argument(
+        "module",
+        nargs="+",
+        help="module directory, e.g. model/PkPd; or the files of a module that shares its directory with others",
+    )
     mode = p.add_mutually_exclusive_group()
     mode.add_argument("--dry-run", action="store_true", help="print the fixes of the first pass, change nothing")
     mode.add_argument(
@@ -48,9 +52,15 @@ class Modernizer:
     def __init__(self, args):
         self.args = args
         self.root = subprocess.check_output(["git", "rev-parse", "--show-toplevel"], text=True).strip()
-        self.module = os.path.normpath(args.module).rstrip("/") + "/"
-        if not os.path.isdir(os.path.join(self.root, self.module)):
-            sys.exit(f"no such directory: {self.module}")
+        self.paths = []
+        for m in args.module:
+            path = os.path.normpath(m)
+            if os.path.isdir(os.path.join(self.root, path)):
+                path += "/"
+            elif not os.path.isfile(os.path.join(self.root, path)):
+                sys.exit(f"no such directory or file: {path}")
+            self.paths.append(path)
+        self.module = " ".join(self.paths)
         build = args.build_dir
         self.build = build if os.path.isabs(build) else os.path.join(self.root, build)
         if not os.path.isfile(os.path.join(self.build, "compile_commands.json")):
@@ -60,7 +70,8 @@ class Modernizer:
         return os.path.relpath(path, self.root)
 
     def in_module(self, path):
-        return self.rel(path).startswith(self.module)
+        rel = self.rel(os.path.join(self.root, path))
+        return any(rel.startswith(p) if p.endswith("/") else rel == p for p in self.paths)
 
     def git(self, *args):
         return subprocess.check_output(["git", *args], cwd=self.root, text=True)
@@ -77,7 +88,9 @@ class Modernizer:
             str(self.args.j),
             "-quiet",
             f"-checks={checks}",
-            f"-header-filter=^{re.escape(os.path.join(self.root, self.module))}",
+            "-header-filter=^("
+            + "|".join(re.escape(os.path.join(self.root, p)) + ("" if p.endswith("/") else "$") for p in self.paths)
+            + ")",
             "-export-fixes",
             out_dir + "/",
         ]
@@ -259,7 +272,7 @@ class Modernizer:
             outside = [
                 f
                 for f in self.git("diff", "--name-only", "HEAD", "--", "model", "unittest").split()
-                if not f.startswith(self.module)
+                if not self.in_module(f)
             ]
             if outside:
                 sys.exit("changed files outside the module: " + ", ".join(outside))
@@ -273,7 +286,7 @@ class Modernizer:
         return 0
 
     def module_files(self):
-        files = self.git("ls-files", self.module).split()
+        files = self.git("ls-files", "--", *self.paths).split()
         return [f for f in files if f.endswith((".h", ".cpp"))]
 
     def report(self):
