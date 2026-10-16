@@ -47,7 +47,7 @@ inline int floor_to_int(double x) { return static_cast<int>(std::floor(x)); }
  * 
  * Granularity: 1 day.
  *****************************************************************************/
-typedef int SimTime;
+using SimTime = int;
 
 /** Encapsulates static variables: sim time. */
 class Sim {
