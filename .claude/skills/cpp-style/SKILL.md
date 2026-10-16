@@ -75,6 +75,19 @@ The `.clang-tidy` config enforces `bugprone-*`, `cppcoreguidelines-*`, `moderniz
   `cmake -S . -B build-rework`.
 - `git add -N <file>` so `util/style.sh` sees it. Its commands read `git diff`.
 
+## Unit tests
+
+- New tests are Catch2 v3, never CxxTest: a `unittest/<Area>Tests.cpp` added to the
+  `unittest-catch2` sources in `unittest/CMakeLists.txt`. The CxxTest suites
+  (`unittest/*Suite.h`) are legacy until M9 ports them.
+- Put the `TEST_CASE`s and any helpers in an anonymous namespace. Tag each case with its
+  area, e.g. `[util][vectors]`.
+- Floating-point checks use `CHECK_THAT(x, WithinRel(y, tol) || WithinAbs(y, tol))` with
+  the tolerance as a named `constexpr`, never `==` on doubles. A G-diff test states its
+  tolerance the same way.
+- Run them through ctest (`ctest -R unittest`), which sets the working directory the
+  resource files need.
+
 ## Formatting
 
 `.clang-format` is the authority. Don't hand-format; after editing, run:
