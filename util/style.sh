@@ -24,6 +24,9 @@ project .clang-format and .clang-tidy.
                         optionally only in the given paths
   fix [base] [checks]   apply clang-tidy fix-its on lines changed since base, for
                         the given -checks filter (default: the safe list below)
+  rename <dir> [opts]   rename the identifiers declared in one module directory
+                        to the naming rules, at every use in every TU, then
+                        format-changed (util/rename_module.py; -h for options)
 
 Safe fix-it checks:
   $SAFE_FIX_CHECKS
@@ -100,6 +103,14 @@ run_fix() {
     run_format_changed "$base"
 }
 
+run_rename() {
+    compile_db
+    cd "$ROOT"
+    uv run --quiet --no-project --with pyyaml python util/rename_module.py \
+        --llvm-version "$LLVM_VERSION" --build-dir "$BUILD_DIR" "$@"
+    [[ " $* " == *" --dry-run "* || " $* " == *" -h "* || " $* " == *" --help "* ]] || run_format_changed HEAD
+}
+
 run_check() {
     local base="${1:-HEAD}"
     cd "$ROOT"
@@ -139,6 +150,7 @@ case "$cmd" in
     changed) changed_files "${1:-HEAD}" ;;
     format-changed) run_format_changed "$@" ;;
     fix) run_fix "$@" ;;
+    rename) run_rename "$@" ;;
     -h|--help|help) usage ;;
     *) usage; exit 2 ;;
 esac
