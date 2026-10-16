@@ -90,10 +90,10 @@ void LSTMDrugThreeComp::update_cached(double body_mass) const {
 /// Parameters for func_fC
 struct ParamsFC {
     double c_a, c_b, c_c, c_abc; // concentration parameters
-    double na, nb, ng, nka;  // decay parameters
-    double n;                // slope: unitless
-    double v;                // max killing rate: unitless
-    double kn;               // IC50^n: (mg/kg) ^ n
+    double na, nb, ng, nka;      // decay parameters
+    double n;                    // slope: unitless
+    double v;                    // max killing rate: unitless
+    double kn;                   // IC50^n: (mg/kg) ^ n
 };
 /** Function for calculating concentration and then killing function at time t
  * 
@@ -112,7 +112,7 @@ double func_f_c(double t, void* pp) {
     const double conc_abc = p.c_abc * exp(p.nka * t);
     const double conc = conc_a + conc_b + conc_c - conc_abc; // mg/l
 
-    const double cn = pow(conc, p.n);         // (mg/l) ^ n
+    const double cn = pow(conc, p.n);          // (mg/l) ^ n
     const double f_c = p.v * cn / (cn + p.kn); // unitless
     return f_c;
 }
@@ -170,7 +170,7 @@ double LSTMDrugThreeComp::calculate_drug_factor(LocalRng& rng, WithinHost::Commo
     p.v = pd.max_killing_rate();
     p.kn = pd.ic50_pow_slope(rng, type_data.get_index(), inf);
 
-    double time = 0.0;        // time since start of day
+    double time = 0.0;         // time since start of day
     double total_factor = 1.0; // survival factor for whole day
 
     typedef pair<double, double> TimeConc;

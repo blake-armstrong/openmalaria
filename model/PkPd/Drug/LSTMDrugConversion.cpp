@@ -154,9 +154,9 @@ void LSTMDrugConversion::set_conversion_parameters(ParamsConvFactor& p, double b
     // decay "constants" (dependent on body mass):
     const double nk_p = nk_p_sample * pow(body_mass, parent_type.neg_m_exponent());   // -y
     const double nconv = nconv_sample * pow(body_mass, parent_type.neg_m_exponent()); // -z
-    p.nka = nka;                                                                     // -x
-    p.nk_m = nk_m_sample * pow(body_mass, metabolite_type.neg_m_exponent());         // -k
-    p.nl = nk_p + nconv;                                                             // -(y + z)
+    p.nka = nka;                                                                      // -x
+    p.nk_m = nk_m_sample * pow(body_mass, metabolite_type.neg_m_exponent());          // -k
+    p.nl = nk_p + nconv;                                                              // -(y + z)
 
     p.f = nka / (p.nl - nka); // -x / (x-y-z) = x / (y+z-x)
     // Let u = parentType.molecular_weight_ratio() = M_C / M_B:
@@ -209,7 +209,7 @@ double LSTMDrugConversion::calculate_drug_factor(LocalRng& rng, WithinHost::Comm
     set_conversion_parameters(p, body_mass);
     set_killing_parameters(rng, p, inf);
 
-    double time = 0.0;        // time since start of day
+    double time = 0.0;         // time since start of day
     double total_factor = 1.0; // survival factor for whole day
 
     typedef pair<double, double> TimeConc;
