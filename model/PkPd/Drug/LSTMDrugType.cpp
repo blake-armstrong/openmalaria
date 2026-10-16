@@ -31,6 +31,7 @@
 #include <schema/pharmacology.h>
 
 #include <cmath>
+#include <format>
 #include <iomanip>
 #include <numbers>
 
@@ -49,13 +50,10 @@ map<string, size_t> drug_type_names;
 vector<size_t> drugs_in_use;
 
 LSTMDrugPD::LSTMDrugPD(const scnXml::Phenotype& phenotype)
-    : n(phenotype.getSlope()), v(phenotype.getMax_killing_rate()) {
+    : n(phenotype.getSlope()), ic50(util::createSampler(phenotype.getIC50())), v(phenotype.getMax_killing_rate()) {}
 
-    ic50 = util::createSampler(phenotype.getIC50());
-}
-
-double LSTMDrugPD::calc_factor(double kn, double neg_elim_rate, double* conc, double duration) const {
-    const double c0 = *conc;
+double LSTMDrugPD::calc_factor(double kn, double neg_elim_rate, double& conc, double duration) const {
+    const double c0 = conc;
     const double c1 = c0 * exp(neg_elim_rate * duration);
 
     // From Hastings & Winter 2011 paper
@@ -65,7 +63,7 @@ double LSTMDrugPD::calc_factor(double kn, double neg_elim_rate, double* conc, do
     const double denominator = kn + pow(c0, n);
     const double power = v / (-neg_elim_rate * n);
 
-    *conc = c1;                                 // conc is an in/out parameter
+    conc = c1;
     return pow(numerator / denominator, power); // unitless
 }
 
@@ -88,7 +86,7 @@ void LSTMDrugType::init(const scnXml::Pharmacology::DrugsType& drug_data) {
         if (drug_type_names.find(abbrev) != drug_type_names.end())
             throw TRACED_EXCEPTION_DEFAULT(string("Drug added twice: ").append(abbrev));
 
-        size_t i = drug_types.size();
+        const size_t i = drug_types.size();
         drug_types.emplace_back(i, drug);
         drug_type_names[abbrev] = i;
     }
@@ -102,7 +100,7 @@ size_t LSTMDrugType::num_drug_types() { return drug_types.size(); }
 
 // Add index to drugsInUse if not already present. Not fast but doesn't need to be.
 void drug_is_used(size_t index) {
-    for (size_t i : drugs_in_use) {
+    for (const size_t i : drugs_in_use) {
         if (i == index)
             return; // already in list
     }
@@ -112,7 +110,7 @@ size_t LSTMDrugType::find_drug(const string& abbreviation) {
     auto iter = drug_type_names.find(abbreviation);
     if (iter == drug_type_names.end())
         throw util::xml_scenario_error(string("attempt to use drug without description: ").append(abbreviation));
-    size_t index = iter->second;
+    const size_t index = iter->second;
 
     // We assume that drugs are used when and only when findDrug returns their
     // index or they are a metabolite of a drug returned here.
@@ -131,16 +129,16 @@ LSTMDrugType& LSTMDrugType::get(size_t index) { //static
 const vector<size_t>& LSTMDrugType::get_drugs_in_use() { return drugs_in_use; }
 
 unique_ptr<LSTMDrug> LSTMDrugType::create_instance(LocalRng& rng, size_t index) {
-    LSTMDrugType& type_data = drug_types[index];
+    const LSTMDrugType& type_data = drug_types[index];
     if (type_data.conversion_rate) {
-        LSTMDrugType& metabolite_data = drug_types[type_data.metabolite];
-        return unique_ptr<LSTMDrug>(new LSTMDrugConversion(type_data, metabolite_data, rng));
+        const LSTMDrugType& metabolite_data = drug_types[type_data.metabolite];
+        return make_unique<LSTMDrugConversion>(type_data, metabolite_data, rng);
     } else if (type_data.k12) {
         // k21 is set when k12 is set; k13 and k31 may be set
-        return unique_ptr<LSTMDrug>(new LSTMDrugThreeComp(type_data, rng));
+        return make_unique<LSTMDrugThreeComp>(type_data, rng);
     } else {
         // none of k12/k21/k13/k31 should be set in this case
-        return unique_ptr<LSTMDrug>(new LSTMDrugOneComp(type_data, rng));
+        return make_unique<LSTMDrugOneComp>(type_data, rng);
     }
 }
 
@@ -197,7 +195,7 @@ LSTMDrugType::LSTMDrugType(size_t index, const scnXml::PKPDDrug& drug_data)
         }
         conversion_rate = util::createSampler(conv.getRate());
         mwr = conv.getMolRatio();
-        double correlation = conv.getIC50_log_correlation();
+        const double correlation = conv.getIC50_log_correlation();
         if (correlation < 0.0 || correlation > 1.0) {
             throw util::xml_scenario_error("PK conversion model: IC50 correlation must be between 0 and 1");
         }
@@ -224,7 +222,7 @@ LSTMDrugType::LSTMDrugType(size_t index, const scnXml::PKPDDrug& drug_data)
 
     set<string> loci_per_phenotype;
     string first_phenotype_name;
-    size_t n_phenotypes = pd.size();
+    const size_t n_phenotypes = pd.size();
     pd_params.reserve(n_phenotypes);
     // per phenotype (first index), per locus-of-restriction (second list), a list of alleles
     vector<vector<vector<uint32_t>>> phenotype_restrictions;
@@ -242,7 +240,7 @@ LSTMDrugType::LSTMDrugType(size_t index, const scnXml::PKPDDrug& drug_data)
         } else {
             set<string> expected_loci = loci_per_phenotype;
             for (const scnXml::Restriction& restriction : phenotype.getRestriction()) {
-                size_t n = expected_loci.erase(restriction.getOnLocus());
+                const size_t n = expected_loci.erase(restriction.getOnLocus());
                 if (n == 0) {
                     string this_phenotype_name;
                     if (phenotype.getName().present())
@@ -272,7 +270,7 @@ LSTMDrugType::LSTMDrugType(size_t index, const scnXml::PKPDDrug& drug_data)
         map<string, size_t> loci;
         vector<vector<uint32_t>> loc_alleles;
         for (const scnXml::Restriction& restriction : phenotype.getRestriction()) {
-            uint32_t allele = Genotypes::findAlleleCode(restriction.getOnLocus(), restriction.getToAllele());
+            const uint32_t allele = Genotypes::findAlleleCode(restriction.getOnLocus(), restriction.getToAllele());
             if (allele == numeric_limits<uint32_t>::max()) {
                 throw util::xml_scenario_error("phenotype has "
                                                "restriction on locus " +
@@ -313,7 +311,7 @@ LSTMDrugType::LSTMDrugType(size_t index, const scnXml::PKPDDrug& drug_data)
                 bool match = true;
                 for (const vector<uint32_t>& loc_alleles : phenotype_restrictions[i]) {
                     bool match_for_locus = false;
-                    for (uint32_t restrict_allele : loc_alleles) {
+                    for (const uint32_t restrict_allele : loc_alleles) {
                         if (genotypes[j].alleles.count(restrict_allele) > 0) {
                             assert(!match_for_locus); // shouldn't be two matches
                             match_for_locus = true;
@@ -353,15 +351,11 @@ LSTMDrugType::LSTMDrugType(size_t index, const scnXml::PKPDDrug& drug_data)
             cout << "|" << setw(8) << "--------" << "|" << setw(14) << "-------------" << "|" << endl;
 
             uint32_t genotype = 0;
-            stringstream phenotype_name;
-            for (unsigned int& phen : genotype_mapping) {
-                phenotype_name.str("");
-                if (pd[phen].getName().present()) {
-                    phenotype_name << pd[phen].getName().get();
-                } else {
-                    phenotype_name << "no: " << phen;
-                }
-                cout << "|" << setw(8) << (genotype * 100000) << "|" << setw(14) << phenotype_name.str() << "|" << endl;
+            for (const uint32_t phen : genotype_mapping) {
+                const auto& name = pd[phen].getName();
+                const string phenotype_name = name.present() ? string(name.get()) : std::format("no: {}", phen);
+                cout << "|" << setw(8) << (genotype * 100000) << "|" << setw(14) << phenotype_name << "|"
+                     << endl; // NOLINT(performance-avoid-endl)
                 genotype += 1;
             }
         }

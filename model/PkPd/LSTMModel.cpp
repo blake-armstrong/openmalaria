@@ -76,12 +76,12 @@ void LSTMModel::checkpoint(ostream& stream) {
 
 void LSTMModel::prescribe(size_t schedule, size_t dosage, double age, double body_mass, double delay_d) {
     DosageTable& table = dosages[dosage];
-    double key = table.use_mass ? body_mass : age;
-    double dose_mult = table.get_multiplier(key);
+    const double key = table.use_mass ? body_mass : age;
+    const double dose_mult = table.get_multiplier(key);
     for (MedicateData& medicate_data : schedules[schedule].medications) {
         MedicateData data = medicate_data.multiplied(dose_mult);
         data.time += delay_d;
-        medicate_queue.push_back(std::move(data));
+        medicate_queue.push_back(data);
     }
 }
 
@@ -138,7 +138,7 @@ double LSTMModel::get_drug_factor(LocalRng& rng, WithinHost::CommonInfection* in
     double factor = 1.0; //no effect
 
     for (const auto& drug : drugs) {
-        double drug_factor = drug->calculate_drug_factor(rng, inf, body_mass);
+        const double drug_factor = drug->calculate_drug_factor(rng, inf, body_mass);
         factor *= drug_factor;
     }
     return factor;
@@ -156,7 +156,7 @@ void LSTMModel::summarize(const Host::Human& human) const {
     const vector<size_t>& drugs_in_use(LSTMDrugType::get_drugs_in_use());
     for (size_t index : drugs_in_use) {
         for (auto& drug : drugs) {
-            double conc = drug->get_concentration(index);
+            const double conc = drug->get_concentration(index);
             if (conc > 0.0) {
                 mon::recordStat(mon::measure("nHostDrugConcNonZero"), human, 1, 0, 0, index);
                 mon::recordStat(mon::measure("sumLogDrugConcNonZero"), human, log(conc), 0, 0, index);

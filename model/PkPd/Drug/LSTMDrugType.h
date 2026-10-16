@@ -61,10 +61,7 @@ class LSTMDrug;
 class LSTMDrugPD {
 public:
     /// Construct
-    LSTMDrugPD(const scnXml::Phenotype& phenotype);
-
-    LSTMDrugPD(LSTMDrugPD&&) = default;
-    LSTMDrugPD& operator=(LSTMDrugPD&&) = default;
+    explicit LSTMDrugPD(const scnXml::Phenotype& phenotype);
 
     /** Calculate a survival factor induced by a drug already in the blood.
      * It is expected that no drug doses are taken over the period for which
@@ -72,12 +69,12 @@ public:
      * 
      * @param Kn IC50^slope, sampled per infection
      * @param neg_elim_rate -k (sampled)
-     * @param C0 Concentration of drug in blood at start of period. Will be
+     * @param conc Concentration of drug in blood at start of period. Will be
      *  updated to correct concentration at end of period. Units: mg/l
      * @param duration Timespan over which the factor is being calculated. Units: days.
      * @return survival factor (unitless)
      */
-    double calc_factor(double kn, double neg_elim_rate, double* c0, double duration) const;
+    double calc_factor(double kn, double neg_elim_rate, double& conc, double duration) const;
 
     inline double slope() const { return n; }
     double ic50_pow_slope(LocalRng& rng, size_t index, WithinHost::CommonInfection* inf) const;
@@ -139,6 +136,8 @@ public:
     LSTMDrugType(size_t index, const scnXml::PKPDDrug& drug_data);
     ~LSTMDrugType();
 
+    LSTMDrugType(const LSTMDrugType&) = delete;
+    LSTMDrugType& operator=(const LSTMDrugType&) = delete;
     LSTMDrugType(LSTMDrugType&&) = default;
     LSTMDrugType& operator=(LSTMDrugType&&) = default;
 
@@ -166,10 +165,6 @@ public:
     //@}
 
 private:
-    // non-copyable (due to allocation of members of drugPhenotype)
-    LSTMDrugType(const LSTMDrugType&) = delete;
-    LSTMDrugType& operator=(const LSTMDrugType&) = delete;
-
     /** The drug index in drugTypes and a unique identifier for the drug type.
      * Stored here since LTSMDrug stores a pointer to this struct object, not the index. */
     size_t index;

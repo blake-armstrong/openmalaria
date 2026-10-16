@@ -134,8 +134,8 @@ double LSTMDrugConversion::calculate_factor(const ParamsConvFactor& p, double du
     double intf_c = NAN, err_eps = NAN; // intfC will carry our result; err_eps is a measure of accuracy of the result
 
     //     intg_steps = 0;
-    int r = gsl_integration_qag(&f, 0.0, duration, abs_eps, rel_eps, GslIntgConvMaxIter, qag_rule, gsl_intgr_conv_wksp,
-                                &intf_c, &err_eps);
+    const int r = gsl_integration_qag(&f, 0.0, duration, abs_eps, rel_eps, GslIntgConvMaxIter, qag_rule,
+                                      gsl_intgr_conv_wksp, &intf_c, &err_eps);
     if (r != 0) {
         throw TRACED_EXCEPTION("calculateFactor: error from gsl_integration_qag", util::Error::GSL);
     }
@@ -145,7 +145,8 @@ double LSTMDrugConversion::calculate_factor(const ParamsConvFactor& p, double du
     return exp(-intf_c); // drug factor
 }
 
-void LSTMDrugConversion::set_conversion_parameters(ParamsConvFactor& p, double body_mass) const {
+ParamsConvFactor LSTMDrugConversion::conversion_parameters(double body_mass) const {
+    ParamsConvFactor p{};
     p.qty_g = qty_g;
     p.qty_p = qty_p;
     p.qty_m = qty_m;
@@ -167,11 +168,12 @@ void LSTMDrugConversion::set_conversion_parameters(ParamsConvFactor& p, double b
 
     p.inv_vd_p = 1.0 / (vol_dist * body_mass);
     p.inv_vd_m = 1.0 / (vol_dist_metabolite * body_mass);
+    return p;
 }
 
 void LSTMDrugConversion::set_killing_parameters(LocalRng& rng, ParamsConvFactor& p,
                                                 WithinHost::CommonInfection* inf) const {
-    uint32_t genotype = inf->genotype();
+    const uint32_t genotype = inf->genotype();
     const LSTMDrugPD &pd_p = parent_type.get_pd(genotype), &pd_m = metabolite_type.get_pd(genotype);
     p.n_p = pd_p.slope();
     p.vp = pd_p.max_killing_rate();
@@ -204,8 +206,7 @@ double LSTMDrugConversion::calculate_drug_factor(LocalRng& rng, WithinHost::Comm
         return 1.0; // nothing to do
     }
 
-    ParamsConvFactor p{};
-    set_conversion_parameters(p, body_mass);
+    ParamsConvFactor p = conversion_parameters(body_mass);
     set_killing_parameters(rng, p, inf);
 
     double time = 0.0;         // time since start of day
@@ -216,7 +217,7 @@ double LSTMDrugConversion::calculate_drug_factor(LocalRng& rng, WithinHost::Comm
         // we iterate through doses in time order (since doses are sorted)
         if (time_conc.first < 1.0 /*i.e. today*/) {
             if (time < time_conc.first) {
-                double duration = time_conc.first - time;
+                const double duration = time_conc.first - time;
                 total_factor *= calculate_factor(p, duration);
                 const double exp_absorb = exp(nka * duration), exp_p_loss = exp(p.nl * duration);
                 p.qty_m = calculate_metabolite_quantity(p, exp_absorb, exp_p_loss, duration);
@@ -245,16 +246,16 @@ void LSTMDrugConversion::update_concentration(double body_mass) {
     }
     last_bm = body_mass;
 
-    ParamsConvFactor p{};
-    set_conversion_parameters(p, body_mass);
+    ParamsConvFactor p = conversion_parameters(body_mass);
 
-    double time = 0.0, duration = NAN;
+    double time = 0.0;
     size_t doses_taken = 0;
     using TimeConc = pair<double, double>;
     for (TimeConc& time_conc : doses) {
         // we iteratate through doses in time order (since doses are sorted)
         if (time_conc.first < 1.0 /*i.e. today*/) {
-            if ((duration = time_conc.first - time) > 0.0) {
+            const double duration = time_conc.first - time;
+            if (duration > 0.0) {
                 const double exp_absorb = exp(nka * duration), exp_p_loss = exp(p.nl * duration);
                 p.qty_m = calculate_metabolite_quantity(p, exp_absorb, exp_p_loss, duration);
                 p.qty_p = calculate_parent_quantity(p, exp_absorb, exp_p_loss);
@@ -271,7 +272,7 @@ void LSTMDrugConversion::update_concentration(double body_mass) {
         }
     }
     if (time < 1.0) {
-        duration = 1.0 - time;
+        const double duration = 1.0 - time;
         const double exp_absorb = exp(nka * duration), exp_p_loss = exp(p.nl * duration);
         p.qty_m = calculate_metabolite_quantity(p, exp_absorb, exp_p_loss, duration);
         p.qty_p = calculate_parent_quantity(p, exp_absorb, exp_p_loss);

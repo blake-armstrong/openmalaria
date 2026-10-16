@@ -56,18 +56,18 @@ double LSTMDrugOneComp::calculate_drug_factor(LocalRng& rng, WithinHost::CommonI
     // Make a copy of concetration and use that over today. Don't adjust concentration because this
     // function may be called multiple times (or not at all) in a day.
     double concentration_today = concentration; // mg / l
-    double neg_elim_rate = neg_elim_sample * pow(body_mass, type_data.neg_m_exponent());
+    const double neg_elim_rate = neg_elim_sample * pow(body_mass, type_data.neg_m_exponent());
 
     const LSTMDrugPD& drug_pd = type_data.get_pd(inf->genotype());
     const double kn = drug_pd.ic50_pow_slope(rng, type_data.get_index(), inf);
 
     double time = 0.0;
     using TimeConc = pair<double, double>;
-    for (TimeConc time_conc : doses) {
+    for (const TimeConc time_conc : doses) {
         // we iteratate through doses in time order (since doses are sorted)
         if (time_conc.first < 1.0 /*i.e. today*/) {
             if (time < time_conc.first) {
-                total_factor *= drug_pd.calc_factor(kn, neg_elim_rate, &concentration_today, time_conc.first - time);
+                total_factor *= drug_pd.calc_factor(kn, neg_elim_rate, concentration_today, time_conc.first - time);
                 time = time_conc.first;
             } else {
                 assert(time == time_conc.first);
@@ -79,7 +79,7 @@ double LSTMDrugOneComp::calculate_drug_factor(LocalRng& rng, WithinHost::CommonI
         }
     }
     if (time < 1.0) {
-        total_factor *= drug_pd.calc_factor(kn, neg_elim_rate, &concentration_today, 1.0 - time);
+        total_factor *= drug_pd.calc_factor(kn, neg_elim_rate, concentration_today, 1.0 - time);
     }
 
     return total_factor; // Drug effect per day per drug per parasite
@@ -92,7 +92,7 @@ void LSTMDrugOneComp::update_concentration(double body_mass) {
     // exponential decay of drug concentration (portion without new doses):
     //TODO: is it faster to pre-calculate this and either store an extra
     // parameter or adapt uses of neg_elim_rate, etc. below?
-    double neg_elim_rate = neg_elim_sample * pow(body_mass, type_data.neg_m_exponent());
+    const double neg_elim_rate = neg_elim_sample * pow(body_mass, type_data.neg_m_exponent());
     concentration *= exp(neg_elim_rate);
     size_t doses_taken = 0;
     using TimeConc = pair<double, double>;

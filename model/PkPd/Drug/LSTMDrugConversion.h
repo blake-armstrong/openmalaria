@@ -88,7 +88,7 @@ protected:
     //@}
 
 private:
-    void set_conversion_parameters(ParamsConvFactor& p, double body_mass) const;
+    ParamsConvFactor conversion_parameters(double body_mass) const;
     void set_killing_parameters(LocalRng& rng, ParamsConvFactor& p, WithinHost::CommonInfection* inf) const;
 };
 

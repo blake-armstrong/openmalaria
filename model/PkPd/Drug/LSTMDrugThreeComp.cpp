@@ -27,6 +27,7 @@
 
 #include <gsl/gsl_integration.h>
 #include <cmath>
+#include <format>
 #include <limits>
 #include <numbers>
 
@@ -56,7 +57,7 @@ void LSTMDrugThreeComp::update_cached(double body_mass) const {
     if (last_bm == body_mass)
         return;
 
-    double k = elim_sample * pow(body_mass, type_data.neg_m_exponent());
+    const double k = elim_sample * pow(body_mass, type_data.neg_m_exponent());
 
     const double a0 = k * k21 * k31;
     const double a1 = k * k31 + k21 * k31 + k21 * k13 + k * k21 + k31 * k12;
@@ -133,16 +134,16 @@ double LSTMDrugThreeComp::calculate_factor(const ParamsFC& p, double duration) c
     const int qag_rule = 1; // alg 1 seems to be good enough
     double intf_c = NAN, err_eps = NAN;
 
-    int r = gsl_integration_qag(&f, 0.0, duration, abs_eps, rel_eps, GslIntgMaxIter, qag_rule, gsl_intgr_wksp, &intf_c,
-                                &err_eps);
+    const int r = gsl_integration_qag(&f, 0.0, duration, abs_eps, rel_eps, GslIntgMaxIter, qag_rule, gsl_intgr_wksp,
+                                      &intf_c, &err_eps);
     if (r != 0) {
         throw TRACED_EXCEPTION("calculateFactor: error from gsl_integration_qag", util::Error::GSL);
     }
     if (err_eps > 5e-2) {
         // This could be a warning, except that warnings tend to be ignored.
-        ostringstream msg;
-        msg << "calculateFactor: error epsilon is large: " << err_eps << " (integral is " << intf_c << ")";
-        throw TRACED_EXCEPTION(msg.str(), util::Error::GSL);
+        throw TRACED_EXCEPTION(
+            std::format("calculateFactor: error epsilon is large: {:g} (integral is {:g})", err_eps, intf_c),
+            util::Error::GSL);
     }
 
     return 1.0 / exp(intf_c); // drug factor
@@ -178,7 +179,7 @@ double LSTMDrugThreeComp::calculate_drug_factor(LocalRng& rng, WithinHost::Commo
         // we iteratate through doses in time order (since doses are sorted)
         if (time_conc.first < 1.0 /*i.e. today*/) {
             if (time < time_conc.first) {
-                double duration = time_conc.first - time;
+                const double duration = time_conc.first - time;
                 total_factor *= calculate_factor(p, duration);
                 p.c_a *= exp(p.na * duration);
                 p.c_b *= exp(p.nb * duration);
