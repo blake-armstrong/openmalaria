@@ -45,6 +45,7 @@ The work is split into **small, self-contained chunks**. Each chunk fits in one 
 2. **Read only:**
    - `docs/refactor/PLAN.md` (a copy of this file, made by chunk A1): Part 1, the one chunk being done, and the Part 3 reference sections that chunk names
    - `docs/refactor/PROGRESS.md`
+   - the open entries in `docs/refactor/FINDINGS.md` that concern the files or modules the chunk touches
 3. **Check the chunk's prerequisites** against `PROGRESS.md`. If any is missing, stop and say so.
 4. **Do only that chunk.** If it is clearly growing beyond one session (more than ~20 files of non-mechanical change), stop at a green point. Split the rest into a new chunk ID (e.g. `D4b`) and record the split in both `PLAN.md` and `PROGRESS.md`.
 5. **Pass the gates the chunk lists** (below).
@@ -58,7 +59,8 @@ The work is split into **small, self-contained chunks**. Each chunk fits in one 
    - the gate results
    - surprises and deviations from the plan
    - follow-ups for later chunks
-8. **Clear the context.** The next chunk starts again at step 1.
+8. **Record findings** in `docs/refactor/FINDINGS.md` as you go, not only at the end: every bug, surprise or strange design decision found in the code, tests or build, even if it is outside the chunk's scope. Give each a new ID (`F<n>`) and refer to that ID from the `PROGRESS.md` entry. Don't fix a finding that changes observable output inside a refactor chunk: record it and ask the user. When a later chunk fixes or settles one, move it to § Closed with the commit.
+9. **Clear the context.** The next chunk starts again at step 1.
 
 **Stop and ask the user** before:
 - discarding or stashing tracked changes

@@ -461,3 +461,7 @@ See `PLAN.md` for the session protocol, chunks and gates. Append one log entry p
   - S5: run one `OUT` per scenario. `--first-seed` and `--seeds` let a slow scenario be split across sessions, and the skip-existing behaviour makes reruns safe.
   - I1: switch from rewriting `iseed` to the new `--seed` flag (already in the plan).
 - Next: S2.
+
+### Plan amendment: findings register (2026-10-16, after S1)
+- At the user's request, bugs, surprises and strange design decisions now go in a new register, `docs/refactor/FINDINGS.md`, with stable IDs (`F<n>`). Before this, they were only in the per-chunk log entries. PLAN.md § Session protocol gains step 8 (record findings as you go; don't fix output-changing ones inside a refactor chunk without asking), and step 2 now reads the open entries for the modules a chunk touches.
+- Seeded with F1–F14, gathered from earlier log entries plus four new ones from S1: F2 (stale `errno` printed after errors), F3 (bad input reported as a C++ bug), F4 and F5 (dead or wrong code in `test/run.py`).
