@@ -11,7 +11,7 @@ See `PLAN.md` for the session protocol, chunks and gates. Append one log entry p
 | B1 | done | b7991e9f, 35450066, 8c4dc9b1, dec06531, 2205f6e8, ddc959a8, (this log entry) |
 | B2 | done | 0bf623e3, 4882b106, b7052696, (this log entry) |
 | B3 | done | 1b9b22f6, 06642bf8, 5efb309c, 1d56c288, db529f37, 5dc5baab, b3685dfe, (this log entry) |
-| B4 | todo | |
+| B4 | done | 57afa057, e7074755, cae5d3b5, f82cb9a5, ee7e0471, (this log entry) |
 | B5 | todo | |
 | P1 | done | f29d38e3, 81a14090, b0309128, 6bfcf8c0, 4b803c7f, (this log entry) |
 | S1 | todo | |
@@ -197,3 +197,41 @@ See `PLAN.md` for the session protocol, chunks and gates. Append one log entry p
   - B5: CI should call `util/style.sh check <merge-base>`. A pre-commit hook could call `util/style.sh format-changed HEAD` on staged files.
   - The user may want to add the format-on-edit hook by hand (above).
 - Next: B4.
+
+### B4: `rename-module` skill plus a pilot (done, 2026-10-16)
+- Commits:
+  - 57afa057: `util/style.sh rename <dir>` and `util/rename_module.py`
+  - e7074755: `.claude/skills/rename-module/SKILL.md`
+  - cae5d3b5: **pilot**, `model/PkPd` renamed (24 files, +505 / -503)
+  - f82cb9a5: cae5d3b5 added to `.git-blame-ignore-revs`
+  - ee7e0471: STYLE.md documents the tool and the rename-commit G-style rule
+- **How the tool works** (details in STYLE.md § Module renames). It runs `readability-identifier-naming` over all 75 TUs, including the CxxTest runner, so uses in other modules and in `unittest/` are found. It keeps symbols declared in the module, plus namespaces declared only there. It applies the merged fixes once with `clang-apply-replacements`, then runs `format-changed HEAD`. Two clang-tidy passes take ~45 s at -j10.
+- **Gaps in clang-tidy found by the pilot, now covered by the tool:**
+  - The out-of-line definitions of overrides were not renamed (`LSTMDrugOneComp::getIndex` etc.), though their in-class declarations were. Left alone, this is a compile error. The tool now renames `Class::old` for classes declared in the module.
+  - Header guards: only the `#define` was renamed, not `#ifndef`, which silently breaks the guard. The tool renames the name on every preprocessor line.
+  - Namespace diagnostics land on whichever declaration a TU sees first. So `WithinHost` and `Host` were reported "in" PkPd files, and filtering by location would have partly renamed them. Only namespaces the module owns are renamed.
+  - Member prefixes: `m_drugs` is valid lower case, so it isn't flagged. A second pass, with member kinds set to `UPPER_CASE`, finds every member, and the tool strips `m_`/`_`.
+- **Safety checks** (all passed on the pilot):
+  - The pre-apply collision report flagged two real collisions:
+    - member `PD` → `pd` would have bound to a local `pd` in the `LSTMDrugType` constructor, so it was mapped to `pd_params`;
+    - namespace `pkpd` (my first choice) would share its name with variables named `pkpd` in `unittest/`, so the tool's `pk_pd` was kept.
+  - The post-apply leftover list was all different symbols: `util::Error::PkPd`, `CommonInfection::Kn`, `scnXml::PD`, `SpeciesIndexChecker::getIndex`, and locals in other modules.
+  - Token check: across all 24 files, the only non-whitespace differences are the 124 distinct planned old → new pairs.
+  - A second run from a clean tree gave a byte-identical diff.
+- Pilot: 171 renames (41 members incl. `m_drugs` → `drugs`, 30 methods, 28 local constants, 27 variables, 23 parameters, 9 functions, 8 header guards, 2 global constants, 2 structs, namespace `PkPd` → `pk_pd`). Maps: `IC50` → `ic50` (the tool gives `i_c50`, and likewise for `IC50_pow_slope` and `IC50_correlated_sample`), and `PD` → `pd_params`.
+- Gates (at cae5d3b5):
+  - G-exact / G-unit: 52/52, 11.9 s at `-j10`. Only the baseline build warnings.
+  - G-style: **deviation.** Plain `util/style.sh check HEAD` cannot pass on a rename commit. Every call site touched counts as changed, and still holds other legacy names and hits: about 70 findings, none of them a naming hit for a PkPd symbol. Among them is a pre-existing `ETS_ASSERT` parse error from checking `unittest/UnittestUtil.h` on its own. For rename commits, G-style is redefined in STYLE.md and the skill:
+    - the git-clang-format half of `check` is clean (it was);
+    - `rename model/PkPd --dry-run` prints `nothing to rename` (it did);
+    - the token check passed (it did), which proves the other findings were already there.
+  - G-perf: `util/bench.sh --compare ../om-bench-base/build-rework` (base 52b91fa7): median per-pair ratio 1.0051 (+0.51%), ok. The load average was ~9 at the start, from the base build.
+  - The base worktree `../om-bench-base` was created at 52b91fa7 and kept for later chunks.
+- Notes:
+  - The untracked `python/` was only grepped, not changed. It uses none of the renamed PkPd names.
+  - Comments that mention old names (e.g. `updateConcentration` in a TODO) are not renamed. Only code and preprocessor lines are.
+  - The CxxTest suites that are not registered (AnophelesModel, DescriptiveInfection, ESCaseManagement, MosqLifeCycle) are not compiled, so a rename can't reach them. None of them uses PkPd.
+- Follow-ups:
+  - Stage D onward: run `/rename-module <dir>` right after each module's refactor. Shared namespaces (`OM`, `WithinHost`, `Host`, `Transmission`, …) need a separate tree-wide rename at some point. `OM` → `om` touches every file, so it is best done when no other branch is in flight.
+  - B5: CI's G-style job will fail on rename commits for the reason above. Either skip commits listed in `.git-blame-ignore-revs`, or run the rename-commit variant for them.
+- Next: B5.
