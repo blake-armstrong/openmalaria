@@ -23,6 +23,7 @@ util/style.sh check [base]              # G-style gate, lines changed since base
 util/style.sh changed [base]            # model/ and unittest/ C++ files changed since base
 util/style.sh format-changed [base [paths...]]  # git-clang-format the changed lines
 util/style.sh fix [base] [checks]       # apply clang-tidy fix-its on changed lines
+util/style.sh rename <dir> [--dry-run] [--map OLD=NEW] [--skip OLD]  # rename one module
 ```
 
 `format-changed` uses `git-clang-format`, so it formats exactly the lines `check`
@@ -36,8 +37,9 @@ a time. The fixes are exported and applied once with `clang-apply-replacements`,
 `clang-tidy-diff.py` runs one clang-tidy per file in parallel, and two of them can fix
 the same header. After any fix, it runs `format-changed`.
 
-The Claude Code skills `/cpp-style` (rules for writing code) and `/cpp-lint` (fix,
-rebuild, triage, report) in `.claude/skills/` wrap these commands.
+The Claude Code skills `/cpp-style` (rules for writing code), `/cpp-lint` (fix,
+rebuild, triage, report) and `/rename-module` (one module's rename commit) in
+`.claude/skills/` wrap these commands.
 
 `check` runs `git-clang-format --diff` and `clang-tidy-diff.py` on the
 `model/` and `unittest/` C++ lines changed since `base`. It looks only at changed lines
@@ -159,14 +161,58 @@ Legacy hits: 3176 naming diagnostics in `model/` and `unittest/`. These include 
 methods, 144 free functions, 426 members and 32 namespaces (e.g. `OM`, `WithinHost`).
 They are fixed per module by the rename commits (B4 onward), not here.
 
-Notes for the rename work (B4):
-- clang-tidy's case conversion does not strip the `m_` or `_` member prefixes
-  (`m_cumulative_Y` → `m_cumulative_y`, `_innateImmSurvFact` →
-  `_innate_imm_surv_fact`). Stripping them needs a separate scripted rename.
-- Header guards such as `Hmod_Population` are flagged as macros, and become
-  `HMOD_POPULATION`.
+## Module renames (`util/style.sh rename`)
+
+Legacy names are fixed one module at a time by `util/style.sh rename <dir>`
+(`util/rename_module.py`), driven by the `/rename-module` skill. Each rename is one
+commit, listed in `.git-blame-ignore-revs`. The pilot was `model/PkPd` (B4).
+
+How it works, and why:
+- `readability-identifier-naming` runs over **every** TU in the compile database,
+  including the generated CxxTest runner, because a symbol's uses in other modules and in
+  `unittest/` headers are only seen from TUs that include them. The exported fixes are
+  filtered to symbols declared in the module, merged, and applied once with
+  `clang-apply-replacements`.
+- Namespaces are renamed only if the module is the only place that declares them. A
+  namespace's diagnostic lands on whichever declaration a TU sees first, so it can't be
+  filtered by location. `OM`, `WithinHost`, `Host` and the like are left for a later
+  rename of their own.
+- clang-tidy's case conversion keeps `m_` and `_` prefixes (`m_cumulative_Y` →
+  `m_cumulative_y`), and doesn't flag `m_drugs` at all, since it is valid lower case. A
+  second pass with every member kind set to `UPPER_CASE` finds the locations of all
+  members, and the tool strips the prefix from those that have one.
+- clang-tidy misses two kinds of use, which the tool adds textually:
+  - the out-of-line definition of an override (`LSTMDrugOneComp::getIndex`). The
+    in-class override declaration is renamed with the base method, but the definition
+    is not. The tool renames `Class::old` for every class declared in the module.
+  - header guards: only the `#define` is renamed, not `#ifndef` or the `#endif` comment.
+    The tool renames the old macro name on every preprocessor line.
+- Before applying, it reports possible collisions: a new name that already appears in
+  code in a touched file (comments and strings ignored), or two old names that become
+  one. After applying, it lists old names still used in code. Each must be a different
+  symbol, e.g. the enumerator `util::Error::PkPd`.
+- A token check compares every changed file with `HEAD`. Apart from whitespace, the only
+  differences allowed are the planned old → new pairs. So the commit provably contains
+  only renames.
+
+**G-style for a rename commit.** `util/style.sh check` cannot pass on a rename commit:
+every call site the rename touches counts as changed, and still holds other legacy names
+and legacy hits. On the PkPd pilot it reported about 70 findings, none of them a naming hit for
+a PkPd symbol. A rename commit therefore passes G-style when (1) the git-clang-format
+half of `check` is clean, (2) `rename <dir> --dry-run` prints `nothing to rename`, and
+(3) the token check passed, which proves every other finding was there before.
+
+Name overrides (`--map`) handle poor case conversions (`IC50` → `i_c50`, mapped to
+`ic50`) and collisions (member `PD` → `pd` would bind to a local `pd` in one
+constructor, mapped to `pd_params`).
+
+Other notes:
+- Header guards such as `Hmod_Population` become `HMOD_POPULATION`. A guard is renamed
+  by case conversion only, so a misspelt one (`Hmod_LSTMDrugOnComp`) stays misspelt.
 - CxxTest finds tests by the `test` prefix on suite methods, so `testFoo` → `test_foo`
   still works. The suite classes themselves are already PascalCase. The generated
-  runner (`<build>/unittest/tests.cpp`) is never checked.
+  runner (`<build>/unittest/tests.cpp`) is never edited.
+- Unittest suites that `unittest/CMakeLists.txt` doesn't register are not compiled, so
+  their uses are not renamed.
 - `class sim` (`model/sim.h`) and the exception classes in `util/errors.h`
   (`base_exception`, `format_error`, …) are flagged and will become PascalCase.
