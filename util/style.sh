@@ -16,12 +16,13 @@ project .clang-format and .clang-tidy.
 
   format [args...]      clang-format with the given args
   tidy [args...]        clang-tidy -p \$OM_BUILD_DIR with the given args
-  check [base]          G-style gate on lines changed since base (default HEAD):
-                        git-clang-format --diff, then clang-tidy-diff
+  check [base]          G-style gate on changes since base (default HEAD):
+                        clang-format on the changed files, then clang-tidy-diff on
+                        the changed lines
   changed [base]        list model/ and unittest/ C++ files changed since base
   format-changed [base [paths...]]
-                        git-clang-format: reformat the lines changed since base,
-                        optionally only in the given paths
+                        clang-format -i the files changed since base, optionally
+                        only the given paths
   fix [base] [checks]   apply clang-tidy fix-its on lines changed since base, for
                         the given -checks filter (default: the safe list below)
   rename <dir> [opts]   rename the identifiers declared in one module directory
@@ -86,8 +87,11 @@ run_format_changed() {
     files=$(changed_files "$base" "$@")
     [[ -n "$files" ]] || return 0
     cd "$ROOT"
-    uvx --from "clang-format==$LLVM_VERSION" git-clang-format --binary clang-format --quiet --force "$base" -- $files ||
-        { local rc=$?; [[ $rc -eq 1 ]] || return $rc; }
+    run_format -i $files
+}
+
+unformatted_files() {
+    run_format --dry-run "$@" 2>&1 | sed -nE 's/^([^:]+):[0-9]+:[0-9]+: (warning|error): .*clang-format-violations.*/\1/p' | sort -u
 }
 
 run_fix() {
@@ -121,13 +125,12 @@ run_check() {
         return 0
     fi
     local status=0
-    echo "== git-clang-format"
-    local format_diff
-    format_diff=$(uvx --from "clang-format==$LLVM_VERSION" git-clang-format --binary clang-format --diff "$base" -- $files || true)
-    if grep -q '^@@' <<<"$format_diff"; then
-        echo "$format_diff"
+    echo "== clang-format"
+    local file
+    for file in $(unformatted_files $files); do
+        run_format "$file" | diff -u --label "a/$file" --label "b/$file" "$file" - || true
         status=1
-    fi
+    done
     echo "== clang-tidy-diff"
     tidy_diff "$base" >"${TMPDIR:-/tmp}/om-tidy-diff.$$" 2>&1 || true
     if grep -qE ': (warning|error): ' "${TMPDIR:-/tmp}/om-tidy-diff.$$"; then
