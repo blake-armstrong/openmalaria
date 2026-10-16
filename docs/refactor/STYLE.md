@@ -24,6 +24,7 @@ util/style.sh changed [base]            # model/ and unittest/ C++ files changed
 util/style.sh format-changed [base [paths...]]  # clang-format -i the changed files
 util/style.sh fix [base] [checks]       # apply clang-tidy fix-its on changed lines
 util/style.sh rename <dir> [--dry-run] [--map OLD=NEW] [--skip OLD]  # rename one module
+util/style.sh modernize <dir> [--dry-run | --report]  # safe fix-its over one module
 util/ci-style.sh [base-ref]             # the CI job: check against the merge base with base-ref
 ```
 
@@ -42,8 +43,9 @@ a time. The fixes are exported and applied once with `clang-apply-replacements`,
 the same header. After any fix, it runs `format-changed`.
 
 The Claude Code skills `/cpp-style` (rules for writing code), `/cpp-lint` (fix,
-rebuild, triage, report) and `/rename-module` (one module's rename commit) in
-`.claude/skills/` wrap these commands.
+rebuild, triage, report), `/rename-module` (one module's rename commit) and
+`/modernize-module` (one module's modernisation commits) in `.claude/skills/` wrap these
+commands.
 
 `check` runs clang-format on the `model/` and `unittest/` C++ files changed since `base`
 (printing a diff for each one that fails), then `clang-tidy-diff.py` on the changed lines.
@@ -240,6 +242,64 @@ Other notes:
   their uses are not renamed.
 - `class sim` (`model/sim.h`) and the exception classes in `util/errors.h`
   (`base_exception`, `format_error`, …) are flagged and will become PascalCase.
+
+## Module modernisation (`util/style.sh modernize`)
+
+After a module's rename, `util/style.sh modernize <dir>` (`util/modernize_module.py`),
+driven by the `/modernize-module` skill, applies the fix-its of `MODERNIZE_CHECKS` in
+`util/style.sh` to the whole module as one tool-made commit, listed in
+`.git-blame-ignore-revs`. A hand commit for the judgement items of the plan's
+§ Modernisation policy follows. The pilot was `model/PkPd` (M2).
+
+`MODERNIZE_CHECKS` is the `fix` safe list plus `make-unique`/`make-shared`,
+`loop-convert`, `use-default-member-init`, `use-emplace`, `use-std-numbers`,
+`concat-nested-namespaces`, `deprecated-headers`, `use-ranges`, `use-starts-ends-with`,
+`type-traits`, `unary-static-assert`, `shrink-to-fit` (all `modernize-`),
+`cppcoreguidelines-pro-type-member-init`, `cppcoreguidelines-prefer-member-initializer`,
+`performance-unnecessary-value-param`, `performance-move-const-arg` and
+`performance-faster-string-find`. Left out on purpose:
+
+| Check | Why not in the tool commit |
+|---|---|
+| `modernize-use-integer-sign-comparison` | `std::cmp_less` changes the result when a signed value is negative |
+| `modernize-min-max-use-initializer-list` | `max({a, b, c})` can pick a different NaN operand than nested `max` |
+| `modernize-pass-by-value` | changes signatures and adds moves; judgement |
+| `modernize-macro-to-enum` | macros are a hand item (`constexpr`) |
+| `modernize-use-auto`, `modernize-return-braced-init-list`, `modernize-use-designated-initializers` | style only |
+| `performance-avoid-endl` | changes flush timing |
+| `performance-type-promotion-in-math-fn` | `std::sin(float)` computes in float where `::sin` promoted to double, so results change |
+| `performance-noexcept-move-constructor` | a move that does throw would then terminate |
+| `performance-inefficient-vector-operation` | adds `reserve()` calls; worth a look on hot paths, not mechanical |
+| `cppcoreguidelines-virtual-class-destructor` | changes the vtable or access; judgement |
+
+How it works, and why:
+- clang-tidy runs over **every** TU with the header filter set to the module, so a module
+  header is fixed even when only other modules include it. Fixes are kept per diagnostic:
+  only those located in the module whose replacements all stay inside it. A by-value
+  parameter whose definition is in another module, say, is listed and not applied, so a
+  declaration and its definition never disagree.
+- The same header diagnostic comes from many TUs; identical ones are merged. Two different
+  fixes that overlap (e.g. two `prefer-member-initializer` fixes in one constructor) cannot
+  go in one `clang-apply-replacements` run, so the second waits for the next pass. Passes
+  repeat until none is left, at most 5. PkPd needed 3.
+- Include insertions for a header the file already includes are dropped:
+  `modernize-use-ranges` inserted a second `#include <algorithm>` into `LSTMDrug.cpp`.
+- `modernize-use-std-numbers` inserts no `#include <numbers>` when the constant it replaces
+  comes from a macro (`PI` in `Global.h`). The tool adds it after each pass.
+- `modernize-concat-nested-namespaces` writes `namespace OM::pk_pd {`.
+  `util/rename_module.py` reads every name in such a declaration when it decides which
+  namespaces a module owns.
+
+**G-style for a modernize commit** is as for a rename: the clang-format half of
+`check HEAD` is clean, a second `--dry-run` applies nothing, and once the commit is in
+`.git-blame-ignore-revs`, `check <commit>^` is clean.
+
+`--report` lists what the tool commit leaves: every finding in the module from the full
+`.clang-tidy` set minus naming, plus `misc-const-correctness` (Con.1–4, not enabled
+tree-wide), and text matches for `new`/`delete`, `printf`/`stringstream`, `#define` and
+plain `enum`. `misc-const-correctness` fix-its write east const (`double const x`) and edit
+headers of other modules too, so the skill applies them per file and rewrites them to
+west const.
 
 ## Pre-commit and CI
 
