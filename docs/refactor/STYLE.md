@@ -162,6 +162,9 @@ but new code must comply or carry a targeted `NOLINT(check)`.
   the standard way to make a macro body one statement. Every Catch2 assertion
   (`REQUIRE`, `CHECK_THAT`, ...) expands to it, so without this option every assertion
   in a Catch2 test is a finding (M1).
+- `cppcoreguidelines-init-variables.MathHeader: '<cmath>'`: the fix-it initialises a
+  floating-point variable to `NAN` and includes the header that declares it. The default
+  is the C header `<math.h>` (M2).
 
 ### Naming (`readability-identifier-naming`)
 
