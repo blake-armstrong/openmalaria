@@ -1,6 +1,6 @@
 ---
 name: cpp-style
-description: OpenMalaria C++ style rules (naming, Core Guidelines, clang-format) and how to format changed lines. Use when writing or editing C++ under model/ or unittest/, and before committing C++ changes.
+description: OpenMalaria C++ style rules (naming, Core Guidelines, clang-format) and how to format changed files. Use when writing or editing C++ under model/ or unittest/, and before committing C++ changes.
 ---
 
 # OpenMalaria C++ style
@@ -84,8 +84,10 @@ export OM_BUILD_DIR=build-rework
 util/style.sh format-changed <base>     # base: the chunk's base commit, or HEAD
 ```
 
-This runs `git-clang-format` on lines changed since `<base>`, which are exactly the lines
-the G-style gate checks. Pass paths after the base to limit it to those files.
+This runs `clang-format -i` on the files changed since `<base>`. The G-style gate checks
+those whole files, so a formatted file always passes its format half. Pass paths after the
+base to limit it to those files. The pre-commit hook (`pre-commit install`, once per
+clone) does the same on commit.
 
 Then run `/cpp-lint` for the clang-tidy half of the gate.
 

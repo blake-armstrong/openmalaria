@@ -82,13 +82,17 @@ duplicate `-lc++`). G-exact and G-unit must pass.
 
 ## 5. G-style for a rename commit
 
-`util/style.sh check HEAD` will report findings, because every call site the rename
-touched now counts as changed and still holds legacy names and other legacy hits. A
-renames-only commit cannot fix those. For a rename commit, G-style is instead:
+Before the commit, `util/style.sh check HEAD` will report findings, because every call
+site the rename touched now counts as changed and still holds legacy names and other
+legacy hits. A renames-only commit cannot fix those. For a rename commit, G-style is
+instead:
 
-- the `== git-clang-format` half of `util/style.sh check HEAD` prints nothing;
+- the `== clang-format` half of `util/style.sh check HEAD` prints nothing;
 - `util/style.sh rename <dir> --dry-run` prints `nothing to rename`;
-- the token check passed, which proves every other `check` finding is pre-existing.
+- the token check passed, which proves every other `check` finding is pre-existing;
+- after the `.git-blame-ignore-revs` commit (§ 6), `util/style.sh check <rename commit>^`
+  is clean. The clang-tidy half skips lines that only blame-ignored commits touched, so
+  this is also how CI sees a branch that contains the rename.
 
 ## 6. Commit
 

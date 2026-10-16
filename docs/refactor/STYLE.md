@@ -9,7 +9,7 @@ Config: `.clang-format`, `.clang-tidy` (repo root). Runner: `util/style.sh`.
 installed globally. The version is set once, in `LLVM_VERSION` at the top of
 `util/style.sh`. The `clang-tidy` wheel also ships `clang-tidy-diff.py`,
 `run-clang-tidy.py` and `clang-apply-replacements`. The `clang-format` wheel ships
-`git-clang-format`. Pre-commit (B5) should pin the same version.
+`git-clang-format`. `.pre-commit-config.yaml` pins the same version (see § Pre-commit and CI).
 
 ## Usage
 
@@ -21,15 +21,19 @@ util/style.sh format -i model/Foo.cpp   # clang-format, project config
 util/style.sh tidy model/Foo.cpp        # clang-tidy -p $OM_BUILD_DIR
 util/style.sh check [base]              # G-style gate, lines changed since base (default HEAD)
 util/style.sh changed [base]            # model/ and unittest/ C++ files changed since base
-util/style.sh format-changed [base [paths...]]  # git-clang-format the changed lines
+util/style.sh format-changed [base [paths...]]  # clang-format -i the changed files
 util/style.sh fix [base] [checks]       # apply clang-tidy fix-its on changed lines
 util/style.sh rename <dir> [--dry-run] [--map OLD=NEW] [--skip OLD]  # rename one module
+util/ci-style.sh [base-ref]             # the CI job: check against the merge base with base-ref
 ```
 
-`format-changed` uses `git-clang-format`, so it formats exactly the lines `check`
-verifies. Whole-file `clang-format -i` is not quite equivalent: on a function appended
-before a namespace's closing `}`, it kept a blank line that the line-range format in
-`check` removes.
+`format-changed` runs `clang-format -i` on the whole of each changed file, and the format
+half of `check` checks whole changed files, so a formatted file always passes. Both
+worked on changed lines only (`git-clang-format`) until B5. That was dropped because
+line-range results depend on which lines are in range: trailing comments that the PkPd
+rename aligned for `HEAD^..HEAD` failed `check` against the branch's merge base, and a
+blank line before a namespace's closing `}` that whole-file formatting keeps was flagged.
+Since the B2 reformat every file is clean whole-file, so this costs nothing.
 
 `fix` defaults to a safe list of checks whose fix-its are local and don't change
 behaviour (`util/style.sh -h` prints it). Pass a `-checks` filter to apply others one at
@@ -41,11 +45,21 @@ The Claude Code skills `/cpp-style` (rules for writing code), `/cpp-lint` (fix,
 rebuild, triage, report) and `/rename-module` (one module's rename commit) in
 `.claude/skills/` wrap these commands.
 
-`check` runs `git-clang-format --diff` and `clang-tidy-diff.py` on the
-`model/` and `unittest/` C++ lines changed since `base`. It looks only at changed lines
-because legacy names are not fixed until each module's rename. (Formatting alone could
-be checked whole-file since the B2 reformat.) It exits non-zero on any finding. It reads `git diff`, so new files
-must be staged (or `git add -N`) to be seen.
+`check` runs clang-format on the `model/` and `unittest/` C++ files changed since `base`
+(printing a diff for each one that fails), then `clang-tidy-diff.py` on the changed lines.
+clang-tidy looks only at changed lines because legacy names are not fixed until each
+module's rename. It exits non-zero on any finding. It reads `git diff`, so new files must
+be staged (or `git add -N`) to be seen.
+
+Between `git diff` and `clang-tidy-diff.py`, `util/tidy_diff_filter.py` drops the
+changed lines that only bulk mechanical commits touched. When `base..HEAD` contains a
+commit listed in `.git-blame-ignore-revs`, it keeps only the added lines that
+`git blame --ignore-revs-file .git-blame-ignore-revs` (on the working-tree contents)
+attributes to another commit in the range or to uncommitted changes. Lines that blame
+can't move off an ignored commit stay on it and are dropped too. With no ignored commit
+in the range, the diff passes through unchanged. `fix` uses the same filter. Without it,
+`check` against this branch's merge base with `upstream/main` (171 files changed by B2
+and the PkPd rename) reported 3575 distinct legacy findings; with it, none.
 
 On macOS, `util/style.sh` adds `-isysroot $(xcrun --show-sdk-path)` to clang-tidy.
 CMake 4 no longer writes `-isysroot` into `compile_commands.json`, and the PyPI
@@ -195,12 +209,15 @@ How it works, and why:
   differences allowed are the planned old → new pairs. So the commit provably contains
   only renames.
 
-**G-style for a rename commit.** `util/style.sh check` cannot pass on a rename commit:
-every call site the rename touches counts as changed, and still holds other legacy names
-and legacy hits. On the PkPd pilot it reported about 70 findings, none of them a naming hit for
-a PkPd symbol. A rename commit therefore passes G-style when (1) the git-clang-format
-half of `check` is clean, (2) `rename <dir> --dry-run` prints `nothing to rename`, and
-(3) the token check passed, which proves every other finding was there before.
+**G-style for a rename commit.** `util/style.sh check HEAD` cannot pass on a rename
+commit before it is listed in `.git-blame-ignore-revs`: every call site the rename touches
+counts as changed, and still holds other legacy names and legacy hits. On the PkPd pilot
+it reported about 70 findings, none of them a naming hit for a PkPd symbol. A rename
+commit therefore passes G-style when (1) the clang-format half of `check` is clean,
+(2) `rename <dir> --dry-run` prints `nothing to rename`, (3) the token check passed,
+which proves every other finding was there before, and (4) once the commit is listed in
+`.git-blame-ignore-revs`, `check <rename commit>^` is clean, because the tidy filter then
+skips the lines only the rename touched.
 
 Name overrides (`--map`) handle poor case conversions (`IC50` → `i_c50`, mapped to
 `ic50`) and collisions (member `PD` → `pd` would bind to a local `pd` in one
@@ -216,3 +233,36 @@ Other notes:
   their uses are not renamed.
 - `class sim` (`model/sim.h`) and the exception classes in `util/errors.h`
   (`base_exception`, `format_error`, …) are flagged and will become PascalCase.
+
+## Pre-commit and CI
+
+**Pre-commit.** `.pre-commit-config.yaml` runs the `clang-format` hook from
+`pre-commit/mirrors-clang-format` at `v22.1.8` on `model/` and `unittest/` C++. It formats
+whole staged files, like `format-changed`, and fails the commit if it changed anything
+(restage and commit again). Enable it once per clone:
+
+```sh
+uv tool install pre-commit && pre-commit install
+```
+
+**CI.** `.github/workflows/style.yml` (job `g-style`, ubuntu-24.04) runs on every push and
+pull request. All of its logic is in `util/ci-style.sh [base-ref]`, which runs the same
+way by hand:
+
+1. `git merge-base <base-ref> HEAD`. In CI, base-ref is `origin/<PR base branch>`, or
+   `origin/<default branch>` for a push. The checkout uses `fetch-depth: 0`, which both
+   the merge base and the blame filter need.
+2. If `$OM_BUILD_DIR` (default `build-style/`) has no `compile_commands.json`, configure
+   it (`Release`, `OM_CXXTEST_ENABLE=ON`). CI sets `CC=clang CXX=clang++`, so the compile
+   database holds flags clang-tidy understands.
+3. Build the `schema` target, so the generated `scnXml` headers exist for clang-tidy.
+4. `util/style.sh check <merge base>`.
+
+A rename commit in the range is handled by the tidy filter, so CI does not need the
+rename-commit variant of G-style, as long as the rename's `.git-blame-ignore-revs` entry
+is in the same push.
+
+The fork's `origin/main` is still at upstream #430 (7b1d8919), while this branch is based
+on `upstream/main` (#468). Until `origin/main` is moved up, push runs on this branch also
+check upstream's #431–#468 changes. That is clean today: `util/ci-style.sh origin/main`
+passes.
