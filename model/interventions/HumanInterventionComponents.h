@@ -269,8 +269,8 @@ private:
 class TreatPKPDComponent : public HumanInterventionComponent {
 public:
     TreatPKPDComponent(ComponentId id, const scnXml::DTTreatPKPD& elt)
-        : HumanInterventionComponent(id), schedule(PkPd::LSTMTreatments::findSchedule(elt.getSchedule())),
-          dosage(PkPd::LSTMTreatments::findDosages(elt.getDosage())),
+        : HumanInterventionComponent(id), schedule(pk_pd::LSTMTreatments::find_schedule(elt.getSchedule())),
+          dosage(pk_pd::LSTMTreatments::find_dosages(elt.getDosage())),
           delay_d(elt.getDelay_h() / 24.0 /* convert to days */) {}
 
     void deploy(Human& human, mon::Deploy::Method method, VaccineLimits) const {

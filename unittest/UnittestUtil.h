@@ -347,7 +347,7 @@ public:
                       0.07948639559767655 /*k31*/),
                  PD(3.45 /* vmax */, 0.020831339 /* IC50 */, 6.0 /* slope */)));
 
-        PkPd::LSTMDrugType::init(drugs);
+        pk_pd::LSTMDrugType::init(drugs);
 
         // Treatments
         scnXml::PKPDSchedule sched1("sched1");
@@ -366,7 +366,7 @@ public:
         treatments.getSchedule().push_back(sched1);
         treatments.getSchedule().push_back(sched2);
         treatments.getDosages().push_back(dosage1);
-        PkPd::LSTMTreatments::init(treatments);
+        pk_pd::LSTMTreatments::init(treatments);
     }
 
     // For when infection parameters shouldn't be used; enforce by setting to NaNs.
@@ -415,19 +415,19 @@ public:
         ModelOptions::set(util::VECTOR_LIFE_CYCLE_MODEL);
     }
 
-    static double getPrescribedMg(const PkPd::LSTMModel& pkpd) {
+    static double getPrescribedMg(const pk_pd::LSTMModel& pkpd) {
         double r = 0.0;
-        for (const PkPd::MedicateData& md : pkpd.medicateQueue) {
+        for (const pk_pd::MedicateData& md : pkpd.medicate_queue) {
             r += md.qty;
         }
         return r;
     }
 
-    static void medicate(LocalRng& rng, PkPd::LSTMModel& pkpd, size_t typeIndex, double qty, double time) {
-        pkpd.medicateDrug(rng, typeIndex, qty, time);
+    static void medicate(LocalRng& rng, pk_pd::LSTMModel& pkpd, size_t typeIndex, double qty, double time) {
+        pkpd.medicate_drug(rng, typeIndex, qty, time);
     }
 
-    static void clearMedicateQueue(PkPd::LSTMModel& pkpd) { pkpd.medicateQueue.clear(); }
+    static void clearMedicateQueue(pk_pd::LSTMModel& pkpd) { pkpd.medicate_queue.clear(); }
 
     static unique_ptr<Host::Human> createHuman(SimTime dateOfBirth) {
         return unique_ptr<Host::Human>(new Host::Human(dateOfBirth));

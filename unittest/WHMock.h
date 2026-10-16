@@ -75,7 +75,7 @@ public:
     SimTime lastTimeLiver, lastTimeBlood;
 
     // Lists medications and drugs in the body
-    PkPd::LSTMModel pkpd;
+    pk_pd::LSTMModel pkpd;
 
 protected:
     virtual void checkpoint(istream& stream);

@@ -35,9 +35,9 @@
 using namespace std;
 
 namespace OM {
-namespace PkPd {
+namespace pk_pd {
 
-LSTMDrug::LSTMDrug(double Vd) : vol_dist(Vd) {}
+LSTMDrug::LSTMDrug(double vd) : vol_dist(vd) {}
 LSTMDrug::~LSTMDrug() {}
 
 bool comp(pair<double, double> lhs, pair<double, double> rhs) { return lhs.first < rhs.first; }

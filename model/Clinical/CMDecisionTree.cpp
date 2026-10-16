@@ -485,7 +485,7 @@ protected:
 private:
     struct TreatInfo {
         TreatInfo(const string& s, const string& d, double h)
-            : schedule(PkPd::LSTMTreatments::findSchedule(s)), dosage(PkPd::LSTMTreatments::findDosages(d)),
+            : schedule(pk_pd::LSTMTreatments::find_schedule(s)), dosage(pk_pd::LSTMTreatments::find_dosages(d)),
               delay_h(h) {}
         inline bool operator!=(const TreatInfo& that) const {
             return schedule != that.schedule || dosage != that.dosage || delay_h != that.delay_h;

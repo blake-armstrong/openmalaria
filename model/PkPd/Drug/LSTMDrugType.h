@@ -20,8 +20,8 @@
  * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301, USA.
  */
 
-#ifndef Hmod_LSTMDrugType
-#define Hmod_LSTMDrugType
+#ifndef HMOD_LSTM_DRUG_TYPE
+#define HMOD_LSTM_DRUG_TYPE
 
 #include "Global.h"
 #include "util/sampler.h"
@@ -45,7 +45,7 @@ namespace OM {
 namespace WithinHost {
 class CommonInfection;
 }
-namespace PkPd {
+namespace pk_pd {
 using util::LocalRng;
 using util::LognormalSampler;
 using util::NormalSample;
@@ -77,20 +77,20 @@ public:
      * @param duration Timespan over which the factor is being calculated. Units: days.
      * @return survival factor (unitless)
      */
-    double calcFactor(double Kn, double neg_elim_rate, double* C0, double duration) const;
+    double calc_factor(double kn, double neg_elim_rate, double* c0, double duration) const;
 
     inline double slope() const { return n; }
-    double IC50_pow_slope(LocalRng& rng, size_t index, WithinHost::CommonInfection* inf) const;
-    inline double IC50_pow_slope(NormalSample normal) const { return pow(IC50->sample(normal), n); }
-    inline double max_killing_rate() const { return V; }
+    double ic50_pow_slope(LocalRng& rng, size_t index, WithinHost::CommonInfection* inf) const;
+    inline double ic50_pow_slope(NormalSample normal) const { return pow(ic50->sample(normal), n); }
+    inline double max_killing_rate() const { return v; }
 
 private:
     /// Slope of the dose response curve (no unit)
     double n; // slope
     /// Concentration with 50% of the maximal parasite killing
-    std::unique_ptr<LognormalSampler> IC50; // IC50
+    std::unique_ptr<LognormalSampler> ic50; // IC50
     /// Maximal drug killing rate per day (units: 1/days)
-    double V; // max_killing_rate;
+    double v; // max_killing_rate;
 };
 
 /** Drug PK & PD parameters (one instance per drug type).
@@ -110,23 +110,23 @@ public:
     static void clear();
 
     /** Get the number of drug types. */
-    static size_t numDrugTypes();
+    static size_t num_drug_types();
 
     /** Find a DrugType by its abbreviation, and returns its index.
      *
      * Throws if the drug isn't found, so you can rely on it returning a valid
      * index if it doesn't throw. */
-    static size_t findDrug(string abbreviation);
+    static size_t find_drug(string abbreviation);
 
     /** Get a reference to drug type data for some index. This can't be used
      * to change the data. */
     static LSTMDrugType& get(size_t index);
 
     /** Get a list of all drug types which are (possibly) being used. */
-    static const vector<size_t>& getDrugsInUse();
+    static const vector<size_t>& get_drugs_in_use();
 
     /** Create a per-human drug module for a given drug index. */
-    static unique_ptr<LSTMDrug> createInstance(LocalRng& rng, size_t index);
+    static unique_ptr<LSTMDrug> create_instance(LocalRng& rng, size_t index);
     //@}
 
     ///@brief Non static (per instance) functions
@@ -136,23 +136,23 @@ public:
      * @param index     Index of drug in internal list
      * @param drugData Scenario data for this drug (PK params, PD params per phenotype)
      */
-    LSTMDrugType(size_t index, const scnXml::PKPDDrug& drugData);
+    LSTMDrugType(size_t index, const scnXml::PKPDDrug& drug_data);
     ~LSTMDrugType();
 
     LSTMDrugType(LSTMDrugType&&) = default;
     LSTMDrugType& operator=(LSTMDrugType&&) = default;
 
-    inline size_t getIndex() const { return index; }
-    inline double getNegligibleConcentration() const { return negligible_concentration; }
+    inline size_t get_index() const { return index; }
+    inline double get_negligible_concentration() const { return negligible_concentration; }
     inline double neg_m_exponent() const { return neg_m_exp; }
     inline double molecular_weight_ratio() const { return mwr; }
 
     /// Generate IC50 sample of metabolite
-    inline NormalSample IC50_correlated_sample(NormalSample parent, LocalRng& rng) const {
+    inline NormalSample ic50_correlated_sample(NormalSample parent, LocalRng& rng) const {
         return NormalSample::generate_correlated(parent, ic50_log_corr, ic50_corr_factor, rng);
     }
 
-    inline double sample_Vd(LocalRng& rng) const { return vol_dist->sample(rng); }
+    inline double sample_vd(LocalRng& rng) const { return vol_dist->sample(rng); }
     inline double sample_elim_rate(LocalRng& rng) const { return elimination_rate->sample(rng); }
     inline double sample_conv_rate(LocalRng& rng) const { return conversion_rate->sample(rng); }
     inline double sample_k12(LocalRng& rng) const { return k12->sample(rng); }
@@ -162,7 +162,7 @@ public:
     inline double sample_ka(LocalRng& rng) const { return absorption_rate->sample(rng); }
 
     /** Return reference to correct drug-phenotype data. */
-    const LSTMDrugPD& getPD(uint32_t genotype) const;
+    const LSTMDrugPD& get_pd(uint32_t genotype) const;
     //@}
 
 private:
@@ -184,7 +184,7 @@ private:
     // model is used. Evaluate whether this is sensible or not.
 
     /* PD parameters (may vary based on infection genotype). */
-    vector<LSTMDrugPD> PD;
+    vector<LSTMDrugPD> pd_params;
 
     /*PK parameters required - varies with humans age and severity of disease*/
     /** Concentration, below which drug is deemed not to have an effect and is
@@ -215,8 +215,8 @@ private:
 
     // Allow LSTMDrug to access private members
     friend class LSTMDrugPD;
-    friend inline double drugEffect(const LSTMDrugType& drugType, double& concentration, double duration,
-                                    double weight_kg, double dose_mg);
+    friend inline double drug_effect(const LSTMDrugType& drug_type, double& concentration, double duration,
+                                     double weight_kg, double dose_mg);
 };
 
 }

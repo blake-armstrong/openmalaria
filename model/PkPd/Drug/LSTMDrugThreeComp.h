@@ -20,8 +20,8 @@
  * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301, USA.
  */
 
-#ifndef Hmod_LSTMDrugThreeComp
-#define Hmod_LSTMDrugThreeComp
+#ifndef HMOD_LSTM_DRUG_THREE_COMP
+#define HMOD_LSTM_DRUG_THREE_COMP
 
 #include "Global.h"
 #include "PkPd/Drug/LSTMDrug.h"
@@ -31,12 +31,12 @@ using namespace std;
 
 namespace OM {
 
-namespace PkPd {
+namespace pk_pd {
 struct DoseParams;
 }
-namespace PkPd {
+namespace pk_pd {
 
-struct Params_fC;
+struct ParamsFC;
 
 /** A class holding PK and PD drug info, per human, per drug type.
  * 
@@ -50,29 +50,29 @@ public:
     /** Create a new instance. */
     LSTMDrugThreeComp(const LSTMDrugType&, LocalRng& rng);
 
-    virtual size_t getIndex() const;
-    virtual double getConcentration(size_t index) const;
+    virtual size_t get_index() const;
+    virtual double get_concentration(size_t index) const;
 
-    virtual double calculateDrugFactor(LocalRng& rng, WithinHost::CommonInfection* inf, double body_mass) const;
-    virtual void updateConcentration(double body_mass);
+    virtual double calculate_drug_factor(LocalRng& rng, WithinHost::CommonInfection* inf, double body_mass) const;
+    virtual void update_concentration(double body_mass);
 
 protected:
     virtual void checkpoint(istream& stream);
     virtual void checkpoint(ostream& stream);
 
-    inline double conc() const { return concA + concB + concC - concABC; }
+    inline double conc() const { return conc_a + conc_b + conc_c - conc_abc; }
 
     // Update constants. bm: body mass (kg)
-    void updateCached(double bm) const;
+    void update_cached(double bm) const;
 
     /// Always links a drug instance to its drug-type data
     //TODO: does it still make sense to link this?
-    const LSTMDrugType& typeData;
+    const LSTMDrugType& type_data;
 
     // Concentrations in the blood and other compartments
     // See "Permutation of the three-compartment equation",
     // Diggory Hardy, Swiss TPH, February 3, 2015
-    double concA, concB, concC, concABC;
+    double conc_a, conc_b, conc_c, conc_abc;
 
     // Sampled constants
     double elim_sample;
@@ -83,12 +83,12 @@ protected:
     // (this is essentially a cache updated by updateCached())
     mutable double last_bm;    // body mass at time of last calculation
     mutable double na, nb, ng; // -α, -β, -γ, -k_a
-    mutable double A, B, C;    // A, B, C
+    mutable double a, b, c;    // A, B, C
 
 private:
-    double calculateFactor(const Params_fC& p, double duration) const;
+    double calculate_factor(const ParamsFC& p, double duration) const;
 
-    friend double func_fC(double t, void* pp); // function used in calculateFactor
+    friend double func_f_c(double t, void* pp); // function used in calculateFactor
 };
 
 }

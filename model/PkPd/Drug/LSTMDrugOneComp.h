@@ -20,8 +20,8 @@
  * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301, USA.
  */
 
-#ifndef Hmod_LSTMDrugOnComp
-#define Hmod_LSTMDrugOnComp
+#ifndef HMOD_LSTM_DRUG_ON_COMP
+#define HMOD_LSTM_DRUG_ON_COMP
 
 #include "Global.h"
 #include "PkPd/Drug/LSTMDrug.h"
@@ -31,11 +31,11 @@ using namespace std;
 
 namespace OM {
 
-namespace PkPd {
+namespace pk_pd {
 struct DoseParams;
 }
 
-namespace PkPd {
+namespace pk_pd {
 
 /** A class holding pkpd drug use info.
  * 
@@ -47,11 +47,11 @@ public:
     /** Create a new instance. */
     LSTMDrugOneComp(const LSTMDrugType&, LocalRng& rng);
 
-    virtual size_t getIndex() const;
-    virtual double getConcentration(size_t index) const;
+    virtual size_t get_index() const;
+    virtual double get_concentration(size_t index) const;
 
-    virtual double calculateDrugFactor(LocalRng& rng, WithinHost::CommonInfection* inf, double body_mass) const;
-    virtual void updateConcentration(double body_mass);
+    virtual double calculate_drug_factor(LocalRng& rng, WithinHost::CommonInfection* inf, double body_mass) const;
+    virtual void update_concentration(double body_mass);
 
 protected:
     virtual void checkpoint(istream& stream);
@@ -59,7 +59,7 @@ protected:
 
     /// Always links a drug instance to its drug-type data
     //TODO: does it still make sense to link this?
-    const LSTMDrugType& typeData;
+    const LSTMDrugType& type_data;
 
     /// Concentration in blood; units: mg / l.
     double concentration;

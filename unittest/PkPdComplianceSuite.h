@@ -36,7 +36,7 @@
 using std::multimap;
 using std::pair;
 using namespace OM;
-using namespace OM::PkPd;
+using namespace OM::pk_pd;
 
 // Use one of these to switch verbosity on/off:
 #define PCS_VERBOSE(x)
@@ -159,10 +159,10 @@ public:
         PCS_VERBOSE(cout << "\n\033[32mTesting \033[1m" << drugName;
                     if (hasSecondDrug) { cout << " - " << drug2Name << " Conversion"; } cout << endl
                                                                                              << "====\033[0m" << endl;)
-        size_t drugIndex = LSTMDrugType::findDrug(drugName);
-        size_t drug2Ind = hasSecondDrug ? LSTMDrugType::findDrug(drug2Name) : 0;
-        double conc_abs_tol = LSTMDrugType::get(drugIndex).getNegligibleConcentration();
-        double conc_abs_tol2 = hasSecondDrug ? LSTMDrugType::get(drug2Ind).getNegligibleConcentration() : 0;
+        size_t drugIndex = LSTMDrugType::find_drug(drugName);
+        size_t drug2Ind = hasSecondDrug ? LSTMDrugType::find_drug(drug2Name) : 0;
+        double conc_abs_tol = LSTMDrugType::get(drugIndex).get_negligible_concentration();
+        double conc_abs_tol2 = hasSecondDrug ? LSTMDrugType::get(drug2Ind).get_negligible_concentration() : 0;
         const size_t maxDays = 6;
         PCS_VERBOSE(double res_Fac[maxDays];)
         double res_Conc[maxDays];
@@ -170,19 +170,19 @@ public:
         double totalFac = 1;
         for (size_t i = 0; i < maxDays; i++) {
             // before update (after last step):
-            double fac = proxy->getDrugFactor(m_rng, inf, bodymass);
+            double fac = proxy->get_drug_factor(m_rng, inf, bodymass);
             totalFac *= fac;
             TS_ASSERT_APPROX_TOL(totalFac, drug_factors[i], PKPD_FACT_REL_TOL, PKPD_FACT_ABS_TOL);
             PCS_VERBOSE(res_Fac[i] = totalFac;)
 
             // update (two parts):
             UnittestUtil::incrTime(sim::oneDay());
-            proxy->decayDrugs(bodymass);
+            proxy->decay_drugs(bodymass);
 
             // after update:
-            res_Conc[i] = proxy->getDrugConc(drugIndex);
+            res_Conc[i] = proxy->get_drug_conc(drugIndex);
             TS_ASSERT_APPROX_TOL(res_Conc[i], drug_conc[i], PKPD_CONC_REL_TOL, conc_abs_tol);
-            res_Conc2[i] = hasSecondDrug ? proxy->getDrugConc(drug2Ind) : 0.0;
+            res_Conc2[i] = hasSecondDrug ? proxy->get_drug_conc(drug2Ind) : 0.0;
             if (hasSecondDrug)
                 TS_ASSERT_APPROX_TOL(res_Conc2[i], drug2_conc[i], PKPD_CONC_REL_TOL, conc_abs_tol2);
 

@@ -36,122 +36,122 @@
 using namespace std;
 
 namespace OM {
-namespace PkPd {
+namespace pk_pd {
 using namespace OM::util;
 using WithinHost::Genotypes;
 
 // -----  Static variables and functions  -----
 
 // The list of drugTypes drugs. Not checkpointed.
-vector<LSTMDrugType> drugTypes;
-map<string, size_t> drugTypeNames;
+vector<LSTMDrugType> drug_types;
+map<string, size_t> drug_type_names;
 // List of all indices of drugs being used
-vector<size_t> drugsInUse;
+vector<size_t> drugs_in_use;
 
 LSTMDrugPD::LSTMDrugPD(const scnXml::Phenotype& phenotype) {
     n = phenotype.getSlope();
-    IC50 = util::createSampler(phenotype.getIC50());
-    V = phenotype.getMax_killing_rate();
+    ic50 = util::createSampler(phenotype.getIC50());
+    v = phenotype.getMax_killing_rate();
 }
 
-double LSTMDrugPD::calcFactor(double Kn, double neg_elim_rate, double* conc, double duration) const {
-    const double C0 = *conc;
-    const double C1 = C0 * exp(neg_elim_rate * duration);
+double LSTMDrugPD::calc_factor(double kn, double neg_elim_rate, double* conc, double duration) const {
+    const double c0 = *conc;
+    const double c1 = c0 * exp(neg_elim_rate * duration);
 
     // From Hastings & Winter 2011 paper
     // Note: these look a little different from original equations because Kn
     // is calculated when parameters are read from the scenario document instead of now.
-    const double numerator = Kn + pow(C1, n);
-    const double denominator = Kn + pow(C0, n);
-    const double power = V / (-neg_elim_rate * n);
+    const double numerator = kn + pow(c1, n);
+    const double denominator = kn + pow(c0, n);
+    const double power = v / (-neg_elim_rate * n);
 
-    *conc = C1;                                 // conc is an in/out parameter
+    *conc = c1;                                 // conc is an in/out parameter
     return pow(numerator / denominator, power); // unitless
 }
 
-double LSTMDrugPD::IC50_pow_slope(LocalRng& rng, size_t index, WithinHost::CommonInfection* inf) const {
-    double Kn; // gets sampled once per infection
+double LSTMDrugPD::ic50_pow_slope(LocalRng& rng, size_t index, WithinHost::CommonInfection* inf) const {
+    double kn; // gets sampled once per infection
     if (inf->Kn.count(index) != 0) {
-        Kn = inf->Kn.at(index);
+        kn = inf->Kn.at(index);
     } else {
-        Kn = pow(IC50->sample(rng), n);
-        inf->Kn[index] = Kn;
+        kn = pow(ic50->sample(rng), n);
+        inf->Kn[index] = kn;
     }
-    return Kn;
+    return kn;
 }
 
-void LSTMDrugType::init(const scnXml::Pharmacology::DrugsType& drugData) {
-    drugTypes.reserve(drugData.getDrug().size());
-    for (const scnXml::PKPDDrug& drug : drugData.getDrug()) {
+void LSTMDrugType::init(const scnXml::Pharmacology::DrugsType& drug_data) {
+    drug_types.reserve(drug_data.getDrug().size());
+    for (const scnXml::PKPDDrug& drug : drug_data.getDrug()) {
         const string& abbrev = drug.getAbbrev();
         // Check drug doesn't already exist
-        if (drugTypeNames.find(abbrev) != drugTypeNames.end())
+        if (drug_type_names.find(abbrev) != drug_type_names.end())
             throw TRACED_EXCEPTION_DEFAULT(string("Drug added twice: ").append(abbrev));
 
-        size_t i = drugTypes.size();
-        drugTypes.emplace_back(i, drug);
-        drugTypeNames[abbrev] = i;
+        size_t i = drug_types.size();
+        drug_types.emplace_back(i, drug);
+        drug_type_names[abbrev] = i;
     }
 }
 void LSTMDrugType::clear() {
-    drugTypes.clear();
-    drugTypeNames.clear();
+    drug_types.clear();
+    drug_type_names.clear();
 }
 
-size_t LSTMDrugType::numDrugTypes() { return drugTypes.size(); }
+size_t LSTMDrugType::num_drug_types() { return drug_types.size(); }
 
 // Add index to drugsInUse if not already present. Not fast but doesn't need to be.
-void drugIsUsed(size_t index) {
-    for (size_t i : drugsInUse) {
+void drug_is_used(size_t index) {
+    for (size_t i : drugs_in_use) {
         if (i == index)
             return; // already in list
     }
-    drugsInUse.push_back(index);
+    drugs_in_use.push_back(index);
 }
-size_t LSTMDrugType::findDrug(string _abbreviation) {
-    auto iter = drugTypeNames.find(_abbreviation);
-    if (iter == drugTypeNames.end())
-        throw util::xml_scenario_error(string("attempt to use drug without description: ").append(_abbreviation));
+size_t LSTMDrugType::find_drug(string abbreviation) {
+    auto iter = drug_type_names.find(abbreviation);
+    if (iter == drug_type_names.end())
+        throw util::xml_scenario_error(string("attempt to use drug without description: ").append(abbreviation));
     size_t index = iter->second;
 
     // We assume that drugs are used when and only when findDrug returns their
     // index or they are a metabolite of a drug returned here.
-    drugIsUsed(index);
-    if (drugTypes[index].conversion_rate /*conversion model used*/) {
-        drugIsUsed(drugTypes[index].metabolite);
+    drug_is_used(index);
+    if (drug_types[index].conversion_rate /*conversion model used*/) {
+        drug_is_used(drug_types[index].metabolite);
     }
 
     return index;
 }
 
 LSTMDrugType& LSTMDrugType::get(size_t index) { //static
-    return drugTypes.at(index);
+    return drug_types.at(index);
 }
 
-const vector<size_t>& LSTMDrugType::getDrugsInUse() { return drugsInUse; }
+const vector<size_t>& LSTMDrugType::get_drugs_in_use() { return drugs_in_use; }
 
-unique_ptr<LSTMDrug> LSTMDrugType::createInstance(LocalRng& rng, size_t index) {
-    LSTMDrugType& typeData = drugTypes[index];
-    if (typeData.conversion_rate) {
-        LSTMDrugType& metaboliteData = drugTypes[typeData.metabolite];
-        return unique_ptr<LSTMDrug>(new LSTMDrugConversion(typeData, metaboliteData, rng));
-    } else if (typeData.k12) {
+unique_ptr<LSTMDrug> LSTMDrugType::create_instance(LocalRng& rng, size_t index) {
+    LSTMDrugType& type_data = drug_types[index];
+    if (type_data.conversion_rate) {
+        LSTMDrugType& metabolite_data = drug_types[type_data.metabolite];
+        return unique_ptr<LSTMDrug>(new LSTMDrugConversion(type_data, metabolite_data, rng));
+    } else if (type_data.k12) {
         // k21 is set when k12 is set; k13 and k31 may be set
-        return unique_ptr<LSTMDrug>(new LSTMDrugThreeComp(typeData, rng));
+        return unique_ptr<LSTMDrug>(new LSTMDrugThreeComp(type_data, rng));
     } else {
         // none of k12/k21/k13/k31 should be set in this case
-        return unique_ptr<LSTMDrug>(new LSTMDrugOneComp(typeData, rng));
+        return unique_ptr<LSTMDrug>(new LSTMDrugOneComp(type_data, rng));
     }
 }
 
 // -----  Non-static LSTMDrugType functions  -----
 
-LSTMDrugType::LSTMDrugType(size_t index, const scnXml::PKPDDrug& drugData)
+LSTMDrugType::LSTMDrugType(size_t index, const scnXml::PKPDDrug& drug_data)
     : index(index), metabolite(0), negligible_concentration(numeric_limits<double>::quiet_NaN()),
       neg_m_exp(numeric_limits<double>::quiet_NaN()), mwr(numeric_limits<double>::quiet_NaN()),
       ic50_log_corr(numeric_limits<double>::quiet_NaN()), ic50_corr_factor(numeric_limits<double>::quiet_NaN()) {
     // ———  PK parameters  ———
-    const scnXml::PK& pk = drugData.getPK();
+    const scnXml::PK& pk = drug_data.getPK();
     negligible_concentration = pk.getNegligible_concentration();
     if (pk.getHalf_life().present()) {
         if (pk.getK().present() || pk.getM_exponent().present()) {
@@ -190,7 +190,7 @@ LSTMDrugType::LSTMDrugType(size_t index, const scnXml::PKPDDrug& drugData)
         }
         const scnXml::Conversion& conv = pk.getConversion().get();
         try {
-            metabolite = findDrug(conv.getMetabolite());
+            metabolite = find_drug(conv.getMetabolite());
         } catch (util::xml_scenario_error& e) {
             throw util::xml_scenario_error(
                 "PK: metabolite drug not found; metabolite must be defined *before* parent drug!");
@@ -219,13 +219,13 @@ LSTMDrugType::LSTMDrugType(size_t index, const scnXml::PKPDDrug& drugData)
     }
 
     // ———  PD parameters  ———
-    const scnXml::PD::PhenotypeSequence& pd = drugData.getPD().getPhenotype();
+    const scnXml::PD::PhenotypeSequence& pd = drug_data.getPD().getPhenotype();
     assert(pd.size() > 0); // required by XSD
 
     set<string> loci_per_phenotype;
     string first_phenotype_name;
     size_t n_phenotypes = pd.size();
-    PD.reserve(n_phenotypes);
+    pd_params.reserve(n_phenotypes);
     // per phenotype (first index), per locus-of-restriction (second list), a list of alleles
     vector<vector<vector<uint32_t>>> phenotype_restrictions;
     phenotype_restrictions.reserve(n_phenotypes);
@@ -290,7 +290,7 @@ LSTMDrugType::LSTMDrugType(size_t index, const scnXml::PKPDDrug& drugData)
             }
         }
         phenotype_restrictions.push_back(loc_alleles);
-        PD.push_back(LSTMDrugPD(pd[i]));
+        pd_params.push_back(LSTMDrugPD(pd[i]));
     }
 
     if (loci_per_phenotype.size() == 0) {
@@ -353,15 +353,15 @@ LSTMDrugType::LSTMDrugType(size_t index, const scnXml::PKPDDrug& drugData)
             cout << "|" << setw(8) << "--------" << "|" << setw(14) << "-------------" << "|" << endl;
 
             uint32_t genotype = 0;
-            stringstream phenotypeName;
+            stringstream phenotype_name;
             for (auto phen = genotype_mapping.begin(); phen != genotype_mapping.end(); ++phen) {
-                phenotypeName.str("");
+                phenotype_name.str("");
                 if (pd[*phen].getName().present()) {
-                    phenotypeName << pd[*phen].getName().get();
+                    phenotype_name << pd[*phen].getName().get();
                 } else {
-                    phenotypeName << "no: " << *phen;
+                    phenotype_name << "no: " << *phen;
                 }
-                cout << "|" << setw(8) << (genotype * 100000) << "|" << setw(14) << phenotypeName.str() << "|" << endl;
+                cout << "|" << setw(8) << (genotype * 100000) << "|" << setw(14) << phenotype_name.str() << "|" << endl;
                 genotype += 1;
             }
         }
@@ -369,7 +369,7 @@ LSTMDrugType::LSTMDrugType(size_t index, const scnXml::PKPDDrug& drugData)
 }
 LSTMDrugType::~LSTMDrugType() {}
 
-const LSTMDrugPD& LSTMDrugType::getPD(uint32_t genotype) const { return PD[genotype_mapping[genotype]]; }
+const LSTMDrugPD& LSTMDrugType::get_pd(uint32_t genotype) const { return pd_params[genotype_mapping[genotype]]; }
 
 }
 }

@@ -62,7 +62,7 @@ void CommonWithinHost::init(const scnXml::Scenario& scenario) {
     reportInfectedOrPatentInfected =
         mon::isUsed(mon::measure("totalInfs")) || mon::isUsed(mon::measure("totalPatentInf"));
 
-    PkPd::LSTMModel::init(scenario);
+    pk_pd::LSTMModel::init(scenario);
 }
 
 CommonWithinHost::CommonWithinHost(LocalRng& rng, double comorbidityFactor) : WHFalciparum(rng, comorbidityFactor) {
@@ -205,7 +205,7 @@ void CommonWithinHost::update(Host::Human& human, LocalRng& rng, int& nNewInfs_i
             bool expires = ((*inf)->bloodStage() ? treatmentBlood : treatmentLiver);
 
             if (!expires) { /* no expiry due to simple treatment model; do update */
-                const double drugFactor = pkpdModel.getDrugFactor(rng, *inf, body_mass);
+                const double drugFactor = pkpdModel.get_drug_factor(rng, *inf, body_mass);
                 const double immFactor = immunitySurvivalFactor(ageInYears, (*inf)->cumulativeExposureJ());
                 const double bsvFactor =
                     human.vaccine.getFactor(interventions::Vaccine::BSV, opt_vaccine_genotype ? (*inf)->genotype() : 0);
@@ -232,7 +232,7 @@ void CommonWithinHost::update(Host::Human& human, LocalRng& rng, int& nNewInfs_i
                 ++inf;
             }
         }
-        pkpdModel.decayDrugs(body_mass);
+        pkpdModel.decay_drugs(body_mass);
     }
 
     // As in AJTMH p22, cumulative_h (X_h + 1) doesn't include infections added

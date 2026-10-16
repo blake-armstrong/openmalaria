@@ -20,8 +20,8 @@
  * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301, USA.
  */
 
-#ifndef Hmod_LSTMDrug
-#define Hmod_LSTMDrug
+#ifndef HMOD_LSTM_DRUG
+#define HMOD_LSTM_DRUG
 
 #include "Global.h"
 #include "util/checkpoint_containers.h"
@@ -31,7 +31,7 @@ namespace OM {
 namespace WithinHost {
 class CommonInfection;
 }
-namespace PkPd {
+namespace pk_pd {
 
 using util::LocalRng;
 
@@ -42,13 +42,13 @@ class LSTMDrug {
 public:
     /// Create a new instance.
     /// Volume of distribution must be specified here (from sample or mean).
-    LSTMDrug(double Vd);
+    LSTMDrug(double vd);
     /// Obligatory virtual destructor on a virtual class
     virtual ~LSTMDrug();
 
     /// Get the drug type's index.
     /// TODO: decide whether this should be virtual or the index should be a local
-    virtual size_t getIndex() const = 0;
+    virtual size_t get_index() const = 0;
 
     /** Indicate a new medication this time step.
      *
@@ -64,7 +64,7 @@ public:
      * compartments with active PD; zero if drug index doesn't match that used).
      * 
      * @returns Concentration in the blood serum, in mg/l. */
-    virtual double getConcentration(size_t index) const = 0;
+    virtual double get_concentration(size_t index) const = 0;
 
     /** Returns the total drug factor for one drug over one day.
      *
@@ -77,12 +77,12 @@ public:
      * @param inf A pointer to the infection of interest
      * @param body_mass Weight of patient in kg
      */
-    virtual double calculateDrugFactor(LocalRng& rng, WithinHost::CommonInfection* inf, double body_mass) const = 0;
+    virtual double calculate_drug_factor(LocalRng& rng, WithinHost::CommonInfection* inf, double body_mass) const = 0;
 
     /** Updates concentration variable and clears day's doses.
      * 
      * @param body_mass Weight of patient in kg */
-    virtual void updateConcentration(double body_mass) = 0;
+    virtual void update_concentration(double body_mass) = 0;
 
     /// Checkpointing
     template <class S> void operator&(S& stream) {

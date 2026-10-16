@@ -20,8 +20,8 @@
  * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301, USA.
  */
 
-#ifndef Hmod_LSTMPkPdModel
-#define Hmod_LSTMPkPdModel
+#ifndef HMOD_LSTM_PK_PD_MODEL
+#define HMOD_LSTM_PK_PD_MODEL
 
 #include "PkPd/Drug/LSTMDrug.h"
 
@@ -35,7 +35,7 @@ class Human;
 namespace WithinHost {
 class CommonInfection;
 }
-namespace PkPd {
+namespace pk_pd {
 
 struct MedicateData {
     MedicateData()
@@ -51,9 +51,9 @@ struct MedicateData {
 private:
     void load(const scnXml::PKPDMedication& med);
 
-    inline MedicateData multiplied(double doseMult) {
+    inline MedicateData multiplied(double dose_mult) {
         MedicateData r(*this);
-        r.qty *= doseMult;
+        r.qty *= dose_mult;
         return r;
     }
 
@@ -110,20 +110,20 @@ public:
     /** Get concentration of the drug at the beginning of the day.
      * 
      * For unit testing. Not optimised. */
-    double getDrugConc(size_t drug_index) const;
+    double get_drug_conc(size_t drug_index) const;
 
     /** This is how drugs act on infections.
      *
      * Each time step, on each infection, the parasite density is multiplied by
      * the return value of this infection. The WithinHostModels are responsible
      * for clearing infections once the parasite density is negligible. */
-    double getDrugFactor(LocalRng& rng, WithinHost::CommonInfection* inf, double body_mass) const;
+    double get_drug_factor(LocalRng& rng, WithinHost::CommonInfection* inf, double body_mass) const;
 
     /** After any resident infections have been reduced by getDrugFactor(),
      * this function is called to update drug levels to their effective level
      * at the end of the day, as well as clear data once drug concentrations
      * become negligible. */
-    void decayDrugs(double body_mass);
+    void decay_drugs(double body_mass);
 
     /** Make summaries of drug concentration data. */
     void summarize(const Host::Human& human) const;
@@ -143,16 +143,16 @@ private:
      * new infection densities) happens first; hence medicate() will always be
      * called after getDrugFactor in a time step, and a time of zero means the
      * dose has effect from the start of the following time step. */
-    void medicateDrug(LocalRng& rng, size_t typeIndex, double qty, double time);
+    void medicate_drug(LocalRng& rng, size_t type_index, double qty, double time);
 
     void checkpoint(istream& stream);
     void checkpoint(ostream& stream);
 
     /// Drugs with non-zero blood concentrations:
-    vector<unique_ptr<LSTMDrug>> m_drugs;
+    vector<unique_ptr<LSTMDrug>> drugs;
 
     /// All pending medications
-    list<MedicateData> medicateQueue;
+    list<MedicateData> medicate_queue;
 
     friend class ::UnittestUtil;
 };

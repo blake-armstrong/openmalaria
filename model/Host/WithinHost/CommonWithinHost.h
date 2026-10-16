@@ -82,7 +82,7 @@ private:
     double hetMassMultiplier;
 
     /// Encapsulates drug code for each human
-    PkPd::LSTMModel pkpdModel;
+    pk_pd::LSTMModel pkpdModel;
 
     /** The list of all infections this human has.
      *

@@ -20,8 +20,8 @@
  * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301, USA.
  */
 
-#ifndef Hmod_LSTMTreatments
-#define Hmod_LSTMTreatments
+#ifndef HMOD_LSTM_TREATMENTS
+#define HMOD_LSTM_TREATMENTS
 
 #include "Global.h"
 
@@ -31,7 +31,7 @@ namespace scnXml {
 class Treatments;
 }
 namespace OM {
-namespace PkPd {
+namespace pk_pd {
 
 /** Information about treatment courses: schedules and dosage tables.
  * 
@@ -49,10 +49,10 @@ public:
     static void clear();
 
     /** Get the index of a named schedule. */
-    static size_t findSchedule(const string& name);
+    static size_t find_schedule(const string& name);
 
     /** Get the index of a named dosage table. */
-    static size_t findDosages(const string& name);
+    static size_t find_dosages(const string& name);
 
 private:
     LSTMTreatments(); // not constructible

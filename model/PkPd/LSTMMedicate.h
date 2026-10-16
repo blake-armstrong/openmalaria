@@ -24,8 +24,8 @@
  * This file contains code internal to the LSTM PK/PD model to do with
  * dosing/scheduling.
  */
-#ifndef Hmod_LSTMMedicate
-#define Hmod_LSTMMedicate
+#ifndef HMOD_LSTM_MEDICATE
+#define HMOD_LSTM_MEDICATE
 
 #include "Global.h"
 #include "PkPd/LSTMModel.h"
@@ -41,7 +41,7 @@ using std::vector;
 
 class UnittestUtil;
 namespace OM {
-namespace PkPd {
+namespace pk_pd {
 
 struct Schedule {
     void load(const scnXml::PKPDSchedule::MedicateSequence& seq);
@@ -50,14 +50,14 @@ struct Schedule {
 };
 
 struct DosageTable {
-    void load(const xsd::cxx::tree::sequence<scnXml::PKPDDosageRange>& seq, bool isBodyMass);
+    void load(const xsd::cxx::tree::sequence<scnXml::PKPDDosageRange>& seq, bool is_body_mass);
 
     /** Get dosage multilier from age or body mass.
      * 
      * Dosings may be given as a table using age or body mass as the key (first
      * column), or dose may be specified as mg drug / kg body mass. */
-    double getMultiplier(double key) {
-        if (multMassKg)
+    double get_multiplier(double key) {
+        if (mult_mass_kg)
             return key;
         else {
             auto iter = table.upper_bound(key);
@@ -67,8 +67,8 @@ struct DosageTable {
         }
     }
 
-    bool useMass;    // false: dosing by age; true: dosing by body mass
-    bool multMassKg; // multiply by mass instead of using table
+    bool use_mass;     // false: dosing by age; true: dosing by body mass
+    bool mult_mass_kg; // multiply by mass instead of using table
     map<double, double> table;
 };
 

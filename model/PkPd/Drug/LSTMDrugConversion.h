@@ -20,8 +20,8 @@
  * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301, USA.
  */
 
-#ifndef Hmod_LSTMDrugConversion
-#define Hmod_LSTMDrugConversion
+#ifndef HMOD_LSTM_DRUG_CONVERSION
+#define HMOD_LSTM_DRUG_CONVERSION
 
 #include "Global.h"
 #include "PkPd/Drug/LSTMDrug.h"
@@ -31,13 +31,13 @@ using namespace std;
 
 namespace OM {
 
-namespace PkPd {
+namespace pk_pd {
 struct DoseParams;
 }
 
-namespace PkPd {
+namespace pk_pd {
 
-struct Params_convFactor;
+struct ParamsConvFactor;
 
 /** A class holding pkpd drug use info.
  * 
@@ -49,38 +49,38 @@ public:
     /** Create a new instance. */
     LSTMDrugConversion(const LSTMDrugType& parent, const LSTMDrugType& metabolite, LocalRng& rng);
 
-    virtual size_t getIndex() const;
-    virtual double getConcentration(size_t index) const;
+    virtual size_t get_index() const;
+    virtual double get_concentration(size_t index) const;
 
-    virtual double calculateDrugFactor(LocalRng& rng, WithinHost::CommonInfection* inf, double body_mass) const;
-    virtual void updateConcentration(double body_mass);
-    double getMetaboliteConcentration() const;
-    double getParentConcentration() const;
+    virtual double calculate_drug_factor(LocalRng& rng, WithinHost::CommonInfection* inf, double body_mass) const;
+    virtual void update_concentration(double body_mass);
+    double get_metabolite_concentration() const;
+    double get_parent_concentration() const;
 
 protected:
     virtual void checkpoint(istream& stream);
     virtual void checkpoint(ostream& stream);
 
-    double calculateFactor(const Params_convFactor& p, double duration) const;
+    double calculate_factor(const ParamsConvFactor& p, double duration) const;
 
     //TODO: do we need to link these?
-    const LSTMDrugType &parentType, &metaboliteType;
+    const LSTMDrugType &parent_type, &metabolite_type;
 
     /// Amount of parent drug in gut, parent drug in circulation and metabolite
     // in circulation; units: mg. In the paper, these are labelled A, B, C.
     //TODO: move metabolite data to a separate class object? Or not?
-    double qtyG, qtyP, qtyM;
+    double qty_g, qty_p, qty_m;
 
     /// @brief Sampled elimination and conversion rate constants
     //@{
     /// Absorbtion rate constant (-x)
     double nka;
     /// Elimination rate constant for parent (-y * body_mass ^ m_exponent)
-    double nkP_sample;
+    double nk_p_sample;
     /// Conversion rate constant (-z * body_mass ^ m_exponent)
     double nconv_sample;
     /// Elimination rate constant for metabolite (-k * body_mass ^ m_exponent)
-    double nkM_sample;
+    double nk_m_sample;
     /// Volume of distribution of metabolite (parent's Vd uses vol_dist)
     double vol_dist_metabolite;
     /// Last body mass (kg)
@@ -88,8 +88,8 @@ protected:
     //@}
 
 private:
-    void setConversionParameters(Params_convFactor& p, double body_mass) const;
-    void setKillingParameters(LocalRng& rng, Params_convFactor& p, WithinHost::CommonInfection* inf) const;
+    void set_conversion_parameters(ParamsConvFactor& p, double body_mass) const;
+    void set_killing_parameters(LocalRng& rng, ParamsConvFactor& p, WithinHost::CommonInfection* inf) const;
 };
 
 }
