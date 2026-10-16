@@ -12,7 +12,7 @@ See `PLAN.md` for the session protocol, chunks and gates. Append one log entry p
 | B2 | done | 0bf623e3, 4882b106, b7052696, (this log entry) |
 | B3 | done | 1b9b22f6, 06642bf8, 5efb309c, 1d56c288, db529f37, 5dc5baab, b3685dfe, (this log entry) |
 | B4 | done | 57afa057, e7074755, cae5d3b5, f82cb9a5, ee7e0471, (this log entry) |
-| B5 | done | 16851d20, 65710e16, dcae0a40, 916e8506, 658cf62b, ab06df46, 8ca36c75, (this log entry) |
+| B5 | done | 16851d20, 65710e16, dcae0a40, 6b870e04, 658cf62b, ab06df46, 8ca36c75, (this log entry) |
 | P1 | done | f29d38e3, 81a14090, b0309128, 6bfcf8c0, 4b803c7f, (this log entry) |
 | S1 | todo | |
 | S2 | todo | |
@@ -242,7 +242,7 @@ See `PLAN.md` for the session protocol, chunks and gates. Append one log entry p
   - 16851d20: whole-file clang-format of `model/PkPd/Drug/LSTMDrugConversion.cpp` and `LSTMDrugThreeComp.cpp`. Whitespace only: trailing comments the PkPd rename left misaligned.
   - 65710e16: 16851d20 added to `.git-blame-ignore-revs`
   - dcae0a40: `util/style.sh`: `check`'s format half and `format-changed` work on whole changed files
-  - 916e8506: `util/tidy_diff_filter.py`, wired into `tidy_diff` (used by `check` and `fix`)
+  - 6b870e04: `util/tidy_diff_filter.py`, wired into `tidy_diff` (used by `check` and `fix`)
   - 658cf62b: `.pre-commit-config.yaml`
   - ab06df46: `.github/workflows/style.yml` and `util/ci-style.sh`
   - 8ca36c75: STYLE.md (new § Pre-commit and CI), cpp-style and rename-module skills
