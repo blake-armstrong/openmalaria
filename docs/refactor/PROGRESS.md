@@ -60,7 +60,7 @@ See `PLAN.md` for the session protocol, chunks and gates. Append one log entry p
 | J4 | todo | |
 | M0 | done | e5205c8a, 331463a7, 45d57ba3, (this log entry) |
 | M1 | done | de71bd96, c7293e4e, 80034802, 941c2e77, (this log entry) |
-| M2 | todo | |
+| M2 | done | afd3fa8c, 9183ffe4, ca51c409, bff08fc0, b979260e, a0f1112c, d4869a62, d9d45adb, 7b330170, a592041f, 565239f1, (this log entry) |
 | M3 | todo | |
 | M4 | todo | |
 | M5 | todo | |
@@ -398,3 +398,44 @@ See `PLAN.md` for the session protocol, chunks and gates. Append one log entry p
   - M9: port the remaining 14 compiled CxxTest suites (+ 4 disabled ones, plus `ExtraAsserts.h`/`UnittestUtil.h` helpers), then fold `unittest-catch2` into `unittest` and rename the option.
   - If the per-case granularity of `catch_discover_tests` is wanted (one ctest test per `TEST_CASE`), it needs `include(Catch)` from `${catch2_SOURCE_DIR}/extras` or the installed config dir. Left out to keep one registration that works both ways.
 - Next: M2 (`modernize-module` skill, pilot on `model/PkPd/`).
+
+### M2: `modernize-module` skill plus a pilot (done, 2026-10-16)
+- Base: 3f290fc4.
+- Commits:
+  - afd3fa8c: `rename_module.py` reads nested namespace declarations (`namespace OM::pk_pd {`), see below
+  - 9183ffe4: `util/style.sh modernize <dir>` and `util/modernize_module.py`
+  - ca51c409: `.clang-tidy`: `cppcoreguidelines-init-variables.MathHeader: '<cmath>'` (the default inserts `<math.h>`)
+  - bff08fc0, b979260e: tool fixes found by the pilot (missing `<numbers>`, duplicate includes)
+  - a0f1112c: **pilot tool commit**, `model/PkPd` safe fix-its (15 files, +91 / -105)
+  - d4869a62: a0f1112c added to `.git-blame-ignore-revs`
+  - d9d45adb: `--report` also lists safe-list findings that have no fix-it
+  - 7b330170: **pilot hand commit**, `model/PkPd` judgement items
+  - a592041f: `.claude/skills/modernize-module/SKILL.md`
+  - 565239f1: STYLE.md § Module modernisation
+- **How the tool works** (details and the checks left out, with reasons, in STYLE.md § Module modernisation): clang-tidy with `MODERNIZE_CHECKS` (the `fix` safe list plus 18 more) over every TU with the header filter set to the module; keep each diagnostic located in the module whose replacements all stay inside it; merge duplicates across TUs; defer overlapping fixes to the next pass; apply each pass once with `clang-apply-replacements`; repeat to a fixed point (max 5); then `format-changed`. `--dry-run` shows the first pass; `--report` lists what is left for the hand commit. About 10 s per pass over all 75 TUs.
+- **Pilot tool commit** (3 passes): 18 `use-override`, 10 `use-default-member-init`, 9 `concat-nested-namespaces`, 8 `init-variables`, 7 `use-using`, 5 `pro-type-member-init`, 2 each of `use-equals-default`, `use-std-numbers`, `prefer-member-initializer`, `use-emplace`, `loop-convert`, 1 each of `deprecated-headers`, `use-ranges`, `unnecessary-value-param`, `use-equals-delete`, plus 2 `#include <numbers>` added by the tool. A second `--dry-run` applies nothing.
+- **Pilot hand commit:** `make_unique` for the 3 `unique_ptr<LSTMDrug>(new …)`; the 2 stream formattings → `std::format` (`{:g}` matches `ostream << double`); `calc_factor`'s in/out `double*` → `double&`; `set_conversion_parameters(p, bm)` → `p = conversion_parameters(bm)`; deleted members public; `LSTMDrugPD` rule of zero and `explicit`; the assignment in an `if`; a no-op `std::move`; 24 `misc-const-correctness` consts (west const). Left, with reasons in the commit message: `endl` (flush timing; one `NOLINT` on a touched line), globals and GSL workspaces (D5), the `const_cast` for GSL's `void*` params, reference data members, the file-local helpers that take `ParamsConvFactor` by value.
+- Gates:
+  - G-exact / G-unit: 53/53 after the tool commit (16.0 s) and after the hand commit (13.7 s), `-j10` under `caffeinate -i`. Only the duplicate `-lc++` warning.
+  - G-style: `OM_BUILD_DIR=build-rework util/style.sh check 3f290fc4` clean. Before the ignore-revs entry, `check HEAD` on the tool commit had a clean format half and 10 tidy findings: 9 legacy `non-private-member-variables-in-classes` on touched lines, and the private `= delete` that `use-equals-delete` wrote (fixed in the hand commit).
+  - G-perf: `util/bench.sh --compare ../om-bench-base/build-rework` (base worktree moved to 3f290fc4 and rebuilt), candidate at 565239f1: median per-pair ratio 0.9899 (−1.01%), per-pair 0.9515–1.0171, ok. Load average ~6.4 at the start; base spread 6.2%, candidate 2.2%.
+  - Extra: `--print-genotypes` on scenarioGenotypes, scenarioMolPairwise and scenarioEffectiveDrug, base (3f290fc4) vs candidate: byte-identical stdout, stderr and exit codes.
+- Surprises:
+  - **`modernize-use-std-numbers` inserts no include when the constant comes from a macro** (`PI` in `Global.h`), so the next pass failed to compile. The tool now adds `#include <numbers>`.
+  - **`modernize-use-ranges` inserts an include the file already has** (`<algorithm>` in `LSTMDrug.cpp`). The tool drops such insertions.
+  - **`cppcoreguidelines-init-variables` defaulted to `<math.h>`.** Changed to `<cmath>` in `.clang-tidy`, which also affects `util/style.sh fix`.
+  - **`modernize-concat-nested-namespaces` would have broken the rename tool's namespace ownership test**, which matched only `namespace X {`. After it, a module writing `namespace OM::pk_pd {` would no longer count as declaring `OM`. Fixed first (afd3fa8c).
+  - **`misc-const-correctness` writes east const and edits headers in other modules** (`util/vectors.h`, `random.h`, … reached through the PkPd TUs). The skill applies it per file, reverts other modules and rewrites to west const.
+  - `modernize-loop-convert` wrote `for (unsigned int& phen : genotype_mapping)`; the hand commit made it `const uint32_t`.
+  - `cppcoreguidelines-prefer-member-initializer` left an empty first line in a constructor body; the hand commit tidied it (and moved `ic50` into the initializer list too).
+- Module status (rename = `/rename-module`, modernise = `/modernize-module`); every other module is still to do:
+
+  | Module | Rename | Modernise |
+  |---|---|---|
+  | `model/PkPd` | cae5d3b5 (B4) | a0f1112c + 7b330170 (M2) |
+
+- Follow-ups:
+  - D chunks: run `/rename-module` then `/modernize-module` on each module the chunk owns, and add a row to the table above.
+  - The tool keeps fixes inside the module. A fix that spans two modules (e.g. `performance-unnecessary-value-param` with the declaration in one and the definition in the other) is listed under "reaches outside the module" and is never applied by the tool from either side. Do those by hand in the hand commit. PkPd had none.
+  - `ParamsConvFactor` (≈20 doubles) is passed by value to four file-local helpers in `LSTMDrugConversion.cpp`. `const&` would be cheaper; left for D5, which owns PkPd's hot path, with G-perf.
+- Next: S1 (recommended order item 7b).
