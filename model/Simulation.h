@@ -30,12 +30,29 @@
 #include "schema/scenario.h"
 
 #include <memory>
+#include <string>
 
 namespace OM {
+
+struct CheckpointOptions {
+    std::string file_name = "checkpoint";
+    bool enabled = false;
+    bool stop_after_write = false;
+};
 
 class Simulation {
 public:
     explicit Simulation(std::unique_ptr<scnXml::Scenario> scenario);
+    Simulation(const Simulation&) = delete;
+    Simulation& operator=(const Simulation&) = delete;
+    Simulation(Simulation&&) = delete;
+    Simulation& operator=(Simulation&&) = delete;
+    ~Simulation();
+
+    void run(const CheckpointOptions& checkpointing);
+    void run_phase(const std::string& phase, SimTime end);
+    void run_until(SimTime end);
+    void step();
 
     const scnXml::Scenario& scenario() const { return *scenario_xml; }
     Population& population() { return *population_model; }
@@ -44,11 +61,18 @@ public:
     bool survey_only_new_ep() const { return only_new_episode; }
 
 private:
+    void start_new(const CheckpointOptions& checkpointing);
+    void resume(const std::string& checkpoint_file);
+    void finish();
+
     std::unique_ptr<scnXml::Scenario> scenario_xml;
     std::unique_ptr<Population> population_model;
     std::unique_ptr<Transmission::TransmissionModel> transmission_model;
     SimTime warmup_length = 0;
-    bool only_new_episode = false;
+    SimTime end_time = 0;
+    SimTime est_end_time = 0;
+    int last_percent = -1;
+    bool only_new_episode;
 };
 
 }
