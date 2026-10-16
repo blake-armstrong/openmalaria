@@ -15,3 +15,6 @@ a0f1112cb17fe800d66cb23f6591562f369bd00b
 
 # D1: rename model/ root files sim, Clock, Simulation, checkpoint (util/style.sh rename)
 4252cba1b9288cccfe6d4a8cd1ce38d557c36814
+
+# D1: model/ root files sim, Clock, Simulation, checkpoint safe modernize fix-its (util/style.sh modernize)
+48d3476cf460daac3e797bca1c38554730ef0886
