@@ -12,7 +12,7 @@ See `PLAN.md` for the session protocol, chunks and gates. Append one log entry p
 | B2 | done | 0bf623e3, 4882b106, b7052696, (this log entry) |
 | B3 | done | 1b9b22f6, 06642bf8, 5efb309c, 1d56c288, db529f37, 5dc5baab, b3685dfe, (this log entry) |
 | B4 | done | 57afa057, e7074755, cae5d3b5, f82cb9a5, ee7e0471, (this log entry) |
-| B5 | todo | |
+| B5 | done | 16851d20, 65710e16, dcae0a40, 916e8506, 658cf62b, ab06df46, 8ca36c75, (this log entry) |
 | P1 | done | f29d38e3, 81a14090, b0309128, 6bfcf8c0, 4b803c7f, (this log entry) |
 | S1 | todo | |
 | S2 | todo | |
@@ -235,3 +235,40 @@ See `PLAN.md` for the session protocol, chunks and gates. Append one log entry p
   - Stage D onward: run `/rename-module <dir>` right after each module's refactor. Shared namespaces (`OM`, `WithinHost`, `Host`, `Transmission`, …) need a separate tree-wide rename at some point. `OM` → `om` touches every file, so it is best done when no other branch is in flight.
   - B5: CI's G-style job will fail on rename commits for the reason above. Either skip commits listed in `.git-blame-ignore-revs`, or run the rename-commit variant for them.
 - Next: B5.
+
+### B5: Pre-commit and CI (done, 2026-10-16)
+- Base: 169a49cb.
+- Commits:
+  - 16851d20: whole-file clang-format of `model/PkPd/Drug/LSTMDrugConversion.cpp` and `LSTMDrugThreeComp.cpp`. Whitespace only: trailing comments the PkPd rename left misaligned.
+  - 65710e16: 16851d20 added to `.git-blame-ignore-revs`
+  - dcae0a40: `util/style.sh`: `check`'s format half and `format-changed` work on whole changed files
+  - 916e8506: `util/tidy_diff_filter.py`, wired into `tidy_diff` (used by `check` and `fix`)
+  - 658cf62b: `.pre-commit-config.yaml`
+  - ab06df46: `.github/workflows/style.yml` and `util/ci-style.sh`
+  - 8ca36c75: STYLE.md (new § Pre-commit and CI), cpp-style and rename-module skills
+- **Pre-commit:** `pre-commit/mirrors-clang-format` at `v22.1.8` on `model/` and `unittest/` C++. Tested with `uvx pre-commit run`: passes on all files, and reformats (and fails on) a misformatted throwaway edit. Not installed in this clone; that is up to the user (`uv tool install pre-commit && pre-commit install`).
+- **CI:** job `g-style` on ubuntu-24.04 for every push and PR, `permissions: contents: read`. It installs clang, cmake, GSL, Xerces-C and xsdcxx, sets up uv, then runs `util/ci-style.sh origin/<PR base or default branch>` with `CC=clang CXX=clang++`. The script takes the merge base, configures `build-style/` if it has no compile database, builds the `schema` target (for the generated `scnXml` headers), then runs `util/style.sh check <merge base>`. Actions are pinned to exact tags at least two weeks old: `actions/checkout@v7.0.1`, `astral-sh/setup-uv@v10.2.0`. `actionlint` (1.7.12, via `uvx --from actionlint-py`) reports nothing.
+- **Done criterion (job passes locally, run by hand):** `act` and docker are not installed, so the script was run by hand on macOS with Apple clang:
+  - fresh `build-style/`, `util/ci-style.sh upstream/main` (merge base 0b264527): clean, 5.7 s wall including configure and the schema build.
+  - With a throwaway global `int legacyName = NULL;` appended to `model/PkPd/LSTMTreatments.cpp` (which reaches the generated `schema/pharmacology.h`): fails with the naming and non-const-global findings, so clang-tidy really runs against `build-style/`. Reverted.
+  - `util/ci-style.sh origin/main` (merge base 7b1d8919): clean.
+  - Not run on Linux. The first GitHub run is the real test of the apt package names and of clang-tidy 22 against Ubuntu's libstdc++ headers.
+- **Deviations and surprises:**
+  - **Check against a merge base could not pass before this chunk**, for two reasons, both fixed here:
+    1. *Format half.* Line-range formatting (`git-clang-format`) depends on which lines are in range. Against 0b264527 it flagged 33 hunks: blank lines before a namespace's closing `}` that B2's whole-file format kept (the B3 surprise again), and trailing comments in two PkPd files that the rename had aligned for `HEAD^..HEAD`. A whole-file `clang-format --dry-run` over `model/` and `unittest/` failed only on those two PkPd files, which 16851d20 fixed. So `check` and `format-changed` now work on whole changed files (dcae0a40), which is a fixed point whatever the base. This changes the B3 tool semantics: `format-changed` now reformats whole changed files, not just changed lines. Since B2 every file is clean whole-file, so in practice it only formats what the edit touched.
+    2. *Tidy half.* The diff since 0b264527 includes every line B2 and the rename touched: 3575 distinct legacy findings. `util/tidy_diff_filter.py` keeps only added lines that `git blame --ignore-revs-file .git-blame-ignore-revs` attributes to a non-ignored commit in `base..HEAD` or to uncommitted changes (it blames the working-tree contents with `--contents`). Lines blame can't move off an ignored commit (e.g. blank lines B2 added) stay on it and are dropped. With no ignored commit in the range, the diff passes through unchanged, so a chunk-local `check HEAD` behaves as before. Blaming 171 files took ~0.7 s.
+  - **That also settles the B4 follow-up** about CI and rename commits: once a rename is listed in `.git-blame-ignore-revs`, plain `check` across it is clean (verified: `check cae5d3b5^` is clean). The rename-module skill's G-style rule gains that as a fourth point. The other three (format half clean, dry-run, token check) still apply before the ignore-revs commit exists.
+  - The fork's `origin/main` is still at upstream #430 (7b1d8919), but this branch is based on `upstream/main` #468, so push runs here diff against the older base. That is clean today. Moving `origin/main` up to `upstream/main` would make push runs check only this branch's own changes. That is a push, so it is left to the user.
+  - zsh doesn't word-split `$files`, so ad hoc pipelines copied from `style.sh` must run under `bash -c`. The first unfiltered count came out as "No relevant changes found" for this reason.
+- Gates (at 8ca36c75):
+  - G-exact / G-unit: 52/52, 12.5 s at `-j10` under `caffeinate -i`. Only the baseline build warnings.
+  - G-style: `OM_BUILD_DIR=build-rework util/style.sh check 169a49cb` is clean.
+  - G-perf: not run. The rebuilt `openMalaria` is byte-identical to the one before this chunk (sha1 `ad1f4b1c…`), since the only C++ change is whitespace with no line shifts.
+- Notes:
+  - `build-style/` (from the local CI script runs) is ignored by `build*/` and can be deleted.
+  - `.claude/settings.json` was untracked before this chunk and is still untouched.
+- Follow-ups:
+  - User: push the branch (or open a PR) to see the first real `g-style` run; install the pre-commit hook if wanted; consider moving `origin/main` to `upstream/main`.
+  - Every bulk mechanical commit (renames, reformats) must have its `.git-blame-ignore-revs` entry in the same push, or CI's tidy half will report the legacy hits on its lines.
+  - The format-on-edit hook script (`.claude/hooks/format-cpp.sh`) now formats the whole edited file through `format-changed`. Its behaviour for tracked files changed with dcae0a40, and its `settings.json` entry is still the user's call (B3).
+- Next: C1.
