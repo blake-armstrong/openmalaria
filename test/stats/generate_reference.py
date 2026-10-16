@@ -8,9 +8,10 @@
 For every cell of output.txt and ctsout.txt it writes the mean, the sample SD, the min and
 max, and the empirical 2.5% and 97.5% quantiles (Hyndman-Fan type 7, numpy's default): a
 95% prediction interval for one new run. A single run is expected to miss about 5% of the
-cells, so the file also records the miss-count threshold: the 99.9th percentile of the miss
-counts each replicate gets against the interval built from the other N - 1 (leave one out).
-The key aggregates get intervals widened by Bonferroni over the aggregates present.
+cells, so the file also records, for every replicate, the miss count it gets against the
+interval built from the other N - 1 (leave one out); check_scenario.py turns a run's miss
+count into a p-value against them. The key aggregates get intervals widened by Bonferroni
+over the aggregates present, so that together they cover 99%.
 
 Needs numpy; the uv shebang provides it, or run it with any python that has numpy.
 """
@@ -30,8 +31,7 @@ import stats_io
 
 ROOT = Path(__file__).resolve().parents[2]
 CELL_INTERVAL = (0.025, 0.975)
-AGGREGATE_ALPHA = 0.05
-LOO_MISS_PERCENTILE = 0.999
+AGGREGATE_ALPHA = 0.01
 MIN_REPLICATES = 10
 CHUNK_CELLS = 1 << 14
 SCHEMA_VERSION = re.compile(rb"""\bschemaVersion\s*=\s*["'](\d+)["']""")
@@ -80,8 +80,8 @@ def check_nan(x, keys):
 class CellStatistics:
     stats: dict
     misses: np.ndarray
-    zero_width_failing: np.ndarray
-    zero_width_failure_cells: int
+    fixed_failing: np.ndarray
+    fixed_failure_cells: int
 
 
 def block_misses(block, s, rank, p_lo, p_hi):
@@ -90,10 +90,10 @@ def block_misses(block, s, rank, p_lo, p_hi):
     return ((block < lo) | (block > hi)).sum(axis=1)
 
 
-def block_zero_width_failures(s, rank):
+def block_fixed_failures(s, rank):
     n = s.shape[0]
-    low_outlier = (s[1] == s[n - 1]) & (s[0] != s[1])
-    high_outlier = (s[0] == s[n - 2]) & (s[n - 2] != s[n - 1])
+    low_outlier = (s[1] == s[n - 1]) & (s[0] != s[1]) & (s[1] != 0)
+    high_outlier = (s[0] == s[n - 2]) & (s[n - 2] != s[n - 1]) & (s[0] != 0)
     failing = (low_outlier & (rank == 0)) | (high_outlier & (rank == n - 1))
     return failing.any(axis=1), int((low_outlier | high_outlier).sum())
 
@@ -115,14 +115,23 @@ def cell_statistics(x, p_lo, p_hi, chunk=CHUNK_CELLS):
         result.stats["lo"][part] = quantile_sorted(s, p_lo)
         result.stats["hi"][part] = quantile_sorted(s, p_hi)
         result.misses += block_misses(block, s, rank, p_lo, p_hi)
-        failing, failure_cells = block_zero_width_failures(s, rank)
-        result.zero_width_failing |= failing
-        result.zero_width_failure_cells += failure_cells
+        failing, failure_cells = block_fixed_failures(s, rank)
+        result.fixed_failing |= failing
+        result.fixed_failure_cells += failure_cells
     return result
 
 
-def miss_threshold(misses):
-    return math.ceil(quantile_sorted(np.sort(misses.astype(float)), LOO_MISS_PERCENTILE))
+def loo_p_values(misses):
+    s = np.sort(misses)
+    at_least = s.size - np.searchsorted(s, misses, side="left")
+    return at_least / s.size
+
+
+def max_passing_misses(misses):
+    counts = misses.tolist()
+    if stats_io.run_p_value(int(misses.max()) + 1, counts) > stats_io.RUN_ALPHA:
+        return None
+    return max(m for m in range(int(misses.max()) + 1) if stats_io.run_p_value(m, counts) > stats_io.RUN_ALPHA)
 
 
 def seed_dirs(directory):
@@ -201,7 +210,8 @@ def build(directory, allow_dirty=False):
     agg_names = [n for n in stats_io.AGGREGATES if all(n in a for a in agg_values)]
     tail = AGGREGATE_ALPHA / 2 / max(len(agg_names), 1)
     agg = np.array([[a[n] for n in agg_names] for a in agg_values], dtype=np.float64).reshape(len(seeds), -1)
-    agg_stats = cell_statistics(agg, tail, 1 - tail).stats
+    agg_cells = cell_statistics(agg, tail, 1 - tail)
+    agg_stats = agg_cells.stats
 
     rows = [(k, {c: cells.stats[c][i] for c in stats_io.STAT_COLUMNS}) for i, k in enumerate(keys)]
     rows += [((stats_io.AGGREGATE, "", "", n), {c: agg_stats[c][i] for c in stats_io.STAT_COLUMNS})
@@ -210,6 +220,13 @@ def build(directory, allow_dirty=False):
     n_survey = sum(1 for k in keys if k[0] == stats_io.SURVEY)
     misses = cells.misses
     sorted_misses = np.sort(misses)
+    miss_failing = loo_p_values(misses) <= stats_io.RUN_ALPHA
+    agg_failing = agg_cells.misses > 0
+    run_failing = miss_failing | agg_failing | cells.fixed_failing
+    limit = max_passing_misses(misses)
+    if limit is None:
+        print(f"warning: with {len(seeds)} replicates no miss count is improbable at "
+              f"{stats_io.RUN_ALPHA}; use at least {math.ceil(1 / stats_io.RUN_ALPHA)}", file=sys.stderr)
     meta = {
         "format_version": stats_io.FORMAT_VERSION,
         "scenario": Path(run_meta.get("scenario", "")).stem,
@@ -230,12 +247,14 @@ def build(directory, allow_dirty=False):
         "cell_interval": f"{CELL_INTERVAL[0]} {CELL_INTERVAL[1]}",
         "loo_misses": (f"min {int(sorted_misses[0])} median {np.median(sorted_misses):g} "
                        f"mean {misses.mean():.2f} max {int(sorted_misses[-1])}"),
-        "loo_miss_percentile": LOO_MISS_PERCENTILE,
-        "miss_threshold": miss_threshold(misses),
-        "loo_zero_width_failures": (f"{int(cells.zero_width_failing.sum())} of {len(seeds)} replicates, "
-                                    f"{cells.zero_width_failure_cells} cells"),
+        "run_alpha": stats_io.RUN_ALPHA,
+        "max_passing_misses": "unlimited" if limit is None else limit,
         "aggregates": " ".join(agg_names) or "none",
         "aggregate_interval": f"{format(tail, '.6g')} {format(1 - tail, '.6g')}",
+        "loo_run_failures": (f"{int(run_failing.sum())} of {len(seeds)} (misses {int(miss_failing.sum())}, "
+                             f"aggregates {int(agg_failing.sum())}, fixed cells {int(cells.fixed_failing.sum())} "
+                             f"in {cells.fixed_failure_cells} cells)"),
+        stats_io.LOO_COUNTS: " ".join(str(int(m)) for m in misses),
     }
     return meta, rows
 
@@ -261,7 +280,7 @@ def main(argv):
         print(f"error: {e}", file=sys.stderr)
         return 2
     print(f"wrote {out}: {meta['replicates']} replicates, {meta['cells']} cells, "
-          f"miss threshold {meta['miss_threshold']}, aggregates {meta['aggregates']}", file=sys.stderr)
+          f"leave-one-out run failures {meta['loo_run_failures']}", file=sys.stderr)
     return 0
 
 

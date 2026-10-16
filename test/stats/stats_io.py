@@ -1,4 +1,5 @@
-"""Readers for openMalaria outputs and statistical reference files, plus the key aggregates.
+"""Readers for openMalaria outputs and statistical reference files, the key aggregates, and
+the per-cell rules shared by generate_reference.py and check_scenario.py.
 
 Standard library only, so the single-run checker can use it without numpy.
 
@@ -14,7 +15,9 @@ from dataclasses import dataclass, field
 SURVEY = "survey"
 CTSOUT = "ctsout"
 AGGREGATE = "aggregate"
-FORMAT_VERSION = "1"
+FORMAT_VERSION = "2"
+RUN_ALPHA = 0.01
+LOO_COUNTS = "loo_miss_counts"
 COLUMNS = ("file", "survey", "group", "measure", "mean", "sd", "min", "max", "lo", "hi")
 STAT_COLUMNS = COLUMNS[4:]
 WHOLE_POPULATION_GROUP_LIMIT = 1000
@@ -148,6 +151,7 @@ def aggregates(cells):
 class Reference:
     meta: dict = field(default_factory=dict)
     rows: dict = field(default_factory=dict)
+    loo_counts: list = field(default_factory=list)
 
 
 def format_number(x):
@@ -190,4 +194,28 @@ def read_reference(path):
             ref.rows[tuple(parts[:4])] = dict(zip(STAT_COLUMNS, map(float, parts[4:]), strict=True))
     if ref.meta.get("format_version") != FORMAT_VERSION:
         raise FormatError(f"{path}: format_version {ref.meta.get('format_version')}, expected {FORMAT_VERSION}")
+    try:
+        ref.loo_counts = [int(c) for c in ref.meta[LOO_COUNTS].split()]
+    except (KeyError, ValueError) as e:
+        raise FormatError(f"{path}: bad or missing {LOO_COUNTS}") from e
+    if str(len(ref.loo_counts)) != ref.meta.get("replicates"):
+        raise FormatError(f"{path}: {len(ref.loo_counts)} {LOO_COUNTS} for {ref.meta.get('replicates')} replicates")
     return ref
+
+
+def run_p_value(misses, loo_counts):
+    return (1 + sum(1 for c in loo_counts if c >= misses)) / (len(loo_counts) + 1)
+
+
+def is_fixed_cell(row):
+    return math.isnan(row["min"]) or (row["min"] == row["max"] and row["min"] != 0)
+
+
+def same_value(a, b):
+    return a == b or (math.isnan(a) and math.isnan(b))
+
+
+def is_miss(value, row):
+    if math.isnan(row["lo"]) or math.isnan(value):
+        return not same_value(value, row["lo"])
+    return value < row["lo"] or value > row["hi"]

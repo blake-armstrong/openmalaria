@@ -89,21 +89,53 @@ class LeaveOneOutTests(unittest.TestCase):
         x[:, 1] = math.nan
         np.testing.assert_array_equal(misses(x, 0.025, 0.975), without_nan)
 
-    def test_miss_threshold_is_ceiling_of_percentile(self):
-        self.assertEqual(gen.miss_threshold(np.arange(1000)), math.ceil(np.quantile(np.arange(1000), 0.999)))
-        self.assertEqual(gen.miss_threshold(np.array([0, 0, 0, 7])), 7)
+class RunPValueTests(unittest.TestCase):
+    def test_loo_p_values_match_brute_force_with_ties(self):
+        misses = np.random.default_rng(6).integers(0, 8, size=40)
+        for i, p in enumerate(gen.loo_p_values(misses)):
+            others = np.delete(misses, i).tolist()
+            self.assertEqual(p, stats_io.run_p_value(int(misses[i]), others))
+
+    def test_run_p_value(self):
+        self.assertEqual(stats_io.run_p_value(5, [1, 5, 5, 9]), 4 / 5)
+        self.assertEqual(stats_io.run_p_value(10, [1, 5, 5, 9]), 1 / 5)
+        self.assertEqual(stats_io.run_p_value(0, [1, 5, 5, 9]), 1.0)
+
+    def test_max_passing_misses(self):
+        misses = np.arange(1000)
+        limit = gen.max_passing_misses(misses)
+        self.assertGreater(stats_io.run_p_value(limit, misses.tolist()), stats_io.RUN_ALPHA)
+        self.assertLessEqual(stats_io.run_p_value(limit + 1, misses.tolist()), stats_io.RUN_ALPHA)
+        self.assertEqual(limit, 990)
+        self.assertIsNone(gen.max_passing_misses(np.array([0, 0, 0, 7])))
 
 
-class ZeroWidthTests(unittest.TestCase):
-    def test_single_outlier_replicate_is_reported(self):
-        x = np.zeros((10, 4))
+class FixedCellTests(unittest.TestCase):
+    def test_single_outlier_from_non_zero_constant_is_reported(self):
+        x = np.zeros((10, 5))
+        x[:, [3, 4]] = 2.0
         x[3, 0] = 1.0
-        x[7, 1] = -2.0
+        x[7, 3] = -2.0
+        x[2, 4] = 5.0
         x[2, 2] = x[5, 2] = 1.0
         result = gen.cell_statistics(x, 0.025, 0.975, chunk=3)
-        failing, cells = result.zero_width_failing, result.zero_width_failure_cells
-        self.assertEqual(cells, 2)
-        self.assertEqual(sorted(np.flatnonzero(failing)), [3, 7])
+        self.assertEqual(result.fixed_failure_cells, 2)
+        self.assertEqual(sorted(np.flatnonzero(result.fixed_failing)), [2, 7])
+
+    def test_is_fixed_cell(self):
+        def row(lo, hi):
+            return {"min": lo, "max": hi}
+        self.assertTrue(stats_io.is_fixed_cell(row(2.5, 2.5)))
+        self.assertTrue(stats_io.is_fixed_cell(row(math.nan, math.nan)))
+        self.assertFalse(stats_io.is_fixed_cell(row(0.0, 0.0)))
+        self.assertFalse(stats_io.is_fixed_cell(row(1.0, 2.0)))
+
+    def test_is_miss(self):
+        row = {"lo": 1.0, "hi": 3.0}
+        self.assertEqual([stats_io.is_miss(v, row) for v in (0.5, 1.0, 3.0, 3.5, math.nan)],
+                         [True, False, False, True, True])
+        nan_row = {"lo": math.nan, "hi": math.nan}
+        self.assertEqual([stats_io.is_miss(v, nan_row) for v in (math.nan, 0.0)], [False, True])
 
     def test_mixed_nan_is_an_error(self):
         x = np.zeros((10, 2))
@@ -230,7 +262,9 @@ class EndToEndTests(unittest.TestCase):
         self.assertEqual(meta["cells"], "11 (survey 7, ctsout 4)")
         self.assertEqual(meta["zero_width_cells"], "6")
         self.assertEqual(meta["aggregates"], "clinical_episodes mean_prevalence mean_eir")
-        self.assertEqual(meta["aggregate_interval"], "0.00833333 0.991667")
+        self.assertEqual(meta["aggregate_interval"], "0.00166667 0.998333")
+        self.assertEqual(len(ref.loo_counts), self.N)
+        self.assertEqual(meta["loo_run_failures"].split(" (")[0].split(" of ")[1], str(self.N))
         self.assertEqual(len(ref.rows), 11 + 3)
 
         episodes = ref.rows[("survey", "1", "1", "14")]
@@ -247,8 +281,8 @@ class EndToEndTests(unittest.TestCase):
 
         total = np.arange(self.N) * 3 + 1.0
         clinical = ref.rows[("aggregate", "", "", "clinical_episodes")]
-        self.assertEqual(clinical["lo"], np.quantile(total, 0.025 / 3))
-        self.assertEqual(clinical["hi"], np.quantile(total, 1 - 0.025 / 3))
+        self.assertEqual(clinical["lo"], np.quantile(total, 0.005 / 3))
+        self.assertEqual(clinical["hi"], np.quantile(total, 1 - 0.005 / 3))
 
     def test_round_trip_is_exact(self):
         code, out, err = self.run_main()
