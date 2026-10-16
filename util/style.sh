@@ -6,6 +6,7 @@ ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 BUILD_DIR="${OM_BUILD_DIR:-build}"
 SOURCE_REGEX='^(model|unittest)/.*\.(cpp|h)$'
 SAFE_FIX_CHECKS='-*,modernize-use-nullptr,modernize-use-override,modernize-use-equals-default,modernize-use-equals-delete,modernize-use-using,modernize-redundant-void-arg,modernize-use-bool-literals,cppcoreguidelines-init-variables,performance-for-range-copy,performance-unnecessary-copy-initialization'
+MODERNIZE_CHECKS="$SAFE_FIX_CHECKS,modernize-make-unique,modernize-make-shared,modernize-loop-convert,modernize-use-default-member-init,modernize-use-emplace,modernize-use-std-numbers,modernize-concat-nested-namespaces,modernize-deprecated-headers,modernize-use-ranges,modernize-use-starts-ends-with,modernize-type-traits,modernize-unary-static-assert,modernize-shrink-to-fit,cppcoreguidelines-pro-type-member-init,cppcoreguidelines-prefer-member-initializer,performance-unnecessary-value-param,performance-move-const-arg,performance-faster-string-find"
 
 usage() {
     cat <<EOF
@@ -29,9 +30,17 @@ project .clang-format and .clang-tidy.
   rename <dir> [opts]   rename the identifiers declared in one module directory
                         to the naming rules, at every use in every TU, then
                         format-changed (util/rename_module.py; -h for options)
+  modernize <dir> [opts]
+                        apply the module-wide fix-its below to one module
+                        directory until none is left, then format-changed;
+                        --report lists what is left for the hand commit
+                        (util/modernize_module.py; -h for options)
 
-Safe fix-it checks:
+Safe fix-it checks (fix):
   $SAFE_FIX_CHECKS
+
+Module-wide fix-it checks (modernize): the safe list, plus
+  ${MODERNIZE_CHECKS#"$SAFE_FIX_CHECKS,"}
 
 All [base] arguments default to HEAD and read git diff, so new files must be
 staged (or git add -N) to be seen.
@@ -117,6 +126,15 @@ run_rename() {
     [[ " $* " == *" --dry-run "* || " $* " == *" -h "* || " $* " == *" --help "* ]] || run_format_changed HEAD
 }
 
+run_modernize() {
+    compile_db
+    cd "$ROOT"
+    uv run --quiet --no-project --with pyyaml python util/modernize_module.py \
+        --llvm-version "$LLVM_VERSION" --build-dir "$BUILD_DIR" --checks="$MODERNIZE_CHECKS" "$@"
+    [[ " $* " == *" --dry-run "* || " $* " == *" --report "* || " $* " == *" -h "* || " $* " == *" --help "* ]] ||
+        run_format_changed HEAD
+}
+
 run_check() {
     local base="${1:-HEAD}"
     cd "$ROOT"
@@ -156,6 +174,7 @@ case "$cmd" in
     format-changed) run_format_changed "$@" ;;
     fix) run_fix "$@" ;;
     rename) run_rename "$@" ;;
+    modernize) run_modernize "$@" ;;
     -h|--help|help) usage ;;
     *) usage; exit 2 ;;
 esac
