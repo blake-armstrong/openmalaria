@@ -28,6 +28,8 @@
 #include "Global.h"
 #include "util/ModelOptions.h"
 
+#include <cxxtest/TestSuite.h>
+
 #include "Clinical/ClinicalModel.h"
 #include "Host/Human.h"
 #include "PkPd/LSTMModel.h"
@@ -234,20 +236,23 @@ public:
         dummyXML::monitoring.setSurveys(dummyXML::surveys);
         dummyXML::scenario.setMonitoring(dummyXML::monitoring);
         util::ModelNameProvider modelNameProvider(dummyXML::scenario.getModel());
-        sim::init(dummyXML::scenario, modelNameProvider);
+        static Clock clock;
+        bridge::current_clock = &clock;
+        clock.init(dummyXML::scenario, modelNameProvider);
 
         // we could just use zero, but we may spot more errors by using some weird number
-        sim::s_t0 = sim::fromYearsN(83.2591);
-        sim::s_t1 = sim::s_t0;
+        clock.t0 = sim::fromYearsN(83.2591);
+        clock.t1 = clock.t0;
 #ifndef NDEBUG
-        sim::in_update =
+        clock.in_update =
             true; // may not always be correct but we're more interested in getting around this check than using it in unit tests
 #endif
     }
     static void incrTime(SimTime incr) {
-        //NOTE: for unit tests, we do not differentiate between s_t0 and s_t1
-        sim::s_t0 = sim::s_t0 + incr;
-        sim::s_t1 = sim::s_t0;
+        //NOTE: for unit tests, we do not differentiate between t0 and t1
+        Clock& clock = bridge::clock();
+        clock.t0 = clock.t0 + incr;
+        clock.t1 = clock.t0;
     }
 
     static const scnXml::Parameters& prepareParameters() {

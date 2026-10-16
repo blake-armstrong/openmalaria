@@ -23,34 +23,13 @@
 #ifndef Hmod_OM_SimTime
 #define Hmod_OM_SimTime
 
-#ifndef Hmod_Global
-#error "Please include Global.h not SimTime.h directly."
-// because checkpoint.h needs this, and we need checkpoint.h
-#endif
-
-#include "util/mod.h"
-#include "util/checkpoint.h"
-#include "util/ModelNameProvider.h"
+#include <cmath>
+#include <cstddef>
 #include <memory>
-
-class UnittestUtil;
-
-namespace scnXml {
-class Scenario;
-}
 
 namespace OM {
 
 inline int floorToInt(double x) { return static_cast<int>(std::floor(x)); }
-
-/// Internal use only
-// Required to avoid use-before-definition
-class SimData {
-    static inline int interval; // days per time step
-    static inline size_t steps_per_year;
-    static inline double years_per_step;
-    friend class sim;
-};
 
 /******************************************************************************
  * Since version 43.1, SimTime is an integer instead of a class. Note: a 
@@ -84,18 +63,14 @@ public:
     static inline double inYears(SimTime d) { return d * (1.0 / DAYS_IN_YEAR); }
 
     /// Convert to time steps (rounding down)
-    static inline int inSteps(SimTime d) { return d / SimData::interval; }
+    static inline int inSteps(SimTime d);
     //@}
 
     /** Return this time in time steps modulo some positive integer. */
-    static inline int moduloSteps(SimTime d, int denominator) {
-        return util::mod_nn(d / SimData::interval, denominator);
-    }
+    static inline int moduloSteps(SimTime d, int denominator);
 
     /** Return this time in time steps modulo some positive integer. */
-    static inline int moduloYearSteps(SimTime d) {
-        return util::mod_nn(d / SimData::interval, SimData::steps_per_year);
-    }
+    static inline int moduloYearSteps(SimTime d);
 
     /** Duration zero and the time at the start of the simulation. */
     static inline SimTime zero() { return SimTime(0); }
@@ -119,13 +94,13 @@ public:
     static inline SimTime oneYear() { return SimTime(DAYS_IN_YEAR); }
 
     /** One time step (currently either one or five days). */
-    static inline SimTime oneTS() { return SimTime(SimData::interval); }
+    static inline SimTime oneTS();
     //@}
 
     ///@brief Parameterised constructors
     //@{
     /** Convert. */
-    static inline SimTime fromTS(int ts) { return SimTime(int(oneTS()) * ts); }
+    static inline SimTime fromTS(int ts);
 
     /** Duration in days. Should be fast (currently no conversion required). */
     static inline SimTime fromDays(int days) { return SimTime(days); }
@@ -134,29 +109,29 @@ public:
     static inline SimTime fromYearsI(int years) { return SimTime(DAYS_IN_YEAR * years); }
 
     /** Convert from years to nearest time step. */
-    static inline SimTime fromYearsN(double years) { return roundToTSFromDays(DAYS_IN_YEAR * years); }
+    static inline SimTime fromYearsN(double years);
 
     /** Convert from years, rounding down to the next time step. */
-    static inline SimTime fromYearsD(double years) { return fromTS(floorToInt(SimData::steps_per_year * years)); }
+    static inline SimTime fromYearsD(double years);
 
     /** Round to the nearest time-step, where input is in days. */
-    static inline SimTime roundToTSFromDays(double days) { return fromTS(floorToInt(days / SimData::interval + 0.5)); }
+    static inline SimTime roundToTSFromDays(double days);
     //@}
 
     /** The number of time steps in one year. */
-    static inline size_t stepsPerYear() { return SimData::steps_per_year; }
+    static inline size_t stepsPerYear();
 
     /** A cached value: one year divided by one time step. */
-    static inline double yearsPerStep() { return SimData::years_per_step; }
+    static inline double yearsPerStep();
 
     /// Maximum possible age of a human.
-    static inline SimTime maxHumanAge() { return s_max_human_age; }
+    static inline SimTime maxHumanAge();
 
     /// The starting date of the simulation
-    static inline SimTime startDate() { return s_start; }
+    static inline SimTime startDate();
 
     /// The ending date of the simulation
-    static inline SimTime endDate() { return s_end; }
+    static inline SimTime endDate();
     //@}
 
     ///@brief Access simulation time variables
@@ -165,18 +140,12 @@ public:
      *
      * This is what is mostly used during an update. It is never negative and
      * increases throughout the simulation. */
-    static inline SimTime ts0() {
-        assert(in_update); // should only be used during updates
-        return s_t0;
-    }
+    static inline SimTime ts0();
     /** Time at the end of a time step update.
      * 
      * During an update, ts0() + oneTS() = ts1(). Neither this nor ts0 should
      * be used outside of updates. */
-    static inline SimTime ts1() {
-        assert(in_update); // should only be used during updates
-        return s_t1;
-    }
+    static inline SimTime ts1();
     /**
      * Time steps are mid-day to mid-day, and this is the time at mid-day (i.e.
      * this equals ts1 from the last step and ts0 from the next one).
@@ -184,16 +153,13 @@ public:
      * This is for monitoring and intervention deployment which happens between
      * updates. Cannot be used during human or vector update.
      */
-    static inline SimTime now() {
-        assert(!in_update); // only for use outside of step updates
-        return s_t0;        // which is equal to s_t1 outside of updates, but that's a detail
-    }
+    static inline SimTime now();
     /** During updates, this is ts0; between, this is now. */
-    static inline SimTime nowOrTs0() { return s_t0; }
+    static inline SimTime nowOrTs0();
     /** During updates, this is ts1; between, this is now. */
-    static inline SimTime nowOrTs1() { return s_t1; }
+    static inline SimTime nowOrTs1();
     /** During updates, this is ts0; between, it is now - 1. */
-    static inline SimTime latestTs0() { return s_t1 - sim::oneTS(); }
+    static inline SimTime latestTs0();
     //@}
 
     ///@brief Access intervention-time variables
@@ -202,7 +168,7 @@ public:
     ///
     /// This equals (intervDate() - startDate()), but happens to be the most
     /// common way that intervention-period dates are used.
-    static inline SimTime intervTime() { return s_interv; }
+    static inline SimTime intervTime();
 
     /// The current date.
     ///
@@ -211,46 +177,8 @@ public:
     /// returns a large negative value.)
     ///
     /// Intervention deployment times are relative to this date.
-    static inline SimTime intervDate() { return s_start + s_interv; }
+    static inline SimTime intervDate();
     //@}
-
-    // private:
-    // Initial set-up: called by Simulator
-    static void init(const scnXml::Scenario& scenario, util::ModelNameProvider mnp);
-
-    // Sets up time step duration.
-    // Assumes that the scenario either:
-    // (1) states to use a named model which has some value for interval, or
-    // (2) includes a <parameters> element, which sets an interval value.
-    static void initInterval(const scnXml::Scenario& scenario, util::ModelNameProvider mnp);
-
-    // Start of update: called by Simulator
-    static inline void start_update() {
-        s_t1 = s_t1 + sim::oneTS();
-#ifndef NDEBUG
-        in_update = true;
-#endif
-    }
-    // End of update: called by Simulator
-    static inline void end_update() {
-#ifndef NDEBUG
-        in_update = false;
-#endif
-        s_t0 = s_t1;
-        s_interv = s_interv + sim::oneTS();
-    }
-
-    // Scenario constants
-    static inline SimTime s_start = sim::never();
-    static inline SimTime s_end = sim::never();
-    static inline SimTime s_max_human_age = sim::never();
-    static inline SimTime s_t0 = sim::never();
-    static inline SimTime s_t1 = sim::never();
-    static inline SimTime s_interv = sim::never();
-
-#ifndef NDEBUG
-    static inline bool in_update = false; // only true during human/population/transmission update
-#endif
 };
 
 }

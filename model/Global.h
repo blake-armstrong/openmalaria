@@ -38,7 +38,10 @@
 #include <cmath>
 
 // Checkpointing and time-step operations are used _everywhere_:
-#include "sim.h" // includes util/checkpoint.h and util/mod.h
+#include "util/checkpoint.h"
+#include "util/mod.h"
+#include "sim.h"
+#include "Clock.h"
 
 #define PI 3.14159265358979323846
 

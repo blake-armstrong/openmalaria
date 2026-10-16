@@ -51,7 +51,7 @@ int readCheckpointNum(const string& checkpointFileName) {
     return checkpointNum;
 }
 
-void checkpoint(istream& stream, SimTime& endTime, SimTime& estEndTime, Population& population,
+void checkpoint(istream& stream, Clock& clock, SimTime& endTime, SimTime& estEndTime, Population& population,
                 Transmission::TransmissionModel& transmission) {
     try {
         util::checkpoint::header(stream);
@@ -66,7 +66,7 @@ void checkpoint(istream& stream, SimTime& endTime, SimTime& estEndTime, Populati
         util::StreamValidator& stream;
 #endif
 
-        sim::s_interv& stream;
+        clock.checkpoint_interv_time(stream);
         endTime & stream;
         estEndTime & stream;
         transmission & stream;
@@ -76,8 +76,7 @@ void checkpoint(istream& stream, SimTime& endTime, SimTime& estEndTime, Populati
 
         // read last, because other loads may use random numbers or expect time
         // to be negative
-        sim::s_t0& stream;
-        sim::s_t1& stream;
+        clock.checkpoint_step_times(stream);
         util::master_RNG.checkpoint(stream);
     } catch (const util::checkpoint_error& e) { // append " (pos X of Y bytes)"
         ostringstream pos;
@@ -96,7 +95,7 @@ void checkpoint(istream& stream, SimTime& endTime, SimTime& estEndTime, Populati
         throw util::checkpoint_error("stream read error");
 }
 
-void checkpoint(ostream& stream, SimTime& endTime, SimTime& estEndTime, Population& population,
+void checkpoint(ostream& stream, Clock& clock, SimTime& endTime, SimTime& estEndTime, Population& population,
                 Transmission::TransmissionModel& transmission) {
     util::checkpoint::header(stream);
     if (!stream.good())
@@ -113,22 +112,21 @@ void checkpoint(ostream& stream, SimTime& endTime, SimTime& estEndTime, Populati
     util::StreamValidator& stream;
 #endif
 
-    sim::s_interv& stream;
+    clock.checkpoint_interv_time(stream);
     endTime & stream;
     estEndTime & stream;
     transmission & stream;
     population.checkpoint(stream);
     interventions::InterventionManager::checkpoint(stream);
 
-    sim::s_t0& stream;
-    sim::s_t1& stream;
+    clock.checkpoint_step_times(stream);
     util::master_RNG.checkpoint(stream);
 
     if (stream.fail())
         throw util::checkpoint_error("stream write error");
 }
 
-void writeCheckpoint(const bool startedFromCheckpoint, const string& checkpointFileName, SimTime& endTime,
+void writeCheckpoint(const bool startedFromCheckpoint, const string& checkpointFileName, Clock& clock, SimTime& endTime,
                      SimTime& estEndTime, Population& population, Transmission::TransmissionModel& transmission) {
     // We alternate between two checkpoints, in case program is closed while writing.
     const int NUM_CHECKPOINTS = 2;
@@ -143,7 +141,7 @@ void writeCheckpoint(const bool startedFromCheckpoint, const string& checkpointF
         ostringstream name;
         name << checkpointFileName << checkpointNum << ".gz";
         ogzstream out(name.str().c_str(), ios::out | ios::binary);
-        checkpoint(out, endTime, estEndTime, population, transmission);
+        checkpoint(out, clock, endTime, estEndTime, population, transmission);
         out.close();
     }
 
@@ -165,8 +163,8 @@ void writeCheckpoint(const bool startedFromCheckpoint, const string& checkpointF
     }
 }
 
-void readCheckpoint(const string& checkpointFileName, SimTime& endTime, SimTime& estEndTime, Population& population,
-                    Transmission::TransmissionModel& transmission) {
+void readCheckpoint(const string& checkpointFileName, Clock& clock, SimTime& endTime, SimTime& estEndTime,
+                    Population& population, Transmission::TransmissionModel& transmission) {
     int checkpointNum = readCheckpointNum(checkpointFileName);
 
     // Open the latest file
@@ -176,10 +174,10 @@ void readCheckpoint(const string& checkpointFileName, SimTime& endTime, SimTime&
     //Note: gzstreams are considered "good" when file not open!
     if (!(in.good() && in.rdbuf()->is_open()))
         throw util::checkpoint_error("Unable to read file");
-    checkpoint(in, endTime, estEndTime, population, transmission);
+    checkpoint(in, clock, endTime, estEndTime, population, transmission);
     in.close();
 
-    cerr << sim::inSteps(sim::now()) << "t loaded checkpoint" << endl;
+    cerr << clock.in_steps(clock.now()) << "t loaded checkpoint\n";
 }
 
 }

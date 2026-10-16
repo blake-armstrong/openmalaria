@@ -30,19 +30,19 @@
 
 namespace OM {
 
-void sim::init(const scnXml::Scenario& scenario, util::ModelNameProvider mnp) {
-    initInterval(scenario, mnp);
-    SimData::steps_per_year = sim::inSteps(sim::oneYear());
-    SimData::years_per_step = 1.0 / SimData::steps_per_year;
-    sim::s_max_human_age = sim::fromYearsD(scenario.getDemography().getMaximumAgeYrs());
+void Clock::init(const scnXml::Scenario& scenario, const util::ModelNameProvider& mnp) {
+    init_interval(scenario, mnp);
+    steps_in_year = in_steps(sim::oneYear());
+    years_in_step = 1.0 / static_cast<double>(steps_in_year);
+    max_age = from_years_d(scenario.getDemography().getMaximumAgeYrs());
 
-    sim::s_start = sim::origin();
-    auto mon = scenario.getMonitoring();
+    start = sim::origin();
+    const auto& mon = scenario.getMonitoring();
     if (mon.getStartDate().present()) {
         try {
             // on failure, this throws or returns sim::never()
-            sim::s_start = UnitParse::parseDate(mon.getStartDate().get());
-            if (sim::s_start == sim::never()) {
+            start = UnitParse::parseDate(mon.getStartDate().get());
+            if (start == sim::never()) {
                 throw util::format_error("invalid format (expected YYYY-MM-DD)");
             }
         } catch (const util::format_error& e) {
@@ -50,34 +50,48 @@ void sim::init(const scnXml::Scenario& scenario, util::ModelNameProvider mnp) {
         }
     }
 
-    sim::s_interv = sim::never(); // large negative number
-    sim::s_end = mon::readSurveyDates(mon);
+    interv = sim::never(); // large negative number
+    end = mon::readSurveyDates(mon);
 }
 
-void sim::initInterval(const scnXml::Scenario& scenario, util::ModelNameProvider mnp) {
+void Clock::init_interval(const scnXml::Scenario& scenario, util::ModelNameProvider mnp) {
     // If scenario states to use a named model, set the relevant time step duration for
     // that named model here.  It may possibly get overwritten later in this method if
     // the scenario also states an explicit interval value - a behaviour that exists so
     // that users have the ability to override the time step duration if they need to.
-    const util::ModelNames namedModelToUse = mnp.GetModelName();
-    const bool useNamedModel = namedModelToUse != util::ModelNames::none;
-    if (useNamedModel) {
-        if (namedModelToUse == util::ModelNames::base) {
+    const util::ModelNames named_model_to_use = mnp.GetModelName();
+    const bool use_named_model = named_model_to_use != util::ModelNames::none;
+    if (use_named_model) {
+        if (named_model_to_use == util::ModelNames::base) {
             // This is where we define the length of the default time step, in days,
             // for the base model.
-            SimData::interval = 5;
+            interval = 5;
         } else {
             throw util::xml_scenario_error("No pre-set interval value is available for the specified model name.");
         }
     }
 
     // Apply the interval duration explicitly written in the scenario, if one exists.
-    const bool parameterBlockExistsInScenario = scenario.getModel().getParameters().present();
-    if (parameterBlockExistsInScenario) {
+    const bool parameter_block_exists_in_scenario = scenario.getModel().getParameters().present();
+    if (parameter_block_exists_in_scenario) {
         // Schema dictates that interval attribute is required if parameter element exists.
         // So no need to check for existsence of interval attribute in this case.
-        SimData::interval = scenario.getModel().getParameters().get().getInterval();
+        interval = scenario.getModel().getParameters().get().getInterval();
     }
+}
+
+void Clock::checkpoint_interv_time(std::istream& stream) { interv & stream; }
+
+void Clock::checkpoint_interv_time(std::ostream& stream) { interv & stream; }
+
+void Clock::checkpoint_step_times(std::istream& stream) {
+    t0 & stream;
+    t1 & stream;
+}
+
+void Clock::checkpoint_step_times(std::ostream& stream) {
+    t0 & stream;
+    t1 & stream;
 }
 
 }

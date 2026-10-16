@@ -65,6 +65,8 @@ private:
     void resume(const std::string& checkpoint_file);
     void finish();
 
+    Clock clock;
+    ClockBinding clock_binding{clock};
     std::unique_ptr<scnXml::Scenario> scenario_xml;
     std::unique_ptr<Population> population_model;
     std::unique_ptr<Transmission::TransmissionModel> transmission_model;

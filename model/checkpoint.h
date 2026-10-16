@@ -32,11 +32,11 @@ namespace OM {
     *
     * readCheckpoint/writeCheckpoint prepare to read/write the file,
     * and read/write read and write the actual data. */
-void writeCheckpoint(const bool startedFromCheckpoint, const string& checkpointFileName, SimTime& endTime,
+void writeCheckpoint(const bool startedFromCheckpoint, const string& checkpointFileName, Clock& clock, SimTime& endTime,
                      SimTime& estEndTime, Population& population, Transmission::TransmissionModel& transmission);
 
-void readCheckpoint(const string& checkpointFileName, SimTime& endTime, SimTime& estEndTime, Population& population,
-                    Transmission::TransmissionModel& transmission);
+void readCheckpoint(const string& checkpointFileName, Clock& clock, SimTime& endTime, SimTime& estEndTime,
+                    Population& population, Transmission::TransmissionModel& transmission);
 }
 
 #endif

@@ -51,18 +51,18 @@ namespace OM {
 
 namespace {
 
-void print_progress(int last_percent, SimTime est_end_time) {
-    int percent = (sim::now() * 100) / est_end_time;
+void print_progress(int last_percent, SimTime now, SimTime est_end_time) {
+    int percent = (now * 100) / est_end_time;
     if (percent != last_percent) { // avoid huge amounts of output for performance/log-file size reasons
         last_percent = percent;
         cerr << "\r" << percent << "%\t" << flush;
     }
 }
 
-void print_errno() {
+void print_errno(SimTime now) {
     if (errno != 0) {
         const int error = errno;
-        const std::string context = "t = " + std::to_string(static_cast<int>(sim::now())) + " Please report! Error: ";
+        const std::string context = "t = " + std::to_string(static_cast<int>(now)) + " Please report! Error: ";
         errno = error;
         std::perror(context.c_str());
         errno = 0;
@@ -80,7 +80,7 @@ Simulation::Simulation(std::unique_ptr<scnXml::Scenario> scenario)
     const util::ModelNameProvider model_name_provider(scenario_xml->getModel());
 
     // 2) elements depending on only elements initialised in (1):
-    sim::init(*scenario_xml, model_name_provider); // Also reads survey dates.
+    clock.init(*scenario_xml, model_name_provider); // Also reads survey dates.
 
     // 3) elements depending on only elements initialised in (2).
     const Parameters parameters(scenario_xml->getModel().getParameters(),
@@ -121,12 +121,11 @@ Simulation::Simulation(std::unique_ptr<scnXml::Scenario> scenario)
     Clinical::ClinicalModel::setHS(scenario_xml->getHealthSystem()); // Depends on interventions, PK/PD (from humanPop)
     mon::initCohorts(scenario_xml->getMonitoring());                 // Depends on interventions
 
-    sim::s_t0 = sim::zero();
-    sim::s_t1 = sim::zero();
+    clock.reset_time();
 
     // Make sure warmup period is at least as long as a human lifespan, as the
     // length required by vector warmup, and is a whole number of years.
-    SimTime warmup = sim::maxHumanAge();
+    SimTime warmup = clock.max_human_age();
     if (transmission_model->interventionMode != Transmission::forcedEIR)
         warmup = max(warmup, sim::fromYearsI(55)); // Data is summed over 5 years; add an extra 50 for stabilization.
 
@@ -144,7 +143,7 @@ void Simulation::run(const CheckpointOptions& checkpointing) {
             errno = 0; // Cleanup errno if file doesn't exist
     }
 
-    est_end_time = warmup_length + (sim::endDate() - sim::startDate()) + sim::oneTS();
+    est_end_time = warmup_length + (clock.end_date() - clock.start_date()) + clock.one_ts();
     assert(est_end_time + sim::never() < sim::zero());
 
     if (started_from_checkpoint)
@@ -160,7 +159,7 @@ void Simulation::run(const CheckpointOptions& checkpointing) {
 
 void Simulation::resume(const std::string& checkpoint_file) {
     mon::Continuous::init(scenario_xml->getMonitoring(), true);
-    readCheckpoint(checkpoint_file, end_time, est_end_time, *population_model, *transmission_model);
+    readCheckpoint(checkpoint_file, clock, end_time, est_end_time, *population_model, *transmission_model);
 
     /** Calculate ento availability percentiles **/
     Transmission::PerHostAnophParams::calcAvailabilityPercentiles();
@@ -176,7 +175,7 @@ void Simulation::start_new(const CheckpointOptions& checkpointing) {
 
     /** Warm-up phase: 
      * Run the simulation using the equilibrium inoculation rates over one
-     * complete lifespan (sim::maxHumanAge()) to reach immunological
+     * complete lifespan (clock.max_human_age()) to reach immunological
      * equilibrium in all age classes. Don't report any events. */
     end_time = warmup_length;
     run_phase("Warmup", end_time);
@@ -187,7 +186,7 @@ void Simulation::start_new(const CheckpointOptions& checkpointing) {
     while (iterate > sim::zero()) {
         end_time = end_time + iterate;
         // adjust estimation of final time step: end of current period + length of main phase
-        est_end_time = end_time + (sim::endDate() - sim::startDate()) + sim::oneTS();
+        est_end_time = end_time + (clock.end_date() - clock.start_date()) + clock.one_ts();
         run_phase("EIR Calibration", end_time);
         iterate = transmission_model->initIterate();
     }
@@ -200,8 +199,8 @@ void Simulation::start_new(const CheckpointOptions& checkpointing) {
      * (iii)       the intervention packages defined in Intervention()
      * (iv)        the survey times defined in Survey() */
     // reset endTime and estEndTime to their exact value after initIterate()
-    est_end_time = end_time = end_time + (sim::endDate() - sim::startDate()) + sim::oneTS();
-    sim::s_interv = sim::zero();
+    est_end_time = end_time = end_time + (clock.end_date() - clock.start_date()) + clock.one_ts();
+    clock.start_intervention_period();
     Host::InfectionIncidenceModel::preMainSimInit();
     Clinical::InfantMortality::preMainSimInit();
     WithinHost::Genotypes::preMainSimInit();
@@ -210,7 +209,8 @@ void Simulation::start_new(const CheckpointOptions& checkpointing) {
     mon::initMainSim();
 
     if (checkpointing.enabled) {
-        writeCheckpoint(false, checkpointing.file_name, end_time, est_end_time, *population_model, *transmission_model);
+        writeCheckpoint(false, checkpointing.file_name, clock, end_time, est_end_time, *population_model,
+                        *transmission_model);
         if (checkpointing.stop_after_write)
             throw util::cmd_exception("Checkpoint test: checkpoint written", util::Error::None);
     }
@@ -240,7 +240,7 @@ void Simulation::run_phase(const std::string& phase, SimTime end) {
 }
 
 void Simulation::run_until(SimTime end) {
-    while (sim::now() < end)
+    while (clock.now() < end)
         step();
 }
 
@@ -248,26 +248,27 @@ void Simulation::step() {
     Population& population = *population_model;
     Transmission::TransmissionModel& transmission = *transmission_model;
 
-    if (util::CommandLine::option(util::CommandLine::VERBOSE) && sim::intervDate() > 0)
-        cout << "Time step: " << sim::now() / sim::oneTS() << ", internal days: " << sim::now() << " | " << est_end_time
-             << ", Intervention Date: " << sim::intervDate() << endl; // NOLINT(performance-avoid-endl)
+    if (util::CommandLine::option(util::CommandLine::VERBOSE) && clock.interv_date() > 0)
+        cout << "Time step: " << clock.now() / clock.one_ts() << ", internal days: " << clock.now() << " | "
+             << est_end_time << ", Intervention Date: " << clock.interv_date()
+             << endl; // NOLINT(performance-avoid-endl)
 
-    // Monitoring. sim::now() gives time of end of last step,
+    // Monitoring. clock.now() gives time of end of last step,
     // and is when reporting happens in our time-series.
     mon::Continuous::update(population);
-    if (sim::intervDate() == mon::nextSurveyDate()) {
+    if (clock.interv_date() == mon::nextSurveyDate()) {
         for (Host::Human& human : population.humans)
             Host::summarize(human, only_new_episode);
         transmission.summarize();
         mon::concludeSurvey();
     }
 
-    // Deploy interventions, at time sim::now().
+    // Deploy interventions, at time clock.now().
     interventions::InterventionManager::deploy(population.humans, transmission);
 
     // Time step updates. Time steps are mid-day to mid-day.
-    // sim::ts0() gives the date at the start of the step, sim::ts1() the date at the end.
-    sim::start_update();
+    // clock.ts0() gives the date at the start of the step, clock.ts1() the date at the end.
+    clock.start_update();
 
     // This should be called before humans contract new infections in the simulation step.
     // This needs the whole population (it is an approximation before all humans are updated).
@@ -278,7 +279,7 @@ void Simulation::step() {
     Host::NeonatalMortality::update(population.humans);
 
     for (Host::Human& human : population.humans) {
-        if (human.getDOB() + sim::maxHumanAge() >= warmup_length) // this is last time of possible update
+        if (human.getDOB() + clock.max_human_age() >= warmup_length) // this is last time of possible update
             Host::update(human, transmission);
     }
 
@@ -289,11 +290,11 @@ void Simulation::step() {
     transmission.updateKappa(population.humans);
     transmission.surveyEIR();
 
-    sim::end_update();
+    clock.end_update();
 
     if (util::CommandLine::option(util::CommandLine::PROGRESS))
-        print_progress(last_percent, est_end_time);
-    print_errno();
+        print_progress(last_percent, clock.now(), est_end_time);
+    print_errno(clock.now());
 }
 
 }
