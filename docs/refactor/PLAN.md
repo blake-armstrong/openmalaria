@@ -245,14 +245,14 @@ Each chunk has the same fields:
 - **Done when:** a reference for `scenario1` at N = 50 is produced and the unit tests pass.
 - **Gates:** G-exact.
 
-### S3: Single-run checker
-- **Needs:** S2. **Read:** § Statistical tests (2).
-- **Do:** add `test/stats/check_scenario.py`. It handles:
-  - zero-width cells, which must match exactly
-  - the out-of-range count against the threshold
-  - the key aggregates
+### S3: Checker with reruns
+- **Needs:** S2. **Read:** § Statistical tests (1)–(2).
+- **Do:** add `test/stats/check_scenario.py`, implementing § Statistical tests (2):
+  - the per-run judgement: miss-count p-value against the leave-one-out counts, the aggregates, and fixed cells
+  - the fixed rerun rule
   - a report sorted by |z|
   - a `--replicates K` mode
+  - Move the reference format to version 2 (full leave-one-out counts, 99% aggregate family) and regenerate `scenario1` at N = 500.
 - **Done when:**
   - The checker passes on unchanged code.
   - It fails on a deliberately perturbed copy of `scenario1`, e.g. EIR × 1.5.
@@ -278,8 +278,9 @@ Each chunk has the same fields:
 ### S6: Validate the method
 - **Needs:** S5. **Read:** § Statistical tests (4).
 - **Do:**
-  - Measure the false-failure rate with 200 fresh-seed runs; it must be ≤ 0.5%.
-  - Run the power study with parameter perturbations of 5%, 10% and 20%, and with an intervention switched off.
+  - Measure the per-run failure rate with 200 fresh-seed runs, then the false-failure rate of the whole procedure, reruns included; it must be ≤ 0.5%.
+  - Run the power study with parameter perturbations of 5%, 10% and 20%, and with an intervention switched off, for both the default rerun rule and `--replicates K`.
+  - Retune the per-run α, K and the rerun rule if the targets are not met.
   - Write `test/stats/README.md` with the minimum detectable effect for each scenario.
   - Optionally add a nightly random-seed job.
 - **Done when:** the README exists and the false-failure target is met. If it isn't, retune the thresholds and record why.
@@ -527,20 +528,25 @@ Licence notes: OpenMalaria is GPL-2.0-or-later. MIT, BSD, BSL and MPL-2.0 code m
 1. **References.** For each scenario:
    - Run N = 500 replicates with seeds 1001…1000+N.
    - For each cell, compute the mean, the SD and the empirical q2.5/q97.5. This is a 95% *prediction* interval for one new run.
-   - Use empirical quantiles rather than mean ± 1.96·SD, because the outputs are skewed counts and often zero.
+   - Use empirical quantiles rather than mean ± 1.96·SD or a fitted distribution, because the outputs are skewed counts and often zero.
+   - Leave-one-out: count each replicate's misses against the interval built from the other N − 1, and store all N counts. They are the yardstick for how many misses a correct run has, and they already include the correlation between cells (F17).
+   - The key aggregates (clinical episodes, severe episodes, deaths, mean prevalence, mean EIR) get Bonferroni-widened intervals whose family covers 99%.
    - Write a CSV with a metadata header: N, seeds, commit, schema version and date.
-2. **Single-run check.** Use the scenario's own `iseed`, which is outside the reference range, so the verdict is deterministic.
-   - Zero-width cells must match exactly.
-   - About 5% of cells miss by chance, so the test fails only when the count of out-of-range cells exceeds the 99.9th percentile of leave-one-out miss counts from the replicates. This allows for correlation between cells.
-   - The key aggregates (clinical episodes, severe episodes, deaths, mean prevalence, mean EIR) must each sit inside a Bonferroni-widened interval.
+2. **Checking a build.** Settled with the user in S3, replacing the original exact-match rule for zero-width cells (F15).
+   - **One run fails** if any of these hold:
+     - (a) its miss count m is improbable: `p = (1 + #{leave-one-out counts ≥ m}) / (N + 1) ≤ 1%`
+     - (b) an aggregate is outside its interval
+     - (c) a *fixed* cell differs: one that was the same non-zero value (or NaN) in every replicate, such as the input EIR echoed back. A cell that was 0 in every replicate is a rare event, and a non-zero value there is just a miss under (a).
+   - A correct run fails one of these about 2% of the time. Missing or extra cells are an error, not a statistical failure.
+   - **Rerun rule, fixed in advance.** Run 1 uses the scenario's own `iseed`, which is outside the reference range. If it passes, the test passes. If it fails, run K = 5 fixed seeds (2001–2005); the test fails if at least one of them also fails. A correct build then fails about 0.02 × (1 − 0.98⁵) ≈ 0.2% of the time; a change that makes every run fail is always caught. Seeds are fixed, so the verdict for a build is deterministic.
+   - `--replicates K` runs K seeds up front and fails if the number of failing runs has a binomial tail ≤ 0.1% at the 2% per-run rate. It is the stronger test for changes expected to move outputs only slightly.
    - The report lists misses sorted by |z|.
 3. **Integration.** Each scenario is a CTest test `stat_<scenario>` with label `statistical`.
    - The byte-for-byte tests stay the oracle for pure refactors.
    - Checkpoint-and-resume stays exact, comparing against the same build and seed.
 4. **Validation.**
-   - False failures must be ≤ 0.5% over 200 fresh seeds.
-   - A power study (perturbations of 5%, 10% and 20%, and an intervention switched off) records each scenario's minimum detectable effect.
-   - A `--replicates 20` mode gives a stronger test for changes expected to move outputs only slightly.
+   - False failures of the whole procedure, reruns included, must be ≤ 0.5%, estimated from the per-run failure rate over 200 fresh seeds.
+   - A power study (perturbations of 5%, 10% and 20%, and an intervention switched off) records each scenario's minimum detectable effect, with and without `--replicates`.
 5. **Updates.** References are regenerated only for intended changes in behaviour. The regeneration goes in its own commit, with a summary of which measures moved.
 
 ## Key risks
