@@ -20,7 +20,24 @@ export OM_BUILD_DIR=build-rework        # default is build/
 util/style.sh format -i model/Foo.cpp   # clang-format, project config
 util/style.sh tidy model/Foo.cpp        # clang-tidy -p $OM_BUILD_DIR
 util/style.sh check [base]              # G-style gate, lines changed since base (default HEAD)
+util/style.sh changed [base]            # model/ and unittest/ C++ files changed since base
+util/style.sh format-changed [base [paths...]]  # git-clang-format the changed lines
+util/style.sh fix [base] [checks]       # apply clang-tidy fix-its on changed lines
 ```
+
+`format-changed` uses `git-clang-format`, so it formats exactly the lines `check`
+verifies. Whole-file `clang-format -i` is not quite equivalent: on a function appended
+before a namespace's closing `}`, it kept a blank line that the line-range format in
+`check` removes.
+
+`fix` defaults to a safe list of checks whose fix-its are local and don't change
+behaviour (`util/style.sh -h` prints it). Pass a `-checks` filter to apply others one at
+a time. The fixes are exported and applied once with `clang-apply-replacements`, because
+`clang-tidy-diff.py` runs one clang-tidy per file in parallel, and two of them can fix
+the same header. After any fix, it runs `format-changed`.
+
+The Claude Code skills `/cpp-style` (rules for writing code) and `/cpp-lint` (fix,
+rebuild, triage, report) in `.claude/skills/` wrap these commands.
 
 `check` runs `git-clang-format --diff` and `clang-tidy-diff.py` on the
 `model/` and `unittest/` C++ lines changed since `base`. It looks only at changed lines
