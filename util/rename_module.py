@@ -19,6 +19,7 @@ PREFIX_RE = re.compile(r"^(m_|_)(?=[A-Za-z])")
 CODE_NOISE_RE = re.compile(r'//[^\n]*|/\*.*?\*/|"(?:\\.|[^"\\\n])*"|\'(?:\\.|[^\'\\\n])*\'', re.DOTALL)
 CODE_NOISE_BYTES_RE = re.compile(CODE_NOISE_RE.pattern.encode(), re.DOTALL)
 DIRECTIVE_RE = re.compile(rb"^[ \t]*#[^\n]*", re.MULTILINE)
+NAMESPACE_DECL_RE = re.compile(r"\bnamespace\s+([A-Za-z_]\w*(?:\s*::\s*(?:inline\s+)?[A-Za-z_]\w*)*)\s*\{")
 TOKEN_RE = re.compile(r"[A-Za-z_]\w*|\d[\w.]*|\S")
 LOCAL_KINDS = {"parameter", "local constant", "local variable", "constant parameter"}
 MEMBER_KINDS = (
@@ -86,8 +87,10 @@ class Renamer:
     def owned_namespaces(self):
         decls = collections.defaultdict(set)
         for path in self.tree_files():
-            for name in re.findall(r"\bnamespace\s+([A-Za-z_]\w*)\s*\{", self.code(path)):
-                decls[name].add(self.in_module(path))
+            for names in NAMESPACE_DECL_RE.findall(self.code(path)):
+                for name in re.findall(r"[A-Za-z_]\w*", names):
+                    if name != "inline":
+                        decls[name].add(self.in_module(path))
         return {name for name, where in decls.items() if where == {True}}
 
     def run_tidy(self, out_dir, config_file=None):
