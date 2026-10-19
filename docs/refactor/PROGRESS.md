@@ -24,7 +24,7 @@ See `PLAN.md` for the session protocol, chunks and gates. Append one log entry p
 | C1 | done | b02303db, (this log entry) |
 | C2 | done | 20e8bf39, (this log entry) |
 | D1 | done | 2e2cac5a, 72e14d9c, bda40963, 4252cba1, 1a0c0b58, 48d3476c, 186d32f5, 21e09c0d, (this log entry) |
-| D2 | todo | |
+| D2 | done | 61fe9993, c98ffe6f, db1c50b1, 0808f323, fdd69348, 82e3c602, (this log entry) |
 | D2b | todo | |
 | D3 | todo | |
 | D4 | todo | |
@@ -435,6 +435,7 @@ See `PLAN.md` for the session protocol, chunks and gates. Append one log entry p
   |---|---|---|
   | `model/PkPd` | cae5d3b5 (B4) | a0f1112c + 7b330170 (M2) |
   | `model/` root: `sim.h`, `Clock.{h,cpp}`, `Simulation.{h,cpp}`, `checkpoint.{h,cpp}` | 4252cba1 (D1) | 48d3476c + 21e09c0d (D1) |
+  | `model/util/random.h`, `model/util/xoshiro.h` | c98ffe6f (D2) | 0808f323 + 82e3c602 (D2) |
 
 - Follow-ups:
   - D chunks: run `/rename-module` then `/modernize-module` on each module the chunk owns, and add a row to the table above.
@@ -617,3 +618,29 @@ See `PLAN.md` for the session protocol, chunks and gates. Append one log entry p
   - Population (`model/Population.cpp`, `PopulationAgeStructure.cpp`) shares the `model/` root but was not renamed or modernised here. It goes with E4, or with the pre-F0 sweep.
   - F1 (`print_progress` takes `last_percent` by value) is unchanged; it still needs the user's go-ahead.
 - Next: D2 (the RNG into `Simulation`), or S5 if the user wants the replicate job resumed (4 cores, in the worktree).
+
+### D2: `util::master_RNG` → an RNG owned by `Simulation` (done, 2026-10-19)
+- Base: ab3a2b4b. No S5 job running (S5 is done); the G-perf base worktree `../om-bench-base` was moved to ab3a2b4b and rebuilt.
+- Commits:
+  - 61fe9993: **logic.** `Simulation` owns `util::MasterRng master_rng`, declared right after the clock and its binding, then `MasterRngBinding master_rng_binding{master_rng}`. It is constructed with the scenario's `iseed` in the member initializer, instead of the global being constructed with seed 0 and reseeded after `Genotypes::init`. ChaCha's constructor is its `seed()`, and nothing draws in between, so the state is identical. `model/util/random.cpp` held only the global and is gone (removed from `Model_CPP`).
+    - **Bridge**, as D1's: `bridge::current_master_rng` (`NOLINT`ed global, removed in D9), `bridge::master_rng()` asserts it is set. Its only users are `Human`'s and `VectorModel`'s constructors, which seed their `LocalRng` from it. Their own chunks (Human: whoever takes `Population`/`Host`, at the latest D9; `VectorModel`: D7) should inject the master RNG instead.
+    - `checkpoint.{h,cpp}`: the four functions take `util::MasterRng&` after `Clock&`, and write it in the same place.
+    - `UnittestUtil::createHuman` binds a function-static `MasterRng(0, 0)`. The unit tests used the never-seeded global before, which had the same seed and was likewise shared across every `createHuman` call, so the draws are unchanged (F30).
+  - c98ffe6f + db1c50b1: **rename**, 6 of 7 planned: `m_rng`, `m_gsl_type`, `m_gsl_gen` lose their prefix, two header guards, `betaWithMean` → `beta_with_mean` (one use outside, in `interventions/Vaccine.cpp`). `--skip result_type`: `Xoshiro256P::result_type` is the UniformRandomBitGenerator name. Collisions reviewed: the new member name `rng` also appears as locals of the free `sample_*` functions and as `MasterRngBinding`'s parameter, both different scopes.
+  - 0808f323 + fdd69348: **modernise, tool:** 3 `pro-type-member-init`, 3 `prefer-member-initializer`, 3 `use-using`.
+  - 82e3c602: **modernise, hand:** `RNG` move operations `noexcept`, move assignment returns `RNG&`, destructor declared (the members stay hand-written, since `gsl_gen` points into the object); the `void*` round trips to GSL use `static_cast`/implicit conversion; 4 consts. `Xoshiro256P`: state is `std::array<uint64_t, 4>`, moves defaulted `noexcept` (they were `memcpy`), `operator==` compares arrays, explicit conversions in `gen_u32`/`gen_double` (same values), 2 consts, never-defined `generate_block`/`chacha_core` declarations and commented-out ChaCha stream code removed. Left: the `reinterpret_cast<char*>` for binary checkpoint I/O (`NOLINTNEXTLINE`; checkpoint format is H3's) and the header guards (the report's two "macros").
+- Gates:
+  - G-exact / G-unit: 53/53 after every commit, on `build-rework/` (Release) and `build-debug/` (Debug, so the bridge's null assert is live). The first Debug run caught the unit-test `createHuman` case before the commit.
+  - G-style: `util/style.sh check ab3a2b4b` clean. The rename and modernise tool commits passed their skill checks (format half clean, a second dry run applies nothing, token check), and `check <tool commit>^` is clean after each ignore-revs commit.
+  - G-perf: `util/bench.sh --compare ../om-bench-base/build-rework`. After the logic commit: median per-pair ratio 1.0103 (+1.03%); load ~11 at the start, from the base build. At the end (82e3c602): 0.9963 (−0.37%), base spread 4.8%, candidate 0.8%. Both ok.
+  - G-stat: plain `ctest -j4` passes 99/99 (53 old, 44 `stat_*`, 2 tool tests) in 41 s.
+- Surprises:
+  - `xoshiro.h` was not self-contained: it used `ostream`, `istream` and `runtime_error` unqualified, relying on `Global.h`'s `using namespace std` in whatever included it first. clang-tidy checks a changed header on its own, so G-style failed until it included and qualified them.
+  - `Transmission::PerHostAnophParams::calcAvailabilityPercentiles` (`PerHost.h`) builds its own local `MasterRng(0, 0)`, deliberately separate from the simulation's RNG. Not part of this family; left as is.
+  - With `noexcept` moves on `RNG`, `Human`'s defaulted move constructor may now be `noexcept` too. `std::vector<Human>` already moved on growth (Human's copy is deleted), so nothing changes.
+- Findings: F30.
+- Follow-ups:
+  - D7: inject the master RNG into `VectorModel` (via `createTransmissionModel`) instead of `bridge::master_rng()`.
+  - Whoever takes `Population`/`Host::Human` (or D9): pass the master RNG to `Population`, which constructs every `Human`, and drop the bridge use in `Human::Human`.
+  - D2b splits this single stream into per-purpose streams. It needs S6, V1 and Decision 1 first.
+- Next: S6 (recommended order item 10), then V1, then D2b.
