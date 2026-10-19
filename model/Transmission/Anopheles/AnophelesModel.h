@@ -264,7 +264,7 @@ public:
     /** Work out whether another interation is needed for initialisation and if
      * so, make necessary changes.
      *
-     * @returns true if another iteration is needed. */
+     * @returns false if another iteration is needed. */
     virtual bool initIterate();
 
     ///@brief Functions called as part of usual per-time-step operations

@@ -91,7 +91,7 @@ public:
     /** Work out whether another interation is needed for initialisation and if
      * so, make necessary changes.
      *
-     * @returns true if another iteration is needed. */
+     * @returns false if another iteration is needed. */
     virtual bool initIterate() {
         bool fitted = AnophelesModel::initIterate();
 
@@ -110,7 +110,9 @@ public:
             invLarvalResources[t] = (probPreadultSurvival * yt - mosqEmergeRate[t]) / (mosqEmergeRate[t] * yt);
         }
 
-        return fitted;
+        const bool resources_valid =
+            std::none_of(invLarvalResources.begin(), invLarvalResources.end(), [](double v) { return v < 0.0; });
+        return fitted && resources_valid;
     }
     //@}
 

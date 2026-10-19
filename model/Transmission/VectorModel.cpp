@@ -313,8 +313,8 @@ SimTime VectorModel::initIterate() {
     bool needIterate = false;
     for (size_t i = 0; i < speciesIndex.size(); ++i) {
         const bool species_needs_iterate = emergenceRateEstimators[i]->estimate(*species[i], kappa, meanAvail);
-        species[i]->initIterate();
-        needIterate = needIterate || species_needs_iterate;
+        const bool species_fitted = species[i]->initIterate();
+        needIterate = needIterate || species_needs_iterate || !species_fitted;
     }
 
     if (needIterate) {
