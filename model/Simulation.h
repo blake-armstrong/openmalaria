@@ -26,6 +26,7 @@
 #include "Global.h"
 #include "Population.h"
 #include "Transmission/transmission.h"
+#include "util/random.h"
 
 #include "schema/scenario.h"
 
@@ -67,6 +68,8 @@ private:
 
     Clock clock;
     ClockBinding clock_binding{clock};
+    util::MasterRng master_rng;
+    MasterRngBinding master_rng_binding{master_rng};
     std::unique_ptr<scnXml::Scenario> scenario_xml;
     std::unique_ptr<Population> population_model;
     std::unique_ptr<Transmission::TransmissionModel> transmission_model;

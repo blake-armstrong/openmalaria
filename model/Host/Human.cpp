@@ -107,7 +107,7 @@ HumanHet hetSample(util::LocalRng& rng) {
 }
 
 Human::Human(SimTime dateOfBirth)
-    : infIncidence(InfectionIncidenceModel::createModel()), rng(util::master_RNG), dateOfBirth(dateOfBirth) {
+    : infIncidence(InfectionIncidenceModel::createModel()), rng(bridge::master_rng()), dateOfBirth(dateOfBirth) {
     // Initial humans are created at time 0 and may have dateOfBirth in past. Otherwise dateOfBirth must be now.
     assert(dateOfBirth == Sim::now_or_ts1() || (Sim::now() == Sim::zero() && dateOfBirth < Sim::now()));
 

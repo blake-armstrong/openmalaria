@@ -234,9 +234,33 @@ private:
 typedef RNG<Xoshiro256P> LocalRng;
 typedef RNG<ChaCha<8>> MasterRng;
 
-/// The master RNG, used only for seeding local RNGs
-extern MasterRng master_RNG;
+}
+
+namespace bridge {
+
+inline util::MasterRng* current_master_rng = nullptr; // NOLINT(cppcoreguidelines-avoid-non-const-global-variables)
+
+inline util::MasterRng& master_rng() {
+    assert(current_master_rng != nullptr);
+    return *current_master_rng;
+}
 
 }
+
+class MasterRngBinding {
+public:
+    explicit MasterRngBinding(util::MasterRng& rng) : previous(bridge::current_master_rng) {
+        bridge::current_master_rng = &rng;
+    }
+    MasterRngBinding(const MasterRngBinding&) = delete;
+    MasterRngBinding& operator=(const MasterRngBinding&) = delete;
+    MasterRngBinding(MasterRngBinding&&) = delete;
+    MasterRngBinding& operator=(MasterRngBinding&&) = delete;
+    ~MasterRngBinding() { bridge::current_master_rng = previous; }
+
+private:
+    util::MasterRng* previous;
+};
+
 }
 #endif
