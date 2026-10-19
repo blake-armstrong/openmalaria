@@ -20,7 +20,7 @@ See `PLAN.md` for the session protocol, chunks and gates. Append one log entry p
 | S4 | done | 507b5b58, (this log entry) |
 | S5 | done | c155c7fb, 7a28ca71, 50fac6c1, ec9a409c, (this log entry) |
 | S6 | done | 350fdaf3, d4a84ef7, a382bc2c, c9f46c93, ecdac231, 5cd66064, (this log entry) |
-| S7 | todo | |
+| S7 | done | bf62b4ff, 190ffc99, 9e1f093e, 5cdcf528, fb09fd66, a4f6904a, 109ea58f, (this log entry) |
 | V1 | todo | |
 | C1 | done | b02303db, (this log entry) |
 | C2 | done | 20e8bf39, (this log entry) |
@@ -673,3 +673,38 @@ See `PLAN.md` for the session protocol, chunks and gates. Append one log entry p
 - At the user's request, after S6's power study (F31): new chunk **S7** in Stage S (PLAN.md), before D2b and independent of V1 (recommended order 10a). `--replicates K` will test the K-run mean of each aggregate and each survey measure's total against the reference, with a leave-K-out-calibrated threshold, plus a `statistical-full` ctest label. That label becomes part of G-stat for the draw-changing chunks D2b, M4 and M8. D2b and M4 now need S7.
 - Its three choices (K = 20, aggregates plus measure totals, 0.01% per scenario) are recommendations to confirm with the user at the start of S7.
 - The S5 replicates (om-s5) and S6 runs stay until S7 is done.
+
+### S7: Group-mean test for `--replicates` (done, 2026-10-19)
+- Base: 76016015. No C++ changed. Compute stayed within 4 cores.
+- **The user confirmed the three choices at the start:** K = 20; aggregates plus each survey measure's total; a family false-failure rate of 0.01% per scenario.
+- Commits:
+  - bf62b4ff: **reference format 4.**
+    - `stats_io.group_quantities`: the aggregates, plus `fsum` totals per survey measure. Groups below 1000 (whole population) and from 1000 up (cohort or genotype) are totalled separately; no survey cell is NaN in any reference, so a plain total works.
+    - The generator stores each replicate's value of every quantity that differs from its most common value in at least 10 replicates. These go in a second CSV table (`file,survey,group,measure,values`) after the cell rows.
+    - It calibrates the threshold by leave-20-out: 10⁶ resamples, `GROUP_SEED` fixed, so the result is reproducible. It stores `group_threshold` (the 1 − 10⁻⁴ quantile), `group_quantiles` (also at 5%, 1% and 0.1%, for validation), and `group_normal_bonferroni` for comparison.
+    - Generator tests: 38, including brute-force z and a check that the generator's totals equal the checker's.
+  - 190ffc99: **checker.**
+    - `--replicates` runs seeds 2001–2020 and fails on the largest |z| over the threshold, or on any rule-(c) run. Per-run results and the binomial count are still printed, for information only.
+    - K defaults to the reference's; another K is an error that says how to regenerate. The binomial `replicates_verdict` and `REPLICATES_ALPHA` are gone.
+    - Checker tests: 24.
+  - 9e1f093e: `statfull_<NAME>` ctest tests, label `statistical-full`, registered with `CONFIGURATIONS full` and `OM_STAT_FULL_JOBS` (default 4, also the `PROCESSORS` value). **Deviation:** the plan wrote `ctest -L statistical-full`. ctest has no other way to keep a test out of a plain run, so the command is `ctest -C full -L statistical-full`; PLAN's G-stat text is updated. Without `-C full` the tests are silently not listed.
+  - 5cdcf528: `validate_method.py`: group-test false failures (disjoint fresh groups), calibration per stored quantile, power from 1000 random groups of the 50 perturbed runs, and the largest shift in SD. Replaces the binomial `--replicates` columns.
+  - fb09fd66: the 44 references regenerated from the kept replicates (`/Users/blaarm/git/om-s5/build-rework/stats-replicates/` for 43, `build-rework/stats-s6/ref1` for scenario1). Cell and aggregate rows and the old metadata are byte-identical, checked per file. They hold 2–38 tested quantities each, with thresholds of 3.93–7.46, plus 17.4 for EffectiveDrug (F32). Total 14 MB (was 13 MB). About 7–9 s per scenario.
+  - a4f6904a: `test/stats/README.md`. 109ea58f: PLAN § Statistical tests (2)–(3), G-stat, key risks; FINDINGS.
+- **Validation** (kept S6 runs, no new runs; full report in `build-rework/stats-s6/report-s7.md`):
+  - False failures: 0 of 438 fresh groups (10 per scenario, 9 for LifeNet1/2).
+  - Calibration at the stored levels: 15 groups over the 5% quantile (21.9 expected), 1 over 1% (4.4), 0 over 0.1% and 0.01%. So it is slightly conservative (F33).
+  - Power at ≥ 80%: FOI × 1.2 in 24 of 44 scenarios (rerun rule 2, S6's `--replicates 20` 10); × 1.1 in 13; × 1.05 in 4 (4, Genotypes, MSAT_HRP2, Penny). Intervention off: 26 of 33 (was 16 / 19).
+  - Extra: scenario1 with every `EIRDaily` × 1.1 fails the group test, through rule (c) on the echoed input EIR in all 20 runs; the largest group z was 2.7 (mean EIR).
+- **Checked before settling on the plan's statistic.** Rare-count quantities lift six thresholds to about 6–7.5, and EffectiveDrug's outbreak replicates lift its threshold to 17.4. A Wilcoxon rank-sum group statistic, calibrated the same way, was compared on the same runs (scratch script, not committed). Its thresholds are lower (3.8–6.1), but its power is the same overall: 23 against 24 scenarios at × 1.2, worse in 5, ESTS, PEV and Cohort, better for NoMPDLarviciding's intervention removal. It doesn't help EffectiveDrug either. So the mean test was kept as specified (F32).
+- Gates (at 109ea58f):
+  - G-exact / G-unit / G-stat: plain `ctest -j4` passes 99/99 (53 old, 44 `stat_*`, 2 tool tests) in 42 s.
+  - G-stat (`statistical-full`): `ctest -C full -L statistical-full -j1` passes 44/44 in 364 s. Slowest: Genotypes 38 s.
+  - `uvx ruff check test/stats/` is clean. No C++ changed, so G-style and G-perf don't apply.
+- Findings: F31 closed; F32, F33 new.
+- Kept for now: `/Users/blaarm/git/om-s5` (4.4 GB of replicates) and `build-rework/stats-s6/` (3.0 GB). PLAN says to ask the user afterwards whether to remove them. They are what any later retuning of the group test, or a regeneration with another K, would be rebuilt from.
+- Follow-ups:
+  - D2b, M4, M8: G-stat includes `ctest -C full -L statistical-full -j1`. If a `statfull_*` test fails, its report lists the quantities by |z|.
+  - V1: the new references for ModelName*, AvailabilityFilter, ExactNv0 and SimpleMPDTest get the group calibration automatically from `generate_reference.py`.
+  - The group test sees means only. A spread or shape test (e.g. a variance ratio or KS on the K runs) would need its own calibration; it was out of scope here.
+- Next: V1 (recommended order 10b). Each of its fixes changes outputs, so ask the user first.
