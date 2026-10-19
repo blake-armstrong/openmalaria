@@ -24,8 +24,8 @@
  * RNG is from: http://prng.di.unimi.it/
  */
 
-#ifndef OM_util_xoshiro
-#define OM_util_xoshiro
+#ifndef OM_UTIL_XOSHIRO
+#define OM_UTIL_XOSHIRO
 
 #include <cstdint>
 #include <limits>

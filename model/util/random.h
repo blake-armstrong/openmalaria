@@ -20,8 +20,8 @@
  * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301, USA.
  */
 
-#ifndef OM_util_random
-#define OM_util_random
+#ifndef OM_UTIL_RANDOM
+#define OM_UTIL_RANDOM
 
 /* This module contains the random-number generator and distributions wrapper.
  *
@@ -84,17 +84,17 @@ template <class T> struct RNG {
     /// seeding with only a 64-bit seed. Since many instances of the LocalRng
     /// are used, 128-bit seeds are recommended to reduce chance of overlapping
     /// sections of RNG output.
-    explicit RNG(uint64_t seed, uint64_t stream) : m_rng(seed, stream) {
-        m_gsl_type = make_gsl_rng_type(m_rng);
-        m_gsl_gen.type = &m_gsl_type;
-        m_gsl_gen.state = reinterpret_cast<void*>(&m_rng);
+    explicit RNG(uint64_t seed, uint64_t stream) : rng(seed, stream) {
+        gsl_type = make_gsl_rng_type(rng);
+        gsl_gen.type = &gsl_type;
+        gsl_gen.state = reinterpret_cast<void*>(&rng);
     }
 
     /// Seed via another RNG
-    template <class S> explicit RNG(RNG<S>& source) : m_rng(source.m_rng) {
-        m_gsl_type = make_gsl_rng_type(m_rng);
-        m_gsl_gen.type = &m_gsl_type;
-        m_gsl_gen.state = reinterpret_cast<void*>(&m_rng);
+    template <class S> explicit RNG(RNG<S>& source) : rng(source.rng) {
+        gsl_type = make_gsl_rng_type(rng);
+        gsl_gen.type = &gsl_type;
+        gsl_gen.state = reinterpret_cast<void*>(&rng);
     }
 
     // Disable copying
@@ -102,46 +102,46 @@ template <class T> struct RNG {
     RNG& operator=(const RNG&) = delete;
 
     /// Allow moving, with explicit functions
-    RNG(RNG&& other) : m_rng(std::move(other.m_rng)) {
-        m_gsl_type = other.m_gsl_type;
+    RNG(RNG&& other) : rng(std::move(other.rng)) {
+        gsl_type = other.gsl_type;
         // The following point into instance of this RNG:
-        m_gsl_gen.type = &m_gsl_type;
-        m_gsl_gen.state = reinterpret_cast<void*>(&m_rng);
+        gsl_gen.type = &gsl_type;
+        gsl_gen.state = reinterpret_cast<void*>(&rng);
     }
     void operator=(RNG&& other) {
-        m_rng = std::move(other.m_rng);
-        m_gsl_type = other.m_gsl_type;
+        rng = std::move(other.rng);
+        gsl_type = other.gsl_type;
         // The following point into instance of this RNG:
-        m_gsl_gen.type = &m_gsl_type;
-        m_gsl_gen.state = reinterpret_cast<void*>(&m_rng);
+        gsl_gen.type = &gsl_type;
+        gsl_gen.state = reinterpret_cast<void*>(&rng);
     }
 
     /// Seed with given 128-bit input (see notes on constructor)
-    void seed(uint64_t seed, uint64_t stream) { m_rng.seed(seed, stream); }
+    void seed(uint64_t seed, uint64_t stream) { rng.seed(seed, stream); }
 
     /// Checkpointing
     ///
     /// Note: this relies on the RNG having been constructed with the same seed.
-    template <class S> void checkpoint(S& stream) { m_rng.binary_checkpoint(stream); }
+    template <class S> void checkpoint(S& stream) { rng.binary_checkpoint(stream); }
     //@}
 
     uint64_t gen_seed() {
-        uint64_t low = m_rng;
-        uint64_t high = m_rng;
+        uint64_t low = rng;
+        uint64_t high = rng;
         return (high << 32) | low;
     }
 
     ///@brief Random number distributions
     //@{
     /** Generate a random number in the range [0,1). */
-    inline double uniform_01() { return m_rng.gen_double(); }
+    inline double uniform_01() { return rng.gen_double(); }
 
     /** This function returns a Gaussian random variate, with mean mean and
      * standard deviation std. The sampled value x ~ N(mean, std^2) . */
-    double gauss(double mean, double std) { return gsl_ran_gaussian(&m_gsl_gen, std) + mean; }
+    double gauss(double mean, double std) { return gsl_ran_gaussian(&gsl_gen, std) + mean; }
 
     /** This function returns a random variate from the gamma distribution. */
-    double gamma(double a, double b) { return gsl_ran_gamma(&m_gsl_gen, a, b); }
+    double gamma(double a, double b) { return gsl_ran_gamma(&gsl_gen, a, b); }
 
     /** This function returns a random variate from the lognormal distribution.
      * 
@@ -151,7 +151,7 @@ template <class T> struct RNG {
      * @param mu mean-log
      * @param sigma sigma-log
      */
-    double log_normal(double meanlog, double stdlog) { return gsl_ran_lognormal(&m_gsl_gen, meanlog, stdlog); }
+    double log_normal(double meanlog, double stdlog) { return gsl_ran_lognormal(&gsl_gen, meanlog, stdlog); }
 
     /** Return the maximum over multiple log-normal samples.
      *
@@ -176,11 +176,11 @@ template <class T> struct RNG {
     }
 
     /** This function returns a random variate from the beta distribution. */
-    double beta(double a, double b) { return gsl_ran_beta(&m_gsl_gen, a, b); }
+    double beta(double a, double b) { return gsl_ran_beta(&gsl_gen, a, b); }
 
     /** This function wraps beta(), setting b=b and a such that m is the mean
      * of the distribution. */
-    inline double betaWithMean(double m, double b) {
+    inline double beta_with_mean(double m, double b) {
         //TODO(performance): could do this calculation externally, and feed in a,b instead of mean,b
         double a = m * b / (1.0 - m);
         return beta(a, b);
@@ -192,7 +192,7 @@ template <class T> struct RNG {
             //This would lead to an inifinite loop
             throw TRACED_EXCEPTION("lambda is inf", Error::InfLambda);
         }
-        return gsl_ran_poisson(&m_gsl_gen, lambda);
+        return gsl_ran_poisson(&gsl_gen, lambda);
     }
 
     /** This function returns true with probability prob or 0 with probability
@@ -218,15 +218,15 @@ template <class T> struct RNG {
      * @param lambda (λ) is the scale parameter
      * @param k is the shape parameter
      */
-    double weibull(double lambda, double k) { return gsl_ran_weibull(&m_gsl_gen, lambda, k); }
+    double weibull(double lambda, double k) { return gsl_ran_weibull(&gsl_gen, lambda, k); }
     //@}
 
 private:
-    T m_rng;
+    T rng;
 
     // Hooks for GSL distributions
-    gsl_rng_type m_gsl_type;
-    gsl_rng m_gsl_gen;
+    gsl_rng_type gsl_type;
+    gsl_rng gsl_gen;
 
     template <class> friend class RNG;
 };

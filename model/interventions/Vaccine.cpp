@@ -175,7 +175,7 @@ double VaccineComponent::getInitialEfficacy(LocalRng& rng, size_t numPrevDoses, 
     if (ime == 0.0) {
         return 0.0;
     } else if (ime < 1.0) {
-        double result = rng.betaWithMean(ime, efficacyB);
+        double result = rng.beta_with_mean(ime, efficacyB);
         //NOTE(validation):: Without extra validation in random, the first difference is noticed here:
         util::streamValidate(result);
         //TODO(validation):: Why the difference? Bug in/limitation of StreamValidatior?
