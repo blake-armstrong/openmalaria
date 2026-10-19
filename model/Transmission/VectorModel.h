@@ -68,6 +68,8 @@ public:
 
     virtual void vectorUpdate(const vector<Host::Human>& population);
 
+    virtual double updateKappa(const vector<Host::Human>& population);
+
     virtual void calculateEIR(Host::Human& human, double ageYears, vector<double>& EIR_i, vector<double>& EIR_l) const;
 
     virtual void deployVectorPopInterv(size_t instance);
@@ -103,6 +105,8 @@ private:
     void ctsCbResAvailability(ostream& stream);
     void ctsCbResRequirements(ostream& stream);
 
+    vector<double> mean_annual_kappa() const;
+
 public:
     /// RNG used by the transmission model
     LocalRng m_rng;
@@ -114,6 +118,8 @@ public:
     int initIterations;
 
     double meanAvail = 1.0;
+
+    vector<double> quinquennial_kappa;
 
     /** Per anopheles species data.
      *

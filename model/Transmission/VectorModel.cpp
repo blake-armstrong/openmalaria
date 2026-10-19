@@ -166,7 +166,7 @@ VectorModel::VectorModel(vector<double> initEIR, int interventionMode,
                          vector<std::unique_ptr<Anopheles::EmergenceRateEstimator>> emergenceRateEstimatorsList,
                          map<string, size_t> speciesIndexList, int populationSize)
     : TransmissionModel(std::move(initEIR), interventionMode, WithinHost::Genotypes::N()), m_rng(bridge::master_rng()),
-      initIterations(0), species(std::move(speciesList)),
+      initIterations(0), quinquennial_kappa(5 * Sim::steps_per_year(), 0.0), species(std::move(speciesList)),
       emergenceRateEstimators(std::move(emergenceRateEstimatorsList)), speciesIndex(std::move(speciesIndexList)) {
     // set VACCINE_GENOTYPE option
     opt_vaccine_genotype = util::ModelOptions::option(util::VACCINE_GENOTYPE);
@@ -309,9 +309,10 @@ SimTime VectorModel::initIterate() {
         throw TRACED_EXCEPTION("Transmission warmup exceeded 30 iterations!", util::Error::VectorWarmup);
     }
 
+    const vector<double> kappa = mean_annual_kappa();
     bool needIterate = false;
     for (size_t i = 0; i < speciesIndex.size(); ++i) {
-        const bool species_needs_iterate = emergenceRateEstimators[i]->estimate(*species[i], laggedKappa, meanAvail);
+        const bool species_needs_iterate = emergenceRateEstimators[i]->estimate(*species[i], kappa, meanAvail);
         species[i]->initIterate();
         needIterate = needIterate || species_needs_iterate;
     }
@@ -324,6 +325,24 @@ SimTime VectorModel::initIterate() {
         initIterations = -1;
         return Sim::one_year();
     }
+}
+
+double VectorModel::updateKappa(const vector<Host::Human>& population) {
+    const double kappa = TransmissionModel::updateKappa(population);
+    quinquennial_kappa[Sim::modulo_steps(Sim::ts1(), quinquennial_kappa.size())] = kappa;
+    return kappa;
+}
+
+vector<double> VectorModel::mean_annual_kappa() const {
+    const size_t steps_per_year = Sim::steps_per_year();
+    vector<double> mean(steps_per_year, 0.0);
+    for (size_t step = 0; step < steps_per_year; ++step) {
+        double total = 0.0;
+        for (size_t year = 0; year < 5; ++year)
+            total += quinquennial_kappa[(year * steps_per_year) + step];
+        mean[step] = total / 5;
+    }
+    return mean;
 }
 
 void VectorModel::calculateEIR(Host::Human& human, double ageYears, vector<double>& EIR_i,
@@ -491,6 +510,7 @@ void VectorModel::checkpoint(istream& stream) {
     TransmissionModel::checkpoint(stream);
     m_rng.checkpoint(stream);
     initIterations & stream;
+    quinquennial_kappa & stream;
     // species & stream;
     for (auto& s : species)
         s->checkpoint(stream);
@@ -499,6 +519,7 @@ void VectorModel::checkpoint(ostream& stream) {
     TransmissionModel::checkpoint(stream);
     m_rng.checkpoint(stream);
     initIterations & stream;
+    quinquennial_kappa & stream;
     for (auto& s : species)
         s->checkpoint(stream);
 }
