@@ -311,10 +311,9 @@ SimTime VectorModel::initIterate() {
 
     bool needIterate = false;
     for (size_t i = 0; i < speciesIndex.size(); ++i) {
-        needIterate = emergenceRateEstimators[i]->estimate(*species[i], laggedKappa, meanAvail);
+        const bool species_needs_iterate = emergenceRateEstimators[i]->estimate(*species[i], laggedKappa, meanAvail);
         species[i]->initIterate();
-        if (needIterate)
-            break;
+        needIterate = needIterate || species_needs_iterate;
     }
 
     if (needIterate) {
