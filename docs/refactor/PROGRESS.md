@@ -702,7 +702,7 @@ See `PLAN.md` for the session protocol, chunks and gates. Append one log entry p
   - G-stat (`statistical-full`): `ctest -C full -L statistical-full -j1` passes 44/44 in 364 s. Slowest: Genotypes 38 s.
   - `uvx ruff check test/stats/` is clean. No C++ changed, so G-style and G-perf don't apply.
 - Findings: F31 closed; F32, F33 new.
-- Kept for now: `/Users/blaarm/git/om-s5` (4.4 GB of replicates) and `build-rework/stats-s6/` (3.0 GB). PLAN says to ask the user afterwards whether to remove them. They are what any later retuning of the group test, or a regeneration with another K, would be rebuilt from.
+- Kept for now: `/Users/blaarm/git/om-s5` (4.4 GB of replicates) and `build-rework/stats-s6/` (3.0 GB). PLAN says to ask the user afterwards whether to remove them. They are what any later retuning of the group test, or a regeneration with another K, would be rebuilt from. **The user decided (2026-10-19): keep both until D2b**, which rebuilds every reference from new replicates anyway.
 - Follow-ups:
   - D2b, M4, M8: G-stat includes `ctest -C full -L statistical-full -j1`. If a `statfull_*` test fails, its report lists the quantities by |z|.
   - V1: the new references for ModelName*, AvailabilityFilter, ExactNv0 and SimpleMPDTest get the group calibration automatically from `generate_reference.py`.
