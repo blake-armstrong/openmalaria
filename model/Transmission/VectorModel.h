@@ -51,39 +51,39 @@ public:
                 vector<std::unique_ptr<Anopheles::EmergenceRateEstimator>> emergenceRateEstimatorsList,
                 map<string, size_t> speciesIndexList, int populationSize);
 
-    virtual ~VectorModel();
+    ~VectorModel() override;
 
     /** Extra initialisation when not loading from a checkpoint, requiring
      * information from the human population structure. */
-    virtual void init2(const vector<Host::Human>& population);
+    void init2(const vector<Host::Human>& population) override;
 
     virtual void initVectorInterv(const scnXml::Description::AnophelesSequence& list, size_t instance,
                                   const string& name);
     virtual void initVectorTrap(const scnXml::VectorTrap::DescriptionSequence list, size_t instance,
                                 const scnXml::VectorTrap::NameOptional name);
 
-    virtual void scaleEIR(double factor);
+    void scaleEIR(double factor) override;
 
-    virtual SimTime initIterate();
+    SimTime initIterate() override;
 
-    virtual void vectorUpdate(const vector<Host::Human>& population);
+    void vectorUpdate(const vector<Host::Human>& population) override;
 
     double updateKappa(const vector<Host::Human>& population) override;
 
-    virtual void calculateEIR(Host::Human& human, double ageYears, vector<double>& EIR_i, vector<double>& EIR_l) const;
+    void calculateEIR(Host::Human& human, double ageYears, vector<double>& EIR_i, vector<double>& EIR_l) const override;
 
     virtual void deployVectorPopInterv(size_t instance);
     virtual void deployVectorTrap(size_t instance, double popSize, SimTime lifespan);
 
-    virtual void changeEIRIntervention(const scnXml::NonVector& nonVectorData);
+    void changeEIRIntervention(const scnXml::NonVector& nonVectorData) override;
 
-    virtual void uninfectVectors();
+    void uninfectVectors() override;
 
-    virtual void summarize();
+    void summarize() override;
 
 protected:
-    virtual void checkpoint(istream& stream);
-    virtual void checkpoint(ostream& stream);
+    void checkpoint(istream& stream) override;
+    void checkpoint(ostream& stream) override;
 
 private:
     void ctsCbN_v0(ostream& stream);
