@@ -5,7 +5,10 @@ Standard library only, so the single-run checker can use it without numpy.
 
 A cell is one value of one run, keyed by (file, survey, group, measure), all strings:
 - output.txt: ("survey", survey, group, measure), from the row's first three columns
-- ctsout.txt: ("ctsout", <first column of the row>, "", <column header>)
+- ctsout.txt: ("ctsout", <first column of the row>, "", <column header>). A ctsout written during
+  initialisation (`<continuous duringInit="true">`) starts with a "simulation time" column and has
+  timestep nan on warmup rows, whose number depends on the vector warmup's rounds. Its rows are
+  keyed by the timestep instead, and the warmup rows and the "simulation time" column are left out.
 - aggregates: ("aggregate", "", "", <aggregate name>)
 
 The group test of check_scenario.py --replicates compares the mean of K runs for each group
@@ -22,6 +25,8 @@ from functools import cached_property
 
 SURVEY = "survey"
 CTSOUT = "ctsout"
+SIMULATION_TIME = "simulation time"
+TIMESTEP = "timestep"
 AGGREGATE = "aggregate"
 TOTAL = "total"
 WHOLE = "whole"
@@ -73,15 +78,20 @@ def read_ctsout(path):
     if len(lines) < 2 or not lines[0].startswith("##"):
         raise FormatError(f"{path}: expected a '##' line and a header line")
     headers = unique_headers(lines[1].split("\t"))
+    key_column = headers.index(TIMESTEP) if headers[0] == SIMULATION_TIME and TIMESTEP in headers else 0
     keys = []
     values = []
     for number, line in enumerate(lines[2:], 3):
         items = line.split("\t")
         if len(items) != len(headers):
             raise FormatError(f"{path}:{number}: expected {len(headers)} columns, found {len(items)}")
-        for header, item in zip(headers[1:], items[1:], strict=True):
-            keys.append((CTSOUT, items[0], "", header))
-            values.append(float(item))
+        key = items[key_column]
+        if key_column and math.isnan(float(key)):
+            continue
+        for column, (header, item) in enumerate(zip(headers, items, strict=True)):
+            if column not in (0, key_column):
+                keys.append((CTSOUT, key, "", header))
+                values.append(float(item))
     return keys, values
 
 

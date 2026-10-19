@@ -231,6 +231,20 @@ class ParserTests(unittest.TestCase):
         self.assertTrue(math.isnan(values[0]) and math.isnan(values[3]))
         self.assertEqual(values[4:], [3.0, 4.0])
 
+    def test_ctsout_during_init_keyed_by_timestep(self):
+        (self.dir / "c.txt").write_text(
+            "##\t##\nsimulation time\ttimestep\tEIR\n0\tnan\t9\n5\tnan\t8\n10\t0\t1\n15\t1\t2\n"
+        )
+        keys, values = stats_io.read_ctsout(self.dir / "c.txt")
+        self.assertEqual(keys, [("ctsout", "0", "", "EIR"), ("ctsout", "1", "", "EIR")])
+        self.assertEqual(values, [1.0, 2.0])
+
+    def test_ctsout_timestep_first_column_unchanged(self):
+        (self.dir / "c.txt").write_text("##\t##\ntimestep\tsimulation time\n0\tnan\n")
+        keys, values = stats_io.read_ctsout(self.dir / "c.txt")
+        self.assertEqual(keys, [("ctsout", "0", "", "simulation time")])
+        self.assertTrue(math.isnan(values[0]))
+
 
 class AggregateTests(unittest.TestCase):
     def cells(self, rows, cts=()):
