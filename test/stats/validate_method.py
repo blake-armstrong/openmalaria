@@ -60,7 +60,9 @@ def critical_count(k):
 
 
 def replicates_fail(r, k):
-    return check_scenario.binomial_tail(critical_count(k), k, r) if r > 0 else 0.0
+    if r <= 0 or r >= 1:
+        return float(r >= 1)
+    return check_scenario.binomial_tail(critical_count(k), k, r)
 
 
 def percent(x, digits=1):

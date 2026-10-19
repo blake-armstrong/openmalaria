@@ -1,0 +1,25 @@
+diff --git a/model/Host/InfectionIncidenceModel.cpp b/model/Host/InfectionIncidenceModel.cpp
+index 4c58b875..c6630283 100644
+--- a/model/Host/InfectionIncidenceModel.cpp
++++ b/model/Host/InfectionIncidenceModel.cpp
+@@ -21,6 +21,8 @@
+  */
+ 
+ #include "Host/InfectionIncidenceModel.h"
++#include <cstdlib>
++#include <string>
+ #include "Host/Human.h"
+ #include "Transmission/PerHost.h"
+ #include "Host/WithinHost/WHInterface.h"
+@@ -237,6 +239,11 @@ double InfectionIncidenceModel::expectedNumNewInfections(OM::Host::Human& human,
+ }
+ 
+ int InfectionIncidenceModel::numNewInfections(Human& human, double expectedNumInfections) {
++    static const double foi_scale = [] {
++        const char* s = std::getenv("OM_S6_FOI_SCALE");
++        return s ? std::stod(s) : 1.0;
++    }();
++    expectedNumInfections *= foi_scale;
+     if (expectedNumInfections > 0.0000001) {
+         int n = human.rng.poisson(expectedNumInfections);
+ 
