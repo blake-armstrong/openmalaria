@@ -549,13 +549,13 @@ Licence notes: OpenMalaria is GPL-2.0-or-later. MIT, BSD, BSL and MPL-2.0 code m
    - For each cell, compute the mean, the SD and the empirical q2.5/q97.5. This is a 95% *prediction* interval for one new run.
    - Use empirical quantiles rather than mean ± 1.96·SD or a fitted distribution, because the outputs are skewed counts and often zero.
    - Leave-one-out: count each replicate's misses against the interval built from the other N − 1, and store all N counts. They are the yardstick for how many misses a correct run has, and they already include the correlation between cells (F17).
-   - The key aggregates (clinical episodes, severe episodes, deaths, mean prevalence, mean EIR) get Bonferroni-widened intervals whose family covers 99%.
+   - The key aggregates (clinical episodes, severe episodes, deaths, mean prevalence, mean EIR) get Bonferroni-widened intervals whose family covers 99%. Their quantiles are Hyndman–Fan type 6, whose expected coverage of one new run is the nominal one; type 7 (used for the cells) is too narrow at these far tails (F18, settled in S6).
    - Write a CSV with a metadata header: N, seeds, commit, schema version and date.
 2. **Checking a build.** Settled with the user in S3, replacing the original exact-match rule for zero-width cells (F15).
    - **One run fails** if any of these hold:
      - (a) its miss count m is improbable: `p = (1 + #{leave-one-out counts ≥ m}) / (N + 1) ≤ 1%`
      - (b) an aggregate is outside its interval
-     - (c) a *fixed* cell differs: one that was the same non-zero value (or NaN) in every replicate, such as the input EIR echoed back. A cell that was 0 in every replicate is a rare event, and a non-zero value there is just a miss under (a).
+     - (c) a *fixed* cell differs: a non-zero (or NaN) cell of a survey measure or ctsout column whose every cell was the same in every replicate, such as the input EIR echoed back. A cell that was 0 in every replicate is a rare event, and a non-zero value there is just a miss under (a). So is a constant cell in a measure or column that varies elsewhere, such as ctsout `recent births` (F28, settled in S6).
    - A correct run fails one of these about 2% of the time. Missing or extra cells are an error, not a statistical failure.
    - **Rerun rule, fixed in advance.** Run 1 uses the scenario's own `iseed`, which is outside the reference range. If it passes, the test passes. If it fails, run K = 5 fixed seeds (2001–2005); the test fails if at least one of them also fails. A correct build then fails about 0.02 × (1 − 0.98⁵) ≈ 0.2% of the time; a change that makes every run fail is always caught. Seeds are fixed, so the verdict for a build is deterministic.
    - `--replicates K` runs K seeds up front and fails if the number of failing runs has a binomial tail ≤ 0.1% at the 2% per-run rate. It is the stronger test for changes expected to move outputs only slightly.
