@@ -481,7 +481,7 @@ void VectorModel::deployVectorTrap(size_t instance, double number, SimTime lifes
     }
 }
 
-void VectorModel::changeEIRIntervention(const scnXml::NonVector& nonVectorData) {
+void VectorModel::changeEIRIntervention(const scnXml::NonVector& non_vector_data) {
     if ((simulationMode != forcedEIR) && (simulationMode != transientEIRknown))
         throw util::xml_scenario_error("changeEIR intervention can only be used in forced EIR mode");
 
@@ -490,7 +490,7 @@ void VectorModel::changeEIRIntervention(const scnXml::NonVector& nonVectorData) 
     if (speciesIndex.size() != 1)
         throw util::xml_scenario_error("changeEIR intervention can only be used with a single anopheles species");
 
-    species[0]->changeEIRIntervention(nonVectorData);
+    species[0]->changeEIRIntervention(non_vector_data);
 }
 
 void VectorModel::uninfectVectors() {

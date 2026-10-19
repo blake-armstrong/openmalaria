@@ -70,12 +70,13 @@ public:
 
     double updateKappa(const vector<Host::Human>& population) override;
 
-    void calculateEIR(Host::Human& human, double ageYears, vector<double>& EIR_i, vector<double>& EIR_l) const override;
+    void calculateEIR(Host::Human& human, double age_years, vector<double>& eir_i,
+                      vector<double>& eir_l) const override;
 
     virtual void deployVectorPopInterv(size_t instance);
     virtual void deployVectorTrap(size_t instance, double popSize, SimTime lifespan);
 
-    void changeEIRIntervention(const scnXml::NonVector& nonVectorData) override;
+    void changeEIRIntervention(const scnXml::NonVector& non_vector_data) override;
 
     void uninfectVectors() override;
 
