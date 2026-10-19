@@ -21,7 +21,7 @@ See `PLAN.md` for the session protocol, chunks and gates. Append one log entry p
 | S5 | done | c155c7fb, 7a28ca71, 50fac6c1, ec9a409c, (this log entry) |
 | S6 | done | 350fdaf3, d4a84ef7, a382bc2c, c9f46c93, ecdac231, 5cd66064, (this log entry) |
 | S7 | done | bf62b4ff, 190ffc99, 9e1f093e, 5cdcf528, fb09fd66, a4f6904a, 109ea58f, (this log entry) |
-| V1 | todo | |
+| V1 | in progress | 05fbf2e7, 15d07ae6, 402952ff, 184c4414, 4f101e8a, 0f73698e, 1b37cb08, 468377ae, c92f951c, 6b08d688, (this log entry) |
 | C1 | done | b02303db, (this log entry) |
 | C2 | done | 20e8bf39, (this log entry) |
 | D1 | done | 2e2cac5a, 72e14d9c, bda40963, 4252cba1, 1a0c0b58, 48d3476c, 186d32f5, 21e09c0d, (this log entry) |
@@ -708,3 +708,24 @@ See `PLAN.md` for the session protocol, chunks and gates. Append one log entry p
   - V1: the new references for ModelName*, AvailabilityFilter, ExactNv0 and SimpleMPDTest get the group calibration automatically from `generate_reference.py`.
   - The group test sees means only. A spread or shape test (e.g. a variance ratio or KS on the K runs) would need its own calibration; it was out of scope here.
 - Next: V1 (recommended order 10b). Each of its fixes changes outputs, so ask the user first.
+
+### V1: Make vector warmup converge reliably (in progress, 2026-10-19)
+- Base: 7f432114. Investigation in a scratch build (`build-v1/`, env-switched prototypes, reverted); sweeps at `-j 4`.
+- **Causes** (details in FINDINGS F16, F24, F26, F27):
+  - `VectorModel::initIterate` stopped at the first species still needing a round, so later species were rarely re-fitted (F16, F26).
+  - The adaptive fitter judged S_v from year 4 alone (upstream #281, 2020), noisier than its ±10% tolerance (F26).
+  - The exact Nv0 solver inverted one noisy year of kappa (F27).
+  - SimpleMPD could accept an unsettled round whose larval resources are negative; `initIterate`'s "fitted" result was ignored (F24).
+  - F29 (SimpleMPDTest's warmup ctsout rows) is handled in the stats tooling instead.
+- **The user approved all four fixes and regenerating now**, after asking for the reasoning (the ask was required by PLAN, not uncertainty).
+- Commits:
+  - 05fbf2e7: `read_ctsout` keys a duringInit ctsout by timestep, without warmup rows or the simulation-time column (F29). All 500 S5 SimpleMPDTest replicates then share one key set. Tool tests 40 + 24 pass.
+  - 15d07ae6: FINDINGS mechanisms.
+  - 402952ff: every species estimated each round (15 scenarios change). 184c4414: 5-year mean S_v (31 change). 4f101e8a: 5-year mean kappa for the exact solver, buffer checkpointed (ExactNv0 changes). 0f73698e: SimpleMPD guard; `initIterate` doc corrected (false = another round).
+  - 1b37cb08, 468377ae, c92f951c: G-style follow-ups (self-contained `EmergenceRateEstimator.h`, `override` across `VectorModel.h` to avoid `-Winconsistent-missing-override`, parameter names on the touched declarations; `calculateEIR`'s definition keeps `EIR_i`/`EIR_l`, which would collide with its locals, for D7's rename).
+  - 6b08d688: `test/expected` for the 32 changed scenarios, from plain runs; the commit message has the per-scenario summary. Most aggregates moved within ±2 single-run SDs; ModelName* are 10-person runs that go extinct or not.
+- Prototype sweeps (aborts / runs): AvailabilityFilter 7/60 → 0/300; ModelNameNoOverrides 38/60 → 0/300, ParamOverrides 0/300; ExactNv0 35/200 → 0/200; LifeNet1/2 2/501 → 0/501 each.
+- Gates so far: G-exact 53/53 (incl. checkpoint stop/resume) at 6b08d688; G-style clean (`check 7f432114`); G-unit in the 53. Not yet: G-perf, G-stat (references being rebuilt).
+- **Replicate job stopped at the user's request** (resumable): `caffeinate -i build-rework/stats-v1/run.sh >> build-rework/stats-v1/run.log 2>&1` reruns 32 scenarios × seeds 1001–1500 at `-j 4`, skipping finished seeds. Done: Genotypes, MSAT_HRP2, PEV (500 each); BSV 88. The build must still be c92f951c's C++ (`build-rework/openMalaria`), or `run_replicates.py` refuses the dirs (F25).
+- Remaining: finish the replicates; regenerate the 25 affected references and build the 7 new ones (ModelName×4, AvailabilityFilter, ExactNv0, SimpleMPDTest) with `uv run --script test/stats/generate_reference.py`; enable their `stat_*` tests; summary of moved measures (new vs old reference means); G-stat both labels; G-perf; check seeds 2001–2005 for every registered scenario; close F16, F24, F26, F27, F29; new finding: `test/expected/ctsoutGenotypes.txt` is stale (Genotypes writes no ctsout, so run.py never compares it).
+
