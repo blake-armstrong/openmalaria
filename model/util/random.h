@@ -56,11 +56,11 @@ namespace util {
 // Note: GSL  doesn't really seem to be interested in RNGs producing more than
 // 32-bits of state. This implementation serves two underlying generators.
 template <class T> long unsigned int sample_ulong(void* ptr) {
-    T* rng = reinterpret_cast<T*>(ptr);
+    auto* rng = static_cast<T*>(ptr);
     return rng->gen_u32();
 }
 template <class T> double sample_double01(void* ptr) {
-    T* rng = reinterpret_cast<T*>(ptr);
+    auto* rng = static_cast<T*>(ptr);
     return rng->gen_double();
 }
 
@@ -85,16 +85,14 @@ template <class T> struct RNG {
     /// are used, 128-bit seeds are recommended to reduce chance of overlapping
     /// sections of RNG output.
     explicit RNG(uint64_t seed, uint64_t stream) : rng(seed, stream), gsl_type(make_gsl_rng_type(rng)) {
-
         gsl_gen.type = &gsl_type;
-        gsl_gen.state = reinterpret_cast<void*>(&rng);
+        gsl_gen.state = &rng;
     }
 
     /// Seed via another RNG
     template <class S> explicit RNG(RNG<S>& source) : rng(source.rng), gsl_type(make_gsl_rng_type(rng)) {
-
         gsl_gen.type = &gsl_type;
-        gsl_gen.state = reinterpret_cast<void*>(&rng);
+        gsl_gen.state = &rng;
     }
 
     // Disable copying
@@ -102,19 +100,20 @@ template <class T> struct RNG {
     RNG& operator=(const RNG&) = delete;
 
     /// Allow moving, with explicit functions
-    RNG(RNG&& other) : rng(std::move(other.rng)), gsl_type(other.gsl_type) {
-
+    RNG(RNG&& other) noexcept : rng(std::move(other.rng)), gsl_type(other.gsl_type) {
         // The following point into instance of this RNG:
         gsl_gen.type = &gsl_type;
-        gsl_gen.state = reinterpret_cast<void*>(&rng);
+        gsl_gen.state = &rng;
     }
-    void operator=(RNG&& other) {
+    RNG& operator=(RNG&& other) noexcept {
         rng = std::move(other.rng);
         gsl_type = other.gsl_type;
         // The following point into instance of this RNG:
         gsl_gen.type = &gsl_type;
-        gsl_gen.state = reinterpret_cast<void*>(&rng);
+        gsl_gen.state = &rng;
+        return *this;
     }
+    ~RNG() = default;
 
     /// Seed with given 128-bit input (see notes on constructor)
     void seed(uint64_t seed, uint64_t stream) { rng.seed(seed, stream); }
@@ -169,9 +168,9 @@ template <class T> struct RNG {
         //              = P(X1 ≤ x) P(X2 ≤ x) .. P(Xn ≤ x)
         //              = F_X(x) ^ n
         // Thus for u = F_Mn(x) = F_X(x) ^ n, u^(1/n) = F_X(x).
-        double normp = pow(uniform_01(), 1.0 / n);
-        double zval = gsl_cdf_ugaussian_Pinv(normp);
-        double multi_sample = exp(meanlog + stdlog * zval);
+        const double normp = pow(uniform_01(), 1.0 / n);
+        const double zval = gsl_cdf_ugaussian_Pinv(normp);
+        const double multi_sample = exp(meanlog + stdlog * zval);
         return std::max(start, multi_sample);
     }
 
@@ -182,7 +181,7 @@ template <class T> struct RNG {
      * of the distribution. */
     inline double beta_with_mean(double m, double b) {
         //TODO(performance): could do this calculation externally, and feed in a,b instead of mean,b
-        double a = m * b / (1.0 - m);
+        const double a = m * b / (1.0 - m);
         return beta(a, b);
     }
 
