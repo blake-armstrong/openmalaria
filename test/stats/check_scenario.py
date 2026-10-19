@@ -9,8 +9,14 @@ One run fails if any of these hold:
       whose every cell was the same in every replicate
 
 Run 1 uses the scenario's own iseed. If it fails, the retry seeds run, and the check fails
-if any of them also fails. With --replicates K, K seeds run up front instead, and the check
-fails if that many failing runs is improbable at the expected per-run failure rate.
+if any of them also fails.
+
+With --replicates, K seeds run up front instead (K as the reference was calibrated for,
+normally 20) and are judged as a group. For each group quantity in the reference (the
+aggregates and the survey measure totals),
+  z = (mean of the K runs - reference mean) / (reference SD * sqrt(1/K + 1/N)).
+The check fails if the largest |z| exceeds the reference's leave-K-out threshold, or if any
+run fails rule (c). The per-run rules are still reported for each run.
 
 Exit codes: 0 pass, 1 statistical failure, 2 error (bad input, a crashed run, or a run
 whose cells differ from the reference's).
@@ -21,6 +27,7 @@ import hashlib
 import math
 import os
 import re
+import statistics
 import sys
 import tempfile
 from dataclasses import dataclass
@@ -32,7 +39,6 @@ import stats_io
 ROOT = Path(__file__).resolve().parents[2]
 RETRY_SEEDS = (2001, 2002, 2003, 2004, 2005)
 PER_RUN_RATE = 0.02
-REPLICATES_ALPHA = 0.001
 TOP_MISSES = 10
 
 
@@ -63,6 +69,7 @@ class RunResult:
     aggregates: dict
     fixed_cells: int
     fixed_mismatches: list
+    group: dict
 
     @property
     def outside_aggregates(self):
@@ -101,8 +108,13 @@ def judge_run(ref, keys, values, seed):
             if key[3] not in found:
                 raise CheckError(f"run {seed} has no {key[3]} aggregate")
             aggregates[key[3]] = Cell(key, found[key[3]], row)
+    quantities = stats_io.group_quantities(cells)
+    missing = [k for k in ref.group_values if k not in quantities]
+    if missing:
+        raise CheckError(f"run {seed} has no group quantity {format_key(missing[0])}")
+    group = {k: quantities[k] for k in ref.group_values}
     p = stats_io.run_p_value(len(misses), ref.loo_counts)
-    return RunResult(str(seed), len(cells), misses, p, aggregates, fixed_cells, fixed_mismatches)
+    return RunResult(str(seed), len(cells), misses, p, aggregates, fixed_cells, fixed_mismatches, group)
 
 
 def judge_dir(ref, directory):
@@ -129,14 +141,75 @@ def binomial_tail(k, n, p):
     return min(1.0, math.fsum(math.exp(log_term(i)) for i in range(k, n + 1)))
 
 
-def replicates_verdict(results):
+def per_run_summary(results):
     failing = sum(r.failed for r in results)
     tail = binomial_tail(failing, len(results), PER_RUN_RATE)
-    summary = (f"{failing} of {len(results)} runs failed; P(at least {failing} | per-run rate {PER_RUN_RATE}) "
-               f"= {tail:.3g}")
-    if tail <= REPLICATES_ALPHA:
-        return True, f"FAIL: {summary} <= {REPLICATES_ALPHA}"
-    return False, f"pass: {summary}"
+    return f"{failing} of {len(results)} runs failed; P(at least {failing} | per-run rate {PER_RUN_RATE}) = {tail:.3g}"
+
+
+@dataclass
+class GroupScore:
+    key: tuple
+    mean: float
+    ref_mean: float
+    ref_sd: float
+    z: float
+
+
+def group_scores(ref, results):
+    scale = math.sqrt(1 / len(results) + 1 / len(ref.loo_counts))
+    scores = []
+    for key, (ref_mean, ref_sd) in ref.group_stats.items():
+        mean = statistics.fmean(r.group[key] for r in results)
+        scores.append(GroupScore(key, mean, ref_mean, ref_sd, (mean - ref_mean) / (ref_sd * scale)))
+    return sorted(scores, key=lambda s: -abs(s.z))
+
+
+def group_threshold(ref):
+    try:
+        return int(ref.meta["group_k"]), float(ref.meta["group_threshold"])
+    except (KeyError, ValueError) as e:
+        raise CheckError("the reference has no group test threshold; regenerate it with more replicates") from e
+
+
+def group_size(ref, requested):
+    k, _ = group_threshold(ref)
+    if requested and requested != k:
+        raise CheckError(f"the reference's group threshold is calibrated for K = {k}, not {requested}; "
+                         f"regenerate it with generate_reference.py --group-k {requested}")
+    return k
+
+
+def group_verdict(ref, results):
+    _, threshold = group_threshold(ref)
+    scores = group_scores(ref, results)
+    fixed_failing = sum(bool(r.fixed_mismatches) for r in results)
+    largest = abs(scores[0].z) if scores else 0.0
+    reasons = []
+    if largest > threshold:
+        reasons.append(f"largest |z| {largest:.2f} ({format_key(scores[0].key)}) > {threshold:g}")
+    if fixed_failing:
+        reasons.append(f"{fixed_failing} of {len(results)} runs differ in fixed cells")
+    if reasons:
+        return True, "FAIL: " + "; ".join(reasons), scores
+    return False, f"pass: largest |z| {largest:.2f} <= {threshold:g}, no fixed cell differs", scores
+
+
+def describe_group(ref, results, scores, verbose):
+    k, threshold = group_threshold(ref)
+    lines = [(f"group test, K = {len(results)}: threshold {threshold:g} (alpha {ref.meta.get('group_alpha')}, "
+              f"leave-{k}-out over {ref.meta.get('replicates')} replicates), {len(scores)} quantities")]
+    shown = scores if verbose else scores[:TOP_MISSES]
+    lines.append(f"  quantities by |z| ({len(shown)} of {len(scores)}):")
+    for s in shown:
+        mark = " <- fails" if abs(s.z) > threshold else ""
+        lines.append(f"    {format_key(s.key)}: mean of {len(results)} runs {s.mean:.6g}; reference mean "
+                     f"{s.ref_mean:.6g}, sd {s.ref_sd:.3g}, z {s.z:+.2f}{mark}")
+    fixed_failing = sum(bool(r.fixed_mismatches) for r in results)
+    lines.append(f"  runs with a fixed cell differing: {fixed_failing} of {len(results)}"
+                 + (" <- fails" if fixed_failing else ""))
+    lines.append(f"  per-run rules, for information: {per_run_summary(results)}")
+    return "\n".join(lines)
 
 
 def format_key(key):
@@ -145,6 +218,9 @@ def format_key(key):
         return f"survey {survey} group {group} measure {measure}"
     if file == stats_io.CTSOUT:
         return f"ctsout {survey} '{measure}'"
+    if file == stats_io.TOTAL:
+        groups = "whole population" if group == stats_io.WHOLE else "cohort/genotype groups"
+        return f"total of measure {measure} ({groups})"
     return f"aggregate {measure}"
 
 
@@ -226,6 +302,8 @@ def check(ref, args, work):
     if hashlib.sha256(job.scenario_bytes).hexdigest() != ref.meta.get("scenario_sha256"):
         print("warning: the scenario differs from the one the reference was built from", file=sys.stderr)
     first = own_seed(job.scenario_bytes)
+    if args.replicates is not None:
+        args.replicates = group_size(ref, args.replicates)
     seeds = list(range(RETRY_SEEDS[0], RETRY_SEEDS[0] + args.replicates)) if args.replicates else [first]
     reruns = [] if args.replicates else args.retry_seeds
     overlap = sorted(parse_seeds(ref.meta.get("seeds", "")) & {*seeds, *reruns})
@@ -236,7 +314,8 @@ def check(ref, args, work):
     for result in results:
         print(describe(result, args.verbose or (result.failed and not args.replicates)))
     if args.replicates:
-        failed, summary = replicates_verdict(results)
+        failed, summary, scores = group_verdict(ref, results)
+        print(describe_group(ref, results, scores, args.verbose))
     else:
         rerun_results = []
         if results[0].failed:
@@ -257,8 +336,9 @@ def parse_args(argv):
     parser.add_argument("--retry-seeds", type=int, nargs="+", default=list(RETRY_SEEDS),
                         help=f"seeds to rerun when run 1 fails (default: {' '.join(map(str, RETRY_SEEDS))})")
     mode = parser.add_mutually_exclusive_group()
-    mode.add_argument("--replicates", type=int, metavar="K",
-                      help=f"run K seeds from {RETRY_SEEDS[0]} up front and judge the number that fail")
+    mode.add_argument("--replicates", type=int, nargs="?", const=0, metavar="K",
+                      help=f"run K seeds from {RETRY_SEEDS[0]} up front and judge them as a group; K must be the "
+                           "one the reference is calibrated for, which is the default")
     mode.add_argument("--outputs", type=Path, metavar="DIR",
                       help="judge the run directories DIR/<seed> (e.g. from run_replicates.py) without running")
     parser.add_argument("--work-dir", type=Path,
@@ -269,7 +349,7 @@ def parse_args(argv):
     parser.add_argument("-j", "--jobs", type=int, default=os.cpu_count(), help="parallel runs (default: all cores)")
     parser.add_argument("-v", "--verbose", action="store_true", help="list the largest misses of passing runs too")
     args = parser.parse_args(argv)
-    if args.replicates is not None and args.replicates < 1:
+    if args.replicates is not None and args.replicates < 0:
         parser.error("--replicates must be at least 1")
     if args.jobs < 1:
         parser.error("-j must be at least 1")
