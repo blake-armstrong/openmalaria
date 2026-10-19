@@ -68,7 +68,7 @@ public:
 
     virtual void vectorUpdate(const vector<Host::Human>& population);
 
-    virtual double updateKappa(const vector<Host::Human>& population);
+    double updateKappa(const vector<Host::Human>& population) override;
 
     virtual void calculateEIR(Host::Human& human, double ageYears, vector<double>& EIR_i, vector<double>& EIR_l) const;
 

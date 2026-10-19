@@ -24,6 +24,7 @@
 #define Hmod_EmergenceRateEstimator
 
 #include "Global.h"
+#include "Transmission/Anopheles/AnophelesModel.h"
 #include "Transmission/PerHost.h"
 #include "util/SimpleDecayingValue.h"
 #include "util/vectors.h"

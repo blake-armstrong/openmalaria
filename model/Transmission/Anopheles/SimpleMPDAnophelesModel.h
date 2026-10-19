@@ -110,8 +110,7 @@ public:
             invLarvalResources[t] = (probPreadultSurvival * yt - mosqEmergeRate[t]) / (mosqEmergeRate[t] * yt);
         }
 
-        const bool resources_valid =
-            std::none_of(invLarvalResources.begin(), invLarvalResources.end(), [](double v) { return v < 0.0; });
+        const bool resources_valid = std::ranges::none_of(invLarvalResources, [](double v) { return v < 0.0; });
         return fitted && resources_valid;
     }
     //@}

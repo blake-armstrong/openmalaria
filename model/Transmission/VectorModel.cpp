@@ -329,7 +329,7 @@ SimTime VectorModel::initIterate() {
 
 double VectorModel::updateKappa(const vector<Host::Human>& population) {
     const double kappa = TransmissionModel::updateKappa(population);
-    quinquennial_kappa[Sim::modulo_steps(Sim::ts1(), quinquennial_kappa.size())] = kappa;
+    quinquennial_kappa[Sim::modulo_steps(Sim::ts1(), static_cast<int>(quinquennial_kappa.size()))] = kappa;
     return kappa;
 }
 
