@@ -76,7 +76,7 @@ The work is split into **small, self-contained chunks**. Each chunk fits in one 
 | **G-unit** | the CxxTest suites in `unittest/` pass | A2 |
 | **G-style** | `OM_BUILD_DIR=build-rework util/style.sh check <chunk's base commit>`: `git-clang-format --diff` and `clang-tidy-diff` report nothing on changed lines (see `docs/refactor/STYLE.md`) | B1 |
 | **G-perf** | `OM_BUILD_DIR=build-rework util/bench.sh --compare <base build>`, where the base build is the chunk's base commit configured the same way (recipe in `util/bench.sh -h`): the median per-pair candidate/base wall-time ratio is ≤ 1.03. The stored baseline in `PROGRESS.md` is a sanity check only | P1 |
-| **G-stat** | `ctest -L statistical` passes | S4 (full coverage after S5) |
+| **G-stat** | `ctest -L statistical` passes. For a chunk that changes draws on purpose (D2b, M4, M8), `ctest -L statistical-full` (S7's group test, K runs per scenario) must pass too | S4 (full coverage after S5; `statistical-full` after S7) |
 | **G-two-sims** | two `Simulation`s in one process match two separate runs exactly | D9 |
 | **G-diff** | for a chunk that replaces a numerical routine (GSL, R_nmath, a distribution): a Catch2 differential test compares the new routine with the old one over a grid of inputs, within a tolerance stated in the test. The old routine stays callable from the test until the chunk ends | M1 |
 | **G-cli** | `util/ab_cli.sh <base build>`: a few scenarios run with default, `--verbose --progress`, `--checkpoint` and `--checkpoint-stop` flags (twice, so the second run resumes) give byte-identical stdout, stderr, outputs, checkpoint files and exit codes. Required for any chunk that touches console output or command-line handling | M3 |
@@ -89,12 +89,12 @@ Every chunk must pass every gate that is available at that point. One exception 
 ```
 A1 → A2 ─┬─ B1 → B2 → B3 → B4 → B5
          ├─ P1
-         ├─ S1 → S2 → S3 → S4 → S5 → S6
+         ├─ S1 → S2 → S3 → S4 → S5 → S6 → S7
          └─ C1 → C2 → D1 … D9 → E1 … E6 → F0 … F6 → G1 … G3 → H1 … H3 → I1 … I3 → J1 … J4
-B5 → M0 → M1;  B4 → M2 (before D1);  S5 → V1 → D2b;  D9 → M3, M7;  D2b + S6 → M4;  F6 → M5 → M6;  G3 + M4 + M7 → M8;  M1 → M9
+B5 → M0 → M1;  B4 → M2 (before D1);  S5 → V1 → D2b;  S7 → D2b;  D9 → M3, M7;  D2b + S7 → M4;  F6 → M5 → M6;  G3 + M4 + M7 → M8;  M1 → M9
 ```
 - The B, P and S tracks can run in any order relative to each other and to C/D.
-- D2b (splitting the RNG streams) is the first chunk allowed to change draw order, so it requires S6, and V1, so that no regenerated scenario seed aborts in vector warmup.
+- D2b (splitting the RNG streams) is the first chunk allowed to change draw order, so it requires S6 and S7 (a test with enough power to verify it), and V1, so that no regenerated scenario seed aborts in vector warmup.
 - Every chunk from D onward requires B4, so that each module's rename can run right after it is refactored.
 - Every chunk from D onward also requires M2, so that each module's modernisation pass runs right after its rename.
 
@@ -115,6 +115,7 @@ The dependency graph allows many orders. Follow this one unless the user says ot
 | 8 | **S5** | A long compute job (≈1 h at `-j10` for N = 500 if every scenario is run; more with stragglers). Run it overnight or while no G-perf measurement is being taken, because it saturates the CPU. Every chunk up to D2 keeps outputs byte-identical, so it doesn't matter which commit generates the references. |
 | 9 | **D1**, **D2** | These can overlap with S5/S6 in calendar time, but don't take G-perf measurements while S5 is running. |
 | 10 | **S6** | Must be done before D2b. |
+| 10a | **S7** | Added after S6 (F31). Must be done before D2b: G-stat is the only gate for draw-order changes, and S6 showed the current check misses shifts of about 2 SD. Confirm its three choices with the user first. Independent of V1. |
 | 10b | **V1** | Added after S5 (F16, F24, F26, F27). Must be done before D2b: with new draws, a scenario's own seed could start aborting in vector warmup. Each fix changes outputs, so ask the user first. |
 | 11 | **D2b**, then **M4** | **First ask the user Decision 1.** The first chunk allowed to change draw order; it is gated by G-stat, not G-exact. M4 also changes draws, so do it straight after and regenerate `test/expected/` once for both. |
 | 12 | **D3 → D9** | |
@@ -288,6 +289,25 @@ Each chunk has the same fields:
 - **Done when:** the README exists and the false-failure target is met. If it isn't, retune the thresholds and record why.
 - **Gates:** G-stat.
 
+### S7: Group-mean test for `--replicates`
+Added after S6, with the user's agreement (F31). S6 found that the check has little power against small real changes: a 20% higher force of infection moves mean prevalence by about 2 single-run SDs in ten scenarios, yet the default rerun rule detects it in only 2 of 44 scenarios and `--replicates 20` in 10. Each run is judged against intervals that hold 99% of single runs, and `--replicates` counts failing runs instead of testing where the K runs lie as a group. Since D2b, M4 and M8 change draws on purpose, G-stat is their only gate.
+- **Needs:** S6. **Read:** § Statistical tests; `test/stats/README.md`; FINDINGS F17, F31.
+- **First confirm with the user** the three choices below (recommended values given). They change § Statistical tests (2), which the user settled in S3.
+  - K = 20.
+  - Tested quantities: the aggregates plus each survey measure's total over surveys and age groups (not aggregates only), so changes that don't reach the five aggregates (e.g. treatment counts) are seen too.
+  - A family false-failure rate of 0.01% per scenario, so the 44-test suite raises a false alarm about 0.4% of the time instead of S6's ~9%.
+- **Do:**
+  - Reference format 4: store every replicate's value of every tested quantity. Regenerate all references from the kept replicates: `/Users/blaarm/git/om-s5/build-rework/stats-replicates/` (43 scenarios) and `build-rework/stats-s6/ref1` (scenario1). No new replicates are needed.
+  - `--replicates K` judges the group: for each tested quantity, z = (mean of the K runs − reference mean) / (reference SD · √(1/K + 1/N)). The check fails if the largest |z| exceeds a threshold, or if any single run fails rule (c) (fixed cells). Keep the per-run rules for reporting.
+  - Calibrate the threshold per scenario by leave-K-out on the reference replicates, not from the normal distribution: repeatedly take K of the N replicates as the "new build", score them against the other N − K, and use the (1 − α) quantile of the largest |z|. This allows for skewed counts and for correlation between quantities, as rule (a)'s leave-one-out does for misses.
+  - Add a ctest label (e.g. `statistical-full`) that runs `check_scenario.py --replicates K` for every referenced scenario. Plain `ctest` keeps the cheap single-run check.
+  - Extend `validate_method.py` and re-validate on the kept S6 runs in `build-rework/stats-s6/`, with no new runs: false failures from the 200 fresh seeds per scenario as disjoint groups of K (440 groups), and power and MDE from groups of K resampled from the 50 runs of each perturbation. Update the README tables.
+  - Update § Statistical tests (2) and the G-stat gate text.
+  - Afterwards, ask the user whether to remove `/Users/blaarm/git/om-s5` and `build-rework/stats-s6/`, kept for this chunk.
+- **Not in scope:** tests of spread or distribution shape. A change that keeps every mean but changes a variance (e.g. a sampler with the wrong spread) still passes; record it as a known limitation.
+- **Done when:** the group test's false-failure rate per scenario meets the chosen α (calibration plus the fresh-group check), the README has the new power table, and `ctest -L statistical-full` runs.
+- **Gates:** G-stat (both labels), G-exact.
+
 ## Stage V: Vector warmup robustness
 
 Added after S5, with the user's agreement. In S5, some scenarios aborted in vector warmup for a share of seeds, so they got no statistical reference: ModelName* (F16; 10 people), AvailabilityFilter (F26; 13% of seeds, 300 people) and ExactNv0 (F27; 18%, 150 people). SimpleMPDTest got none either, because its warmup ctsout length varies with the number of calibration rounds (F29). LifeNet1/2 lost one seed (F24). Every abort is a model safety check tripped by sampling noise in a small population; the scenario's own seed happens to pass.
@@ -344,7 +364,7 @@ For each D chunk, **Needs:** the previous D chunk plus B4 and M2. **Gates:** G-e
 |---|---|
 | **D1** | `sim::` time statics in `model/sim.h` → `Clock`, a member of `Simulation` |
 | **D2** | `util::master_RNG` → an RNG owned by `Simulation`, with the same single stream and draw order |
-| **D2b** | Split into per-purpose RNG streams. **Changes draw order on purpose.** Needs S6, V1 and the user's answer to Decision 1. Gate: G-stat instead of G-exact. Regenerate `test/expected/` only with the user's approval. |
+| **D2b** | Split into per-purpose RNG streams. **Changes draw order on purpose.** Needs S6, S7, V1 and the user's answer to Decision 1. Gate: G-stat (including `statistical-full`) instead of G-exact. Regenerate `test/expected/` only with the user's approval. |
 | **D3** | `ModelOptions`, `CommandLine` bitsets, `Parameters` → a `ModelOptions` object built once and owned by `Simulation` |
 | **D4** | Within-host and infection file statics (`WHFalciparum.cpp:55-79`, `CommonWithinHost`, the `Infection` subclasses) → component instance members. Split by subdirectory if it grows past ~20 files. |
 | **D5** | PK/PD `schedules`/`dosages` and `PerHost::params` → instance state |
@@ -442,7 +462,7 @@ Read § Modernisation policy before any M chunk. Each library enters in its own 
 | **M1** | M0 | Catch2 v3 as a second unit-test target, registered with ctest, so G-unit covers both. Port one small CxxTest suite as the pilot. From here on, new tests (F1, G3, every G-diff) are written in Catch2. | G-exact, G-unit, G-style |
 | **M2** | B4 | `.claude/skills/modernize-module/SKILL.md` plus `util/style.sh modernize <dir>`, modelled on `rename-module`: module-wide safe `modernize-*` and Core Guidelines fix-its as one tool-made commit (listed in `.git-blame-ignore-revs`), then a hand commit for the judgement items in § Modernisation policy. Pilot on `model/PkPd/`. | G-exact, G-unit, G-style, G-perf |
 | **M3** | D9, M0 | Logging on spdlog (with `SPDLOG_USE_STD_FORMAT`, so no separate fmt). `Simulation` owns an `om::Logger`, handed to components like the clock and RNG are after D. The CLI sink uses the pattern `%v`, so console text is unchanged; Python (J) can attach its own sink. Replace the ~130 `cout`/`cerr` diagnostics in ~32 files; survey and ctsout writers are not logging and stay. Compile out debug levels with `SPDLOG_ACTIVE_LEVEL`. Add `util/ab_cli.sh` (G-cli) first. Fix the `print_progress` bug noted in C2 here, if the user agrees. May split into M3a (infrastructure + G-cli) and M3b (call sites). | G-exact, G-unit, G-style, G-perf, G-cli |
-| **M4** | D2b, S6 | Portable random distributions. `random.h` wraps the RNG as a `gsl_rng` to use GSL's `gsl_ran_*` samplers. Replace them with in-tree samplers (or Boost.Random) on the `Simulation` RNG. **Not** the `std::` distributions, whose output differs between libc++, libstdc++ and MSVC, which would break cross-platform reproducibility. Changes draws on purpose. | G-stat, G-diff (moments and KS tests per distribution), G-unit, G-style, G-perf |
+| **M4** | D2b, S7 | Portable random distributions. `random.h` wraps the RNG as a `gsl_rng` to use GSL's `gsl_ran_*` samplers. Replace them with in-tree samplers (or Boost.Random) on the `Simulation` RNG. **Not** the `std::` distributions, whose output differs between libc++, libstdc++ and MSVC, which would break cross-platform reproducibility. Changes draws on purpose. | G-stat, G-diff (moments and KS tests per distribution), G-unit, G-style, G-perf |
 | **M5** | F6, Decision 7 | Linear algebra on Eigen: `gsl_vector`, `gsl_matrix` and `gsl_blas` in `util/vectors.h`, `CalcNvO`, `TransmissionModel` and `PopulationAgeStructure`. Use fixed-size Eigen types where sizes are known (vector life-cycle matrices). | G-diff, G-stat, G-unit, G-style, G-perf |
 | **M6** | M5 | The rest of GSL and R_nmath: root finding, multiroot, minimisation, integration, CDFs and splines (`AnophelesModel`, `CalcNvO`, `WHFalciparum`, `AgeGroupInterpolation`, `sampler`, `LSTMDrug*`, `ITN`, `IRS`) on Boost.Math (header-only, BSL) or Eigen-based solvers. Split M6a (vector model calibration) and M6b (the rest) if needed. When the last use goes, drop GSL and `contrib/R_nmath` from the build. | G-diff, G-stat, G-unit, G-style, G-perf |
 | **M7** | D9, M0, Decision 6 | Replicate-level parallelism with oneTBB (or the Decision 6 alternative): an `om::run_replicates` batch API built on `task_group`, used by the S1 runner and later by Python. Extend G-two-sims: N simulations in parallel equal N serial runs. No change inside a simulation. | G-exact, G-unit, G-style, G-two-sims |

@@ -20,6 +20,7 @@ See `PLAN.md` for the session protocol, chunks and gates. Append one log entry p
 | S4 | done | 507b5b58, (this log entry) |
 | S5 | done | c155c7fb, 7a28ca71, 50fac6c1, ec9a409c, (this log entry) |
 | S6 | done | 350fdaf3, d4a84ef7, a382bc2c, c9f46c93, ecdac231, 5cd66064, (this log entry) |
+| S7 | todo | |
 | V1 | todo | |
 | C1 | done | b02303db, (this log entry) |
 | C2 | done | 20e8bf39, (this log entry) |
@@ -667,3 +668,8 @@ See `PLAN.md` for the session protocol, chunks and gates. Append one log entry p
   - **F31: ask the user** whether to add a mean-shift test to `--replicates` (and use it as G-stat for D2b/M4) before D2b. If yes, it is a new chunk (e.g. S7) and changes § Statistical tests (2).
   - V1 next (recommended order 10b), then D2b with Decision 1.
 - Next: V1 (each fix changes outputs: ask the user first), or the F31 follow-up if the user wants it before D2b.
+
+### Plan amendment: S7, a group-mean test (2026-10-19, after S6)
+- At the user's request, after S6's power study (F31): new chunk **S7** in Stage S (PLAN.md), before D2b and independent of V1 (recommended order 10a). `--replicates K` will test the K-run mean of each aggregate and each survey measure's total against the reference, with a leave-K-out-calibrated threshold, plus a `statistical-full` ctest label. That label becomes part of G-stat for the draw-changing chunks D2b, M4 and M8. D2b and M4 now need S7.
+- Its three choices (K = 20, aggregates plus measure totals, 0.01% per scenario) are recommendations to confirm with the user at the start of S7.
+- The S5 replicates (om-s5) and S6 runs stay until S7 is done.
