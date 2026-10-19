@@ -20,3 +20,5 @@ a0f1112cb17fe800d66cb23f6591562f369bd00b
 48d3476cf460daac3e797bca1c38554730ef0886
 # D2: rename model/util/random.h and xoshiro.h identifiers (util/style.sh rename)
 c98ffe6f3cedd05bf22bb4bb93cc4dfdf908fc42
+# D2: model/util/random.h and xoshiro.h safe modernize fix-its (util/style.sh modernize)
+0808f323aea531c377000fb7af4e7a2bee6d7286
