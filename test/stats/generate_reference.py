@@ -15,6 +15,11 @@ over the aggregates present, so that together they cover 99%. Their quantiles ar
 type 6, whose expected coverage of one new run is the nominal one; type 7 is too narrow in
 the far tails these intervals use.
 
+For the group test of check_scenario.py --replicates K, it also stores every replicate's value
+of every group quantity that varies enough, and calibrates the test's threshold by leave K out:
+it repeatedly takes K replicates as the "new build", scores them against the other N - K, and
+takes the 1 - alpha quantile of the largest |z| over the quantities.
+
 Needs numpy; the uv shebang provides it, or run it with any python that has numpy.
 """
 
@@ -24,6 +29,7 @@ import hashlib
 import json
 import math
 import re
+import statistics
 import sys
 from dataclasses import dataclass
 from pathlib import Path
@@ -43,6 +49,13 @@ NOT_FIXED = -2
 CONSTANT = -1
 MIN_REPLICATES = 10
 CHUNK_CELLS = 1 << 14
+GROUP_K = 20
+GROUP_ALPHA = 1e-4
+GROUP_REPORTED_ALPHAS = (0.05, 0.01, 0.001)
+GROUP_RESAMPLES = 1_000_000
+GROUP_BATCH = 5000
+GROUP_MIN_VARYING = 10
+GROUP_SEED = 20261019
 SCHEMA_VERSION = re.compile(rb"""\bschemaVersion\s*=\s*["'](\d+)["']""")
 
 
@@ -168,6 +181,70 @@ def max_passing_misses(misses):
     return max(m for m in range(int(misses.max()) + 1) if stats_io.run_p_value(m, counts) > stats_io.RUN_ALPHA)
 
 
+def total_columns(keys):
+    columns = {}
+    for i, k in enumerate(keys):
+        if k[0] == stats_io.SURVEY:
+            columns.setdefault(stats_io.total_key(k[2], k[3]), []).append(i)
+    return columns
+
+
+def replicate_totals(x, keys):
+    rows = x.tolist()
+    return {key: [math.fsum(row[i] for i in columns) for row in rows] for key, columns in total_columns(keys).items()}
+
+
+def varies_enough(values):
+    column = np.asarray(values)
+    if not np.isfinite(column).all():
+        return False
+    _, counts = np.unique(column, return_counts=True)
+    return column.size - counts.max() >= GROUP_MIN_VARYING
+
+
+def largest_group_z(centred, chosen):
+    n = centred.shape[0]
+    k = chosen.shape[1]
+    rows = centred[chosen]
+    chosen_sum = rows.sum(axis=1)
+    rest_mean = (centred.sum(axis=0) - chosen_sum) / (n - k)
+    rest_var = ((centred ** 2).sum(axis=0) - (rows ** 2).sum(axis=1) - (n - k) * rest_mean ** 2) / (n - k - 1)
+    diff = chosen_sum / k - rest_mean
+    with np.errstate(divide="ignore", invalid="ignore"):
+        z = np.where(diff == 0, 0.0, np.abs(diff) / (np.sqrt(np.maximum(rest_var, 0)) * math.sqrt(1 / k + 1 / (n - k))))
+    return z.max(axis=1)
+
+
+def leave_k_out_maxima(values, k, resamples, seed=GROUP_SEED, batch=GROUP_BATCH):
+    n = values.shape[0]
+    centred = values - values.mean(axis=0)
+    rng = np.random.default_rng(seed)
+    maxima = np.empty(resamples)
+    for start in range(0, resamples, batch):
+        size = min(batch, resamples - start)
+        maxima[start:start + size] = largest_group_z(centred, rng.random((size, n)).argpartition(k, axis=1)[:, :k])
+    return maxima
+
+
+@dataclass
+class GroupCalibration:
+    values: dict
+    skipped: int
+    quantiles: dict
+    normal_bonferroni: float
+
+
+def calibrate_group(candidates, n, k, alpha, resamples):
+    values = {key: v for key, v in candidates.items() if varies_enough(v)}
+    if not values or n < 2 * k:
+        return GroupCalibration(values, len(candidates) - len(values), {}, math.nan)
+    maxima = leave_k_out_maxima(np.array(list(values.values())).T, k, resamples)
+    alphas = sorted({*GROUP_REPORTED_ALPHAS, alpha}, reverse=True)
+    quantiles = {a: float(np.quantile(maxima, 1 - a)) for a in alphas}
+    normal = statistics.NormalDist().inv_cdf(1 - alpha / (2 * len(values)))
+    return GroupCalibration(values, len(candidates) - len(values), quantiles, normal)
+
+
 def seed_dirs(directory):
     seeds = sorted(int(p.name) for p in directory.iterdir()
                    if re.fullmatch(r"-?\d+", p.name) and (p / "output.txt").is_file())
@@ -222,7 +299,7 @@ def schema_version(run_meta):
     return match[1].decode() if match else "unknown"
 
 
-def build(directory, allow_dirty=False):
+def build(directory, allow_dirty=False, group_k=GROUP_K, group_alpha=GROUP_ALPHA, group_resamples=GROUP_RESAMPLES):
     meta_path = directory / "meta.json"
     if not meta_path.is_file():
         raise ReferenceError(f"{meta_path} not found; is {directory} a run_replicates.py output dir?")
@@ -246,6 +323,13 @@ def build(directory, allow_dirty=False):
     agg = np.array([[a[n] for n in agg_names] for a in agg_values], dtype=np.float64).reshape(len(seeds), -1)
     agg_cells = cell_statistics(agg, tail, 1 - tail, method=AGGREGATE_QUANTILE)
     agg_stats = agg_cells.stats
+
+    candidates = {(stats_io.AGGREGATE, "", "", n): agg[:, i].tolist() for i, n in enumerate(agg_names)}
+    candidates.update(replicate_totals(x, keys))
+    group = calibrate_group(candidates, len(seeds), group_k, group_alpha, group_resamples)
+    if not group.quantiles:
+        print(f"warning: no group test: {len(group.values)} group quantities vary enough and {len(seeds)} "
+              f"replicates for K = {group_k} (need at least {2 * group_k})", file=sys.stderr)
 
     rows = [(k, {c: cells.stats[c][i] for c in stats_io.STAT_COLUMNS}) for i, k in enumerate(keys)]
     rows += [((stats_io.AGGREGATE, "", "", n), {c: agg_stats[c][i] for c in stats_io.STAT_COLUMNS})
@@ -292,8 +376,16 @@ def build(directory, allow_dirty=False):
                              f"aggregates {int(agg_failing.sum())}, fixed cells {int(fixed_failing.sum())} "
                              f"in {fixed_failure_cells} cells)"),
         stats_io.LOO_COUNTS: " ".join(str(int(m)) for m in misses),
+        "group_k": group_k,
+        "group_alpha": format(group_alpha, "g"),
+        "group_threshold": format(group.quantiles[group_alpha], ".6g") if group.quantiles else "none",
+        "group_quantiles": " ".join(f"{format(a, 'g')} {format(q, '.6g')}" for a, q in group.quantiles.items()) or "none",
+        "group_normal_bonferroni": format(group.normal_bonferroni, ".6g"),
+        "group_resamples": group_resamples if group.quantiles else 0,
+        "group_quantities": (f"{len(group.values)} (skipped {group.skipped} with fewer than {GROUP_MIN_VARYING} "
+                             "replicates off their most common value)"),
     }
-    return meta, rows
+    return meta, rows, group.values
 
 
 def parse_args(argv):
@@ -303,21 +395,29 @@ def parse_args(argv):
                         help="reference CSV to write, gzipped if it ends in .gz (default: test/reference/<scenario file stem>.csv.gz)")
     parser.add_argument("--allow-dirty", action="store_true",
                         help="accept replicates built from a source tree with uncommitted changes")
+    parser.add_argument("--group-k", type=int, default=GROUP_K, metavar="K",
+                        help=f"runs per group in check_scenario.py --replicates (default {GROUP_K})")
+    parser.add_argument("--group-alpha", type=float, default=GROUP_ALPHA,
+                        help=f"false-failure rate of the group test (default {GROUP_ALPHA:g})")
+    parser.add_argument("--group-resamples", type=int, default=GROUP_RESAMPLES,
+                        help=f"leave-K-out resamples for the group threshold (default {GROUP_RESAMPLES})")
     return parser.parse_args(argv)
 
 
 def main(argv):
     args = parse_args(argv)
     try:
-        meta, rows = build(args.replicates, args.allow_dirty)
+        meta, rows, group_values = build(args.replicates, args.allow_dirty, args.group_k, args.group_alpha,
+                                         args.group_resamples)
         out = args.out or ROOT / "test" / "reference" / f"{meta['scenario']}{stats_io.REFERENCE_SUFFIX}"
         out.parent.mkdir(parents=True, exist_ok=True)
-        stats_io.write_reference(out, meta, rows)
+        stats_io.write_reference(out, meta, rows, group_values)
     except (ReferenceError, stats_io.FormatError, OSError, json.JSONDecodeError) as e:
         print(f"error: {e}", file=sys.stderr)
         return 2
     print(f"wrote {out}: {meta['replicates']} replicates, {meta['cells']} cells, "
-          f"leave-one-out run failures {meta['loo_run_failures']}", file=sys.stderr)
+          f"leave-one-out run failures {meta['loo_run_failures']}, group quantities {len(group_values)}, "
+          f"group threshold {meta['group_threshold']}", file=sys.stderr)
     return 0
 
 

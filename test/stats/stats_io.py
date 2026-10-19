@@ -7,22 +7,32 @@ A cell is one value of one run, keyed by (file, survey, group, measure), all str
 - output.txt: ("survey", survey, group, measure), from the row's first three columns
 - ctsout.txt: ("ctsout", <first column of the row>, "", <column header>)
 - aggregates: ("aggregate", "", "", <aggregate name>)
+
+The group test of check_scenario.py --replicates compares the mean of K runs for each group
+quantity: every aggregate, and every survey measure's total over surveys and groups, keyed
+("total", "", "whole" or "split", measure), with whole-population groups (below 1000) and
+cohort or genotype groups (1000 and above) totalled separately.
 """
 
 import gzip
 import math
+import statistics
 from dataclasses import dataclass, field
 from functools import cached_property
 
 SURVEY = "survey"
 CTSOUT = "ctsout"
 AGGREGATE = "aggregate"
-FORMAT_VERSION = "3"
+TOTAL = "total"
+WHOLE = "whole"
+SPLIT = "split"
+FORMAT_VERSION = "4"
 RUN_ALPHA = 0.01
 LOO_COUNTS = "loo_miss_counts"
 REFERENCE_SUFFIX = ".csv.gz"
 COLUMNS = ("file", "survey", "group", "measure", "mean", "sd", "min", "max", "lo", "hi")
 STAT_COLUMNS = COLUMNS[4:]
+GROUP_COLUMNS = (*COLUMNS[:4], "values")
 WHOLE_POPULATION_GROUP_LIMIT = 1000
 
 M_HOSTS = 0
@@ -150,26 +160,59 @@ def aggregates(cells):
     return {name: value for name, f in AGGREGATES.items() if (value := f(cells)) is not None}
 
 
+def total_key(group, measure):
+    return TOTAL, "", WHOLE if int(group) < WHOLE_POPULATION_GROUP_LIMIT else SPLIT, measure
+
+
+def measure_totals(cells):
+    values = {}
+    for (file, _, group, measure), value in cells.items():
+        if file == SURVEY:
+            values.setdefault(total_key(group, measure), []).append(value)
+    return {key: math.fsum(v) for key, v in values.items()}
+
+
+def group_quantities(cells):
+    quantities = {(AGGREGATE, "", "", name): value for name, value in aggregates(cells).items()}
+    quantities.update(measure_totals(cells))
+    return quantities
+
+
 @dataclass
 class Reference:
     meta: dict = field(default_factory=dict)
     rows: dict = field(default_factory=dict)
     loo_counts: list = field(default_factory=list)
+    group_values: dict = field(default_factory=dict)
 
     @cached_property
     def fixed(self):
         return fixed_keys(self.rows)
+
+    @cached_property
+    def group_stats(self):
+        return {key: (statistics.fmean(v), statistics.stdev(v)) for key, v in self.group_values.items()}
 
 
 def format_number(x):
     return repr(float(x))
 
 
+def format_value(x):
+    text = repr(float(x))
+    return text.removesuffix(".0")
+
+
+def check_key(key):
+    if any("," in part or "\n" in part for part in key):
+        raise ValueError(f"key {key!r} can't be written to CSV")
+
+
 def is_gzip(path):
     return str(path).endswith(".gz")
 
 
-def write_reference(path, meta, rows):
+def write_reference(path, meta, rows, group_values=None):
     lines = ["# OpenMalaria statistical reference\n"]
     for key, value in meta.items():
         if "\n" in str(value) or ":" in key:
@@ -177,9 +220,13 @@ def write_reference(path, meta, rows):
         lines.append(f"# {key}: {value}\n")
     lines.append(",".join(COLUMNS) + "\n")
     for key, stats in rows:
-        if any("," in part or "\n" in part for part in key):
-            raise ValueError(f"key {key!r} can't be written to CSV")
+        check_key(key)
         lines.append(",".join([*key, *(format_number(stats[c]) for c in STAT_COLUMNS)]) + "\n")
+    if group_values:
+        lines.append(",".join(GROUP_COLUMNS) + "\n")
+        for key, values in group_values.items():
+            check_key(key)
+            lines.append(",".join([*key, " ".join(map(format_value, values))]) + "\n")
     data = "".join(lines).encode()
     with open(path, "wb") as f:
         f.write(gzip.compress(data, compresslevel=9, mtime=0) if is_gzip(path) else data)
@@ -188,6 +235,7 @@ def write_reference(path, meta, rows):
 def read_reference(path):
     ref = Reference()
     header_seen = False
+    in_group_values = False
     with gzip.open(path, "rt") if is_gzip(path) else open(path) as f:
         for number, line in enumerate(f, 1):
             line = line.rstrip("\n")
@@ -202,6 +250,14 @@ def read_reference(path):
                     raise FormatError(f"{path}:{number}: expected header {','.join(COLUMNS)}")
                 header_seen = True
                 continue
+            if tuple(parts) == GROUP_COLUMNS:
+                in_group_values = True
+                continue
+            if in_group_values:
+                if len(parts) != len(GROUP_COLUMNS):
+                    raise FormatError(f"{path}:{number}: expected {len(GROUP_COLUMNS)} fields, found {len(parts)}")
+                ref.group_values[tuple(parts[:4])] = [float(v) for v in parts[4].split()]
+                continue
             if len(parts) != len(COLUMNS):
                 raise FormatError(f"{path}:{number}: expected {len(COLUMNS)} fields, found {len(parts)}")
             ref.rows[tuple(parts[:4])] = dict(zip(STAT_COLUMNS, map(float, parts[4:]), strict=True))
@@ -213,6 +269,9 @@ def read_reference(path):
         raise FormatError(f"{path}: bad or missing {LOO_COUNTS}") from e
     if str(len(ref.loo_counts)) != ref.meta.get("replicates"):
         raise FormatError(f"{path}: {len(ref.loo_counts)} {LOO_COUNTS} for {ref.meta.get('replicates')} replicates")
+    for key, values in ref.group_values.items():
+        if len(values) != len(ref.loo_counts):
+            raise FormatError(f"{path}: {len(values)} values of {key} for {len(ref.loo_counts)} replicates")
     return ref
 
 
@@ -229,14 +288,18 @@ def is_constant(row):
     return row["min"] == row["max"] or math.isnan(row["min"])
 
 
+def is_cell(key):
+    return key[0] in (SURVEY, CTSOUT)
+
+
 def fixed_keys(rows):
     constant = {}
     for key, row in rows.items():
-        if key[0] != AGGREGATE:
+        if is_cell(key):
             group = fixed_cell_group(key)
             constant[group] = constant.get(group, True) and is_constant(row)
     return {key for key, row in rows.items()
-            if key[0] != AGGREGATE and constant[fixed_cell_group(key)] and row["min"] != 0}
+            if is_cell(key) and constant[fixed_cell_group(key)] and row["min"] != 0}
 
 
 def same_value(a, b):

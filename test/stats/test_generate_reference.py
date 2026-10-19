@@ -261,6 +261,71 @@ class AggregateTests(unittest.TestCase):
         self.assertEqual(stats_io.aggregates(subset), stats_io.aggregates(cells))
 
 
+class GroupQuantityTests(unittest.TestCase):
+    def test_measure_totals_split_whole_population_and_subgroups(self):
+        cells = AggregateTests().cells([(1, 1, 14, 2), (1, 2, 14, 3), (2, 1, 14, 1), (1, 1001, 14, 100),
+                                        (2, 1000000, 14, 7), (1, 1, 3, 0.1), (2, 1, 3, 0.2)],
+                                       [(0, "simulated EIR", 4.0)])
+        self.assertEqual(stats_io.measure_totals(cells), {
+            ("total", "", "whole", "14"): 6, ("total", "", "split", "14"): 107,
+            ("total", "", "whole", "3"): math.fsum([0.1, 0.2])})
+        quantities = stats_io.group_quantities(cells)
+        self.assertEqual(quantities[("aggregate", "", "", "clinical_episodes")], 6)
+        self.assertEqual(quantities[("aggregate", "", "", "mean_eir")], 4.0)
+        self.assertEqual(len(quantities), 5)
+
+    def test_replicate_totals_match_measure_totals(self):
+        rng = np.random.default_rng(3)
+        keys = [("survey", str(s), str(g), str(m)) for s in (1, 2) for g in (1, 2, 1001) for m in (0, 14)]
+        keys.append(("ctsout", "0", "", "simulated EIR"))
+        x = rng.random((4, len(keys))) * 1e3
+        totals = gen.replicate_totals(x, keys)
+        for r in range(4):
+            expected = stats_io.measure_totals(dict(zip(keys, x[r].tolist(), strict=True)))
+            self.assertEqual({k: v[r] for k, v in totals.items()}, expected)
+
+    def test_varies_enough(self):
+        self.assertFalse(gen.varies_enough([0.0] * 491 + [1.0] * 9))
+        self.assertTrue(gen.varies_enough([0.0] * 490 + [1.0] * 10))
+        self.assertTrue(gen.varies_enough(list(range(20))))
+        self.assertFalse(gen.varies_enough([math.nan] * 20 + list(range(20))))
+
+    def test_largest_group_z_matches_brute_force(self):
+        rng = np.random.default_rng(4)
+        n, k = 40, 6
+        values = np.column_stack([rng.normal(5, 2, n), rng.poisson(3, n), np.r_[np.zeros(n - 3), 1, 2, 3]])
+        centred = values - values.mean(axis=0)
+        chosen = np.array([rng.permutation(n)[:k] for _ in range(50)])
+        chosen[0] = [n - 3, n - 2, n - 1, 0, 1, 2]
+        maxima = gen.largest_group_z(centred, chosen)
+        for row, indices in zip(maxima, chosen, strict=True):
+            rest = np.delete(values, indices, axis=0)
+            group = values[indices]
+            z = [abs(group[:, q].mean() - rest[:, q].mean()) / (rest[:, q].std(ddof=1) * math.sqrt(1 / k + 1 / (n - k)))
+                 if rest[:, q].std() else (math.inf if group[:, q].mean() != rest[:, q].mean() else 0.0)
+                 for q in range(values.shape[1])]
+            self.assertAlmostEqual(row, max(z), places=9)
+        self.assertEqual(maxima[0], math.inf)
+
+    def test_calibration_of_one_normal_quantity(self):
+        values = np.random.default_rng(5).normal(size=(500, 1))
+        maxima = gen.leave_k_out_maxima(values, 20, 20000)
+        self.assertAlmostEqual(float(np.quantile(maxima, 0.95)), 1.96, delta=0.15)
+        np.testing.assert_array_equal(gen.leave_k_out_maxima(values, 20, 20000), maxima)
+
+    def test_calibrate_group_skips_rare_quantities(self):
+        rng = np.random.default_rng(6)
+        candidates = {("total", "", "whole", "14"): rng.poisson(30, 100).tolist(),
+                      ("total", "", "whole", "15"): [0.0] * 95 + [1.0] * 5,
+                      ("total", "", "whole", "0"): [100.0] * 100}
+        group = gen.calibrate_group(candidates, 100, 10, 0.001, 5000)
+        self.assertEqual(list(group.values), [("total", "", "whole", "14")])
+        self.assertEqual(group.skipped, 2)
+        self.assertEqual(list(group.quantiles), [0.05, 0.01, 0.001])
+        self.assertLess(group.quantiles[0.05], group.quantiles[0.001])
+        self.assertFalse(gen.calibrate_group(candidates, 100, 60, 0.001, 5000).quantiles)
+
+
 class EndToEndTests(unittest.TestCase):
     N = 30
 
@@ -345,12 +410,37 @@ class EndToEndTests(unittest.TestCase):
         self.assertEqual((meta["quantile_method"], meta["aggregate_quantile_method"]),
                          ("hyndman-fan-7", "hyndman-fan-6"))
 
+    def test_group_values_and_threshold(self):
+        code, out, err = self.run_main("--group-k", "5", "--group-alpha", "0.01", "--group-resamples", "2000")
+        self.assertEqual(code, 0, err)
+        ref = stats_io.read_reference(out)
+        self.assertEqual(set(ref.group_values), {
+            ("aggregate", "", "", "clinical_episodes"), ("aggregate", "", "", "mean_prevalence"),
+            ("aggregate", "", "", "mean_eir"), ("total", "", "whole", "3"), ("total", "", "whole", "14")})
+        for i, seed in enumerate(range(1001, 1001 + self.N)):
+            keys, values = stats_io.read_run(self.reps / str(seed))
+            quantities = stats_io.group_quantities(dict(zip(keys, values, strict=True)))
+            self.assertEqual({k: v[i] for k, v in ref.group_values.items()},
+                             {k: quantities[k] for k in ref.group_values})
+        meta = ref.meta
+        self.assertEqual((meta["group_k"], meta["group_alpha"], meta["group_resamples"]), ("5", "0.01", "2000"))
+        quantiles = meta["group_quantiles"].split()
+        self.assertEqual(quantiles[0::2], ["0.05", "0.01", "0.001"])
+        self.assertEqual(meta["group_threshold"], quantiles[3])
+        self.assertTrue(meta["group_quantities"].startswith("5 (skipped 2 "))
+
+    def test_no_group_threshold_with_too_few_replicates(self):
+        code, out, err = self.run_main()
+        self.assertEqual(code, 0, err)
+        self.assertIn("no group test", err)
+        self.assertEqual(stats_io.read_reference(out).meta["group_threshold"], "none")
+
     def test_round_trip_is_exact(self):
         code, out, err = self.run_main()
         self.assertEqual(code, 0, err)
         ref = stats_io.read_reference(out)
         copy = self.dir / "copy.csv"
-        stats_io.write_reference(copy, ref.meta, list(ref.rows.items()))
+        stats_io.write_reference(copy, ref.meta, list(ref.rows.items()), ref.group_values)
         self.assertEqual(copy.read_text(), out.read_text())
 
     def test_gzip_round_trip_is_exact_and_reproducible(self):
@@ -358,15 +448,16 @@ class EndToEndTests(unittest.TestCase):
         self.assertEqual(code, 0, err)
         ref = stats_io.read_reference(out)
         packed = self.dir / "ref.csv.gz"
-        stats_io.write_reference(packed, ref.meta, list(ref.rows.items()))
+        stats_io.write_reference(packed, ref.meta, list(ref.rows.items()), ref.group_values)
         self.assertEqual(gzip.decompress(packed.read_bytes()), out.read_bytes())
         first = packed.read_bytes()
-        stats_io.write_reference(packed, ref.meta, list(ref.rows.items()))
+        stats_io.write_reference(packed, ref.meta, list(ref.rows.items()), ref.group_values)
         self.assertEqual(packed.read_bytes(), first)
         unpacked = stats_io.read_reference(packed)
         self.assertEqual(unpacked.meta, ref.meta)
         self.assertEqual(unpacked.loo_counts, ref.loo_counts)
         self.assertEqual(unpacked.rows.keys(), ref.rows.keys())
+        self.assertEqual(unpacked.group_values, ref.group_values)
 
     def test_differing_cells_are_an_error(self):
         (self.reps / "1005" / "output.txt").write_text("1\t1\t0\t100\n")
