@@ -19,7 +19,7 @@ See `PLAN.md` for the session protocol, chunks and gates. Append one log entry p
 | S3 | done | 46cef63b, e61e95d4, 2b6281d6, 5384584d, 012e38d8, ed38bba4, 7472b8b5, fcbfc337, (this log entry) |
 | S4 | done | 507b5b58, (this log entry) |
 | S5 | done | c155c7fb, 7a28ca71, 50fac6c1, ec9a409c, (this log entry) |
-| S6 | todo | |
+| S6 | done | 350fdaf3, d4a84ef7, a382bc2c, c9f46c93, ecdac231, 5cd66064, (this log entry) |
 | V1 | todo | |
 | C1 | done | b02303db, (this log entry) |
 | C2 | done | 20e8bf39, (this log entry) |
@@ -644,3 +644,26 @@ See `PLAN.md` for the session protocol, chunks and gates. Append one log entry p
   - Whoever takes `Population`/`Host::Human` (or D9): pass the master RNG to `Population`, which constructs every `Human`, and drop the bridge use in `Human::Human`.
   - D2b splits this single stream into per-purpose streams. It needs S6, V1 and Decision 1 first.
 - Next: S6 (recommended order item 10), then V1, then D2b.
+
+### S6: Validate the method (done, 2026-10-19)
+- Base: a1536e12. No C++ changed. Every compute job ran at `-j 4` at most (user's limit). At the user's request a background watch reported the Mac's thermal state (macOS `thermalState`, plus `pmset` warnings; no sudo, so no sensor temperatures) every ~10 min; it stayed *nominal* throughout.
+- **Decision with the user:** the power study's "parameter perturbation" is a scaled force of infection, not an XML parameter. The 14 `LOGNORMAL_MASS_ACTION` scenarios ignore Sinf and Estar, and no other scenario parameter has the same meaning in all 44 scenarios. `test/stats/foi_scale.patch`, applied only in a throwaway worktree build (removed afterwards), multiplies the expected new infections in `InfectionIncidenceModel::numNewInfections` by `$OM_S6_FOI_SCALE`. With the variable unset it reproduced the S5 replicates byte for byte.
+- Commits:
+  - 350fdaf3: **rule changes, reference format 3.** Rule (c) counts a cell as fixed only if its whole survey measure or ctsout column is constant across the replicates (F28; the candidate written into the S6 chunk). Aggregate intervals use Hyndman–Fan type-6 quantiles (F18): leave-one-out over 43 scenarios, the 99% aggregate family failed 1.59% with type 7, 1.09% with type 6. Unit tests: 30 (generator) and 18 (checker) pass, including brute-force leave-one-out checks of the new fixed-cell rule and of type-6 quantiles.
+  - d4a84ef7: PLAN.md § Statistical tests (1)–(2) text for both rules.
+  - a382bc2c: `test/stats/validate_method.py` (judges run dirs exactly as the checker does; false-failure rates, power, MDE).
+  - c9f46c93: 43 references regenerated from the kept S5 replicates. Cell rows byte-identical; all 131 aggregate intervals wider; leave-one-out per-run failures now 1.0–3.0% (were up to 11%).
+  - ecdac231: scenario1's reference. Its S3 replicates weren't kept; remade at c9f46c93 from a clean tree, and its cell rows are byte-identical to the S3 reference.
+  - 5cd66064: `test/stats/README.md`, `foi_scale.patch`, `make_intervention_off.py`.
+- **False failures** (fresh seeds 3001–3200, 8798 runs over 44 scenarios): per-run 1.8% (rule (a) 0.93%, (b) 1.10%, (c) 0 runs). Whole procedure 0.16% pooled; per scenario at most 0.39% (NoInterv) with fresh + leave-one-out runs pooled. **Target ≤ 0.5% met; α, K and the rerun rule are unchanged.** `--replicates 20`: 0.04%. With 44 tests, a correct draw-changing build has ~9% chance that some `stat_*` test fails falsely.
+- **Power** (seeds 4001–4050, 50 runs per variant): force of infection ×1.05/1.10/1.20 for all 44 scenarios; one intervention switched off for the 33 that have one. MDE at 80% power, rerun rule: 5% for Genotypes, 20% for Penny, > 20% for the other 42. `--replicates 20`: ≤ 20% for 10 scenarios. Intervention off: caught in 16 (rerun rule) / 19 (`--replicates 20`) of 33. Full table in `test/stats/README.md`.
+- **Main surprise (F31):** the weak power is the test, not the model. At ×1.20 the mean prevalence moves 1.9–2.5 single-run SDs in ten scenarios, but single runs are judged against 99% intervals, and `--replicates` counts failing runs instead of testing the K-run mean. Seven scenarios hardly respond (≤ 0.4 SD). This weakens G-stat as the only gate of D2b/M4/M8.
+- Gates: plain `ctest -j4` passes 99/99 (53 old, 44 `stat_*`, 2 tool tests) in 40 s, so G-exact and G-stat. `uvx ruff check test/stats/` clean. No C++ changed, so G-style and G-perf don't apply.
+- Other observations: LifeNet1/2 also abort for fresh seed 3095, and for 2 of 50 seeds with the LifeNet intervention removed (F24). F22 bit again (replicates recorded dirty while the tree had uncommitted files). Each full `validate_method.py` report takes ~5 min, mostly re-reading the GaussianCopula runs.
+- Findings: F18, F19, F28 closed; F17, F22, F24 updated; F31 new.
+- Kept: `build-rework/stats-s6/` (3.0 GB: fresh runs, power runs, intervention-off scenarios, drivers, `report.md`), so a changed test can be re-validated without rerunning anything. The worktree `/Users/blaarm/git/om-s5` and its replicates (4.4 GB) are also still kept, though S5 planned to remove them after S6: a follow-up for F31 that changes the reference format would regenerate from them in minutes. Ask the user before removing either.
+- Not done: the optional nightly random-seed job.
+- Follow-ups:
+  - **F31: ask the user** whether to add a mean-shift test to `--replicates` (and use it as G-stat for D2b/M4) before D2b. If yes, it is a new chunk (e.g. S7) and changes § Statistical tests (2).
+  - V1 next (recommended order 10b), then D2b with Decision 1.
+- Next: V1 (each fix changes outputs: ask the user first), or the F31 follow-up if the user wants it before D2b.
