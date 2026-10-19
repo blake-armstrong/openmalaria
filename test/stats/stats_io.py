@@ -12,11 +12,12 @@ A cell is one value of one run, keyed by (file, survey, group, measure), all str
 import gzip
 import math
 from dataclasses import dataclass, field
+from functools import cached_property
 
 SURVEY = "survey"
 CTSOUT = "ctsout"
 AGGREGATE = "aggregate"
-FORMAT_VERSION = "2"
+FORMAT_VERSION = "3"
 RUN_ALPHA = 0.01
 LOO_COUNTS = "loo_miss_counts"
 REFERENCE_SUFFIX = ".csv.gz"
@@ -155,6 +156,10 @@ class Reference:
     rows: dict = field(default_factory=dict)
     loo_counts: list = field(default_factory=list)
 
+    @cached_property
+    def fixed(self):
+        return fixed_keys(self.rows)
+
 
 def format_number(x):
     return repr(float(x))
@@ -215,8 +220,23 @@ def run_p_value(misses, loo_counts):
     return (1 + sum(1 for c in loo_counts if c >= misses)) / (len(loo_counts) + 1)
 
 
-def is_fixed_cell(row):
-    return math.isnan(row["min"]) or (row["min"] == row["max"] and row["min"] != 0)
+def fixed_cell_group(key):
+    file, _, _, measure = key
+    return file, measure
+
+
+def is_constant(row):
+    return row["min"] == row["max"] or math.isnan(row["min"])
+
+
+def fixed_keys(rows):
+    constant = {}
+    for key, row in rows.items():
+        if key[0] != AGGREGATE:
+            group = fixed_cell_group(key)
+            constant[group] = constant.get(group, True) and is_constant(row)
+    return {key for key, row in rows.items()
+            if key[0] != AGGREGATE and constant[fixed_cell_group(key)] and row["min"] != 0}
 
 
 def same_value(a, b):

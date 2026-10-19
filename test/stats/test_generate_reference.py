@@ -8,6 +8,7 @@
 import gzip
 import hashlib
 import io
+import itertools
 import json
 import math
 import sys
@@ -23,17 +24,33 @@ sys.path.insert(0, str(Path(__file__).resolve().parent))
 import generate_reference as gen
 import stats_io
 
-PROBS = (0.0, 0.01, 0.025, 0.1, 0.5, 0.9, 0.975, 0.99, 1.0)
+PROBS = (0.0, 0.001, 0.0025, 0.01, 0.025, 0.1, 0.5, 0.9, 0.975, 0.99, 0.9975, 0.999, 1.0)
+METHODS = (gen.LINEAR, gen.WEIBULL)
 
 
-def brute_loo_misses(x, p_lo, p_hi):
+def brute_loo_misses(x, p_lo, p_hi, method=gen.LINEAR):
     misses = np.zeros(x.shape[0], dtype=int)
     for i in range(x.shape[0]):
         others = np.delete(x, i, axis=0)
-        lo = np.quantile(others, p_lo, axis=0)
-        hi = np.quantile(others, p_hi, axis=0)
+        lo = np.quantile(others, p_lo, axis=0, method=method)
+        hi = np.quantile(others, p_hi, axis=0, method=method)
         misses[i] = int(((x[i] < lo) | (x[i] > hi)).sum())
     return misses
+
+
+def brute_fixed_failures(keys, x):
+    failing = np.zeros(x.shape[0], dtype=bool)
+    for i in range(x.shape[0]):
+        others = np.delete(x, i, axis=0)
+        rows = {k: {"min": others[:, c].min(), "max": others[:, c].max()} for c, k in enumerate(keys)}
+        fixed = stats_io.fixed_keys(rows)
+        failing[i] = any(not stats_io.same_value(x[i, c], rows[k]["min"]) for c, k in enumerate(keys) if k in fixed)
+    return failing
+
+
+def loo_fixed_failures(keys, x, chunk=gen.CHUNK_CELLS):
+    cells = gen.cell_statistics(x, 0.025, 0.975, chunk=chunk)
+    return gen.fixed_failures(gen.fixed_cell_groups(keys), cells.outlier, cells.common, x.shape[0])
 
 
 def misses(x, p_lo, p_hi):
@@ -41,14 +58,20 @@ def misses(x, p_lo, p_hi):
 
 
 class QuantileTests(unittest.TestCase):
-    def test_matches_numpy_default(self):
+    def test_matches_numpy(self):
         rng = np.random.default_rng(1)
-        for n in (1, 2, 3, 10, 49, 50, 51):
+        for n in (1, 2, 3, 10, 49, 50, 51, 499, 500):
             x = rng.normal(size=(n, 7))
             s = np.sort(x, axis=0)
-            for p in PROBS:
-                np.testing.assert_allclose(gen.quantile_sorted(s, p), np.quantile(x, p, axis=0),
-                                           rtol=0, atol=1e-12, err_msg=f"n={n} p={p}")
+            for method, p in itertools.product(METHODS, PROBS):
+                np.testing.assert_allclose(gen.quantile_sorted(s, p, method), np.quantile(x, p, axis=0, method=method),
+                                           rtol=0, atol=1e-12, err_msg=f"n={n} p={p} {method}")
+
+    def test_weibull_tail_is_an_order_statistic(self):
+        s = np.arange(1.0, 500.0)[:, None]
+        self.assertEqual(gen.quantile_sorted(s, 0.0025, gen.WEIBULL)[0], 1.25)
+        self.assertEqual(gen.quantile_sorted(s, 0.001, gen.WEIBULL)[0], 1.0)
+        self.assertEqual(gen.quantile_sorted(s, 0.999, gen.WEIBULL)[0], 499.0)
 
     def test_ordinal_data_gives_exact_order_statistics(self):
         s = np.arange(1.0, 51.0)[:, None]
@@ -62,9 +85,10 @@ class LeaveOneOutTests(unittest.TestCase):
         rng = np.random.default_rng(2)
         for n in (10, 11, 40):
             x = rng.integers(0, 4, size=(n, 300)).astype(float)
-            for p_lo, p_hi in ((0.025, 0.975), (0.1, 0.9), (0.0, 1.0)):
-                np.testing.assert_array_equal(gen.cell_statistics(x, p_lo, p_hi, chunk=64).misses,
-                                              brute_loo_misses(x, p_lo, p_hi), err_msg=f"n={n}")
+            for method, (p_lo, p_hi) in itertools.product(METHODS, ((0.025, 0.975), (0.1, 0.9), (0.0, 1.0),
+                                                                   (0.0025, 0.9975))):
+                np.testing.assert_array_equal(gen.cell_statistics(x, p_lo, p_hi, chunk=64, method=method).misses,
+                                              brute_loo_misses(x, p_lo, p_hi, method), err_msg=f"n={n} {method}")
 
     def test_matches_brute_force_continuous(self):
         x = np.random.default_rng(3).lognormal(size=(25, 200))
@@ -74,10 +98,10 @@ class LeaveOneOutTests(unittest.TestCase):
         x = np.random.default_rng(4).integers(0, 6, size=(12, 30)).astype(float)
         s = np.sort(x, axis=0)
         rank = gen.ranks(x)
-        for p in PROBS:
-            fast = gen.loo_quantile(s, rank, p)
+        for method, p in itertools.product(METHODS, PROBS):
+            fast = gen.loo_quantile(s, rank, p, method)
             for i in range(x.shape[0]):
-                np.testing.assert_allclose(fast[i], np.quantile(np.delete(x, i, axis=0), p, axis=0),
+                np.testing.assert_allclose(fast[i], np.quantile(np.delete(x, i, axis=0), p, axis=0, method=method),
                                            rtol=0, atol=1e-12)
 
     def test_constant_cells_have_sd_zero(self):
@@ -116,25 +140,54 @@ class RunPValueTests(unittest.TestCase):
         self.assertIsNone(gen.max_passing_misses(np.array([0, 0, 0, 7])))
 
 
-class FixedCellTests(unittest.TestCase):
-    def test_single_outlier_from_non_zero_constant_is_reported(self):
-        x = np.zeros((10, 5))
-        x[:, [3, 4]] = 2.0
-        x[3, 0] = 1.0
-        x[7, 3] = -2.0
-        x[2, 4] = 5.0
-        x[2, 2] = x[5, 2] = 1.0
-        result = gen.cell_statistics(x, 0.025, 0.975, chunk=3)
-        self.assertEqual(result.fixed_failure_cells, 2)
-        self.assertEqual(sorted(np.flatnonzero(result.fixed_failing)), [2, 7])
+def ctsout_key(time, column):
+    return (stats_io.CTSOUT, str(time), "", column)
 
-    def test_is_fixed_cell(self):
+
+class FixedCellTests(unittest.TestCase):
+    def test_single_outlier_of_a_constant_group_is_reported(self):
+        keys = [ctsout_key(0, "a"), ctsout_key(1, "a"), ctsout_key(0, "b"), ctsout_key(1, "b"),
+                ctsout_key(0, "zero"), ctsout_key(0, "c"), ctsout_key(1, "c"), ctsout_key(0, "d"),
+                ctsout_key(1, "d")]
+        x = np.full((10, len(keys)), 2.0)
+        x[3, 1] = 1.0
+        x[7, 2] = -2.0
+        x[2, 3] = 5.0
+        x[:, 4] = 0.0
+        x[5, 4] = 1.0
+        x[6, 5] = 3.0
+        x[1, 6] = x[4, 6] = 1.0
+        x[:, [7, 8]] = 3.0
+        x[8, [7, 8]] = 4.0
+        failing, failure_cells = loo_fixed_failures(keys, x, chunk=4)
+        self.assertEqual(sorted(np.flatnonzero(failing)), [3, 8])
+        self.assertEqual(failure_cells, 3)
+        np.testing.assert_array_equal(failing, brute_fixed_failures(keys, x))
+
+    def test_matches_brute_force(self):
+        rng = np.random.default_rng(8)
+        keys = [ctsout_key(t, f"m{t % 7}") for t in range(60)] + [("survey", "1", str(g), str(g % 5))
+                                                                  for g in range(40)]
+        for trial in range(20):
+            x = np.repeat(rng.integers(0, 3, size=(1, len(keys))).astype(float), 12, axis=0)
+            x[:, rng.integers(0, len(keys), size=3)] = math.nan
+            deviants = rng.integers(0, 6)
+            x[rng.integers(0, 12, size=deviants), rng.integers(0, len(keys), size=deviants)] += 1.0
+            np.testing.assert_array_equal(loo_fixed_failures(keys, x, chunk=17)[0], brute_fixed_failures(keys, x),
+                                          err_msg=f"trial {trial}")
+
+    def test_fixed_keys(self):
         def row(lo, hi):
             return {"min": lo, "max": hi}
-        self.assertTrue(stats_io.is_fixed_cell(row(2.5, 2.5)))
-        self.assertTrue(stats_io.is_fixed_cell(row(math.nan, math.nan)))
-        self.assertFalse(stats_io.is_fixed_cell(row(0.0, 0.0)))
-        self.assertFalse(stats_io.is_fixed_cell(row(1.0, 2.0)))
+        rows = {ctsout_key(0, "input EIR"): row(2.5, 2.5), ctsout_key(1, "input EIR"): row(0.0, 0.0),
+                ctsout_key(0, "births"): row(2.0, 2.0), ctsout_key(1, "births"): row(2.0, 3.0),
+                ctsout_key(0, "simulated EIR"): row(math.nan, math.nan),
+                ctsout_key(0, "zero"): row(0.0, 0.0),
+                (stats_io.SURVEY, "1", "1", "35"): row(7.0, 7.0), (stats_io.SURVEY, "2", "1", "35"): row(7.0, 7.0),
+                (stats_io.AGGREGATE, "", "", "mean_eir"): row(1.0, 1.0)}
+        self.assertEqual(stats_io.fixed_keys(rows),
+                         {ctsout_key(0, "input EIR"), ctsout_key(0, "simulated EIR"),
+                          (stats_io.SURVEY, "1", "1", "35"), (stats_io.SURVEY, "2", "1", "35")})
 
     def test_is_miss(self):
         row = {"lo": 1.0, "hi": 3.0}
@@ -287,8 +340,10 @@ class EndToEndTests(unittest.TestCase):
 
         total = np.arange(self.N) * 3 + 1.0
         clinical = ref.rows[("aggregate", "", "", "clinical_episodes")]
-        self.assertEqual(clinical["lo"], np.quantile(total, 0.005 / 3))
-        self.assertEqual(clinical["hi"], np.quantile(total, 1 - 0.005 / 3))
+        self.assertEqual(clinical["lo"], np.quantile(total, 0.005 / 3, method="weibull"))
+        self.assertEqual(clinical["hi"], np.quantile(total, 1 - 0.005 / 3, method="weibull"))
+        self.assertEqual((meta["quantile_method"], meta["aggregate_quantile_method"]),
+                         ("hyndman-fan-7", "hyndman-fan-6"))
 
     def test_round_trip_is_exact(self):
         code, out, err = self.run_main()

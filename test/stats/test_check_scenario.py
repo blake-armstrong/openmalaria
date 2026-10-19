@@ -81,6 +81,17 @@ class JudgeRunTests(unittest.TestCase):
             self.assertEqual(result.p, (1 + max(N - n_misses, 0)) / (N + 1))
             self.assertEqual(result.failed, failed, n_misses)
 
+    def test_constant_cell_of_a_varying_column_is_only_a_miss(self):
+        births = (stats_io.CTSOUT, "1", "", "input EIR")
+        self.ref.rows[births] = row(3.5, 0.2, 3.5, 3.5, 3.5, 4.5)
+        self.cells[births] = 3.5
+        self.cells[(stats_io.CTSOUT, "0", "", "input EIR")] = 4.0
+        result = judge(self.ref, self.cells)
+        self.assertEqual(result.fixed_cells, 2)
+        self.assertEqual(result.fixed_mismatches, [])
+        self.assertEqual(len(result.misses), 1)
+        self.assertFalse(result.failed)
+
     def test_rare_event_cell_is_only_a_miss(self):
         self.cells[survey_key(2, 1, 12)] = 1
         result = judge(self.ref, self.cells)
@@ -216,7 +227,7 @@ class OutputsModeTests(unittest.TestCase):
         self.assertIn("can't read run 1", err)
 
     def test_wrong_format_version_is_an_error(self):
-        self.ref_path.write_text(self.ref_path.read_text().replace("format_version: 2", "format_version: 1"))
+        self.ref_path.write_text(self.ref_path.read_text().replace(f"format_version: {stats_io.FORMAT_VERSION}", "format_version: 1"))
         self.write_run(1, passing_run(self.ref))
         code, _, err = self.run_main()
         self.assertEqual(code, 2)

@@ -5,7 +5,8 @@ One run fails if any of these hold:
   (a) its count of cells outside their reference interval is improbable: p <= RUN_ALPHA,
       where p is the share of the reference's leave-one-out miss counts at least as large
   (b) an aggregate is outside its reference interval
-  (c) a fixed cell, one that was the same non-zero value (or NaN) in every replicate, differs
+  (c) a fixed cell differs: a non-zero (or NaN) cell of a survey measure or ctsout column
+      whose every cell was the same in every replicate
 
 Run 1 uses the scenario's own iseed. If it fails, the retry seeds run, and the check fails
 if any of them also fails. With --replicates K, K seeds run up front instead, and the check
@@ -89,7 +90,7 @@ def judge_run(ref, keys, values, seed):
         row = ref.rows[key]
         if stats_io.is_miss(value, row):
             misses.append(Cell(key, value, row))
-        if stats_io.is_fixed_cell(row):
+        if key in ref.fixed:
             fixed_cells += 1
             if not stats_io.same_value(value, row["min"]):
                 fixed_mismatches.append(Cell(key, value, row))

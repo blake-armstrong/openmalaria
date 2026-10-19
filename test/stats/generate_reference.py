@@ -11,7 +11,9 @@ max, and the empirical 2.5% and 97.5% quantiles (Hyndman-Fan type 7, numpy's def
 cells, so the file also records, for every replicate, the miss count it gets against the
 interval built from the other N - 1 (leave one out); check_scenario.py turns a run's miss
 count into a p-value against them. The key aggregates get intervals widened by Bonferroni
-over the aggregates present, so that together they cover 99%.
+over the aggregates present, so that together they cover 99%. Their quantiles are Hyndman-Fan
+type 6, whose expected coverage of one new run is the nominal one; type 7 is too narrow in
+the far tails these intervals use.
 
 Needs numpy; the uv shebang provides it, or run it with any python that has numpy.
 """
@@ -32,6 +34,13 @@ import stats_io
 ROOT = Path(__file__).resolve().parents[2]
 CELL_INTERVAL = (0.025, 0.975)
 AGGREGATE_ALPHA = 0.01
+LINEAR = "linear"
+WEIBULL = "weibull"
+QUANTILE_METHOD_NAMES = {LINEAR: "hyndman-fan-7", WEIBULL: "hyndman-fan-6"}
+CELL_QUANTILE = LINEAR
+AGGREGATE_QUANTILE = WEIBULL
+NOT_FIXED = -2
+CONSTANT = -1
 MIN_REPLICATES = 10
 CHUNK_CELLS = 1 << 14
 SCHEMA_VERSION = re.compile(rb"""\bschemaVersion\s*=\s*["'](\d+)["']""")
@@ -41,24 +50,26 @@ class ReferenceError(Exception):
     pass
 
 
-def quantile_sorted(s, p):
-    n = s.shape[0]
-    h = (n - 1) * p
-    j = math.floor(h)
-    if j + 1 >= n:
-        return s[n - 1]
-    return s[j] + (h - j) * (s[j + 1] - s[j])
+def quantile_position(n, p, method):
+    h = (n - 1) * p if method == LINEAR else n * p + p - 1
+    return min(max(h, 0), n - 1)
 
 
-def loo_quantile(s, rank, p):
-    n = s.shape[0] - 1
-    h = (n - 1) * p
+def interpolate(element, n, p, method):
+    h = quantile_position(n, p, method)
     j = math.floor(h)
-    below = np.where(rank > j, s[j], s[j + 1])
     if j + 1 >= n:
-        return below
-    above = np.where(rank > j + 1, s[j + 1], s[j + 2])
-    return below + (h - j) * (above - below)
+        return element(n - 1)
+    below = element(j)
+    return below + (h - j) * (element(j + 1) - below)
+
+
+def quantile_sorted(s, p, method=LINEAR):
+    return interpolate(lambda t: s[t], s.shape[0], p, method)
+
+
+def loo_quantile(s, rank, p, method=LINEAR):
+    return interpolate(lambda t: np.where(rank > t, s[t], s[t + 1]), s.shape[0] - 1, p, method)
 
 
 def ranks(x):
@@ -80,28 +91,32 @@ def check_nan(x, keys):
 class CellStatistics:
     stats: dict
     misses: np.ndarray
-    fixed_failing: np.ndarray
-    fixed_failure_cells: int
+    outlier: np.ndarray
+    common: np.ndarray
 
 
-def block_misses(block, s, rank, p_lo, p_hi):
-    lo = loo_quantile(s, rank, p_lo)
-    hi = loo_quantile(s, rank, p_hi)
+def block_misses(block, s, rank, p_lo, p_hi, method):
+    lo = loo_quantile(s, rank, p_lo, method)
+    hi = loo_quantile(s, rank, p_hi, method)
     return ((block < lo) | (block > hi)).sum(axis=1)
 
 
-def block_fixed_failures(s, rank):
+def block_outliers(s, rank):
     n = s.shape[0]
-    low_outlier = (s[1] == s[n - 1]) & (s[0] != s[1]) & (s[1] != 0)
-    high_outlier = (s[0] == s[n - 2]) & (s[n - 2] != s[n - 1]) & (s[0] != 0)
-    failing = (low_outlier & (rank == 0)) | (high_outlier & (rank == n - 1))
-    return failing.any(axis=1), int((low_outlier | high_outlier).sum())
+    constant = (s[0] == s[n - 1]) | np.isnan(s[0])
+    low = ~constant & (s[1] == s[n - 1])
+    high = ~constant & (s[0] == s[n - 2])
+    outlier = np.full(s.shape[1], NOT_FIXED)
+    outlier[constant] = CONSTANT
+    outlier[low] = np.argmin(rank, axis=0)[low]
+    outlier[high] = np.argmax(rank, axis=0)[high]
+    return outlier, np.where(low, s[1], s[0])
 
 
-def cell_statistics(x, p_lo, p_hi, chunk=CHUNK_CELLS):
+def cell_statistics(x, p_lo, p_hi, chunk=CHUNK_CELLS, method=LINEAR):
     n, cells = x.shape
     result = CellStatistics({c: np.empty(cells) for c in stats_io.STAT_COLUMNS},
-                            np.zeros(n, dtype=np.int64), np.zeros(n, dtype=bool), 0)
+                            np.zeros(n, dtype=np.int64), np.empty(cells, dtype=np.int64), np.empty(cells))
     for start in range(0, cells, chunk):
         block = x[:, start:start + chunk]
         part = slice(start, start + block.shape[1])
@@ -112,13 +127,32 @@ def cell_statistics(x, p_lo, p_hi, chunk=CHUNK_CELLS):
         result.stats["mean"][part] = block.mean(axis=0)
         result.stats["min"][part] = s[0]
         result.stats["max"][part] = s[-1]
-        result.stats["lo"][part] = quantile_sorted(s, p_lo)
-        result.stats["hi"][part] = quantile_sorted(s, p_hi)
-        result.misses += block_misses(block, s, rank, p_lo, p_hi)
-        failing, failure_cells = block_fixed_failures(s, rank)
-        result.fixed_failing |= failing
-        result.fixed_failure_cells += failure_cells
+        result.stats["lo"][part] = quantile_sorted(s, p_lo, method)
+        result.stats["hi"][part] = quantile_sorted(s, p_hi, method)
+        result.misses += block_misses(block, s, rank, p_lo, p_hi, method)
+        result.outlier[part], result.common[part] = block_outliers(s, rank)
     return result
+
+
+def fixed_cell_groups(keys):
+    index = {}
+    return np.array([index.setdefault(stats_io.fixed_cell_group(k), len(index)) for k in keys], dtype=np.int64)
+
+
+def fixed_failures(group, outlier, common, n):
+    groups = int(group.max()) + 1 if group.size else 0
+    fixable = np.ones(groups, dtype=bool)
+    fixable[group[outlier == NOT_FIXED]] = False
+    deviant = outlier >= 0
+    first = np.full(groups, n)
+    last = np.full(groups, -1)
+    np.minimum.at(first, group[deviant], outlier[deviant])
+    np.maximum.at(last, group[deviant], outlier[deviant])
+    single = fixable & (first == last)
+    failing_cells = deviant & single[group] & (common != 0)
+    failing = np.zeros(n, dtype=bool)
+    failing[outlier[failing_cells]] = True
+    return failing, int(failing_cells.sum())
 
 
 def loo_p_values(misses):
@@ -210,7 +244,7 @@ def build(directory, allow_dirty=False):
     agg_names = [n for n in stats_io.AGGREGATES if all(n in a for a in agg_values)]
     tail = AGGREGATE_ALPHA / 2 / max(len(agg_names), 1)
     agg = np.array([[a[n] for n in agg_names] for a in agg_values], dtype=np.float64).reshape(len(seeds), -1)
-    agg_cells = cell_statistics(agg, tail, 1 - tail)
+    agg_cells = cell_statistics(agg, tail, 1 - tail, method=AGGREGATE_QUANTILE)
     agg_stats = agg_cells.stats
 
     rows = [(k, {c: cells.stats[c][i] for c in stats_io.STAT_COLUMNS}) for i, k in enumerate(keys)]
@@ -222,7 +256,9 @@ def build(directory, allow_dirty=False):
     sorted_misses = np.sort(misses)
     miss_failing = loo_p_values(misses) <= stats_io.RUN_ALPHA
     agg_failing = agg_cells.misses > 0
-    run_failing = miss_failing | agg_failing | cells.fixed_failing
+    fixed_failing, fixed_failure_cells = fixed_failures(fixed_cell_groups(keys), cells.outlier, cells.common,
+                                                        len(seeds))
+    run_failing = miss_failing | agg_failing | fixed_failing
     limit = max_passing_misses(misses)
     if limit is None:
         print(f"warning: with {len(seeds)} replicates no miss count is improbable at "
@@ -241,7 +277,8 @@ def build(directory, allow_dirty=False):
         "seeds": seed_ranges(seeds),
         "replicates_created": run_meta.get("created"),
         "generated": datetime.datetime.now(datetime.UTC).isoformat(timespec="seconds"),
-        "quantile_method": "hyndman-fan-7",
+        "quantile_method": QUANTILE_METHOD_NAMES[CELL_QUANTILE],
+        "aggregate_quantile_method": QUANTILE_METHOD_NAMES[AGGREGATE_QUANTILE],
         "cells": f"{len(keys)} (survey {n_survey}, ctsout {len(keys) - n_survey})",
         "zero_width_cells": zero_width,
         "cell_interval": f"{CELL_INTERVAL[0]} {CELL_INTERVAL[1]}",
@@ -252,8 +289,8 @@ def build(directory, allow_dirty=False):
         "aggregates": " ".join(agg_names) or "none",
         "aggregate_interval": f"{format(tail, '.6g')} {format(1 - tail, '.6g')}",
         "loo_run_failures": (f"{int(run_failing.sum())} of {len(seeds)} (misses {int(miss_failing.sum())}, "
-                             f"aggregates {int(agg_failing.sum())}, fixed cells {int(cells.fixed_failing.sum())} "
-                             f"in {cells.fixed_failure_cells} cells)"),
+                             f"aggregates {int(agg_failing.sum())}, fixed cells {int(fixed_failing.sum())} "
+                             f"in {fixed_failure_cells} cells)"),
         stats_io.LOO_COUNTS: " ".join(str(int(m)) for m in misses),
     }
     return meta, rows
