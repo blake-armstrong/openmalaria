@@ -84,15 +84,15 @@ template <class T> struct RNG {
     /// seeding with only a 64-bit seed. Since many instances of the LocalRng
     /// are used, 128-bit seeds are recommended to reduce chance of overlapping
     /// sections of RNG output.
-    explicit RNG(uint64_t seed, uint64_t stream) : rng(seed, stream) {
-        gsl_type = make_gsl_rng_type(rng);
+    explicit RNG(uint64_t seed, uint64_t stream) : rng(seed, stream), gsl_type(make_gsl_rng_type(rng)) {
+
         gsl_gen.type = &gsl_type;
         gsl_gen.state = reinterpret_cast<void*>(&rng);
     }
 
     /// Seed via another RNG
-    template <class S> explicit RNG(RNG<S>& source) : rng(source.rng) {
-        gsl_type = make_gsl_rng_type(rng);
+    template <class S> explicit RNG(RNG<S>& source) : rng(source.rng), gsl_type(make_gsl_rng_type(rng)) {
+
         gsl_gen.type = &gsl_type;
         gsl_gen.state = reinterpret_cast<void*>(&rng);
     }
@@ -102,8 +102,8 @@ template <class T> struct RNG {
     RNG& operator=(const RNG&) = delete;
 
     /// Allow moving, with explicit functions
-    RNG(RNG&& other) : rng(std::move(other.rng)) {
-        gsl_type = other.gsl_type;
+    RNG(RNG&& other) : rng(std::move(other.rng)), gsl_type(other.gsl_type) {
+
         // The following point into instance of this RNG:
         gsl_gen.type = &gsl_type;
         gsl_gen.state = reinterpret_cast<void*>(&rng);
@@ -225,14 +225,14 @@ private:
     T rng;
 
     // Hooks for GSL distributions
-    gsl_rng_type gsl_type;
-    gsl_rng gsl_gen;
+    gsl_rng_type gsl_type{};
+    gsl_rng gsl_gen{};
 
     template <class> friend class RNG;
 };
 
-typedef RNG<Xoshiro256P> LocalRng;
-typedef RNG<ChaCha<8>> MasterRng;
+using LocalRng = RNG<Xoshiro256P>;
+using MasterRng = RNG<ChaCha<8>>;
 
 }
 

@@ -33,7 +33,7 @@
 /// Implementation of Xoshiro256+
 class Xoshiro256P {
 public:
-    typedef uint64_t result_type;
+    using result_type = uint64_t;
 
     Xoshiro256P(uint64_t a, uint64_t b = 0x220b5e8d, uint64_t c = 0x712a58a2, uint64_t d = 0x712a58a2) {
         this->seed(a, b, c, d);
@@ -95,7 +95,7 @@ private:
     void generate_block();
     void chacha_core();
 
-    uint64_t s[4];
+    uint64_t s[4]{};
 };
 
 // template<class Sseq>
