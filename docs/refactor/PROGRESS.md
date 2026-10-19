@@ -18,7 +18,7 @@ See `PLAN.md` for the session protocol, chunks and gates. Append one log entry p
 | S2 | done | 841b2a9f, 720c0f09, 3c40c24b, (this log entry) |
 | S3 | done | 46cef63b, e61e95d4, 2b6281d6, 5384584d, 012e38d8, ed38bba4, 7472b8b5, fcbfc337, (this log entry) |
 | S4 | done | 507b5b58, (this log entry) |
-| S5 | in progress | c155c7fb, 7a28ca71, (this log entry) |
+| S5 | done | c155c7fb, 7a28ca71, 50fac6c1, ec9a409c, (this log entry) |
 | S6 | todo | |
 | V1 | todo | |
 | C1 | done | b02303db, (this log entry) |
@@ -561,7 +561,7 @@ See `PLAN.md` for the session protocol, chunks and gates. Append one log entry p
   - S5: each new CSV under `test/reference/` turns its `stat_*` test on. The four ModelName* scenarios stay disabled until F16 is decided.
 - Next: S5 (a long compute job; see the recommended-order note) or D1.
 
-### S5: Generate the full references (in progress, 2026-10-16)
+### S5: Generate the full references (done, 2026-10-19)
 - Base: 3f5c0bb3. Build `build-rework/` from 3f5c0bb3 (no C++ changed since, so the binary is the same at every later S5 commit).
 - **Decisions, made with the user before any references:**
   - **ModelName\* (F16): skipped.** No reference, so the four `stat_ModelName*` tests stay disabled. F16 stays open as a model bug for its own task.
@@ -577,7 +577,16 @@ See `PLAN.md` for the session protocol, chunks and gates. Append one log entry p
   - Done in the worktree (2026-10-17, worktree binary `d3ab74cf…`), with wall times at `-j 4`: 12 112 s, Genotypes 776 s, IRS30 206 s, KK_20150612 132 s, LifeNet1 254 s, LifeNet2 (about 4–5 min). **LifeNet1 and LifeNet2 have 499 seeds each:** seed 1223 aborts both (F24). 499 is enough for a reference (F20 needs ≥ 100).
   - Paused again at the user's request, after LifeNet2. The driver was stopped between scenarios, so no directory is partial.
   - Not started: the other 29, from Molineaux on in `OM_BOXTEST_NAMES` order. Rerun `caffeinate -i /Users/blaarm/git/om-s5/build-rework/s5_run.sh` (append its output to `s5_run.log`). The 11 scenarios made with the main-tree binary are refused with exit 2 and left untouched (F25), so their `rc=2` lines in the log are expected. LifeNet1/LifeNet2 are re-entered and retry only seed 1223, which fails again (rc=1, same 499).
-- Still to do: finish the replicates; in the worktree, `test/stats/generate_reference.py build-rework/stats-replicates/<NAME> -o /Users/blaarm/git/openmalaria-fork/test/reference/scenario<NAME>.csv.gz` for each, then commit the 46 `.csv.gz` files in the main tree; G-exact, G-unit and G-stat; record each reference's N, cell counts and `loo_run_failures` here. When S5 is committed, remove the worktree (`git worktree remove /Users/blaarm/git/om-s5`).
+- Finished 2026-10-17 at `-j 2` (from Molineaux on), at the user's request. Further losses: **AvailabilityFilter 436** of 500 (warmup exceeded 30 rounds, F26), **ExactNv0 408** (exact solver, negative emergence, F27). The checker's rerun seeds: LifeNet1/2 all 5 run; AvailabilityFilter fails on 2004, ExactNv0 on 2003.
+- **Decision with the user (2026-10-19):** no reference for AvailabilityFilter or ExactNv0, as for ModelName*. Fix the warmup in a new chunk **V1**, before D2b (50fac6c1: PLAN.md Stage V, findings F26, F27). SimpleMPDTest was then also left out: its ctsout covers the warmup, so the number of rows depends on the calibration rounds (F29). Same root cause, so V1 covers it too.
+- **ec9a409c: 43 new references** (`test/reference/*.csv.gz`, 13 MB together with scenario1). N = 500, except LifeNet1/2 at 499. Leave-one-out per-run failures, of N:
+  4 14, 5 16, 6 10, 9 10, 10 8, 11 11, 12 11, 2ITNs **48**, Cohort 16, EffectiveDrug 5, Empirical 11, ESTS 14, Genotypes 12, IRS30 **51**, KK_20150612 13, LifeNet1 7, LifeNet2 9, Molineaux 11, MolPairwise 8, MSAT 9, MSAT_HRP2 13, NamawalaArabiensis 11, NoInterv 15, NoMPDLarviciding 18, Penny 12, Rach5IC **56**, SimpleMPDLarviciding 18, SubPopRemoval 5, TrapTest 14, TriggeredMSAT 12, VecFullTest 14, VecMonthly 13, VecTest 12, Vivax 12, NonHumanHosts 10, PEV 8, BSV 10, TBV 8, DecisionTree5DayDielmo 12, HetVecDailyEIR 11, GaussianCopulaGamma 11, GaussianCopulaLognormal 15, InfectionOrigin 9.
+  - So 1–4% everywhere except the three in bold, about 10% each, all from rule (c) on the ctsout `recent births` column (F28). Left for S6, which retunes the rules.
+  - Largest: the two GaussianCopula references, 189,800 cells each. Each reference's header has its cell counts.
+- Gates: G-exact / G-unit / G-stat: plain `ctest -j2` passes 99/99 (53 old, 44 `stat_*`, 2 tool tests) in 72 s. On its own seed only `stat_MSAT_HRP2` failed (490 misses, p = 0.006); all 5 of its reruns passed. One run-1 failure in 44 is the expected ~2% rate. No C++ changed, so G-style and G-perf don't apply.
+- **Kept, not removed as first planned:** the worktree `/Users/blaarm/git/om-s5` and its replicates (4.4 GB in `build-rework/stats-replicates/`). S6 may change rule (c) (F28), which changes every reference's `loo_run_failures` metadata, and regenerating from these replicates takes minutes instead of hours. Remove it after S6.
+- Findings from S5: F22, F24, F25, F26, F27, F28, F29.
+- Next: D2 (recommended order item 9), then S6, then V1, then D2b.
 
 ### D1: `sim::` time statics → `Clock` owned by `Simulation` (done, 2026-10-16)
 - Base: d02e1d8d. The S5 replicate job was paused throughout (see S5); its pinned worktree `/Users/blaarm/git/om-s5` is separate from this tree.

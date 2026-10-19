@@ -282,6 +282,7 @@ Each chunk has the same fields:
   - Measure the per-run failure rate with 200 fresh-seed runs, then the false-failure rate of the whole procedure, reruns included; it must be ≤ 0.5%.
   - Run the power study with parameter perturbations of 5%, 10% and 20%, and with an intervention switched off, for both the default rerun rule and `--replicates K`.
   - Retune the per-run α, K and the rerun rule if the targets are not met.
+  - Rule (c) (fixed cells) gives ~10% per-run false failures in 2ITNs, IRS30 and Rach5IC, from the nearly constant ctsout `recent births` column (F28). Candidate: a cell counts as fixed only if every cell of its measure or column is constant in every replicate. Changing the rule changes each reference's `loo_run_failures`, so regenerate the references from the S5 replicates, which are kept for this (see S5 in PROGRESS.md).
   - Write `test/stats/README.md` with the minimum detectable effect for each scenario.
   - Optionally add a nightly random-seed job.
 - **Done when:** the README exists and the false-failure target is met. If it isn't, retune the thresholds and record why.
@@ -289,7 +290,7 @@ Each chunk has the same fields:
 
 ## Stage V: Vector warmup robustness
 
-Added after S5, with the user's agreement. In S5, some scenarios aborted in vector warmup for a share of seeds, so they got no statistical reference: ModelName* (F16; 10 people), AvailabilityFilter (F26; 13% of seeds, 300 people) and ExactNv0 (F27; 18%, 150 people). LifeNet1/2 lost one seed (F24). Every abort is a model safety check tripped by sampling noise in a small population; the scenario's own seed happens to pass.
+Added after S5, with the user's agreement. In S5, some scenarios aborted in vector warmup for a share of seeds, so they got no statistical reference: ModelName* (F16; 10 people), AvailabilityFilter (F26; 13% of seeds, 300 people) and ExactNv0 (F27; 18%, 150 people). SimpleMPDTest got none either, because its warmup ctsout length varies with the number of calibration rounds (F29). LifeNet1/2 lost one seed (F24). Every abort is a model safety check tripped by sampling noise in a small population; the scenario's own seed happens to pass.
 
 ### V1: Make vector warmup converge reliably
 - **Needs:** S5. **Read:** § Statistical tests (5); FINDINGS F16, F24, F26, F27.
@@ -298,7 +299,8 @@ Added after S5, with the user's agreement. In S5, some scenarios aborted in vect
   - ExactNv0 (`CalcNvO.cpp`): stop noise in the measured human infectiousness (`laggedKappa`) from producing negative emergence. Candidates: smooth `laggedKappa` before the solver; clamp small negatives to zero. Keep the error for inputs that are genuinely infeasible.
   - Look at the SimpleMPD negative-emergence check (F24) in the same way.
   - **Every fix changes outputs: ask the user before each one.** Regenerate `test/expected/` for the affected scenarios only with approval, and batch it with D2b/M4's regeneration where the order allows. Regenerate the statistical references of the affected scenarios in their own commit (§ Statistical tests (5)).
-  - Then build references for ModelName*, AvailabilityFilter and ExactNv0 and enable their `stat_*` tests.
+  - SimpleMPDTest writes ctsout during warmup (`duringInit`), so its length follows the number of calibration rounds (F29). Either V1 makes the round count fixed, or the stats tooling keys such rows by time from the end of the run and ignores the warmup rows.
+  - Then build references for ModelName*, AvailabilityFilter, ExactNv0 and SimpleMPDTest and enable their `stat_*` tests.
 - **Done when:** seeds 1001–1500 and 2001–2005 run without an abort for every registered scenario, and every registered scenario has a reference.
 - **Gates:** G-unit, G-style, G-perf. G-exact and G-stat on the scenarios the fix does not touch. For the ones it touches, the change is intended: show which measures moved, as for a reference regeneration.
 
