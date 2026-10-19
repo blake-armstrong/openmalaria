@@ -76,7 +76,7 @@ The work is split into **small, self-contained chunks**. Each chunk fits in one 
 | **G-unit** | the CxxTest suites in `unittest/` pass | A2 |
 | **G-style** | `OM_BUILD_DIR=build-rework util/style.sh check <chunk's base commit>`: `git-clang-format --diff` and `clang-tidy-diff` report nothing on changed lines (see `docs/refactor/STYLE.md`) | B1 |
 | **G-perf** | `OM_BUILD_DIR=build-rework util/bench.sh --compare <base build>`, where the base build is the chunk's base commit configured the same way (recipe in `util/bench.sh -h`): the median per-pair candidate/base wall-time ratio is ≤ 1.03. The stored baseline in `PROGRESS.md` is a sanity check only | P1 |
-| **G-stat** | `ctest -L statistical` passes. For a chunk that changes draws on purpose (D2b, M4, M8), `ctest -L statistical-full` (S7's group test, K runs per scenario) must pass too | S4 (full coverage after S5; `statistical-full` after S7) |
+| **G-stat** | `ctest -L statistical` passes. For a chunk that changes draws on purpose (D2b, M4, M8), `ctest -C full -L statistical-full -j1` (S7's group test, 20 runs per scenario, ~6 min) must pass too | S4 (full coverage after S5; `statistical-full` after S7) |
 | **G-two-sims** | two `Simulation`s in one process match two separate runs exactly | D9 |
 | **G-diff** | for a chunk that replaces a numerical routine (GSL, R_nmath, a distribution): a Catch2 differential test compares the new routine with the old one over a grid of inputs, within a tolerance stated in the test. The old routine stays callable from the test until the chunk ends | M1 |
 | **G-cli** | `util/ab_cli.sh <base build>`: a few scenarios run with default, `--verbose --progress`, `--checkpoint` and `--checkpoint-stop` flags (twice, so the second run resumes) give byte-identical stdout, stderr, outputs, checkpoint files and exit codes. Required for any chunk that touches console output or command-line handling | M3 |
@@ -306,6 +306,7 @@ Added after S6, with the user's agreement (F31). S6 found that the check has lit
   - Afterwards, ask the user whether to remove `/Users/blaarm/git/om-s5` and `build-rework/stats-s6/`, kept for this chunk.
 - **Not in scope:** tests of spread or distribution shape. A change that keeps every mean but changes a variance (e.g. a sampler with the wrong spread) still passes; record it as a known limitation.
 - **Done when:** the group test's false-failure rate per scenario meets the chosen α (calibration plus the fresh-group check), the README has the new power table, and `ctest -L statistical-full` runs.
+- **As built:** the label's tests need `-C full` (see § Statistical tests (3)); results in `test/stats/README.md` and the S7 entry in `PROGRESS.md`.
 - **Gates:** G-stat (both labels), G-exact.
 
 ## Stage V: Vector warmup robustness
@@ -578,9 +579,9 @@ Licence notes: OpenMalaria is GPL-2.0-or-later. MIT, BSD, BSL and MPL-2.0 code m
      - (c) a *fixed* cell differs: a non-zero (or NaN) cell of a survey measure or ctsout column whose every cell was the same in every replicate, such as the input EIR echoed back. A cell that was 0 in every replicate is a rare event, and a non-zero value there is just a miss under (a). So is a constant cell in a measure or column that varies elsewhere, such as ctsout `recent births` (F28, settled in S6).
    - A correct run fails one of these about 2% of the time. Missing or extra cells are an error, not a statistical failure.
    - **Rerun rule, fixed in advance.** Run 1 uses the scenario's own `iseed`, which is outside the reference range. If it passes, the test passes. If it fails, run K = 5 fixed seeds (2001–2005); the test fails if at least one of them also fails. A correct build then fails about 0.02 × (1 − 0.98⁵) ≈ 0.2% of the time; a change that makes every run fail is always caught. Seeds are fixed, so the verdict for a build is deterministic.
-   - `--replicates K` runs K seeds up front and fails if the number of failing runs has a binomial tail ≤ 0.1% at the 2% per-run rate. It is the stronger test for changes expected to move outputs only slightly.
+   - **Group test** (`--replicates`, added in S7 after F31): K = 20 seeds (2001–2020) run up front. For every *group quantity* (each aggregate, and each survey measure's total over surveys and age groups, whole-population and cohort/genotype groups separately), z = (mean of the K runs − reference mean) / (reference SD · √(1/K + 1/N)). The check fails if the largest |z| exceeds the scenario's threshold, or if any run fails (c). The threshold is the 99.99% quantile of the largest |z| under leave-K-out on the reference replicates (10⁶ resamples of K against the other N − K), so each scenario's family false-failure rate is 0.01% whatever the skew or correlation of the quantities. A quantity is tested only if at least 10 replicates differ from its most common value. Reference format 4 stores every replicate's value of every tested quantity and the threshold. It is the test for changes expected to move outputs only slightly, and it tests means only, not spreads or shapes.
    - The report lists misses sorted by |z|.
-3. **Integration.** Each scenario is a CTest test `stat_<scenario>` with label `statistical`.
+3. **Integration.** Each scenario is a CTest test `stat_<scenario>` with label `statistical` (the single-run check with reruns), and `statfull_<scenario>` with label `statistical-full` (the group test), registered for the configuration `full` only, so plain `ctest` skips it: `ctest -C full -L statistical-full`.
    - The byte-for-byte tests stay the oracle for pure refactors.
    - Checkpoint-and-resume stays exact, comparing against the same build and seed.
 4. **Validation.**
@@ -589,7 +590,7 @@ Licence notes: OpenMalaria is GPL-2.0-or-later. MIT, BSD, BSL and MPL-2.0 code m
 5. **Updates.** References are regenerated only for intended changes in behaviour. The regeneration goes in its own commit, with a summary of which measures moved.
 
 ## Key risks
-- **Reproducibility.** Pure refactors keep G-exact. Deliberate draw-order changes rely on G-stat, which only catches shifts above the minimum detectable effect measured in S6.
+- **Reproducibility.** Pure refactors keep G-exact. Deliberate draw-order changes rely on G-stat, which only catches shifts above the minimum detectable effect measured in S6 and S7 (`test/stats/README.md`), and only changes of means.
 - **Statistical test cost.** About 50 scenarios × 500 runs is a large one-off job. Batch it using the A2 timings.
 - **Performance.** The per-human loop is hot. Dispatch per component, not per human per step, and check G-perf.
 - **Scale.** About 32k lines. The bridge pattern and chunk splitting keep each session small.
