@@ -91,10 +91,10 @@ A1 → A2 ─┬─ B1 → B2 → B3 → B4 → B5
          ├─ P1
          ├─ S1 → S2 → S3 → S4 → S5 → S6
          └─ C1 → C2 → D1 … D9 → E1 … E6 → F0 … F6 → G1 … G3 → H1 … H3 → I1 … I3 → J1 … J4
-B5 → M0 → M1;  B4 → M2 (before D1);  D9 → M3, M7;  D2b + S6 → M4;  F6 → M5 → M6;  G3 + M4 + M7 → M8;  M1 → M9
+B5 → M0 → M1;  B4 → M2 (before D1);  S5 → V1 → D2b;  D9 → M3, M7;  D2b + S6 → M4;  F6 → M5 → M6;  G3 + M4 + M7 → M8;  M1 → M9
 ```
 - The B, P and S tracks can run in any order relative to each other and to C/D.
-- D2b (splitting the RNG streams) is the first chunk allowed to change draw order, so it requires S6.
+- D2b (splitting the RNG streams) is the first chunk allowed to change draw order, so it requires S6, and V1, so that no regenerated scenario seed aborts in vector warmup.
 - Every chunk from D onward requires B4, so that each module's rename can run right after it is refactored.
 - Every chunk from D onward also requires M2, so that each module's modernisation pass runs right after its rename.
 
@@ -115,6 +115,7 @@ The dependency graph allows many orders. Follow this one unless the user says ot
 | 8 | **S5** | A long compute job (≈1 h at `-j10` for N = 500 if every scenario is run; more with stragglers). Run it overnight or while no G-perf measurement is being taken, because it saturates the CPU. Every chunk up to D2 keeps outputs byte-identical, so it doesn't matter which commit generates the references. |
 | 9 | **D1**, **D2** | These can overlap with S5/S6 in calendar time, but don't take G-perf measurements while S5 is running. |
 | 10 | **S6** | Must be done before D2b. |
+| 10b | **V1** | Added after S5 (F16, F24, F26, F27). Must be done before D2b: with new draws, a scenario's own seed could start aborting in vector warmup. Each fix changes outputs, so ask the user first. |
 | 11 | **D2b**, then **M4** | **First ask the user Decision 1.** The first chunk allowed to change draw order; it is gated by G-stat, not G-exact. M4 also changes draws, so do it straight after and regenerate `test/expected/` once for both. |
 | 12 | **D3 → D9** | |
 | 12b | **M3**, **M7** | Logging and replicate-level parallelism, once `Simulation` owns all its state. **Ask the user Decision 6 before M7.** |
@@ -286,6 +287,21 @@ Each chunk has the same fields:
 - **Done when:** the README exists and the false-failure target is met. If it isn't, retune the thresholds and record why.
 - **Gates:** G-stat.
 
+## Stage V: Vector warmup robustness
+
+Added after S5, with the user's agreement. In S5, some scenarios aborted in vector warmup for a share of seeds, so they got no statistical reference: ModelName* (F16; 10 people), AvailabilityFilter (F26; 13% of seeds, 300 people) and ExactNv0 (F27; 18%, 150 people). LifeNet1/2 lost one seed (F24). Every abort is a model safety check tripped by sampling noise in a small population; the scenario's own seed happens to pass.
+
+### V1: Make vector warmup converge reliably
+- **Needs:** S5. **Read:** § Statistical tests (5); FINDINGS F16, F24, F26, F27.
+- **Do:**
+  - Instrument `EmergenceRateAdaptiveFitter` (per-round measured S_v ratio and scale factor) on AvailabilityFilter and a ModelName* scenario. Find why passing seeds need ~25 rounds of 6 simulated years each instead of a few, and fix the cause. Candidates: a damped correction step; a convergence test on an averaged measurement instead of one noisy round. Raising the 30-round cap alone only hides the problem.
+  - ExactNv0 (`CalcNvO.cpp`): stop noise in the measured human infectiousness (`laggedKappa`) from producing negative emergence. Candidates: smooth `laggedKappa` before the solver; clamp small negatives to zero. Keep the error for inputs that are genuinely infeasible.
+  - Look at the SimpleMPD negative-emergence check (F24) in the same way.
+  - **Every fix changes outputs: ask the user before each one.** Regenerate `test/expected/` for the affected scenarios only with approval, and batch it with D2b/M4's regeneration where the order allows. Regenerate the statistical references of the affected scenarios in their own commit (§ Statistical tests (5)).
+  - Then build references for ModelName*, AvailabilityFilter and ExactNv0 and enable their `stat_*` tests.
+- **Done when:** seeds 1001–1500 and 2001–2005 run without an abort for every registered scenario, and every registered scenario has a reference.
+- **Gates:** G-unit, G-style, G-perf. G-exact and G-stat on the scenarios the fix does not touch. For the ones it touches, the change is intended: show which measures moved, as for a reference regeneration.
+
 ## Stage C: Extract the Simulation (Phase 1)
 
 ### C1: Move the initialisation into `Simulation`
@@ -326,7 +342,7 @@ For each D chunk, **Needs:** the previous D chunk plus B4 and M2. **Gates:** G-e
 |---|---|
 | **D1** | `sim::` time statics in `model/sim.h` → `Clock`, a member of `Simulation` |
 | **D2** | `util::master_RNG` → an RNG owned by `Simulation`, with the same single stream and draw order |
-| **D2b** | Split into per-purpose RNG streams. **Changes draw order on purpose.** Needs S6 and the user's answer to Decision 1. Gate: G-stat instead of G-exact. Regenerate `test/expected/` only with the user's approval. |
+| **D2b** | Split into per-purpose RNG streams. **Changes draw order on purpose.** Needs S6, V1 and the user's answer to Decision 1. Gate: G-stat instead of G-exact. Regenerate `test/expected/` only with the user's approval. |
 | **D3** | `ModelOptions`, `CommandLine` bitsets, `Parameters` → a `ModelOptions` object built once and owned by `Simulation` |
 | **D4** | Within-host and infection file statics (`WHFalciparum.cpp:55-79`, `CommonWithinHost`, the `Infection` subclasses) → component instance members. Split by subdirectory if it grows past ~20 files. |
 | **D5** | PK/PD `schedules`/`dosages` and `PerHost::params` → instance state |

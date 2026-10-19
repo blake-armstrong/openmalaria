@@ -20,6 +20,7 @@ See `PLAN.md` for the session protocol, chunks and gates. Append one log entry p
 | S4 | done | 507b5b58, (this log entry) |
 | S5 | in progress | c155c7fb, 7a28ca71, (this log entry) |
 | S6 | todo | |
+| V1 | todo | |
 | C1 | done | b02303db, (this log entry) |
 | C2 | done | 20e8bf39, (this log entry) |
 | D1 | done | 2e2cac5a, 72e14d9c, bda40963, 4252cba1, 1a0c0b58, 48d3476c, 186d32f5, 21e09c0d, (this log entry) |
