@@ -35,6 +35,7 @@
 
 #include <vector>
 #include <limits>
+#include <numbers>
 
 namespace OM {
 namespace Transmission {
@@ -55,43 +56,31 @@ inline int argmax(const std::vector<double>& vec) {
     return imax;
 }
 
-inline double findAngle(const double EIRRotageAngle, const std::vector<double>& FSCoeffic,
-                        const std::vector<double>& sim) {
+inline double find_angle(const double eir_rotate_angle, const std::vector<double>& fs_coeffic,
+                         const std::vector<double>& sim) {
     std::vector<double> temp(sim.size(), 0.0);
-
-    double delta = 2.0 * M_PI / 365.0;
-
-    double min = std::numeric_limits<double>::infinity();
-    double minAngle = 0.0;
-    for (double angle = -M_PI; angle < M_PI; angle += delta) {
-        vectors::expIDFT(temp, FSCoeffic, EIRRotageAngle + angle);
-
-        // Minimize l1-norm
+    const auto squared_distance = [&](double angle) {
+        vectors::expIDFT(temp, fs_coeffic, eir_rotate_angle + angle);
         double sum = 0.0;
         for (int i = 0; i < Sim::one_year(); i++) {
-            double v = fabs(temp[i] - sim[i]);
-            sum += v * v;
+            const double difference = temp[i] - sim[i];
+            sum += difference * difference;
         }
+        return sum;
+    };
 
-        sum = sqrtf(sum);
-        if (sum < min) {
-            min = sum;
-            minAngle = angle;
-            // cout << angle << " " << min << " " << sum << endl;
+    constexpr int AngleSteps = 365;
+    double best_distance = squared_distance(0.0);
+    double best_angle = 0.0;
+    for (int step = 0; step < AngleSteps; ++step) {
+        const double angle = -std::numbers::pi + (2.0 * std::numbers::pi * step / AngleSteps);
+        const double distance = squared_distance(angle);
+        if (distance < best_distance) {
+            best_distance = distance;
+            best_angle = angle;
         }
-
-        // Or minimize peaks offset
-        // int m1 = argmax(temp);
-        // int m2 = argmax(sim);
-        // int offset = abs(m1-m2);
-
-        // if(offset < min)
-        // {
-        //     min = offset;
-        //     minAngle = angle;
-        // }
     }
-    return minAngle;
+    return best_angle;
 }
 
 class EmergenceRateEstimator {
@@ -146,9 +135,9 @@ public:
 
         constexpr double RotationLimit = 0.2;
 
-        double rAngle = findAngle(m.EIRRotateAngle, m.FSCoeffic, avgAnnualS_v);
-        shiftAngle += rAngle;
-        rotated = std::fabs(rAngle) <= RotationLimit;
+        double rotation = find_angle(m.EIRRotateAngle, m.FSCoeffic, avgAnnualS_v);
+        shiftAngle += rotation;
+        rotated = std::fabs(rotation) <= RotationLimit;
 
         // Compute forced_sv from the Fourrier Coeffs EIR
         vectors::expIDFT(m.mosqEmergeRate, m.FSCoeffic, -shiftAngle);
