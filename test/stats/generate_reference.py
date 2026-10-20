@@ -92,12 +92,15 @@ def ranks(x):
     return rank
 
 
-def check_nan(x, keys):
+def partly_nan_measures(x, keys):
     nan = np.isnan(x)
     mixed = np.flatnonzero(nan.any(axis=0) & ~nan.all(axis=0))
-    if mixed.size:
-        shown = ", ".join(str(keys[i]) for i in mixed[:5])
-        raise ReferenceError(f"{mixed.size} cells are NaN in some replicates but not all, e.g. {shown}")
+    return frozenset(stats_io.fixed_cell_group(keys[i]) for i in mixed)
+
+
+def drop_measures(x, keys, measures):
+    kept = [i for i, k in enumerate(keys) if stats_io.fixed_cell_group(k) not in measures]
+    return [keys[i] for i in kept], x[:, kept]
 
 
 @dataclass
@@ -311,13 +314,14 @@ def build(directory, allow_dirty=False, group_k=GROUP_K, group_alpha=GROUP_ALPHA
         raise ReferenceError(f"found {len(seeds)} replicates in {directory}, need at least {MIN_REPLICATES}")
 
     keys, x = load_replicates(directory, seeds)
-    check_nan(x, keys)
-    cells = cell_statistics(x, *CELL_INTERVAL)
-    zero_width = int(np.sum((cells.stats["min"] == cells.stats["max"]) | np.isnan(cells.stats["min"])))
-
     inputs = [i for i, k in enumerate(keys) if stats_io.is_aggregate_input(k)]
     agg_values = [stats_io.aggregates({keys[i]: v for i, v in zip(inputs, row, strict=True)})
                   for row in x[:, inputs].tolist()]
+    nan_measures = partly_nan_measures(x, keys)
+    keys, x = drop_measures(x, keys, nan_measures)
+    cells = cell_statistics(x, *CELL_INTERVAL)
+    zero_width = int(np.sum((cells.stats["min"] == cells.stats["max"]) | np.isnan(cells.stats["min"])))
+
     agg_names = [n for n in stats_io.AGGREGATES if all(n in a for a in agg_values)]
     tail = AGGREGATE_ALPHA / 2 / max(len(agg_names), 1)
     agg = np.array([[a[n] for n in agg_names] for a in agg_values], dtype=np.float64).reshape(len(seeds), -1)
@@ -365,6 +369,7 @@ def build(directory, allow_dirty=False, group_k=GROUP_K, group_alpha=GROUP_ALPHA
         "aggregate_quantile_method": QUANTILE_METHOD_NAMES[AGGREGATE_QUANTILE],
         "cells": f"{len(keys)} (survey {n_survey}, ctsout {len(keys) - n_survey})",
         "zero_width_cells": zero_width,
+        stats_io.NAN_MEASURES: stats_io.format_measures(nan_measures),
         "cell_interval": f"{CELL_INTERVAL[0]} {CELL_INTERVAL[1]}",
         "loo_misses": (f"min {int(sorted_misses[0])} median {np.median(sorted_misses):g} "
                        f"mean {misses.mean():.2f} max {int(sorted_misses[-1])}"),

@@ -92,6 +92,23 @@ class JudgeRunTests(unittest.TestCase):
             self.assertEqual(result.p, (1 + max(N - n_misses, 0)) / (N + 1))
             self.assertEqual(result.failed, failed, n_misses)
 
+    def test_nan_measures_are_left_out(self):
+        self.ref.meta[stats_io.NAN_MEASURES] = "survey:36"
+        self.ref.rows[(stats_io.AGGREGATE, "", "", "mean_eir")] = row(6, 1, 4, 8)
+        self.cells[survey_key(1, 0, 36)] = math.nan
+        self.cells[survey_key(2, 0, 36)] = 6.0
+        result = judge(self.ref, self.cells)
+        self.assertFalse(result.failed)
+        self.assertEqual(result.misses, [])
+        self.assertEqual(result.aggregates["mean_eir"].value, 6.0)
+        self.assertNotIn((stats_io.TOTAL, "", stats_io.WHOLE, "36"), stats_io.group_quantities(
+            self.cells, self.ref.nan_measures))
+
+    def test_unlisted_measure_is_still_an_extra_cell(self):
+        self.cells[survey_key(1, 0, 36)] = 6.0
+        with self.assertRaisesRegex(chk.CheckError, "different cells"):
+            judge(self.ref, self.cells)
+
     def test_constant_cell_of_a_varying_column_is_only_a_miss(self):
         births = (stats_io.CTSOUT, "1", "", "input EIR")
         self.ref.rows[births] = row(3.5, 0.2, 3.5, 3.5, 3.5, 4.5)

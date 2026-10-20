@@ -11,6 +11,11 @@ A cell is one value of one run, keyed by (file, survey, group, measure), all str
   keyed by the timestep instead, and the warmup rows and the "simulation time" column are left out.
 - aggregates: ("aggregate", "", "", <aggregate name>)
 
+A survey measure or ctsout column with a cell that is NaN in some replicates but not all (such as
+simulatedEIR, the mean EIR of adults, in a survey of a tiny population that has no adults) has no
+per-cell statistics: the reference lists it under nan_measures, and its cells are left out of a
+run's per-cell checks and measure totals. The aggregates still use them, skipping NaN values.
+
 The group test of check_scenario.py --replicates compares the mean of K runs for each group
 quantity: every aggregate, and every survey measure's total over surveys and groups, keyed
 ("total", "", "whole" or "split", measure), with whole-population groups (below 1000) and
@@ -32,6 +37,8 @@ TOTAL = "total"
 WHOLE = "whole"
 SPLIT = "split"
 FORMAT_VERSION = "4"
+NAN_MEASURES = "nan_measures"
+MEASURE_SEPARATOR = " | "
 RUN_ALPHA = 0.01
 LOO_COUNTS = "loo_miss_counts"
 REFERENCE_SUFFIX = ".csv.gz"
@@ -145,7 +152,7 @@ def _mean_eir(cells):
     survey = [v for (file, _, g, m), v in cells.items()
               if file == SURVEY and m == str(M_SIMULATED_EIR) and int(g) < WHOLE_POPULATION_GROUP_LIMIT]
     if survey:
-        return _mean(survey)
+        return _mean([v for v in survey if not math.isnan(v)])
     return _mean([v for (file, _, _, m), v in cells.items()
                   if file == CTSOUT and m == CTS_SIMULATED_EIR and not math.isnan(v)])
 
@@ -182,10 +189,26 @@ def measure_totals(cells):
     return {key: math.fsum(v) for key, v in values.items()}
 
 
-def group_quantities(cells):
+def group_quantities(cells, excluded=frozenset()):
     quantities = {(AGGREGATE, "", "", name): value for name, value in aggregates(cells).items()}
-    quantities.update(measure_totals(cells))
+    quantities.update(measure_totals(without_measures(cells, excluded)))
     return quantities
+
+
+def format_measures(measures):
+    return MEASURE_SEPARATOR.join(f"{file}:{measure}" for file, measure in sorted(measures)) or "none"
+
+
+def parse_measures(text):
+    if text in ("", "none"):
+        return frozenset()
+    return frozenset(tuple(item.split(":", 1)) for item in text.split(MEASURE_SEPARATOR))
+
+
+def without_measures(cells, measures):
+    if not measures:
+        return cells
+    return {key: value for key, value in cells.items() if fixed_cell_group(key) not in measures}
 
 
 @dataclass
@@ -198,6 +221,10 @@ class Reference:
     @cached_property
     def fixed(self):
         return fixed_keys(self.rows)
+
+    @cached_property
+    def nan_measures(self):
+        return parse_measures(self.meta.get(NAN_MEASURES, ""))
 
     @cached_property
     def group_stats(self):

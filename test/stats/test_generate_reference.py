@@ -196,13 +196,26 @@ class FixedCellTests(unittest.TestCase):
         nan_row = {"lo": math.nan, "hi": math.nan}
         self.assertEqual([stats_io.is_miss(v, nan_row) for v in (math.nan, 0.0)], [False, True])
 
-    def test_mixed_nan_is_an_error(self):
-        x = np.zeros((10, 2))
+    def test_partly_nan_measures(self):
+        keys = [("survey", "1", "0", "0"), ("survey", "1", "0", "36"), ("survey", "2", "0", "36"),
+                ctsout_key(0, "simulated EIR")]
+        x = np.zeros((10, 4))
+        x[:, 3] = math.nan
+        self.assertEqual(gen.partly_nan_measures(x, keys), frozenset())
         x[0, 1] = math.nan
-        with self.assertRaisesRegex(gen.ReferenceError, "NaN in some replicates"):
-            gen.check_nan(x, [("a",), ("b",)])
-        x[:, 1] = math.nan
-        gen.check_nan(x, [("a",), ("b",)])
+        measures = gen.partly_nan_measures(x, keys)
+        self.assertEqual(measures, {("survey", "36")})
+        kept, y = gen.drop_measures(x, keys, measures)
+        self.assertEqual(kept, [keys[0], keys[3]])
+        self.assertEqual(y.shape, (10, 2))
+
+    def test_measure_list_round_trip(self):
+        measures = frozenset({("survey", "36"), ("ctsout", "simulated EIR")})
+        text = stats_io.format_measures(measures)
+        self.assertEqual(text, "ctsout:simulated EIR | survey:36")
+        self.assertEqual(stats_io.parse_measures(text), measures)
+        self.assertEqual(stats_io.format_measures(frozenset()), "none")
+        self.assertEqual(stats_io.parse_measures("none"), frozenset())
 
 
 class ParserTests(unittest.TestCase):
@@ -266,6 +279,10 @@ class AggregateTests(unittest.TestCase):
         cts = [(0, "simulated EIR", math.nan), (1, "simulated EIR", 2.0), (2, "simulated EIR", 4.0)]
         self.assertEqual(stats_io.aggregates(self.cells([], cts))["mean_eir"], 3.0)
         self.assertEqual(stats_io.aggregates(self.cells([(1, 0, 36, 7), (2, 0, 36, 9)], cts))["mean_eir"], 8.0)
+
+    def test_eir_skips_nan_surveys(self):
+        rows = [(1, 0, 36, 7), (2, 0, 36, math.nan), (3, 0, 36, 9)]
+        self.assertEqual(stats_io.aggregates(self.cells(rows))["mean_eir"], 8.0)
 
     def test_aggregate_inputs_cover_every_aggregate(self):
         cells = self.cells([(1, 1, m, 1.0) for m in (0, 3, 14, 15, 18, 19, 36)] + [(1, 1, 11, 4.0)],
@@ -472,6 +489,31 @@ class EndToEndTests(unittest.TestCase):
         self.assertEqual(unpacked.loo_counts, ref.loo_counts)
         self.assertEqual(unpacked.rows.keys(), ref.rows.keys())
         self.assertEqual(unpacked.group_values, ref.group_values)
+
+    def test_partly_nan_measure_has_no_cells(self):
+        for seed in (1003, 1007):
+            path = self.reps / str(seed) / "output.txt"
+            path.write_text(path.read_text() + "1\t0\t36\tnan\n2\t0\t36\t5\n")
+        for i in range(self.N):
+            path = self.reps / str(1001 + i) / "output.txt"
+            if 1001 + i not in (1003, 1007):
+                path.write_text(path.read_text() + f"1\t0\t36\t{4 + i % 3}\n2\t0\t36\t5\n")
+        code, out, err = self.run_main()
+        self.assertEqual(code, 0, err)
+        ref = stats_io.read_reference(out)
+        self.assertEqual(ref.meta[stats_io.NAN_MEASURES], "survey:36")
+        self.assertEqual(ref.nan_measures, {("survey", "36")})
+        self.assertFalse([k for k in ref.rows if k[3] == "36"])
+        self.assertEqual(ref.meta["cells"], "11 (survey 7, ctsout 4)")
+        self.assertIn(("aggregate", "", "", "mean_eir"), ref.rows)
+        self.assertNotIn(("total", "", "whole", "36"), ref.group_values)
+
+    def test_no_nan_measures(self):
+        code, out, err = self.run_main()
+        self.assertEqual(code, 0, err)
+        ref = stats_io.read_reference(out)
+        self.assertEqual(ref.meta[stats_io.NAN_MEASURES], "none")
+        self.assertEqual(ref.nan_measures, frozenset())
 
     def test_differing_cells_are_an_error(self):
         (self.reps / "1005" / "output.txt").write_text("1\t1\t0\t100\n")

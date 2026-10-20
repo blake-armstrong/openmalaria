@@ -81,9 +81,10 @@ class RunResult:
 
 
 def judge_run(ref, keys, values, seed):
-    cells = dict(zip(keys, values, strict=True))
-    if len(cells) != len(keys):
+    all_cells = dict(zip(keys, values, strict=True))
+    if len(all_cells) != len(keys):
         raise CheckError(f"run {seed} has duplicate cells")
+    cells = stats_io.without_measures(all_cells, ref.nan_measures)
     expected = {k for k in ref.rows if k[0] != stats_io.AGGREGATE}
     if cells.keys() != expected:
         missing = sorted(expected - cells.keys())
@@ -101,14 +102,14 @@ def judge_run(ref, keys, values, seed):
             fixed_cells += 1
             if not stats_io.same_value(value, row["min"]):
                 fixed_mismatches.append(Cell(key, value, row))
-    found = stats_io.aggregates(cells)
+    found = stats_io.aggregates(all_cells)
     aggregates = {}
     for key, row in ref.rows.items():
         if key[0] == stats_io.AGGREGATE:
             if key[3] not in found:
                 raise CheckError(f"run {seed} has no {key[3]} aggregate")
             aggregates[key[3]] = Cell(key, found[key[3]], row)
-    quantities = stats_io.group_quantities(cells)
+    quantities = stats_io.group_quantities(all_cells, ref.nan_measures)
     missing = [k for k in ref.group_values if k not in quantities]
     if missing:
         raise CheckError(f"run {seed} has no group quantity {format_key(missing[0])}")
