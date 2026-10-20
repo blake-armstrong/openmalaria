@@ -144,9 +144,11 @@ public:
         } else
             scaled = true;
 
+        constexpr double RotationLimit = 0.2;
+
         double rAngle = findAngle(m.EIRRotateAngle, m.FSCoeffic, avgAnnualS_v);
         shiftAngle += rAngle;
-        rotated = true;
+        rotated = std::fabs(rAngle) <= RotationLimit;
 
         // Compute forced_sv from the Fourrier Coeffs EIR
         vectors::expIDFT(m.mosqEmergeRate, m.FSCoeffic, -shiftAngle);
