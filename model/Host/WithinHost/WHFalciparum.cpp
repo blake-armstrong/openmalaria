@@ -47,8 +47,6 @@ namespace OM::WithinHost {
 
 using namespace OM::util;
 
-SimTime Infection::s_latentP = Sim::never();
-
 FalciparumParams::FalciparumParams(const OM::Parameters& parameters, const util::ModelOptionFlags& options)
     : sigma_i(sqrt(parameters[Parameter::SigmaISq])), imm_penalty_22(1 - exp(parameters[Parameter::ImmunityPenalty])),
       imm_effector_remain(exp(-parameters[Parameter::ImmuneEffectorDecay])),

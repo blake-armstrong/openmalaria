@@ -29,6 +29,7 @@
 #include "Host/WithinHost/WHFalciparum.h"
 #include "Host/WithinHost/WHInterface.h"
 #include "Parameters.h"
+#include "util/CommandLine.h"
 #include "util/ModelOptions.h"
 #include "util/random.h"
 
@@ -48,7 +49,7 @@ struct WithinHostModel {
 
     WithinHostModel() = default;
     WithinHostModel(const OM::Parameters& parameters, const util::ModelOptionFlags& options,
-                    const scnXml::Scenario& scenario);
+                    const util::CommandLineOptions& command_line, const scnXml::Scenario& scenario);
 
     std::unique_ptr<WHInterface> create(util::LocalRng& rng, double comorbidity_factor) const;
 

@@ -38,12 +38,10 @@ using namespace std;
 
 namespace OM::WithinHost {
 
-CommonInfection* (*CommonWithinHost::create_infection)(LocalRng& rng, uint32_t prot_id, int origin);
-CommonInfection* (*CommonWithinHost::checkpointed_infection)(istream& stream);
-
 // -----  Initialization  -----
 
-CommonWithinHostParams::CommonWithinHostParams(const scnXml::Scenario& scenario) {
+CommonWithinHostParams::CommonWithinHostParams(const scnXml::Scenario& scenario, const CommonInfectionModel& infection)
+    : infection(infection) {
     const scnXml::Human human = scenario.getModel().getHuman();
     if (!human.getWeight().present()) {
         // Technically this is needed by the PK/PD and Molineaux models
@@ -105,6 +103,10 @@ void CommonWithinHost::clear_immunity() {
     cumulative_h = 0.0;
     cumulative_y_lag = 0.0;
 }
+std::unique_ptr<CommonInfection> CommonWithinHost::new_infection(LocalRng& rng, uint32_t genotype, int origin) const {
+    return common_params->infection.create(params().latent_p, rng, genotype, origin);
+}
+
 void CommonWithinHost::import_infection(LocalRng& rng) {
     if (num_infs < MaxInfections) {
         cumulative_h += 1;
@@ -113,7 +115,7 @@ void CommonWithinHost::import_infection(LocalRng& rng) {
         // should use initial frequencies to select genotypes.
         vector<double> weights(0); // zero length: signal to use initial frequencies
         const uint32_t genotype = Genotypes::sampleGenotype(rng, weights);
-        infections.emplace_back(create_infection(rng, genotype, WithinHost::InfectionOrigin::Imported));
+        infections.emplace_back(new_infection(rng, genotype, WithinHost::InfectionOrigin::Imported));
     }
     assert(num_infs == static_cast<int>(infections.size()));
 }
@@ -140,11 +142,11 @@ void CommonWithinHost::update(Host::Human& human, LocalRng& rng, int& n_new_infs
         if (opt_vaccine_genotype) {
             const double vaccine_factor = human.vaccine.getFactor(interventions::Vaccine::PEV, genotype);
             if (vaccine_factor == 1.0 || human.host_rng.bernoulli(vaccine_factor))
-                infections.emplace_back(create_infection(rng, genotype, InfectionOrigin::Introduced));
+                infections.emplace_back(new_infection(rng, genotype, InfectionOrigin::Introduced));
             else
                 n_new_infs_discarded++;
         } else if (opt_vaccine_genotype == false)
-            infections.emplace_back(create_infection(rng, genotype, InfectionOrigin::Introduced));
+            infections.emplace_back(new_infection(rng, genotype, InfectionOrigin::Introduced));
     }
     // Update nNewInfs, this is the number that will be reported in Human
     n_new_infs_i -= n_new_infs_discarded;
@@ -158,11 +160,11 @@ void CommonWithinHost::update(Host::Human& human, LocalRng& rng, int& n_new_infs
         if (opt_vaccine_genotype) {
             const double vaccine_factor = human.vaccine.getFactor(interventions::Vaccine::PEV, genotype);
             if (vaccine_factor == 1.0 || human.host_rng.bernoulli(vaccine_factor))
-                infections.emplace_back(create_infection(rng, genotype, InfectionOrigin::Indigenous));
+                infections.emplace_back(new_infection(rng, genotype, InfectionOrigin::Indigenous));
             else
                 n_new_infs_discarded++;
         } else if (opt_vaccine_genotype == false)
-            infections.emplace_back(create_infection(rng, genotype, InfectionOrigin::Indigenous));
+            infections.emplace_back(new_infection(rng, genotype, InfectionOrigin::Indigenous));
     }
     // Update nNewInfs, this is the number that will be reported in Human
     n_new_infs_l -= n_new_infs_discarded;
@@ -356,7 +358,7 @@ void CommonWithinHost::checkpoint(istream& stream) {
     het_mass_multiplier & stream;
     pkpd_model & stream;
     for (int i = 0; i < num_infs; ++i) {
-        infections.emplace_back(checkpointed_infection(stream));
+        infections.emplace_back(common_params->infection.load(params().latent_p, stream));
     }
     assert(num_infs == static_cast<int>(infections.size()));
 }

@@ -21,7 +21,6 @@
  */
 
 #include "Host/WithinHost/Infection/MolineauxInfection.h"
-#include "Host/WithinHost/CommonWithinHost.h"
 #include "util/random.h"
 #include "util/errors.h"
 #include "util/CommandLine.h"
@@ -37,31 +36,6 @@ namespace OM {
 namespace WithinHost {
 
 using namespace OM::util;
-
-// ———  model constants set from input parameters  ———
-
-// depends on lognormal/gamma distribution for first_local_max
-static bool first_local_maximum_gamma = false;
-// mean/shape and sd/scale of the first local maximum density for lognormal/gamma distribution
-static double mean_shape_first_local_max = std::numeric_limits<double>::signaling_NaN();
-static double sd_scale_first_local_max = std::numeric_limits<double>::signaling_NaN();
-
-// depends on between lognormal/gamma distribution for mean_duration diff_pos_days
-static bool mean_duration_gamma = false;
-// mean/shape and sd/scale of the difference between last positive and first positive days for lognormal/gamma distribution
-static double mean_shape_diff_pos_days = std::numeric_limits<double>::signaling_NaN();
-static double sd_scale_diff_pos_days = std::numeric_limits<double>::signaling_NaN();
-
-// boolean choosing between gamma and lognormal distribution for equation 11
-static bool multi_factor_gamma = false;
-
-// pairwise sample of case-specific P* parameters
-static bool pairwise_P_star_sample = false;
-
-// q^(i+1) array
-// All the values of q^1... q^v are stored in this array.
-// This avoids the recalculation of those values every second time step. */
-static double qPow[MolineauxInfection::v];
 
 // ———  hard-coded model constants  ———
 
@@ -149,22 +123,12 @@ const double case_specific_data[] = {
     404, 156240  // G48
 };
 
-// ———  static (non-class-member) code  ———
+// ———  parameters  ———
 
-CommonInfection* createMolineauxInfection(LocalRng& rng, uint32_t protID, int origin) {
-    return new MolineauxInfection(rng, protID, origin);
-}
-
-CommonInfection* checkpointedMolineauxInfection(istream& stream) { return new MolineauxInfection(stream); }
-
-void MolineauxInfection::init(const Parameters& parameters) {
-    CommonWithinHost::create_infection = &createMolineauxInfection;
-    CommonWithinHost::checkpointed_infection = &checkpointedMolineauxInfection;
-
-    multi_factor_gamma = util::ModelOptions::option(util::ParasiteReplicationGamma);
-
-    pairwise_P_star_sample = util::ModelOptions::option(util::MolineauxPairwiseSample);
-    if (!pairwise_P_star_sample) {
+MolineauxInfectionParams::MolineauxInfectionParams(const Parameters& parameters, const util::ModelOptionFlags& options)
+    : multi_factor_gamma(options.option(util::ParasiteReplicationGamma)),
+      pairwise_p_star_sample(options.option(util::MolineauxPairwiseSample)) {
+    if (!pairwise_p_star_sample) {
         mean_shape_first_local_max = parameters[Parameter::MeanLocalMaxDensity];
         sd_scale_first_local_max = parameters[Parameter::SdLocalMaxDensity];
 
@@ -172,7 +136,7 @@ void MolineauxInfection::init(const Parameters& parameters) {
         sd_scale_diff_pos_days = parameters[Parameter::SdDiffPosDays];
 
         // with gamma distribution shape and scale parameters has to be recalculated
-        if (util::ModelOptions::option(util::FirstLocalMaximumGamma)) {
+        if (options.option(util::FirstLocalMaximumGamma)) {
             //NOTE: variant does not appear to work well (according to unit test stats)
             first_local_maximum_gamma = true;
             mean_shape_first_local_max = pow(mean_shape_first_local_max, 2) / pow(sd_scale_first_local_max, 2);
@@ -182,7 +146,7 @@ void MolineauxInfection::init(const Parameters& parameters) {
         }
 
         // with gamma distribution shape and scale parameters has to be recalculated
-        if (util::ModelOptions::option(util::MeanDurationGamma)) {
+        if (options.option(util::MeanDurationGamma)) {
             //NOTE: variant does not appear to work well (according to unit test stats)
             mean_duration_gamma = true;
             mean_shape_diff_pos_days = pow(mean_shape_diff_pos_days, 2) / pow(sd_scale_diff_pos_days, 2);
@@ -192,18 +156,19 @@ void MolineauxInfection::init(const Parameters& parameters) {
         }
     }
 
-    for (size_t i = 0; i < v; i++) {
-        qPow[i] = pow(q, static_cast<double>(i + 1));
+    for (size_t i = 0; i < MolineauxInfection::v; i++) {
+        q_pow[i] = pow(q, static_cast<double>(i + 1));
     }
 }
 
 // ———  MolineauxInfection: initialisation  ———
 
-MolineauxInfection::MolineauxInfection(LocalRng& rng, uint32_t genotype, int origin)
-    : CommonInfection(genotype, origin) {
+MolineauxInfection::MolineauxInfection(const MolineauxInfectionParams& params, SimTime latent_p, LocalRng& rng,
+                                       uint32_t genotype, int origin)
+    : CommonInfection(latent_p, genotype, origin), params(&params) {
     for (size_t i = 0; i < v; i++) {
         // Molineaux paper, equation 11
-        if (multi_factor_gamma) {
+        if (params.multi_factor_gamma) {
             do {
                 mi[i] = static_cast<float>(rng.gamma(shape_m, scale_m));
             } while (mi[i] < 1.0);
@@ -220,25 +185,27 @@ MolineauxInfection::MolineauxInfection(LocalRng& rng, uint32_t genotype, int ori
 
     Sm_summation = 0.0;
 
-    if (pairwise_P_star_sample) {
+    if (params.pairwise_p_star_sample) {
         int patient = rng.uniform(35);
         Pc_star = static_cast<float>(k_c * case_specific_data[2 * patient + 1]);
         Pm_star = static_cast<float>(k_m * case_specific_data[2 * patient + 0]);
     } else {
         // Sampling of the first local maxima:
-        if (first_local_maximum_gamma) {
-            Pc_star =
-                static_cast<float>(k_c * pow(10.0, rng.gamma(mean_shape_first_local_max, sd_scale_first_local_max)));
+        if (params.first_local_maximum_gamma) {
+            Pc_star = static_cast<float>(
+                k_c * pow(10.0, rng.gamma(params.mean_shape_first_local_max, params.sd_scale_first_local_max)));
         } else {
-            Pc_star =
-                static_cast<float>(k_c * pow(10.0, rng.gauss(mean_shape_first_local_max, sd_scale_first_local_max)));
+            Pc_star = static_cast<float>(
+                k_c * pow(10.0, rng.gauss(params.mean_shape_first_local_max, params.sd_scale_first_local_max)));
         }
 
         // Sampling of duration:
-        if (mean_duration_gamma) {
-            Pm_star = static_cast<float>(k_m * pow(10.0, rng.gamma(mean_shape_diff_pos_days, sd_scale_diff_pos_days)));
+        if (params.mean_duration_gamma) {
+            Pm_star = static_cast<float>(
+                k_m * pow(10.0, rng.gamma(params.mean_shape_diff_pos_days, params.sd_scale_diff_pos_days)));
         } else {
-            Pm_star = static_cast<float>(k_m * pow(10.0, rng.gauss(mean_shape_diff_pos_days, sd_scale_diff_pos_days)));
+            Pm_star = static_cast<float>(
+                k_m * pow(10.0, rng.gauss(params.mean_shape_diff_pos_days, params.sd_scale_diff_pos_days)));
         }
     }
 }
@@ -339,7 +306,7 @@ bool MolineauxInfection::updateDensity(LocalRng&, double survival_factor, SimTim
         } else {
             Si[i] = 1.0; // eqn 6 for the case when P_i(τ) = 0 for τ ≤ t - δ_m
         }
-        sum_qj_Sj += qPow[i] * Si[i]; // sum in eqn 4
+        sum_qj_Sj += params->q_pow[i] * Si[i]; // sum in eqn 4
     }
 
     // ———  5. Variant densities, equations 1, 2 and 4  ———
@@ -347,8 +314,8 @@ bool MolineauxInfection::updateDensity(LocalRng&, double survival_factor, SimTim
         // 4.a) Calculate p_i, variant selection probability (eqn 4)
         double p_i = 0.0;
         if (Si[i] >= 0.1) {
-            //note: qPow[i] = pow(q, i+1)
-            p_i = qPow[i] * Si[i] / sum_qj_Sj;
+            //note: q_pow[i] = pow(q, i+1)
+            p_i = params->q_pow[i] * Si[i] / sum_qj_Sj;
         }
 
         // 4.b) calculate P_i'(t+2) [eqn 1] then P_i(t+2) [eqn 2]
@@ -383,7 +350,8 @@ bool MolineauxInfection::updateDensity(LocalRng&, double survival_factor, SimTim
 
 // ———  MolineauxInfection: checkpointing  ———
 
-MolineauxInfection::MolineauxInfection(istream& stream) : CommonInfection(stream) {
+MolineauxInfection::MolineauxInfection(const MolineauxInfectionParams& params, SimTime latent_p, istream& stream)
+    : CommonInfection(latent_p, stream), params(&params) {
     Sm_summation & stream;
     for (size_t i = 0; i < v; i++) {
         mi[i] & stream;

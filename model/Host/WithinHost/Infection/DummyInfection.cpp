@@ -21,7 +21,6 @@
  */
 
 #include "Host/WithinHost/Infection/DummyInfection.h"
-#include "Host/WithinHost/CommonWithinHost.h"
 #include "util/ModelOptions.h"
 
 #include <algorithm>
@@ -31,17 +30,8 @@
 namespace OM {
 namespace WithinHost {
 
-CommonInfection* createDummyInfection(LocalRng& rng, uint32_t protID, int origin) {
-    return new DummyInfection(rng, protID, origin);
-}
-CommonInfection* checkpointedDummyInfection(istream& stream) { return new DummyInfection(stream); }
-
-void DummyInfection::init() {
-    CommonWithinHost::create_infection = &createDummyInfection;
-    CommonWithinHost::checkpointed_infection = &checkpointedDummyInfection;
-}
-
-DummyInfection::DummyInfection(LocalRng& rng, uint32_t protID, int origin) : CommonInfection(protID, origin) {
+DummyInfection::DummyInfection(SimTime latent_p, LocalRng& rng, uint32_t protID, int origin)
+    : CommonInfection(latent_p, protID, origin) {
     m_density = 16; // increased by DH to avoid zeros in initialKappa
 }
 
@@ -59,7 +49,7 @@ bool DummyInfection::updateDensity(LocalRng& rng, double survivalFactor, SimTime
     }
 }
 
-DummyInfection::DummyInfection(istream& stream) : CommonInfection(stream) {}
+DummyInfection::DummyInfection(SimTime latent_p, istream& stream) : CommonInfection(latent_p, stream) {}
 
 }
 }

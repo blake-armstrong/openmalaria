@@ -21,7 +21,6 @@
  */
 
 #include "Host/WithinHost/Infection/PennyInfection.h"
-#include "Host/WithinHost/CommonWithinHost.h"
 #include "util/random.h"
 #include "util/errors.h"
 #include "util/CommandLine.h"
@@ -102,10 +101,6 @@ const double exp_negRho_V = exp(-rho_V);
 const double lambda_V = 4.2119;
 const double prob_lambda_V = 1.0 / lambda_V;
 
-/* distribution model paramters */
-bool PennyInfection::immune_threshold_gamma = false;
-bool PennyInfection::update_density_gamma = false;
-
 /* Parameters to assign infection dependent parameters */
 const double mu_Y = 3.9700;
 const double sigma_Y = 1.3436;
@@ -139,33 +134,15 @@ const double Omega = 0.00025;
 
 //@}
 
-CommonInfection* createPennyInfection(LocalRng& rng, uint32_t protID, int origin) {
-    return new PennyInfection(rng, protID, origin);
-}
+PennyInfectionParams::PennyInfectionParams(const util::ModelOptionFlags& options)
+    : immune_threshold_gamma(options.option(util::ImmuneThresholdGamma)),
+      update_density_gamma(options.option(util::UpdateDensityGamma)) {}
 
-CommonInfection* checkpointedPennyInfection(istream& stream) { return new PennyInfection(stream); }
-
-void PennyInfection::init() {
-    CommonWithinHost::create_infection = &createPennyInfection;
-    CommonWithinHost::checkpointed_infection = &checkpointedPennyInfection;
-
-    if (util::ModelOptions::option(util::ImmuneThresholdGamma)) {
-        immune_threshold_gamma = true;
-    } else {
-        immune_threshold_gamma = false;
-    }
-
-    if (util::ModelOptions::option(util::UpdateDensityGamma)) {
-        update_density_gamma = true;
-    } else {
-        update_density_gamma = false;
-    }
-}
-
-PennyInfection::PennyInfection(LocalRng& rng, uint32_t protID, int origin)
-    : CommonInfection(protID, origin), variantSpecificSummation(0), clonalSummation(0) {
+PennyInfection::PennyInfection(const PennyInfectionParams& params, SimTime latent_p, LocalRng& rng, uint32_t protID,
+                               int origin)
+    : CommonInfection(latent_p, protID, origin), variantSpecificSummation(0), clonalSummation(0), params(&params) {
     // assign infection dependent immune thresholds
-    if (immune_threshold_gamma) /* using gamma distribution */ {
+    if (params.immune_threshold_gamma) /* using gamma distribution */ {
         do {
             threshold_N = exp(rng.gamma(a_TN, b_TN));
             threshold_C = exp(rng.gamma(a_TC, b_TC));
@@ -193,7 +170,7 @@ bool PennyInfection::updateDensity(LocalRng& rng, double survivalFactor, SimTime
         // assign initial densities (Y circulating, X sequestered)
         size_t today = mod_nn(ageDays, delta_C);
 
-        if (update_density_gamma) {
+        if (params->update_density_gamma) {
             cirDensities[today] = exp(rng.gamma(a_Y, b_Y));
         } else {
             cirDensities[today] = exp(rng.gauss(mu_Y, sigma_Y));
@@ -202,7 +179,7 @@ bool PennyInfection::updateDensity(LocalRng& rng, double survivalFactor, SimTime
         m_density = cirDensities[today];
         today = mod_nn(ageDays, delta_V);
 
-        if (update_density_gamma) {
+        if (params->update_density_gamma) {
             seqDensities[today] = exp(rng.gamma(a_X, b_X));
         } else {
             seqDensities[today] = exp(rng.gauss(mu_X, sigma_X));
@@ -250,7 +227,7 @@ bool PennyInfection::updateDensity(LocalRng& rng, double survivalFactor, SimTime
             cirDensity_new = 0.0;
         } else {
 
-            if (update_density_gamma) {
+            if (params->update_density_gamma) {
                 double a_cirDens = pow(log(cirDensity_new), 2) / pow(sigma_epsilon, 2);
                 double b_cirDens = pow(sigma_epsilon, 2) / log(cirDensity_new);
                 cirDensity_new = exp(rng.gamma(a_cirDens, b_cirDens)) * survivalFactor;
@@ -313,7 +290,8 @@ double PennyInfection::getClonalSummation(int ageDays) {
     return clonalSummation;
 }
 
-PennyInfection::PennyInfection(istream& stream) : CommonInfection(stream) {
+PennyInfection::PennyInfection(const PennyInfectionParams& params, SimTime latent_p, istream& stream)
+    : CommonInfection(latent_p, stream), params(&params) {
     for (int i = 0; i < delta_C; ++i) {
         cirDensities[i] & stream;
     }

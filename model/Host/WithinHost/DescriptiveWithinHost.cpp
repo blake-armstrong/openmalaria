@@ -36,7 +36,6 @@ using namespace std;
 
 namespace OM::WithinHost {
 
-extern bool bugfix_max_dens; // DescriptiveInfection.cpp
 // -----  Initialization  -----
 
 DescriptiveWithinHostModel::DescriptiveWithinHostModel(const FalciparumParams& params,
@@ -49,8 +48,15 @@ DescriptiveWithinHostModel::DescriptiveWithinHostModel(const FalciparumParams& p
 
 // -----  Simple infection adders/removers  -----
 
+std::unique_ptr<DescriptiveInfection> DescriptiveWithinHostModel::new_infection(LocalRng& rng, uint32_t genotype,
+                                                                                int origin) const {
+    return std::make_unique<DescriptiveInfection>(descriptive_params->infection, params().latent_p, rng, genotype,
+                                                  origin);
+}
+
 void DescriptiveWithinHostModel::load_infection(istream& stream) {
-    infections.push_back(std::make_unique<DescriptiveInfection>(stream));
+    infections.push_back(
+        std::make_unique<DescriptiveInfection>(descriptive_params->infection, params().latent_p, stream));
 }
 
 void DescriptiveWithinHostModel::clear_infections(Treatments::Stages stage) {
@@ -83,8 +89,7 @@ void DescriptiveWithinHostModel::import_infection(LocalRng& rng) {
         // should use initial frequencies to select genotypes.
         vector<double> weights(0); // zero length: signal to use initial frequencies
         const uint32_t genotype = Genotypes::sampleGenotype(rng, weights);
-        infections.push_back(
-            std::make_unique<DescriptiveInfection>(rng, genotype, WithinHost::InfectionOrigin::Imported));
+        infections.push_back(new_infection(rng, genotype, WithinHost::InfectionOrigin::Imported));
     }
     assert(num_infs == static_cast<int>(infections.size()));
 }
@@ -111,10 +116,9 @@ void DescriptiveWithinHostModel::update(Host::Human& human, LocalRng& rng, int& 
         if (opt_vaccine_genotype) {
             const double vaccine_factor = human.vaccine.getFactor(interventions::Vaccine::PEV, genotype);
             if (vaccine_factor == 1.0 || human.host_rng.bernoulli(vaccine_factor))
-                infections.push_back(
-                    std::make_unique<DescriptiveInfection>(rng, genotype, InfectionOrigin::Introduced));
+                infections.push_back(new_infection(rng, genotype, InfectionOrigin::Introduced));
         } else if (opt_vaccine_genotype == false)
-            infections.push_back(std::make_unique<DescriptiveInfection>(rng, genotype, InfectionOrigin::Introduced));
+            infections.push_back(new_infection(rng, genotype, InfectionOrigin::Introduced));
     }
     assert(num_infs == static_cast<int>(infections.size()));
 
@@ -127,10 +131,9 @@ void DescriptiveWithinHostModel::update(Host::Human& human, LocalRng& rng, int& 
         if (opt_vaccine_genotype) {
             const double vaccine_factor = human.vaccine.getFactor(interventions::Vaccine::PEV, genotype);
             if (vaccine_factor == 1.0 || human.host_rng.bernoulli(vaccine_factor))
-                infections.push_back(
-                    std::make_unique<DescriptiveInfection>(rng, genotype, InfectionOrigin::Indigenous));
+                infections.push_back(new_infection(rng, genotype, InfectionOrigin::Indigenous));
         } else if (opt_vaccine_genotype == false)
-            infections.push_back(std::make_unique<DescriptiveInfection>(rng, genotype, InfectionOrigin::Indigenous));
+            infections.push_back(new_infection(rng, genotype, InfectionOrigin::Indigenous));
     }
     assert(num_infs == static_cast<int>(infections.size()));
 
@@ -168,7 +171,7 @@ void DescriptiveWithinHostModel::update(Host::Human& human, LocalRng& rng, int& 
         (*inf)->determineDensities(rng, cumulative_h, inf_step_max_dens, imm_surv_fact, innate_imm_surv_fact,
                                    bsv_factor);
 
-        if (bugfix_max_dens)
+        if (descriptive_params->infection.bugfix_max_dens)
             inf_step_max_dens = std::max(inf_step_max_dens, time_step_max_density);
         time_step_max_density = inf_step_max_dens;
 

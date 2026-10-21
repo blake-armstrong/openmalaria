@@ -24,28 +24,26 @@
 #define Hmod_EmpiricalInfection
 
 #include "Host/WithinHost/Infection/CommonInfection.h"
+#include "util/CommandLine.h"
+
+#include <array>
 
 namespace OM {
 namespace WithinHost {
 
+struct EmpiricalInfectionParams;
+
 class EmpiricalInfection : public CommonInfection {
 public:
-    ///@brief Static methods
-    //@{
-    /// Static (shared) data initialisation
-    static void init();
-
-    /// only for parameterisation?
-    static void overrideInflationFactors(double inflationMean, double inflationVariance, double extinctionLevel,
-                                         double overallMultiplier);
-    //@}
+    static const int _maximumDurationInDays = 418;
 
     /// @brief Construction and destruction
     //@{
     /// For checkpointing (don't use for anything else)
-    EmpiricalInfection(istream& stream);
+    EmpiricalInfection(const EmpiricalInfectionParams& params, SimTime latent_p, istream& stream);
     /// Per instance initialisation; create new inf.
-    EmpiricalInfection(LocalRng& rng, uint32_t protID, int origin, double growthRateMultiplier);
+    EmpiricalInfection(const EmpiricalInfectionParams& params, SimTime latent_p, LocalRng& rng, uint32_t protID,
+                       int origin, double growthRateMultiplier);
     /** Destructor
    * 
    * Note: this destructor does nothing in order to allow shallow copying to
@@ -71,31 +69,38 @@ private:
     double _laggedLogDensities[3];
     double _patentGrowthRateMultiplier;
 
-    ///@brief Static variables
-    ///Set by initParameters and some reset by overrideInflationFactors
-    //@{
-    static const int _maximumDurationInDays = 418;
-    static double _maximumPermittedAmplificationPerCycle;
-    static double _subPatentLimit;
-    static double _alpha1;
-    static double _alpha2;
-    static double _alpha3;
-    static double _mu1;
-    static double _mu2;
-    static double _mu3;
-    static double _sigma0_res;
-    static double _sigmat_res;
-    static double _mu_beta1[_maximumDurationInDays];
-    static double _sigma_beta1[_maximumDurationInDays];
-    static double _mu_beta2[_maximumDurationInDays];
-    static double _sigma_beta2[_maximumDurationInDays];
-    static double _mu_beta3[_maximumDurationInDays];
-    static double _sigma_beta3[_maximumDurationInDays];
-    static double _inflationMean;
-    static double _inflationVariance;
-    static double _extinctionLevel;
-    static double _overallMultiplier;
-    //@}
+    const EmpiricalInfectionParams* params;
+};
+
+/// Set by the constructor and some reset by override_inflation_factors
+struct EmpiricalInfectionParams {
+    double maximum_permitted_amplification_per_cycle = 0.0;
+    double sub_patent_limit = 0.0;
+    double alpha1 = 0.0;
+    double alpha2 = 0.0;
+    double alpha3 = 0.0;
+    double mu1 = 0.0;
+    double mu2 = 0.0;
+    double mu3 = 0.0;
+    double sigma0_res = 0.0;
+    double sigmat_res = 0.0;
+    std::array<double, EmpiricalInfection::_maximumDurationInDays> mu_beta1{};
+    std::array<double, EmpiricalInfection::_maximumDurationInDays> sigma_beta1{};
+    std::array<double, EmpiricalInfection::_maximumDurationInDays> mu_beta2{};
+    std::array<double, EmpiricalInfection::_maximumDurationInDays> sigma_beta2{};
+    std::array<double, EmpiricalInfection::_maximumDurationInDays> mu_beta3{};
+    std::array<double, EmpiricalInfection::_maximumDurationInDays> sigma_beta3{};
+    double inflation_mean = 0.0;
+    double inflation_variance = 0.0;
+    double extinction_level = 0.0;
+    double overall_multiplier = 0.0;
+
+    EmpiricalInfectionParams() = default;
+    explicit EmpiricalInfectionParams(const util::CommandLineOptions& command_line);
+
+    /// only for parameterisation?
+    void override_inflation_factors(double inflation_mean, double inflation_variance, double extinction_level,
+                                    double overall_multiplier);
 };
 
 }

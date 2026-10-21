@@ -382,9 +382,7 @@ public:
         pk_pd::LSTMTreatments::init(treatments);
     }
 
-    // For when infection parameters shouldn't be used; enforce by setting to NaNs.
-    // But do set latentP.
-    static void Infection_init_latentP_and_NaN() { Infection::s_latentP = Sim::from_days(15); }
+    static SimTime infection_latent_p() { return Sim::from_days(15); }
 
     static void descriptive_infection_init() { unittest_options::model_options.reset(); }
 
@@ -394,7 +392,7 @@ public:
         unittest_options::within_host_model.kind = WithinHost::WithinHostModel::Kind::Common;
     }
 
-    static void MolineauxWHM_setup(const std::string& mode, bool repl_gamma) {
+    static WithinHost::MolineauxInfectionParams MolineauxWHM_setup(const std::string& mode, bool repl_gamma) {
         unittest_options::model_options.reset();
         unittest_options::model_options.set(util::MolineauxWithinHostModel);
         unittest_options::within_host_model.kind = WithinHost::WithinHostModel::Kind::Common;
@@ -421,7 +419,7 @@ public:
                               unittest_options::command_line);
 
         // This sets up the model based on parameters and options
-        WithinHost::MolineauxInfection::init(parameters);
+        return {parameters, unittest_options::model_options};
     }
 
     static void MosqLifeCycle_init() {

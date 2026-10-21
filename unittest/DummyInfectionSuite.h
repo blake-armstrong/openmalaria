@@ -39,10 +39,9 @@ public:
     void setUp() {
         m_rng.seed(0, 721347520444481703);
         UnittestUtil::initTime(1);
-        UnittestUtil::Infection_init_latentP_and_NaN();
-        DummyInfection::init();
         // pkpdID (1st value) isn't important since we're not using drug model here:
-        infection = CommonWithinHost::create_infection(m_rng, 0xFFFFFFFF, InfectionOrigin::Indigenous);
+        infection =
+            new DummyInfection(UnittestUtil::infection_latent_p(), m_rng, 0xFFFFFFFF, InfectionOrigin::Indigenous);
         for (SimTime d = Sim::ts1(), end = Sim::ts1() + Sim::from_days(15); d < end; d = d + Sim::one_day()) {
             // blood stage starts 15 days after creation
             UnittestUtil::incrTime(Sim::one_day());

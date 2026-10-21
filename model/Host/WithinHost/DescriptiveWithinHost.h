@@ -34,6 +34,7 @@ using namespace std;
 namespace OM::WithinHost {
 
 struct DescriptiveWithinHostParams {
+    DescriptiveInfectionParams infection;
     bool report_patent_infected = false;
 };
 
@@ -72,6 +73,8 @@ protected:
     void treat_pk_pd(size_t schedule, size_t dosages, double age, double delay_d) override;
 
 private:
+    std::unique_ptr<DescriptiveInfection> new_infection(LocalRng& rng, uint32_t genotype, int origin) const;
+
     /** The list of all infections this human has.
      * 
      * Since infection models and within host models are very much intertwined,

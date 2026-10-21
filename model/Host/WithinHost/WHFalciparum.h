@@ -77,6 +77,8 @@ struct FalciparumParams {
 
     bool vaccine_genotype = false;
 
+    SimTime latent_p = Sim::never();
+
     FalciparumParams() = default;
     FalciparumParams(const OM::Parameters& parameters, const util::ModelOptionFlags& options);
 };

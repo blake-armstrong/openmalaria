@@ -97,7 +97,7 @@ Simulation::Simulation(std::unique_ptr<scnXml::Scenario> scenario, util::Command
     // Init models used by humans
     Transmission::PerHost::init(scenario_xml->getModel().getHuman().getAvailabilityToMosquitoes());
     Host::InfectionIncidenceModel::init(parameters);
-    within_host_model = WithinHost::WithinHostModel(parameters, model_options, *scenario_xml);
+    within_host_model = WithinHost::WithinHostModel(parameters, model_options, command_line, *scenario_xml);
     Clinical::ClinicalModel::init(parameters, *scenario_xml);
     Host::NeonatalMortality::init(scenario_xml->getModel().getClinical());
     AgeStructure::init(scenario_xml->getDemography());

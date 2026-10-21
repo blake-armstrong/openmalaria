@@ -26,6 +26,7 @@
 #include "Global.h"
 #include "Host/WithinHost/WHFalciparum.h"
 #include "Host/WithinHost/Infection/CommonInfection.h"
+#include "Host/WithinHost/Infection/CommonInfectionModel.h"
 #include "PkPd/LSTMModel.h"
 #include "util/AgeGroupInterpolation.h"
 
@@ -38,13 +39,14 @@ using namespace std;
 namespace OM::WithinHost {
 
 struct CommonWithinHostParams {
+    CommonInfectionModel infection;
     util::AgeGroupInterpolator mass_by_age;
     double het_mass_mult_std_dev = std::numeric_limits<double>::signaling_NaN();
     double min_het_mass_mult = std::numeric_limits<double>::signaling_NaN();
     bool report_infected_or_patent_infected = false;
 
     CommonWithinHostParams() = default;
-    explicit CommonWithinHostParams(const scnXml::Scenario& scenario);
+    CommonWithinHostParams(const scnXml::Scenario& scenario, const CommonInfectionModel& infection);
 };
 
 /** Common within-host model functionality.
@@ -68,17 +70,6 @@ public:
 
     virtual void add_prophylactic_effects(const vector<double>& p_clearance_by_time);
 
-    /** \brief Factory functions to create infections.
-     *
-     * These allow creation of the correct type of infection in a generic manner.
-     * 
-     * The first variant is for creating a new infection, the second for loading
-     * one from a checkpoint. */
-    //@{
-    static CommonInfection* (*create_infection)(LocalRng& rng, uint32_t prot_id, int origin);
-    static CommonInfection* (*checkpointed_infection)(istream& stream);
-    //@}
-
     InfectionOrigin infection_origin() const override;
 
     bool summarize(Host::Human& human) const override;
@@ -90,6 +81,8 @@ protected:
     void checkpoint(ostream& stream) override;
 
 private:
+    std::unique_ptr<CommonInfection> new_infection(LocalRng& rng, uint32_t genotype, int origin) const;
+
     /// Multiplies the mean mass (for this age) as a heterogeneity factor.
     double het_mass_multiplier;
 

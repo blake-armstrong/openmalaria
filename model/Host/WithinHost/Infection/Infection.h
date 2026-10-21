@@ -45,12 +45,10 @@ enum InfectionOrigin {
 
 class Infection {
 public:
-    inline static void init(SimTime latentP) { s_latentP = latentP; }
-
-    Infection(uint32_t genotype, int origin)
+    Infection(SimTime latent_p, uint32_t genotype, int origin)
         : m_startDate(Sim::now_or_ts0()), m_density(0.0), m_cumulativeExposureJ(0.0), m_genotype(genotype),
-          m_origin(origin) {}
-    Infection(istream& stream) : m_startDate(Sim::never()) {
+          m_origin(origin), latent_p(latent_p) {}
+    Infection(SimTime latent_p, istream& stream) : m_startDate(Sim::never()), latent_p(latent_p) {
         m_startDate & stream;
         m_density & stream;
         m_cumulativeExposureJ & stream;
@@ -119,15 +117,15 @@ protected:
     /// Cumulative parasite density, since start of this infection
     double m_cumulativeExposureJ;
 
+    SimTime latent_period() const { return latent_p; }
+
 private:
     /// Genotype of infection (a code; see Genotypes class).
     uint32_t m_genotype;
 
     int m_origin;
 
-protected:
-    /// Pre-erythrocytic latent period (instantiated in WHFalciparum.cpp)
-    static SimTime s_latentP;
+    SimTime latent_p;
 
     friend class ::UnittestUtil;
 };

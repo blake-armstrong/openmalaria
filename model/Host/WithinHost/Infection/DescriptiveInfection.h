@@ -24,7 +24,11 @@
 #define Hmod_DescriptiveInfection
 
 #include "Host/WithinHost/Infection/Infection.h"
+#include "util/CommandLine.h"
+#include "util/ModelOptions.h"
 #include "util/random.h"
+
+#include <array>
 
 namespace OM {
 namespace WithinHost {
@@ -41,6 +45,32 @@ const int32_t numDurations = 84; // Above plus one (include a category for 0)
 // NOTE: should this be enforced before or after attenuation (BSV, immunity, IPT)? Was enforced in both places.
 const double maxDens = 2000000;
 
+struct DescriptiveInfectionParams {
+    /* A triangular matrix: mean_log_parasite_count[i][j] is the
+     * Mean Log Parasite Count for age i (in time steps) of an infection which
+     * lasts j days. Indices with i>j are unused. */
+    std::array<std::array<double, numDurations>, numDurations> mean_log_parasite_count{};
+
+    /// Sigma0^2 from AJTM p.9 eq. 13
+    double sigma0_sq = 0.0;
+    /// XNuStar in AJTM p.9 eq. 13
+    double x_nu_star = 0.0;
+
+    bool bugfix_max_dens = true;
+    bool bugfix_innate_max_dens = true;
+
+    DescriptiveInfectionParams() = default;
+    /**
+     * Loads some constants: parameters used by the empirical models.
+     * 
+     * An old comment said the following, but due to code changes may not be completely accurate now:
+     * Init constants common to all Phase A (AJTMH 75(2)) infections (i.e.
+     * those models documented in the referenced publication).
+     */
+    DescriptiveInfectionParams(const OM::Parameters& parameters, const util::ModelOptionFlags& options,
+                               const util::CommandLineOptions& command_line);
+};
+
 /** A model of Plasmodium Falciparum infections. Described in AJTMH 75(2)
  * pp19-31.
  * 
@@ -53,24 +83,13 @@ const double maxDens = 2000000;
  */
 class DescriptiveInfection : public Infection {
 public:
-    ///@name Static init/cleanup
-    //@{
-    /**
-     * Loads some constants: parameters used by the empirical models.
-     * 
-     * An old comment said the following, but due to code changes may not be completely accurate now:
-     * Init constants common to all Phase A (AJTMH 75(2)) infections (i.e.
-     * those models documented in the referenced publication).
-     */
-    static void init(const OM::Parameters& parameters);
-    //@}
-
     ///@name Constructors
     //@{
     /// Default constructor
-    DescriptiveInfection(LocalRng& rng, uint32_t genotype, int origin);
+    DescriptiveInfection(const DescriptiveInfectionParams& params, SimTime latent_p, LocalRng& rng, uint32_t genotype,
+                         int origin);
     /// Checkpoint loading constructor
-    DescriptiveInfection(istream& stream);
+    DescriptiveInfection(const DescriptiveInfectionParams& params, SimTime latent_p, istream& stream);
     //@}
 
     /** Returns true when age reaches the pre-determined duration (i.e. when
@@ -113,18 +132,7 @@ protected:
     bool notPrintedMDWarning;
 
 private:
-    /// @brief Static parameters set by init()
-    //@{
-    /* A triangular matrix: meanLogParasiteCount[i][j] is the
-     * Mean Log Parasite Count for age i (in time steps) of an infection which
-     * lasts j days. Indices with i>j are unused. */
-    static double meanLogParasiteCount[numDurations][numDurations];
-
-    /// Sigma0^2 from AJTM p.9 eq. 13
-    static double sigma0sq;
-    /// XNuStar in AJTM p.9 eq. 13
-    static double xNuStar;
-    //@}
+    const DescriptiveInfectionParams* params;
 };
 
 }

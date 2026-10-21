@@ -24,11 +24,17 @@
 #define Hmod_MOLINEAUXINFECTION_H
 
 #include "Host/WithinHost/Infection/CommonInfection.h"
+#include "util/ModelOptions.h"
+
+#include <array>
+#include <limits>
 
 class MolineauxInfectionSuite;
 
 namespace OM {
 namespace WithinHost {
+
+struct MolineauxInfectionParams;
 
 /**
  * Implementation of a P. falciparum model by Molineaux et. al., published in:
@@ -42,8 +48,6 @@ class MolineauxInfection : public CommonInfection {
 public:
     ///@brief Static class members
     //@{
-    static void init(const OM::Parameters& parameters);
-
     // Constants:
     // v: number of variants per clone (one infection = one new clone); 50 in paper
     //TODO(optimisation): v should have a significant effect on performance, but reducing by,
@@ -54,9 +58,10 @@ public:
     //@}
 
     // Initialise. Samples several parameters.
-    MolineauxInfection(LocalRng& rng, uint32_t protID, int origin);
+    MolineauxInfection(const MolineauxInfectionParams& params, SimTime latent_p, LocalRng& rng, uint32_t protID,
+                       int origin);
     // Load from a checkpoint:
-    MolineauxInfection(istream& stream);
+    MolineauxInfection(const MolineauxInfectionParams& params, SimTime latent_p, istream& stream);
     virtual ~MolineauxInfection() {};
 
     virtual bool updateDensity(LocalRng& rng, double survivalFactor, SimTime bsAge, double body_mass);
@@ -97,8 +102,38 @@ private:
     // variant-specific data; variants[i-1] corresponds to variant i in the paper
     vector<Variant> variants;
 
+    const MolineauxInfectionParams* params;
+
     // allow unittest to access private vars
     friend class ::MolineauxInfectionSuite;
+};
+
+struct MolineauxInfectionParams {
+    // depends on lognormal/gamma distribution for first_local_max
+    bool first_local_maximum_gamma = false;
+    // mean/shape and sd/scale of the first local maximum density for lognormal/gamma distribution
+    double mean_shape_first_local_max = std::numeric_limits<double>::signaling_NaN();
+    double sd_scale_first_local_max = std::numeric_limits<double>::signaling_NaN();
+
+    // depends on between lognormal/gamma distribution for mean_duration diff_pos_days
+    bool mean_duration_gamma = false;
+    // mean/shape and sd/scale of the difference between last positive and first positive days for lognormal/gamma distribution
+    double mean_shape_diff_pos_days = std::numeric_limits<double>::signaling_NaN();
+    double sd_scale_diff_pos_days = std::numeric_limits<double>::signaling_NaN();
+
+    // boolean choosing between gamma and lognormal distribution for equation 11
+    bool multi_factor_gamma = false;
+
+    // pairwise sample of case-specific P* parameters
+    bool pairwise_p_star_sample = false;
+
+    // q^(i+1) array
+    // All the values of q^1... q^v are stored in this array.
+    // This avoids the recalculation of those values every second time step. */
+    std::array<double, MolineauxInfection::v> q_pow{};
+
+    MolineauxInfectionParams() = default;
+    MolineauxInfectionParams(const OM::Parameters& parameters, const util::ModelOptionFlags& options);
 };
 
 }

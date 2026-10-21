@@ -44,9 +44,9 @@ public:
     /// @brief Construction and destruction
     //@{
     /// For checkpointing (don't use for anything else)
-    CommonInfection(istream& stream) : Infection(stream) {}
+    CommonInfection(SimTime latent_p, istream& stream) : Infection(latent_p, stream) {}
     /// Per instance initialisation; create new inf.
-    CommonInfection(uint32_t genotype, int origin) : Infection(genotype, origin) {}
+    CommonInfection(SimTime latent_p, uint32_t genotype, int origin) : Infection(latent_p, genotype, origin) {}
     virtual ~CommonInfection();
     //@}
 
@@ -57,7 +57,7 @@ public:
      * @param body_mass Body mass of host in kg
      * @returns True when the infection goes extinct. */
     inline bool update(LocalRng& rng, double survivalFactor, SimTime now, double body_mass) {
-        SimTime bsAge = now - m_startDate - s_latentP; // age of post-latent-period blood stage
+        SimTime bsAge = now - m_startDate - latent_period(); // age of post-latent-period blood stage
         if (bsAge < Sim::zero())
             return false; // latent period (liver stage) — don't do anything
         else

@@ -22,11 +22,8 @@
 
 #include "Host/WithinHost/WithinHostModel.h"
 
+#include "Host/WithinHost/Infection/CommonInfectionModel.h"
 #include "Host/WithinHost/Infection/DescriptiveInfection.h"
-#include "Host/WithinHost/Infection/DummyInfection.h"
-#include "Host/WithinHost/Infection/EmpiricalInfection.h"
-#include "Host/WithinHost/Infection/MolineauxInfection.h"
-#include "Host/WithinHost/Infection/PennyInfection.h"
 #include "Host/WithinHost/Pathogenesis/PathogenesisModel.h"
 #include "Host/WithinHost/WHVivax.h"
 #include "PkPd/LSTMModel.h"
@@ -64,7 +61,7 @@ bool any_patent_infected_measure_used() {
 }
 
 WithinHostModel::WithinHostModel(const OM::Parameters& parameters, const util::ModelOptionFlags& options,
-                                 const scnXml::Scenario& scenario) {
+                                 const util::CommandLineOptions& command_line, const scnXml::Scenario& scenario) {
     if (options.option(util::VivaxSimpleModel)) {
         kind = Kind::Vivax;
         WHVivax::init(parameters, scenario.getModel());
@@ -73,26 +70,30 @@ WithinHostModel::WithinHostModel(const OM::Parameters& parameters, const util::M
 
     falciparum = FalciparumParams(parameters, options);
     Pathogenesis::PathogenesisModel::init(parameters, scenario.getModel().getClinical(), false);
-    Infection::init(read_latent_p(scenario.getModel()));
+    falciparum.latent_p = read_latent_p(scenario.getModel());
 
+    CommonInfectionModel infection;
     if (options.option(util::DummyWithinHostModel)) {
         kind = Kind::Common;
-        DummyInfection::init();
+        infection.kind = CommonInfectionModel::Kind::Dummy;
     } else if (options.option(util::EmpiricalWithinHostModel)) {
         kind = Kind::Common;
-        EmpiricalInfection::init(); // 1-day time step check
+        infection.kind = CommonInfectionModel::Kind::Empirical;
+        infection.empirical = EmpiricalInfectionParams(command_line); // 1-day time step check
     } else if (options.option(util::MolineauxWithinHostModel)) {
         kind = Kind::Common;
-        MolineauxInfection::init(parameters);
+        infection.kind = CommonInfectionModel::Kind::Molineaux;
+        infection.molineaux = MolineauxInfectionParams(parameters, options);
     } else if (options.option(util::PennyWithinHostModel)) {
         kind = Kind::Common;
-        PennyInfection::init();
+        infection.kind = CommonInfectionModel::Kind::Penny;
+        infection.penny = PennyInfectionParams(options);
     } else {
-        DescriptiveInfection::init(parameters); // 5-day time step check
+        descriptive.infection = DescriptiveInfectionParams(parameters, options, command_line); // 5-day time step check
     }
 
     if (kind == Kind::Common) {
-        common = CommonWithinHostParams(scenario);
+        common = CommonWithinHostParams(scenario, infection);
         pk_pd::LSTMModel::init(scenario);
     } else {
         descriptive.report_patent_infected = any_patent_infected_measure_used();

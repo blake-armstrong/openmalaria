@@ -27,21 +27,27 @@
 #define Hmod_PENNYINFECTION_H
 
 #include "Host/WithinHost/Infection/CommonInfection.h"
+#include "util/ModelOptions.h"
 
 class PennyInfectionSuite;
 
 namespace OM {
 namespace WithinHost {
 
+struct PennyInfectionParams {
+    bool immune_threshold_gamma = false;
+    bool update_density_gamma = false;
+
+    PennyInfectionParams() = default;
+    explicit PennyInfectionParams(const util::ModelOptionFlags& options);
+};
+
 class PennyInfection : public CommonInfection {
 public:
-    /// Static initialization (happens once)
-    static void init();
-
     /// Constructor
-    PennyInfection(LocalRng& rng, uint32_t protID, int origin);
+    PennyInfection(const PennyInfectionParams& params, SimTime latent_p, LocalRng& rng, uint32_t protID, int origin);
     /// Resume from a checkpoint
-    PennyInfection(istream& stream);
+    PennyInfection(const PennyInfectionParams& params, SimTime latent_p, istream& stream);
     /// Destructor
     virtual ~PennyInfection() {};
 
@@ -67,9 +73,6 @@ private:
     // delta_V := delay to variant specific antibody response in R_V^x (days) (value 6.3572 round to 6)
     static const int delta_V = 6;
 
-    static bool immune_threshold_gamma;
-    static bool update_density_gamma;
-
     // Circulating densities, 1 to delta_C days ago.
     // index (age mod delta_C) corresponds to delta_C days ago.
     double cirDensities[delta_C];
@@ -87,6 +90,8 @@ private:
     double variantSpecificSummation;
     // tracked summation of densities with decay for clonal immunity (sigmoidal function)
     double clonalSummation;
+
+    const PennyInfectionParams* params;
 
     // allow unittest to access private vars
     friend class ::PennyInfectionSuite;

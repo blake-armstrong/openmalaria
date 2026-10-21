@@ -73,6 +73,7 @@ set (Model_CPP
   Host/WithinHost/DescriptiveWithinHost.cpp
   Host/WithinHost/Genotypes.cpp
   Host/WithinHost/Infection/CommonInfection.cpp
+  Host/WithinHost/Infection/CommonInfectionModel.cpp
   Host/WithinHost/Infection/DescriptiveInfection.cpp
   Host/WithinHost/Infection/DummyInfection.cpp
   Host/WithinHost/Infection/EmpiricalInfection.cpp
