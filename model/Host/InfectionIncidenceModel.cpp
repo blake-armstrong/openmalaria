@@ -216,29 +216,30 @@ double InfectionIncidenceModel::expectedNumNewInfections(OM::Host::Human& human,
         throw TRACED_EXCEPTION(out.str(), util::Error::EffectiveEIR);
     }
 
-    double expectedNumInfections = getModelExpectedInfections(human.rng, effectiveEIR, human.perHostTransmission);
+    double expected_num_infections =
+        getModelExpectedInfections(human.host_rng, effectiveEIR, human.perHostTransmission);
 
     // Only to be consistent with old simulation runs when set to false
     // Setting this option to true will only affect reporting
     if (opt_vaccine_genotype == false)
         //Introduce the effect of vaccination. Note that this does not affect cumEIR.
-        expectedNumInfections *= human.vaccine.getFactor(interventions::Vaccine::PEV);
+        expected_num_infections *= human.vaccine.getFactor(interventions::Vaccine::PEV);
 
     //Update pre-erythrocytic immunity
     m_cumulativeEIRa += effectiveEIR;
 
-    m_pInfected = 1.0 - exp(-expectedNumInfections) * (1.0 - m_pInfected);
+    m_pInfected = 1.0 - exp(-expected_num_infections) * (1.0 - m_pInfected);
     if (m_pInfected < 0.0)
         m_pInfected = 0.0;
     else if (m_pInfected > 1.0)
         m_pInfected = 1.0;
 
-    return expectedNumInfections;
+    return expected_num_infections;
 }
 
 int InfectionIncidenceModel::numNewInfections(Human& human, double expectedNumInfections) {
     if (expectedNumInfections > 0.0000001) {
-        int n = human.rng.poisson(expectedNumInfections);
+        int n = human.host_rng.poisson(expectedNumInfections);
 
         if (n > WithinHost::WHInterface::MAX_INFECTIONS)
             n = WithinHost::WHInterface::MAX_INFECTIONS;

@@ -41,6 +41,8 @@
 namespace OM {
 namespace interventions {
 
+using Host::Human;
+
 struct ByDeployTime; // forward decl for friend
 
 // ———  TimedDeployment and derivatives  ———
@@ -243,7 +245,7 @@ public:
                             // Apply the Gaussian copula transformation for correlation
                             const ComponentId cid = subPop;
 
-                            /** human.rng.gauss(0.0, 1.0) is calculated once per component and per human. Re-deployment of
+                            /** human.intervention_rng.gauss(0.0, 1.0) is calculated once per component and per human. Re-deployment of
                              * the same component on the same human must use the same gaussian sample. Therefore we store
                              * this value in the human the first time it is calculated. */
                             double g = 0.0;
@@ -251,7 +253,7 @@ public:
                             if (it != human.perHostTransmission.copulaGaussianSamples.end())
                                 g = it->second;
                             else {
-                                g = human.rng.gauss(0.0, 1.0);
+                                g = human.intervention_rng.gauss(0.0, 1.0);
                                 human.perHostTransmission.copulaGaussianSamples[cid] = g;
                             }
                             const double yy = coverageCorr * xx + g * sqrt(1 - coverageCorr * coverageCorr);
@@ -265,7 +267,7 @@ public:
                             // Get the final probability from Beta distribution
                             probability = gsl_cdf_beta_Pinv(uy, alpha, beta);
                         } else // Gamma with CV=0
-                            probability = human.rng.beta(alpha, beta);
+                            probability = human.intervention_rng.beta(alpha, beta);
                     } catch (const std::exception& e) {
                         std::ostringstream oss;
                         oss << "[Gaussian copula]: computing correlated intervention probability using Gaussian copula "
@@ -280,7 +282,7 @@ public:
                 if (availability >= Transmission::PerHostAnophParams::getEntoAvailabilityPercentile(minAvailability) &&
                     availability <= Transmission::PerHostAnophParams::getEntoAvailabilityPercentile(maxAvailability)) {
                     if (subPop == ComponentId::wholePop() || (human.isInSubPop(subPop) != complement)) {
-                        if (human.rng.bernoulli(probability)) {
+                        if (human.intervention_rng.bernoulli(probability)) {
                             deployToHuman(human, mon::Deploy::TIMED);
                         }
                     }
@@ -354,7 +356,7 @@ public:
             cerr << "cum deployment: prop protected " << propProtected << "; additionalCoverage " << additionalCoverage
                  << "; total " << total << endl;
             for (Human* human : unprotected) {
-                if (human->rng.uniform_01() < additionalCoverage) {
+                if (human->intervention_rng.uniform_01() < additionalCoverage) {
                     deployToHuman(*human, mon::Deploy::TIMED);
                 }
             }
@@ -627,7 +629,7 @@ public:
                 auto now = Sim::interv_date();
                 if (begin <= now && now < end &&
                     (subPop == ComponentId::wholePop() || (human.isInSubPop(subPop) != complement)) &&
-                    human.rng.uniform_01() < coverage) // RNG call should be last test
+                    human.intervention_rng.uniform_01() < coverage) // RNG call should be last test
                 {
                     deployToHuman(human, mon::Deploy::CTS);
                 }

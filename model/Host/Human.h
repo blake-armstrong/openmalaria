@@ -111,7 +111,10 @@ public:
     * and clinical outcomes (morbidity, reporting). */
     unique_ptr<Clinical::ClinicalModel> clinicalModel;
 
-    util::LocalRng rng;
+    util::LocalRng host_rng;         // NOLINT(cppcoreguidelines-non-private-member-variables-in-classes)
+    util::LocalRng clinical_rng;     // NOLINT(cppcoreguidelines-non-private-member-variables-in-classes)
+    util::LocalRng intervention_rng; // NOLINT(cppcoreguidelines-non-private-member-variables-in-classes)
+    util::LocalRng monitoring_rng;   // NOLINT(cppcoreguidelines-non-private-member-variables-in-classes)
 
     /** Vaccines */
     interventions::PerHumanVaccine vaccine;

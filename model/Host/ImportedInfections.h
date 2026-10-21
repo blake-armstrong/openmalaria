@@ -117,8 +117,8 @@ public:
         double rateNow = rate[lastIndex].value;
         if (rateNow > 0.0) {
             for (Human& human : population) {
-                if (human.rng.bernoulli(rateNow)) {
-                    human.withinHostModel->importInfection(human.rng);
+                if (human.host_rng.bernoulli(rateNow)) {
+                    human.withinHostModel->importInfection(human.host_rng);
                     mon::recordEvent(mon::measure("nNewInfections"), human);
                     mon::recordEvent(mon::measure("nNewInfections_Imported"), human);
                 }

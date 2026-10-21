@@ -124,7 +124,7 @@ void DescriptiveWithinHostModel::update(Host::Human& human, LocalRng& rng, int& 
         // If opt_vaccine_genotype is true the infection is discarded with probability 1-vaccineFactor
         if (opt_vaccine_genotype) {
             double vaccineFactor = human.vaccine.getFactor(interventions::Vaccine::PEV, genotype);
-            if (vaccineFactor == 1.0 || human.rng.bernoulli(vaccineFactor))
+            if (vaccineFactor == 1.0 || human.host_rng.bernoulli(vaccineFactor))
                 infections.push_back(new DescriptiveInfection(rng, genotype, InfectionOrigin::Introduced));
         } else if (opt_vaccine_genotype == false)
             infections.push_back(new DescriptiveInfection(rng, genotype, InfectionOrigin::Introduced));
@@ -139,7 +139,7 @@ void DescriptiveWithinHostModel::update(Host::Human& human, LocalRng& rng, int& 
         // If opt_vaccine_genotype is true the infection is discarded with probability 1-vaccineFactor
         if (opt_vaccine_genotype) {
             double vaccineFactor = human.vaccine.getFactor(interventions::Vaccine::PEV, genotype);
-            if (vaccineFactor == 1.0 || human.rng.bernoulli(vaccineFactor))
+            if (vaccineFactor == 1.0 || human.host_rng.bernoulli(vaccineFactor))
                 infections.push_back(new DescriptiveInfection(rng, genotype, InfectionOrigin::Indigenous));
         } else if (opt_vaccine_genotype == false)
             infections.push_back(new DescriptiveInfection(rng, genotype, InfectionOrigin::Indigenous));
@@ -262,7 +262,7 @@ bool DescriptiveWithinHostModel::summarize(Host::Human& human) const {
 
         if (reportPatentInfected) {
             for (auto inf = infections.begin(); inf != infections.end(); ++inf) {
-                if (diagnostics::monitoringDiagnostic().isPositive(human.rng, (*inf)->getDensity(),
+                if (diagnostics::monitoringDiagnostic().isPositive(human.monitoring_rng, (*inf)->getDensity(),
                                                                    std::numeric_limits<double>::quiet_NaN())) {
                     mon::recordStat(mon::measure("totalPatentInf"), human);
                     if ((*inf)->origin() == InfectionOrigin::Indigenous)
@@ -283,7 +283,7 @@ bool DescriptiveWithinHostModel::summarize(Host::Human& human) const {
             for (auto gtype : dens_by_gtype) {
                 // we had at least one infection of this genotype
                 mon::recordStat(mon::measure("nInfectByGenotype"), human, 1, 0, gtype.first, 0);
-                if (diagnostics::monitoringDiagnostic().isPositive(human.rng, gtype.second,
+                if (diagnostics::monitoringDiagnostic().isPositive(human.monitoring_rng, gtype.second,
                                                                    std::numeric_limits<double>::quiet_NaN())) {
                     mon::recordStat(mon::measure("nPatentByGenotype"), human, 1, 0, gtype.first, 0);
                     mon::recordStat(mon::measure("logDensByGenotype"), human, log(gtype.second), 0, gtype.first, 0);
@@ -295,7 +295,7 @@ bool DescriptiveWithinHostModel::summarize(Host::Human& human) const {
     // Some treatments (simpleTreat with steps=-1) clear infections immediately
     // (and are applied after update()), thus infections.size() may be 0 while
     // totalDensity > 0. Here we report the last calculated density.
-    if (diagnostics::monitoringDiagnostic().isPositive(human.rng, totalDensity,
+    if (diagnostics::monitoringDiagnostic().isPositive(human.monitoring_rng, totalDensity,
                                                        std::numeric_limits<double>::quiet_NaN())) {
         mon::recordStat(mon::measure("nPatent"), human);
         if (infectionType == InfectionOrigin::Imported)

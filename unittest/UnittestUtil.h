@@ -435,8 +435,8 @@ public:
     static void clearMedicateQueue(pk_pd::LSTMModel& pkpd) { pkpd.medicate_queue.clear(); }
 
     static unique_ptr<Host::Human> createHuman(SimTime dateOfBirth) {
-        static util::MasterRng master_rng(0, 0);
-        bridge::current_master_rng = &master_rng;
+        static util::MasterRngs master_rngs(0);
+        bridge::current_master_rngs = &master_rngs;
         return unique_ptr<Host::Human>(new Host::Human(dateOfBirth));
     }
     // Set the WithinHost model used by the human, and return a pointer to it. Do not delete this!

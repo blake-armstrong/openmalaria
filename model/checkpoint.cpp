@@ -52,7 +52,7 @@ int read_checkpoint_num(const string& checkpoint_file_name) {
     return checkpoint_num;
 }
 
-void checkpoint(istream& stream, Clock& clock, util::MasterRng& master_rng, SimTime& end_time, SimTime& est_end_time,
+void checkpoint(istream& stream, Clock& clock, util::MasterRngs& master_rngs, SimTime& end_time, SimTime& est_end_time,
                 Population& population, Transmission::TransmissionModel& transmission) {
     try {
         util::checkpoint::header(stream);
@@ -78,7 +78,7 @@ void checkpoint(istream& stream, Clock& clock, util::MasterRng& master_rng, SimT
         // read last, because other loads may use random numbers or expect time
         // to be negative
         clock.checkpoint_step_times(stream);
-        master_rng.checkpoint(stream);
+        master_rngs.checkpoint(stream);
     } catch (const util::checkpoint_error& e) { // append " (pos X of Y bytes)"
         const streamoff pos = stream.tellg();
         stream.ignore(numeric_limits<streamsize>::max() - 1); // skip to end of file
@@ -93,7 +93,7 @@ void checkpoint(istream& stream, Clock& clock, util::MasterRng& master_rng, SimT
         throw util::checkpoint_error("stream read error");
 }
 
-void checkpoint(ostream& stream, Clock& clock, util::MasterRng& master_rng, SimTime& end_time, SimTime& est_end_time,
+void checkpoint(ostream& stream, Clock& clock, util::MasterRngs& master_rngs, SimTime& end_time, SimTime& est_end_time,
                 Population& population, Transmission::TransmissionModel& transmission) {
     util::checkpoint::header(stream);
     if (!stream.good())
@@ -118,14 +118,14 @@ void checkpoint(ostream& stream, Clock& clock, util::MasterRng& master_rng, SimT
     interventions::InterventionManager::checkpoint(stream);
 
     clock.checkpoint_step_times(stream);
-    master_rng.checkpoint(stream);
+    master_rngs.checkpoint(stream);
 
     if (stream.fail())
         throw util::checkpoint_error("stream write error");
 }
 
 void write_checkpoint(const bool started_from_checkpoint, const string& checkpoint_file_name, Clock& clock,
-                      util::MasterRng& master_rng, SimTime& end_time, SimTime& est_end_time, Population& population,
+                      util::MasterRngs& master_rngs, SimTime& end_time, SimTime& est_end_time, Population& population,
                       Transmission::TransmissionModel& transmission) {
     // We alternate between two checkpoints, in case program is closed while writing.
     const int num_checkpoints = 2;
@@ -139,7 +139,7 @@ void write_checkpoint(const bool started_from_checkpoint, const string& checkpoi
     { // Open the next checkpoint file for writing:
         const string name = std::format("{}{}.gz", checkpoint_file_name, checkpoint_num);
         ogzstream out(name.c_str(), ios::out | ios::binary);
-        checkpoint(out, clock, master_rng, end_time, est_end_time, population, transmission);
+        checkpoint(out, clock, master_rngs, end_time, est_end_time, population, transmission);
         out.close();
     }
 
@@ -160,7 +160,7 @@ void write_checkpoint(const bool started_from_checkpoint, const string& checkpoi
     }
 }
 
-void read_checkpoint(const string& checkpoint_file_name, Clock& clock, util::MasterRng& master_rng, SimTime& end_time,
+void read_checkpoint(const string& checkpoint_file_name, Clock& clock, util::MasterRngs& master_rngs, SimTime& end_time,
                      SimTime& est_end_time, Population& population, Transmission::TransmissionModel& transmission) {
     const int checkpoint_num = read_checkpoint_num(checkpoint_file_name);
 
@@ -170,7 +170,7 @@ void read_checkpoint(const string& checkpoint_file_name, Clock& clock, util::Mas
     //Note: gzstreams are considered "good" when file not open!
     if (!(in.good() && in.rdbuf()->is_open()))
         throw util::checkpoint_error("Unable to read file");
-    checkpoint(in, clock, master_rng, end_time, est_end_time, population, transmission);
+    checkpoint(in, clock, master_rngs, end_time, est_end_time, population, transmission);
     in.close();
 
     cerr << clock.in_steps(clock.now()) << "t loaded checkpoint\n";

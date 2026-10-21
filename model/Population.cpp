@@ -168,7 +168,7 @@ void ctsPatentHosts(Population& population, ostream& stream) {
     int patent = 0;
     for (Host::Human& human : population.humans) {
         auto diag = WithinHost::diagnostics::monitoringDiagnostic();
-        if (human.withinHostModel->diagnosticResult(human.rng, diag))
+        if (human.withinHostModel->diagnosticResult(human.monitoring_rng, diag))
             ++patent;
     }
     stream << '\t' << patent;

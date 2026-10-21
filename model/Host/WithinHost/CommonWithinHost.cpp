@@ -152,7 +152,7 @@ void CommonWithinHost::update(Host::Human& human, LocalRng& rng, int& nNewInfs_i
         // If opt_vaccine_genotype is true the infection is discarded with probability 1-vaccineFactor
         if (opt_vaccine_genotype) {
             double vaccineFactor = human.vaccine.getFactor(interventions::Vaccine::PEV, genotype);
-            if (vaccineFactor == 1.0 || human.rng.bernoulli(vaccineFactor))
+            if (vaccineFactor == 1.0 || human.host_rng.bernoulli(vaccineFactor))
                 infections.push_back(createInfection(rng, genotype, InfectionOrigin::Introduced));
             else
                 nNewInfsDiscarded++;
@@ -170,7 +170,7 @@ void CommonWithinHost::update(Host::Human& human, LocalRng& rng, int& nNewInfs_i
         // If opt_vaccine_genotype is true the infection is discarded with probability 1-vaccineFactor
         if (opt_vaccine_genotype) {
             double vaccineFactor = human.vaccine.getFactor(interventions::Vaccine::PEV, genotype);
-            if (vaccineFactor == 1.0 || human.rng.bernoulli(vaccineFactor))
+            if (vaccineFactor == 1.0 || human.host_rng.bernoulli(vaccineFactor))
                 infections.push_back(createInfection(rng, genotype, InfectionOrigin::Indigenous));
             else
                 nNewInfsDiscarded++;
@@ -306,7 +306,7 @@ bool CommonWithinHost::summarize(Host::Human& human) const {
                 else
                     mon::recordStat(mon::measure("totalInfs_Imported"), human, 1, 0, genotype, 0);
 
-                if (diagnostics::monitoringDiagnostic().isPositive(human.rng, (*inf)->getDensity(),
+                if (diagnostics::monitoringDiagnostic().isPositive(human.monitoring_rng, (*inf)->getDensity(),
                                                                    std::numeric_limits<double>::quiet_NaN())) {
                     mon::recordStat(mon::measure("totalPatentInf"), human, 1, 0, genotype, 0);
                     if ((*inf)->origin() == InfectionOrigin::Indigenous)
@@ -337,7 +337,7 @@ bool CommonWithinHost::summarize(Host::Human& human) const {
                 } while (inf != sortedInfs.end() && (*inf)->genotype() == genotype);
                 // we had at least one infection of this genotype
                 mon::recordStat(mon::measure("nInfectByGenotype"), human, 1, 0, genotype, 0);
-                if (diagnostics::monitoringDiagnostic().isPositive(human.rng, dens,
+                if (diagnostics::monitoringDiagnostic().isPositive(human.monitoring_rng, dens,
                                                                    std::numeric_limits<double>::quiet_NaN())) {
                     mon::recordStat(mon::measure("nPatentByGenotype"), human, 1, 0, genotype, 0);
                     mon::recordStat(mon::measure("logDensByGenotype"), human, log(dens), 0, genotype, 0);
@@ -349,7 +349,7 @@ bool CommonWithinHost::summarize(Host::Human& human) const {
     // Some treatments (simpleTreat with steps=-1) clear infections immediately
     // (and are applied after update()), thus infections.size() may be 0 while
     // totalDensity > 0. Here we report the last calculated density.
-    if (diagnostics::monitoringDiagnostic().isPositive(human.rng, totalDensity,
+    if (diagnostics::monitoringDiagnostic().isPositive(human.monitoring_rng, totalDensity,
                                                        std::numeric_limits<double>::quiet_NaN())) {
         mon::recordStat(mon::measure("nPatent"), human);
         if (infectionType == InfectionOrigin::Imported)

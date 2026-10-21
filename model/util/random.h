@@ -233,32 +233,44 @@ private:
 using LocalRng = RNG<Xoshiro256P>;
 using MasterRng = RNG<ChaCha<8>>;
 
+struct MasterRngs {
+    explicit MasterRngs(uint64_t seed) : population(seed, 0), transmission(seed, 1) {}
+
+    template <class S> void checkpoint(S& stream) {
+        population.checkpoint(stream);
+        transmission.checkpoint(stream);
+    }
+
+    MasterRng population;
+    MasterRng transmission;
+};
+
 }
 
 namespace bridge {
 
-inline util::MasterRng* current_master_rng = nullptr; // NOLINT(cppcoreguidelines-avoid-non-const-global-variables)
+inline util::MasterRngs* current_master_rngs = nullptr; // NOLINT(cppcoreguidelines-avoid-non-const-global-variables)
 
-inline util::MasterRng& master_rng() {
-    assert(current_master_rng != nullptr);
-    return *current_master_rng;
+inline util::MasterRngs& master_rngs() {
+    assert(current_master_rngs != nullptr);
+    return *current_master_rngs;
 }
 
 }
 
-class MasterRngBinding {
+class MasterRngsBinding {
 public:
-    explicit MasterRngBinding(util::MasterRng& rng) : previous(bridge::current_master_rng) {
-        bridge::current_master_rng = &rng;
+    explicit MasterRngsBinding(util::MasterRngs& rngs) : previous(bridge::current_master_rngs) {
+        bridge::current_master_rngs = &rngs;
     }
-    MasterRngBinding(const MasterRngBinding&) = delete;
-    MasterRngBinding& operator=(const MasterRngBinding&) = delete;
-    MasterRngBinding(MasterRngBinding&&) = delete;
-    MasterRngBinding& operator=(MasterRngBinding&&) = delete;
-    ~MasterRngBinding() { bridge::current_master_rng = previous; }
+    MasterRngsBinding(const MasterRngsBinding&) = delete;
+    MasterRngsBinding& operator=(const MasterRngsBinding&) = delete;
+    MasterRngsBinding(MasterRngsBinding&&) = delete;
+    MasterRngsBinding& operator=(MasterRngsBinding&&) = delete;
+    ~MasterRngsBinding() { bridge::current_master_rngs = previous; }
 
 private:
-    util::MasterRng* previous;
+    util::MasterRngs* previous;
 };
 
 }

@@ -196,7 +196,7 @@ protected:
     virtual CMDTOut exec(CMHostData hostData) const {
         CMDTOut result;
 
-        if (hostData.withinHost().diagnosticResult(hostData.human.rng, diagnostic))
+        if (hostData.withinHost().diagnosticResult(hostData.rng, diagnostic))
             result = positive.exec(hostData);
         else
             result = negative.exec(hostData);
@@ -327,7 +327,7 @@ protected:
     }
 
     virtual CMDTOut exec(CMHostData hostData) const {
-        auto it = branches.upper_bound(hostData.human.rng.uniform_01());
+        auto it = branches.upper_bound(hostData.rng.uniform_01());
         assert(it != branches.end());
         return it->second->exec(hostData);
     }

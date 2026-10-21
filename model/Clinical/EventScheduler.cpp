@@ -165,7 +165,7 @@ void ClinicalEventScheduler::doClinicalUpdate(Human& human, double ageYears, Wit
             if (pgState & Episode::COMPLICATED) {
                 const double pSequelae = pSequelaeInpatient.eval(ageYears);
                 mon::recordStat(mon::measure("expectedSequelae"), human, pSequelae);
-                if (human.rng.uniform_01() < pSequelae) {
+                if (human.clinical_rng.uniform_01() < pSequelae) {
                     pgState = Episode::State(pgState | Episode::SEQUELAE);
                 } else {
                     pgState = Episode::State(pgState | Episode::RECOVERY);
@@ -210,10 +210,10 @@ void ClinicalEventScheduler::doClinicalUpdate(Human& human, double ageYears, Wit
                     pgState = Episode::State(pgState | newState | Episode::RUN_CM_TREE);
                     indirectMortality = pg.indirectMortality;
 
-                    double uVariate = human.rng.uniform_01();
+                    double u_variate = human.clinical_rng.uniform_01();
                     size_t i = 0; // units: days
                     for (; i < cumDailyPrImmUCTS.size(); ++i) {
-                        if (uVariate < cumDailyPrImmUCTS[i]) {
+                        if (u_variate < cumDailyPrImmUCTS[i]) {
                             goto gotDelay;
                         }
                     }
@@ -238,9 +238,9 @@ void ClinicalEventScheduler::doClinicalUpdate(Human& human, double ageYears, Wit
             pgState = Episode::State(pgState | Episode::SECOND_CASE);
         }
 
-        CMDTOut auxOut = ESCaseManagement::execute(CMHostData(human, ageYears, pgState));
+        CMDTOut aux_out = ESCaseManagement::execute(CMHostData(human, human.clinical_rng, ageYears, pgState));
 
-        if (auxOut.treated) { // I.E. some treatment was given
+        if (aux_out.treated) { // I.E. some treatment was given
             timeLastTreatment = Sim::ts0();
             if (pgState & Episode::COMPLICATED) {
                 mon::recordEvent(mon::measure("nTreatments3"), human);
@@ -252,7 +252,7 @@ void ClinicalEventScheduler::doClinicalUpdate(Human& human, double ageYears, Wit
                 }
             }
         }
-        if (auxOut.screened) {
+        if (aux_out.screened) {
             mon::recordEvent(mon::measure("nTreatDiagnostics"), human);
         }
 
@@ -274,7 +274,7 @@ void ClinicalEventScheduler::doClinicalUpdate(Human& human, double ageYears, Wit
             mon::recordStat(mon::measure("expectedDirectDeaths"), human, pDeath);
             if (inHospital)
                 mon::recordStat(mon::measure("expectedHospitalDeaths"), human, pDeath);
-            if (human.rng.uniform_01() < pDeath) {
+            if (human.clinical_rng.uniform_01() < pDeath) {
                 pgState = Episode::State(pgState | Episode::DIRECT_DEATH | Episode::EVENT_FIRST_DAY);
                 // Human is killed at end of time at risk
                 //timeOfRecovery += extraDaysAtRisk;	(no point updating; will be set later: ATORWD)
@@ -290,7 +290,7 @@ void ClinicalEventScheduler::doClinicalUpdate(Human& human, double ageYears, Wit
                  * treatment. */
                 bool isMalarial = pgState & Episode::MALARIA;
                 double pNeedTreat = isMalarial ? MF_need_antibiotic.eval(ageYears) : NMF_need_antibiotic.eval(ageYears);
-                bool needTreat = human.rng.bernoulli(pNeedTreat);
+                bool need_treat = human.clinical_rng.bernoulli(pNeedTreat);
 
                 // Calculate chance of antibiotic administration:
                 double pTreatment = 0.0;
@@ -319,7 +319,7 @@ void ClinicalEventScheduler::doClinicalUpdate(Human& human, double ageYears, Wit
 
                 double treatmentEffectMult = 1.0;
 
-                if (human.rng.uniform_01() < pTreatment) {
+                if (human.clinical_rng.uniform_01() < pTreatment) {
                     /*FIXME: impossible due to above; NMF output removed
                     Survey::current().addInt( Report::MI_NMF_TREATMENTS, human, 1 );
                     treatmentEffectMult = oneMinusEfficacyAb;
@@ -328,9 +328,9 @@ void ClinicalEventScheduler::doClinicalUpdate(Human& human, double ageYears, Wit
 
                 // In a severe NMF case (only when not malarial), there is a
                 // chance of death:
-                if (needTreat) {
+                if (need_treat) {
                     double pDeath = severeNmfMortality.eval(ageYears) * treatmentEffectMult;
-                    if (human.rng.uniform_01() < pDeath) {
+                    if (human.clinical_rng.uniform_01() < pDeath) {
                         pgState = Episode::State(pgState | Episode::DIRECT_DEATH);
                     }
                 }
@@ -357,7 +357,7 @@ void ClinicalEventScheduler::doClinicalUpdate(Human& human, double ageYears, Wit
                 mon::recordStat(mon::measure("expectedDirectDeaths"), human, pDeath);
                 if (pgState & Episode::EVENT_IN_HOSPITAL)
                     mon::recordStat(mon::measure("expectedHospitalDeaths"), human, pDeath);
-                if (human.rng.uniform_01() < pDeath) {
+                if (human.clinical_rng.uniform_01() < pDeath) {
                     pgState = Episode::State(pgState | Episode::DIRECT_DEATH);
                     // Human is killed at end of time at risk
                     timeOfRecovery = timeOfRecovery + extraDaysAtRisk; // may be re-set later (see ATORWD)

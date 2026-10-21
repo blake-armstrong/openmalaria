@@ -244,14 +244,15 @@ bool PerHumanVaccine::possiblyVaccinate(Host::Human& human, ComponentId componen
     const VaccineComponent& params = VaccineComponent::getParams(componentId);
 
     if (effect == 0) {
-        effects.push_back(PerEffectPerHumanVaccine(human.rng, componentId, params));
+        effects.push_back(PerEffectPerHumanVaccine(human.intervention_rng, componentId, params));
         effect = &effects.back();
     }
 
     effect->perGenotypeInitialEfficacy.resize(WithinHost::Genotypes::N());
 
     for (size_t g = 0; g < params.perGenotypeInitialMeanEfficacy.size(); g++)
-        effect->perGenotypeInitialEfficacy[g] = params.getInitialEfficacy(human.rng, numDosesAdministered, g);
+        effect->perGenotypeInitialEfficacy[g] =
+            params.getInitialEfficacy(human.intervention_rng, numDosesAdministered, g);
 
     util::streamValidate(effect->perGenotypeInitialEfficacy);
 

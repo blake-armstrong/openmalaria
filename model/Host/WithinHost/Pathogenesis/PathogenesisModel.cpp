@@ -106,7 +106,7 @@ Pathogenesis::StatePair PathogenesisModel::determineState(Host::Human& human, do
     StatePair result;
     //TODO(performance): would using a single RNG sample and manipulating probabilities be faster?
     //Decide whether a clinical episode occurs and if so, which type
-    if (human.rng.bernoulli(pMalariaFever)) {
+    if (human.host_rng.bernoulli(pMalariaFever)) {
         const double prSevereEpisode = timeStepMaxDensity / (timeStepMaxDensity + pg_severeMalThreshold);
         const double comorb_factor = _comorbidityFactor / (1.0 + ageYears * pg_inv_critAgeComorb);
         const double pCoinfection = pg_comorbIntercept * comorb_factor;
@@ -116,10 +116,10 @@ Pathogenesis::StatePair PathogenesisModel::determineState(Host::Human& human, do
         mon::recordStat(mon::measure("expectedSevere"), human, exSevere);
         mon::recordStat(mon::measure("expectedSevereWithoutComorbidities"), human, prSevereEpisode);
 
-        if (human.rng.bernoulli(prSevereEpisode))
+        if (human.host_rng.bernoulli(prSevereEpisode))
             result.state = STATE_SEVERE;
         else {
-            if (human.rng.bernoulli(pCoinfection))
+            if (human.host_rng.bernoulli(pCoinfection))
                 result.state = STATE_COINFECTION;
             else
                 result.state = STATE_MALARIA;
@@ -136,10 +136,10 @@ Pathogenesis::StatePair PathogenesisModel::determineState(Host::Human& human, do
         // except that (a) it affects random numbers, and (b) it affects
         // evaluation of uncomplicated cases with the 5-day HS when
         // indirectMortBugfix is not enabled.
-        if (human.rng.bernoulli(indirectRisk))
+        if (human.host_rng.bernoulli(indirectRisk))
             result.indirectMortality = true;
     } else {
-        result.state = sampleNMF(human.rng, ageYears);
+        result.state = sampleNMF(human.host_rng, ageYears);
     }
     return result;
 }

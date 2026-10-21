@@ -147,7 +147,7 @@ void ClinicalModel::update(Human& human, double ageYears, bool newBorn) {
     }
     if (newBorn /* i.e. first update since birth */) {
         // Chance of neonatal mortality:
-        if (Host::NeonatalMortality::eventNeonatalMortality(human.rng)) {
+        if (Host::NeonatalMortality::eventNeonatalMortality(human.clinical_rng)) {
             mon::recordEvent(mon::measure("nIndDeaths"), human);
             doomed = DOOMED_NEONATAL;
             return;

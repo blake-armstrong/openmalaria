@@ -180,7 +180,7 @@ void TriggeredDeployments::SubList::deploy(Host::Human& human, mon::Deploy::Meth
     //TODO: why does the above contradict what we do? Is this due to a date being shifted later?
     SimTime age = human.age(Sim::now_or_ts1());
     if (age >= minAge && age < maxAge) {
-        if (coverage >= 1.0 || human.rng.bernoulli(coverage)) {
+        if (coverage >= 1.0 || human.intervention_rng.bernoulli(coverage)) {
             HumanIntervention::deploy(human, method, vaccLimits);
         }
     }
@@ -211,7 +211,7 @@ public:
 
     void deploy(Human& human, mon::Deploy::Method method, VaccineLimits vaccLimits) const {
         mon::recordDeploy(mon::measure("nMassScreenings"), mon::measure("nCtsScreenings"), human, method);
-        if (human.withinHostModel->diagnosticResult(human.rng, diagnostic)) {
+        if (human.withinHostModel->diagnosticResult(human.intervention_rng, diagnostic)) {
             positive.deploy(human, method, vaccLimits);
         } else {
             negative.deploy(human, method, vaccLimits);
@@ -295,8 +295,9 @@ public:
         : HumanInterventionComponent(id), tree(Clinical::CMDecisionTree::create(elt, false)) {}
 
     void deploy(Human& human, mon::Deploy::Method method, VaccineLimits) const {
-        Clinical::CMDTOut out = tree.exec(Clinical::CMHostData(human, Sim::in_years(human.age(Sim::now_or_ts1())),
-                                                               human.clinicalModel->getLatestState()));
+        Clinical::CMDTOut out =
+            tree.exec(Clinical::CMHostData(human, human.intervention_rng, Sim::in_years(human.age(Sim::now_or_ts1())),
+                                           human.clinicalModel->getLatestState()));
         if (out.treated) {
             mon::recordDeploy(mon::measure("nMDAs"), mon::measure("nCtsMDA"), human, method);
         }

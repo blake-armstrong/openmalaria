@@ -85,13 +85,13 @@ void DecisionTree5Day::uncomplicatedEvent(Human& human, Episode::State pgState) 
 
     latestReport.update(human, Episode::State(pgState));
 
-    double x = human.rng.uniform_01();
+    double x = human.clinical_rng.uniform_01();
     if (x < accessUCAny[regimen] * m_treatmentSeekingFactor) {
-        CMHostData hostData(human, Sim::in_years(human.age(Sim::ts0())), pgState);
+        CMHostData host_data(human, human.clinical_rng, Sim::in_years(human.age(Sim::ts0())), pgState);
 
         // Run tree (which may deploy treatment)
-        CMDTOut output = (x < accessUCSelfTreat[regimen] * m_treatmentSeekingFactor) ? treeUCSelfTreat->exec(hostData)
-                                                                                     : treeUCOfficial->exec(hostData);
+        CMDTOut output = (x < accessUCSelfTreat[regimen] * m_treatmentSeekingFactor) ? treeUCSelfTreat->exec(host_data)
+                                                                                     : treeUCOfficial->exec(host_data);
 
         if (output.treated) { // if any treatment or intervention deployed
             m_tLastTreatment = Sim::ts0();

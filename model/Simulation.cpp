@@ -72,7 +72,7 @@ void print_errno(SimTime now) {
 }
 
 Simulation::Simulation(std::unique_ptr<scnXml::Scenario> scenario)
-    : master_rng(scenario->getModel().getComputationParameters().getIseed(), 0), scenario_xml(std::move(scenario)),
+    : master_rngs(scenario->getModel().getComputationParameters().getIseed()), scenario_xml(std::move(scenario)),
       only_new_episode(scenario_xml->getMonitoring().getSurveyOptions().getOnlyNewEpisode()) {
     // 1) elements with no dependencies on other elements initialised here:
     WithinHost::Genotypes::init(*scenario_xml);
@@ -158,7 +158,8 @@ void Simulation::run(const CheckpointOptions& checkpointing) {
 
 void Simulation::resume(const std::string& checkpoint_file) {
     mon::Continuous::init(scenario_xml->getMonitoring(), true);
-    read_checkpoint(checkpoint_file, clock, master_rng, end_time, est_end_time, *population_model, *transmission_model);
+    read_checkpoint(checkpoint_file, clock, master_rngs, end_time, est_end_time, *population_model,
+                    *transmission_model);
 
     /** Calculate ento availability percentiles **/
     Transmission::PerHostAnophParams::calcAvailabilityPercentiles();
@@ -208,7 +209,7 @@ void Simulation::start_new(const CheckpointOptions& checkpointing) {
     mon::initMainSim();
 
     if (checkpointing.enabled) {
-        write_checkpoint(false, checkpointing.file_name, clock, master_rng, end_time, est_end_time, *population_model,
+        write_checkpoint(false, checkpointing.file_name, clock, master_rngs, end_time, est_end_time, *population_model,
                          *transmission_model);
         if (checkpointing.stop_after_write)
             throw util::cmd_exception("Checkpoint test: checkpoint written", util::Error::None);

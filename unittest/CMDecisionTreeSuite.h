@@ -56,7 +56,8 @@ public:
             dynamic_cast<WHMock*>(UnittestUtil::setHumanWH(*human, unique_ptr<WithinHost::WHInterface>(new WHMock())));
         ETS_ASSERT(whm != 0);
 
-        hd.reset(new CMHostData(*human, 21 /* any real age will do for most tests */, Episode::NONE));
+        hd = std::make_unique<CMHostData>(*human, human->clinical_rng, 21 /* any real age will do for most tests */,
+                                          Episode::NONE);
 
         // could seed random-number-generator, but shouldn't affect outcomes
         UnittestUtil::PkPdSuiteSetup();

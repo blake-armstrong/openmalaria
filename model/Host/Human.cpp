@@ -107,14 +107,16 @@ HumanHet hetSample(util::LocalRng& rng) {
 }
 
 Human::Human(SimTime dateOfBirth)
-    : infIncidence(InfectionIncidenceModel::createModel()), rng(bridge::master_rng()), dateOfBirth(dateOfBirth) {
+    : infIncidence(InfectionIncidenceModel::createModel()), host_rng(bridge::master_rngs().population),
+      clinical_rng(bridge::master_rngs().population), intervention_rng(bridge::master_rngs().population),
+      monitoring_rng(bridge::master_rngs().population), dateOfBirth(dateOfBirth) {
     // Initial humans are created at time 0 and may have dateOfBirth in past. Otherwise dateOfBirth must be now.
     assert(dateOfBirth == Sim::now_or_ts1() || (Sim::now() == Sim::zero() && dateOfBirth < Sim::now()));
 
-    HumanHet het = hetSample(rng);
-    withinHostModel = WithinHost::WHInterface::createWithinHostModel(rng, het.comorbidityFactor);
-    double iiFactor = infIncidence->getAvailabilityFactor(rng, 1.0);
-    perHostTransmission.initialise(rng, het.availabilityFactor * iiFactor);
+    HumanHet het = hetSample(host_rng);
+    withinHostModel = WithinHost::WHInterface::createWithinHostModel(host_rng, het.comorbidityFactor);
+    double ii_factor = infIncidence->getAvailabilityFactor(host_rng, 1.0);
+    perHostTransmission.initialise(host_rng, het.availabilityFactor * ii_factor);
     clinicalModel = Clinical::ClinicalModel::createClinicalModel(het.treatmentSeekingFactor);
 }
 
@@ -170,7 +172,10 @@ void Human::checkpoint(istream& stream) {
     infIncidence & stream;
     withinHostModel & stream;
     clinicalModel & stream;
-    rng.checkpoint(stream);
+    host_rng.checkpoint(stream);
+    clinical_rng.checkpoint(stream);
+    intervention_rng.checkpoint(stream);
+    monitoring_rng.checkpoint(stream);
     dateOfBirth & stream;
     vaccine & stream;
     monitoringAgeGroup & stream;
@@ -184,7 +189,10 @@ void Human::checkpoint(ostream& stream) {
     infIncidence & stream;
     withinHostModel & stream;
     clinicalModel & stream;
-    rng.checkpoint(stream);
+    host_rng.checkpoint(stream);
+    clinical_rng.checkpoint(stream);
+    intervention_rng.checkpoint(stream);
+    monitoring_rng.checkpoint(stream);
     dateOfBirth & stream;
     vaccine & stream;
     monitoringAgeGroup & stream;
@@ -255,7 +263,7 @@ void update(Human& human, Transmission::TransmissionModel& transmission) {
     int nNewInfs_i = human.infIncidence->numNewInfections(human, expectedNNewInfs_i);
 
     // age1 used when medicating drugs (small effect) and in immunity model (which was parameterised for it)
-    human.withinHostModel->update(human, human.rng, nNewInfs_i, nNewInfs_l, EIR_per_genotype_i, EIR_per_genotype_l,
+    human.withinHostModel->update(human, human.host_rng, nNewInfs_i, nNewInfs_l, EIR_per_genotype_i, EIR_per_genotype_l,
                                   age1);
     human.infIncidence->reportNumNewInfections(human, nNewInfs_i, nNewInfs_l);
 

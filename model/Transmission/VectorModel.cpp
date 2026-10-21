@@ -165,9 +165,10 @@ VectorModel::VectorModel(vector<double> initEIR, int interventionMode,
                          vector<std::unique_ptr<Anopheles::AnophelesModel>> speciesList,
                          vector<std::unique_ptr<Anopheles::EmergenceRateEstimator>> emergenceRateEstimatorsList,
                          map<string, size_t> speciesIndexList, int populationSize)
-    : TransmissionModel(std::move(initEIR), interventionMode, WithinHost::Genotypes::N()), m_rng(bridge::master_rng()),
-      initIterations(0), quinquennial_kappa(5 * Sim::steps_per_year(), 0.0), species(std::move(speciesList)),
-      emergenceRateEstimators(std::move(emergenceRateEstimatorsList)), speciesIndex(std::move(speciesIndexList)) {
+    : TransmissionModel(std::move(initEIR), interventionMode, WithinHost::Genotypes::N()),
+      m_rng(bridge::master_rngs().transmission), initIterations(0), quinquennial_kappa(5 * Sim::steps_per_year(), 0.0),
+      species(std::move(speciesList)), emergenceRateEstimators(std::move(emergenceRateEstimatorsList)),
+      speciesIndex(std::move(speciesIndexList)) {
     // set VACCINE_GENOTYPE option
     opt_vaccine_genotype = util::ModelOptions::option(util::VACCINE_GENOTYPE);
 

@@ -37,13 +37,15 @@ using WithinHost::WHInterface;
 
 /** All data which needs to be passed to the decision tree evaluators. */
 struct CMHostData {
-    /** Initialise, from a human h with age aY (years), and pathogenesis state
-     * pS. Note that pS is only needed for uncomplicated trees
-     * (see CMDecisionTree::create()). */
-    CMHostData(Host::Human& h, double aY, Episode::State pS) : human(h), ageYears(aY), pgState(pS) {}
+    /** Initialise, from a human h drawing from stream r, with age age_years,
+     * and pathogenesis state pg_state. Note that pg_state is only needed for
+     * uncomplicated trees (see CMDecisionTree::create()). */
+    CMHostData(Host::Human& h, util::LocalRng& r, double age_years, Episode::State pg_state)
+        : human(h), ageYears(age_years), pgState(pg_state), rng(r) {}
     Host::Human& human;
     double ageYears; // only cached to save recalculating
     Episode::State pgState;
+    util::LocalRng& rng; // NOLINT(cppcoreguidelines-avoid-const-or-ref-data-members)
     inline WHInterface& withinHost() { return *human.withinHostModel; }
 };
 /** All output data from the decision tree. */

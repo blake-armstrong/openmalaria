@@ -506,7 +506,7 @@ ITNComponent::ITNComponent(ComponentId id, const scnXml::ITNDescription& elt,
 }
 
 void ITNComponent::deploy(Host::Human& human, mon::Deploy::Method method, VaccineLimits) const {
-    human.perHostTransmission.deployComponent(human.rng, *this);
+    human.perHostTransmission.deployComponent(human.intervention_rng, *this);
     mon::recordDeploy(mon::measure("nMassITNs"), mon::measure("nEPI_ITNs"), human, method);
 }
 
@@ -630,14 +630,14 @@ void HumanITN::update(Host::Human& human) {
 
         int newHoles = 0;
         if (holeRate > 0)
-            newHoles = human.rng.poisson(holeRate);
+            newHoles = human.intervention_rng.poisson(holeRate);
 
         nHoles += newHoles;
         holeIndex += newHoles;
 
         double lambda = nHoles * ripRate;
         if (lambda > 0)
-            holeIndex += params.ripFactor * human.rng.poisson(lambda);
+            holeIndex += params.ripFactor * human.intervention_rng.poisson(lambda);
     }
 }
 
