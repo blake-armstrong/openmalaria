@@ -21,6 +21,7 @@
  */
 
 #include <fstream>
+#include <utility>
 
 #include "util/AgeGroupInterpolation.h"
 #include "util/CommandLine.h"
@@ -258,6 +259,17 @@ public:
 // -----  AgeGroupInterpolator  -----
 
 AgeGroupInterpolator::AgeGroupInterpolator() : obj(&AgeGroupDummy::singleton) {}
+
+AgeGroupInterpolator::AgeGroupInterpolator(AgeGroupInterpolator&& other) noexcept
+    : obj(std::exchange(other.obj, &AgeGroupDummy::singleton)) {}
+
+AgeGroupInterpolator& AgeGroupInterpolator::operator=(AgeGroupInterpolator&& other) noexcept {
+    if (this != &other) {
+        reset();
+        obj = std::exchange(other.obj, &AgeGroupDummy::singleton);
+    }
+    return *this;
+}
 
 void AgeGroupInterpolator::set(const scnXml::AgeGroupValues& ageGroups, const char* eltName) {
     reset();

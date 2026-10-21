@@ -56,6 +56,10 @@ protected:
 struct AgeGroupInterpolator {
     /** Create. set() must be called before further use to avoid exceptions. */
     AgeGroupInterpolator();
+    AgeGroupInterpolator(const AgeGroupInterpolator&) = delete;
+    AgeGroupInterpolator& operator=(const AgeGroupInterpolator&) = delete;
+    AgeGroupInterpolator(AgeGroupInterpolator&& other) noexcept;
+    AgeGroupInterpolator& operator=(AgeGroupInterpolator&& other) noexcept;
     ~AgeGroupInterpolator() { reset(); }
 
     /** Set age-group interpolation data from an XML fragment.
