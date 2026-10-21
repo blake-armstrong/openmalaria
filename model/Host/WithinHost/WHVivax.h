@@ -116,6 +116,10 @@ public:
      * prevent VivaxBrood being default-constructed by its container.
      */
     VivaxBrood(LocalRng& rng, const VivaxParams& params, int origin, WHVivax* host);
+    VivaxBrood(const VivaxBrood&) = default;
+    VivaxBrood& operator=(const VivaxBrood&) = default;
+    VivaxBrood(VivaxBrood&&) = default;
+    VivaxBrood& operator=(VivaxBrood&&) = default;
     ~VivaxBrood();
     /** Save a checkpoint. */
     void checkpoint(ostream& stream);
@@ -153,8 +157,6 @@ public:
     void treatment_ls();
 
 private:
-    VivaxBrood() = default; // not default constructible
-
     // list of times at which the merozoite and hypnozoites release, ordered by
     // time of release, soonest last (i.e. last element is next one to release)
     vector<SimTime> release_dates;
@@ -196,6 +198,10 @@ public:
     /// @brief Constructors, destructors and checkpointing functions
     //@{
     WHVivax(const VivaxParams& params, LocalRng& rng, double comorbidity_factor);
+    WHVivax(const WHVivax&) = delete;
+    WHVivax& operator=(const WHVivax&) = delete;
+    WHVivax(WHVivax&&) = delete;
+    WHVivax& operator=(WHVivax&&) = delete;
     ~WHVivax() override;
     //@}
 
@@ -232,10 +238,6 @@ protected:
     double get_cumulative_y() const override;
 
 private:
-    // not copy constructible
-    WHVivax(const WHVivax&) = delete;
-    WHVivax& operator=(const WHVivax&) = delete;
-
     const VivaxParams* params;
 
     list<VivaxBrood> infections;
@@ -246,7 +248,7 @@ private:
      * chance a male being tested and found to be G6PD deficient. */
     bool no_pq;
 
-    Pathogenesis::State morbidity;
+    Pathogenesis::State morbidity = Pathogenesis::NONE;
 
     // The number of primary blood stage infections to have started since this
     // human was born.
@@ -259,8 +261,6 @@ private:
     double p_event;
     // The probability of a clinical event from an early relapse
     double p_first_relapse_event;
-    // The probability of a clinical event from a later relapse
-    double p_second_relapse_event{};
 
     // Used for reporting; updated by update()
     double p_severe{0.0};

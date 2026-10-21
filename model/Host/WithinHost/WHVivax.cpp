@@ -47,10 +47,10 @@ HypnozoiteReleaseDistribution::HypnozoiteReleaseDistribution(const scnXml::Hypno
     : sampler(createSampler(elt)), latent_relapse(elt.getLatentRelapse()) {}
 
 SimTime HypnozoiteReleaseDistribution::sample_release_delay(LocalRng& rng) const {
-    double liver_stage_maximum_days = 16.0 * 30.0;      // maximum of about 16 months in liver stage
-    double delay = numeric_limits<double>::quiet_NaN(); // in days
+    const double liver_stage_maximum_days = 16.0 * 30.0; // maximum of about 16 months in liver stage
+    double delay = numeric_limits<double>::quiet_NaN();  // in days
     int count = 0;
-    int maxcount = 1e3;
+    const int maxcount = 1000;
 
     do {
         delay = sampler->sample(rng);
@@ -128,7 +128,7 @@ VivaxParams::VivaxParams(const scnXml::Model& model, SimTime latent_p) : latent_
 
 void VivaxParams::set_health_system(const scnXml::LiverStageDrug* elt, const util::CommandLineOptions& command_line) {
     VivaxHealthSystemParams& hs = health_system;
-    double old_p_het_no_pq = hs.p_het_no_pq;
+    const double old_p_het_no_pq = hs.p_het_no_pq;
     if (elt == nullptr) {
         hs.ignore_no_pq = false;
         hs.p_het_no_pq = 0.0;
@@ -155,7 +155,7 @@ void VivaxParams::set_health_system(const scnXml::LiverStageDrug* elt, const uti
 }
 
 int VivaxParams::sample_n_hypnozoites(LocalRng& rng) const {
-    double x = rng.uniform_01();
+    const double x = rng.uniform_01();
     // upper_bound finds the first key (cumulative probability) greater than x:
     auto it = n_hypnozoites_prob_map.upper_bound(x);
     assert(it != n_hypnozoites_prob_map.end()); // i.e. that we did find a real key
@@ -182,12 +182,12 @@ VivaxBrood::VivaxBrood(LocalRng& rng, const VivaxParams& params, int origin, WHV
 
     // primary blood stage plus hypnozoites (relapses)
     releases.insert(Sim::now_or_ts0() + params.latent_p);
-    int number_hypnozoites = params.sample_n_hypnozoites(rng);
+    const int number_hypnozoites = params.sample_n_hypnozoites(rng);
 
     for (int i = 0; i < number_hypnozoites;) {
-        SimTime random_release_delay = params.sample_release_delay(rng);
-        SimTime time_to_release = Sim::now_or_ts0() + params.latent_p + random_release_delay;
-        bool inserted = releases.insert(time_to_release).second;
+        const SimTime random_release_delay = params.sample_release_delay(rng);
+        const SimTime time_to_release = Sim::now_or_ts0() + params.latent_p + random_release_delay;
+        const bool inserted = releases.insert(time_to_release).second;
         if (inserted)
             ++i; // successful
         // else: sample clash with an existing release date, so resample
@@ -276,7 +276,7 @@ VivaxBrood::UpdResult VivaxBrood::update(LocalRng& rng, const VivaxParams& param
         }
         result.new_bs = true;
 
-        double length_days = params.blood_stage_length.sample(rng);
+        const double length_days = params.blood_stage_length.sample(rng);
         blood_stage_clear_date = Sim::ts0() + Sim::round_to_ts_from_days(length_days);
         // Assume gametocytes emerge at the same time (they mature quickly and
         // we have little data, thus assume coincedence of start)
@@ -385,10 +385,10 @@ void WHVivax::update(Host::Human& human, LocalRng& rng, int& n_new_infs_i, int& 
     // update infections
     // NOTE: currently no BSV model
     morbidity = Pathogenesis::NONE;
-    uint32_t old_cum_inf = cum_prim_inf;
-    bool treatment_liver = treat_expiry_liver > Sim::ts0();
-    bool treatment_blood = treat_expiry_blood > Sim::ts0();
-    double mat_imm_clin = 1 - (0.90 * exp(-2.53 * age_in_years));
+    const uint32_t old_cum_inf = cum_prim_inf;
+    const bool treatment_liver = treat_expiry_liver > Sim::ts0();
+    const bool treatment_blood = treat_expiry_blood > Sim::ts0();
+    const double mat_imm_clin = 1 - (0.90 * exp(-2.53 * age_in_years));
     //double matImmClin = 1 - (1 * exp(-(0.639*8*ageInYears)/2.53));
     auto inf = infections.begin();
     while (inf != infections.end()) {
@@ -396,7 +396,7 @@ void WHVivax::update(Host::Human& human, LocalRng& rng, int& n_new_infs_i, int& 
             inf->treatment_ls();
         if (treatment_blood)
             inf->treatment_bs(); // clearance due to treatment; no protection against reemergence
-        VivaxBrood::UpdResult result = inf->update(rng, *params);
+        const VivaxBrood::UpdResult result = inf->update(rng, *params);
         if (result.new_primary_bs)
             cum_prim_inf += 1;
 
@@ -408,7 +408,7 @@ void WHVivax::update(Host::Human& human, LocalRng& rng, int& n_new_infs_i, int& 
             if (result.new_primary_bs) {
                 // Blood stage is primary. oldCumInf wasn't updated yet.
                 //double pPrimaryInfEvent = matImmClin * pPrimaryA * pPrimaryB / (pPrimaryB+oldCumInf);
-                double p_primary_inf_event =
+                const double p_primary_inf_event =
                     mat_imm_clin * params->p_primary_a * exp(-params->p_primary_b * old_cum_inf);
                 clinical_event = rng.bernoulli(p_primary_inf_event);
                 inf->set_had_event(clinical_event);
@@ -417,7 +417,7 @@ void WHVivax::update(Host::Human& human, LocalRng& rng, int& n_new_infs_i, int& 
                 // Blood stage is a relapse. oldCumInf wasn't updated yet. Subtract 1 from oldCumInf not
                 // to count the current brood in the number of cumulative primary infections
 
-                double p_first_relapse_event =
+                const double p_first_relapse_event =
                     mat_imm_clin * params->p_relapse_one_a * exp(-params->p_relapse_one_b * (old_cum_inf - 1));
                 clinical_event = rng.bernoulli(p_first_relapse_event);
                 inf->set_had_relapse(clinical_event);
@@ -425,20 +425,20 @@ void WHVivax::update(Host::Human& human, LocalRng& rng, int& n_new_infs_i, int& 
             } else if (result.new_relapseb_bs) {
 
                 if (params->vivax_clin_option == "A1j" || params->vivax_clin_option == "A2j") {
-                    double p_first_relapse_event =
+                    const double p_first_relapse_event =
                         mat_imm_clin * params->p_relapse_one_a * exp(-params->p_relapse_one_b * (old_cum_inf - 1));
                     clinical_event = rng.bernoulli(p_first_relapse_event);
                     inf->set_had_relapse(clinical_event);
                 }
                 if (params->vivax_clin_option == "B1j" || params->vivax_clin_option == "B2j") {
-                    double p_second_relapse_event =
+                    const double p_second_relapse_event =
                         mat_imm_clin * params->p_relapse_two_a * exp(-params->p_relapse_two_b * (old_cum_inf - 1));
                     clinical_event = rng.bernoulli(p_second_relapse_event);
                     inf->set_had_relapse(clinical_event);
                 }
 
             } else {
-                double p_second_relapse_event =
+                const double p_second_relapse_event =
                     mat_imm_clin * params->p_relapse_two_a * exp(-params->p_relapse_two_b * (old_cum_inf - 1));
                 clinical_event = rng.bernoulli(p_second_relapse_event);
             }
@@ -521,7 +521,7 @@ bool WHVivax::treat_simple(Host::Human& human, SimTime time_liver, SimTime time_
         if ((hs.ignore_no_pq || !no_pq) &&
             (hs.effectiveness_pq == 1.0 || human.host_rng.bernoulli(hs.effectiveness_pq))) {
             if (time_liver >= Sim::zero()) {
-                treat_expiry_liver = max(int(treat_expiry_liver), Sim::now_or_ts1() + time_liver);
+                treat_expiry_liver = max(treat_expiry_liver, Sim::now_or_ts1() + time_liver);
             } else {
                 for (auto& infection : infections) {
                     infection.treatment_ls();
@@ -539,7 +539,7 @@ bool WHVivax::treat_simple(Host::Human& human, SimTime time_liver, SimTime time_
                 infection.treatment_bs();
             }
         } else {
-            treat_expiry_blood = max(int(treat_expiry_blood), Sim::now_or_ts1() + time_blood);
+            treat_expiry_blood = max(treat_expiry_blood, Sim::now_or_ts1() + time_blood);
         }
         return true; // blood stage treatment
     }
