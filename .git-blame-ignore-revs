@@ -26,3 +26,5 @@ c98ffe6f3cedd05bf22bb4bb93cc4dfdf908fc42
 6e96d1cf8a534e89aea02d382a9615127f4488bf
 # D3: option files safe modernize fix-its (util/style.sh modernize)
 efb5ad9daaa0da4f800ffd94ea875f1b98cd9ce6
+# D3: rename the all-caps option enumerators (by hand)
+b8df955e63941d358c0befb727337fbbba08cd2d
