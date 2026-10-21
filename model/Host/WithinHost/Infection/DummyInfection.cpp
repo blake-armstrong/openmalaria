@@ -38,7 +38,7 @@ bool DummyInfection::update_density(LocalRng& rng, double survival_factor, SimTi
     const double growth_rate = 8.0;
     const double parasite_threshold = 1;
 
-    density = (mod_nn(int(density * growth_rate), 20000)) * survival_factor;
+    density = (mod_nn(static_cast<int>(density * growth_rate), 20000)) * survival_factor;
     cum_exposure_j += density;
 
     if (density < parasite_threshold) {

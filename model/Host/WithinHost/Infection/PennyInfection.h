@@ -29,6 +29,8 @@
 #include "Host/WithinHost/Infection/CommonInfection.h"
 #include "util/ModelOptions.h"
 
+#include <array>
+
 class PennyInfectionSuite;
 
 namespace OM::WithinHost {
@@ -54,7 +56,7 @@ public:
 
     /** Get the density of sequestered parasites. */
     inline double seq_density(int age_days) {
-        size_t today_v = mod_nn(age_days, DeltaV);
+        const size_t today_v = mod_nn(age_days, DeltaV);
         return seq_densities[today_v];
     }
 
@@ -74,9 +76,9 @@ private:
 
     // Circulating densities, 1 to delta_C days ago.
     // index (age mod delta_C) corresponds to delta_C days ago.
-    double cir_densities[DeltaC]{};
+    std::array<double, DeltaC> cir_densities{};
     // as above, but length delta_V
-    double seq_densities[DeltaV]{};
+    std::array<double, DeltaV> seq_densities{};
 
     // threshold_N is critical threshold for innate immunity (for sigmoidal immune function)
     double threshold_n{};

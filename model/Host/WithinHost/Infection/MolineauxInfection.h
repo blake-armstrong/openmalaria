@@ -69,26 +69,21 @@ protected:
     void checkpoint(ostream& stream) override;
 
 private:
-    double get_variant_specific_summation(int i, double p_current);
-
     // Note: we also have inherited parameters:
-    // m_startDate is used to give the age here
-    // m_density is equivalent to Pc in paper
-    // m_cumulativeExposureJ is cumulative parasite density (used by external immunity function)
+    // start_date is used to give the age here
+    // density is equivalent to Pc in paper
+    // cum_exposure_j is cumulative parasite density (used by external immunity function)
 
-    float mi[V]{};        // base multiplication factor per two-day cycle of variant i
-    float sm_summation{}; // sum in eqn 7
+    std::array<float, V> mi{}; // base multiplication factor per two-day cycle of variant i
+    float sm_summation{};      // sum in eqn 7
     // index: we use ((bsAge/2) mod 4) for τ = t - δ_v respectively τ = t
-    float lagged_pc[Taus]{}; // Pc(τ) for τ ∈ {t - δ_v, ..., t - 2}
+    std::array<float, Taus> lagged_pc{}; // Pc(τ) for τ ∈ {t - δ_v, ..., t - 2}
     /* Pc_star, Pm_star: two host-specific critical densities.
      * These two values depend on the first local maximum or the difference
      * between the last positive day and the first positive day. */
     float pc_star{}, pm_star{};
 
     struct Variant {
-        // Initialise all variables to 0
-        Variant();
-
         /// Checkpointing
         void operator&(ostream& stream);
         void operator&(istream& stream);
@@ -96,7 +91,7 @@ private:
         float pi1{0.0}, pi2{0.0}; // Pi(t+1), Pi(t+2): variant's i density (PRBC/μl blood)
         float si_summation{0.0};  // sum in eqn 6
         // index: we use ((bsAge/2) mod 4) for τ = t - δ_v respectively τ = t
-        float lagged_pi[Taus]{}; // Pi(τ) for τ ∈ {t - δ_v, ..., t - 2}
+        std::array<float, Taus> lagged_pi{}; // Pi(τ) for τ ∈ {t - δ_v, ..., t - 2}
     };
     // variant-specific data; variants[i-1] corresponds to variant i in the paper
     vector<Variant> variants;

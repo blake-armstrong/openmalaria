@@ -61,11 +61,10 @@ protected:
 
 private:
     double get_inflated_density(LocalRng& rng, double non_inflated_density);
-    double sigma_noise(int age_days);
-    double sample_patent_value(LocalRng& rng, double mu, double sigma, double lower_bound);
-    double sample_sub_patent_value(LocalRng& rng, double mu, double sigma, double upper_bound);
+    double sigma_noise(size_t age_days);
+    double sample_sub_patent_value(LocalRng& rng, double alpha, double mu, double upper_bound);
 
-    double _laggedLogDensities[3]{};
+    std::array<double, 3> lagged_log_densities{};
     double patent_growth_rate_multiplier{};
 
     const EmpiricalInfectionParams* params;

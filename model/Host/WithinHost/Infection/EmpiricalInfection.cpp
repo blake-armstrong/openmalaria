@@ -45,7 +45,7 @@ EmpiricalInfectionParams::EmpiricalInfectionParams(const util::CommandLineOption
        */
       inflation_mean(1.09635), inflation_variance(0.172029), extinction_level(0.0100976), overall_multiplier(0.697581) {
     sub_patent_limit = 10.0 / overall_multiplier;
-    string fname = command_line.lookup_resource("autoRegressionParameters.csv");
+    const string fname = command_line.lookup_resource("autoRegressionParameters.csv");
     fstream f_auto_regression_parameters(fname.c_str(), ios::in);
     if (!f_auto_regression_parameters.is_open())
         throw base_exception(string("file not found: ").append(fname), util::Error::FileIO);
@@ -100,11 +100,11 @@ EmpiricalInfection::EmpiricalInfection(const EmpiricalInfectionParams& params, S
       params(&params) {
     //sample the parasite densities for the last 3 prepatent days
     //note that the lag decreases with time
-    _laggedLogDensities[0] = sample_sub_patent_value(rng, params.alpha1, params.mu1, log(params.sub_patent_limit));
-    _laggedLogDensities[1] = sample_sub_patent_value(rng, params.alpha2, params.mu2, log(params.sub_patent_limit));
-    _laggedLogDensities[2] = sample_sub_patent_value(rng, params.alpha3, params.mu3, log(params.sub_patent_limit));
+    lagged_log_densities[0] = sample_sub_patent_value(rng, params.alpha1, params.mu1, log(params.sub_patent_limit));
+    lagged_log_densities[1] = sample_sub_patent_value(rng, params.alpha2, params.mu2, log(params.sub_patent_limit));
+    lagged_log_densities[2] = sample_sub_patent_value(rng, params.alpha3, params.mu3, log(params.sub_patent_limit));
     //only the immediately preceding value is modified by the growth rate multiplier
-    _laggedLogDensities[0] += log(growth_rate_multiplier);
+    lagged_log_densities[0] += log(growth_rate_multiplier);
 }
 
 // -----  non-static class members (other functions)  -----
@@ -116,26 +116,26 @@ void EmpiricalInfection::set_patent_growth_rate_multiplier(double multiplier) {
 // NOTE: TS never provided a lot of documentation for this code.
 const int EiMaxSamples = 10;
 bool EmpiricalInfection::update_density(LocalRng& rng, double survival_factor, SimTime bs_age, double) {
-//to avoid the formula for the linear predictor being excessively long we introduce L for the lagged densities
-#define L _laggedLogDensities
+    //to avoid the formula for the linear predictor being excessively long we introduce lag for the lagged densities
+    const std::array<double, 3>& lag = lagged_log_densities;
 
-    if (bs_age >= MaximumDurationInDays || !(L[0] > -999999.9)) // Note: second test is extremely unlikely to fail
-        return true;                                            // cut-off point
+    if (bs_age >= MaximumDurationInDays || !(lag[0] > -999999.9)) // Note: second test is extremely unlikely to fail
+        return true;                                              // cut-off point
 
     // constraints to ensure the density is defined and not exploding
-    double upper_limit_of_log_density =
-        log(params->maximum_permitted_amplification_per_cycle * exp(L[1]) / params->inflation_mean);
+    const double upper_limit_of_log_density =
+        log(params->maximum_permitted_amplification_per_cycle * exp(lag[1]) / params->inflation_mean);
     double amplification_per_cycle = NAN;
     double local_density = NAN; // density before scaling by overall_multiplier
-    size_t age_days = bs_age;
+    const size_t age_days = bs_age;
     for (int tries0 = 0; tries0 < EiMaxSamples; ++tries0) {
         double log_density = NAN;
         for (int tries1 = 0; tries1 < EiMaxSamples; ++tries1) {
-            double b_1 = rng.gauss(params->mu_beta1[age_days], params->sigma_beta1[age_days]);
-            double b_2 = rng.gauss(params->mu_beta2[age_days], params->sigma_beta2[age_days]);
-            double b_3 = rng.gauss(params->mu_beta3[age_days], params->sigma_beta3[age_days]);
-            double expected_log_density =
-                b_1 * (L[0] + L[1] + L[2]) / 3 + b_2 * (L[2] - L[0]) / 2 + b_3 * (L[2] + L[0] - 2 * L[1]) / 4;
+            const double b_1 = rng.gauss(params->mu_beta1[age_days], params->sigma_beta1[age_days]);
+            const double b_2 = rng.gauss(params->mu_beta2[age_days], params->sigma_beta2[age_days]);
+            const double b_3 = rng.gauss(params->mu_beta3[age_days], params->sigma_beta3[age_days]);
+            const double expected_log_density = b_1 * (lag[0] + lag[1] + lag[2]) / 3 + b_2 * (lag[2] - lag[0]) / 2 +
+                                                b_3 * (lag[2] + lag[0] - 2 * lag[1]) / 4;
 
             //include sampling error
             log_density = rng.gauss(expected_log_density, sigma_noise(age_days));
@@ -157,17 +157,17 @@ bool EmpiricalInfection::update_density(LocalRng& rng, double survival_factor, S
             local_density = 0.0;
         }
 
-        amplification_per_cycle = local_density / exp(L[1]);
+        amplification_per_cycle = local_density / exp(lag[1]);
         if (local_density >= 0.0 && amplification_per_cycle <= params->maximum_permitted_amplification_per_cycle)
             break; // We're done. Hopefully usually with the first try.
     }
     if (!(local_density >= 0.0 &&
           amplification_per_cycle <= params->maximum_permitted_amplification_per_cycle)) // in case the above tries fail
-        local_density = params->maximum_permitted_amplification_per_cycle * exp(L[1]);
+        local_density = params->maximum_permitted_amplification_per_cycle * exp(lag[1]);
 
-    _laggedLogDensities[2] = _laggedLogDensities[1];
-    _laggedLogDensities[1] = _laggedLogDensities[0];
-    _laggedLogDensities[0] = log(local_density);
+    lagged_log_densities[2] = lagged_log_densities[1];
+    lagged_log_densities[1] = lagged_log_densities[0];
+    lagged_log_densities[0] = log(local_density);
 
     density = local_density;
     cum_exposure_j += density;
@@ -177,12 +177,11 @@ bool EmpiricalInfection::update_density(LocalRng& rng, double survival_factor, S
         return false; // Still parasites; infection didn't go extinct
     else
         return true; // parasites are extinct; infection will be removed from model
-#undef L
 }
 
 double EmpiricalInfection::sample_sub_patent_value(LocalRng& rng, double alpha, double mu, double upper_bound) {
-    double beta = alpha * (1.0 - mu) / mu;
-    double non_inflated_value = upper_bound + log(rng.beta(alpha, beta));
+    const double beta = alpha * (1.0 - mu) / mu;
+    const double non_inflated_value = upper_bound + log(rng.beta(alpha, beta));
     double inflated_value = NAN;
     int tries = 0;
     do {
@@ -194,22 +193,12 @@ double EmpiricalInfection::sample_sub_patent_value(LocalRng& rng, double alpha, 
     return inflated_value;
 }
 
-// NOTE: method is unused — why?
-double EmpiricalInfection::sample_patent_value(LocalRng& rng, double mu, double sigma, double lower_bound) {
-    double return_value = NAN;
-    do {
-        double non_inflated_value = rng.gauss(mu, sigma);
-        return_value = get_inflated_density(rng, non_inflated_value);
-    } while (return_value < lower_bound);
-    return return_value;
-}
-
-double EmpiricalInfection::sigma_noise(int age_days) {
-    return params->sigma0_res + params->sigmat_res * ((double)age_days);
+double EmpiricalInfection::sigma_noise(size_t age_days) {
+    return params->sigma0_res + params->sigmat_res * static_cast<double>(age_days);
 }
 
 double EmpiricalInfection::get_inflated_density(LocalRng& rng, double non_inflated_density) {
-    double inflated_log_density =
+    const double inflated_log_density =
         log(params->inflation_mean) + rng.gauss(non_inflated_density, sqrt(params->inflation_variance));
     return exp(inflated_log_density);
 }
@@ -227,16 +216,16 @@ void EmpiricalInfectionParams::override_inflation_factors(double inflation_mean,
 
 EmpiricalInfection::EmpiricalInfection(const EmpiricalInfectionParams& params, SimTime latent_p, istream& stream)
     : CommonInfection(latent_p, stream), params(&params) {
-    _laggedLogDensities[0] & stream;
-    _laggedLogDensities[1] & stream;
-    _laggedLogDensities[2] & stream;
+    lagged_log_densities[0] & stream;
+    lagged_log_densities[1] & stream;
+    lagged_log_densities[2] & stream;
     patent_growth_rate_multiplier & stream;
 }
 void EmpiricalInfection::checkpoint(ostream& stream) {
     CommonInfection::checkpoint(stream);
-    _laggedLogDensities[0] & stream;
-    _laggedLogDensities[1] & stream;
-    _laggedLogDensities[2] & stream;
+    lagged_log_densities[0] & stream;
+    lagged_log_densities[1] & stream;
+    lagged_log_densities[2] & stream;
     patent_growth_rate_multiplier & stream;
 }
 

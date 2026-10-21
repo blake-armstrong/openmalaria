@@ -84,7 +84,7 @@ const double ElimParasites = 50; // minimum number PRBC to avoid elimination of 
  * 
  * Indexing is 2*patient + param where 0 <= patient < 35 and 0 <= param < 2.
  */
-const double CaseSpecificData[] = {
+constexpr std::array<double, 70> CaseSpecificData = {
     216, 18600,  // G131
     198, 13080,  // G140
     206, 45720,  // G141
@@ -165,25 +165,21 @@ MolineauxInfectionParams::MolineauxInfectionParams(const Parameters& parameters,
 MolineauxInfection::MolineauxInfection(const MolineauxInfectionParams& params, SimTime latent_p, LocalRng& rng,
                                        uint32_t genotype, int origin)
     : CommonInfection(latent_p, genotype, origin), params(&params) {
-    for (float& i : mi) {
+    for (float& m : mi) {
         // Molineaux paper, equation 11
         if (params.multi_factor_gamma) {
             do {
-                i = static_cast<float>(rng.gamma(ShapeM, ScaleM));
-            } while (i < 1.0);
+                m = static_cast<float>(rng.gamma(ShapeM, ScaleM));
+            } while (m < 1.0);
         } else {
             do {
-                i = static_cast<float>(rng.gauss(MuM, SigmaM));
-            } while (i < 1.0);
+                m = static_cast<float>(rng.gauss(MuM, SigmaM));
+            } while (m < 1.0);
         }
     }
 
-    for (float& tau : lagged_pc) {
-        tau = 0.0;
-    }
-
     if (params.pairwise_p_star_sample) {
-        int patient = rng.uniform(35);
+        const int patient = rng.uniform(35);
         pc_star = static_cast<float>(KC * CaseSpecificData[2 * patient + 1]);
         pm_star = static_cast<float>(KM * CaseSpecificData[2 * patient + 0]);
     } else {
@@ -207,12 +203,6 @@ MolineauxInfection::MolineauxInfection(const MolineauxInfectionParams& params, S
     }
 }
 
-MolineauxInfection::Variant::Variant() {
-    for (float& tau : lagged_pi) {
-        tau = 0.0;
-    }
-}
-
 // ———  MolineauxInfection: density updates  ———
 
 bool MolineauxInfection::update_density(LocalRng&, double survival_factor, SimTime age_bs, double body_mass) {
@@ -220,11 +210,11 @@ bool MolineauxInfection::update_density(LocalRng&, double survival_factor, SimTi
     // paper, t=1 in MP's Matlab code), age 2 days is after first update step
     // survivalFactor : probabilty of merozoites surviving drugs, inter-infection immunity and vaccines
 
-    double blood_volume = BloodVolPerKg * body_mass;
-    double elim_dens = ElimParasites / blood_volume; // 50 / 5e6 = 5e-5
+    const double blood_volume = BloodVolPerKg * body_mass;
+    const double elim_dens = ElimParasites / blood_volume; // 50 / 5e6 = 5e-5
 
     // ———  1. Update m_density (Pc), Pi and related  ———
-    double pi[V] = {0.0f};
+    std::array<double, V> pi{};
 
     if (age_bs == Sim::zero()) {
         // The first variant starts with a pre-set density (regardless of blood
@@ -235,7 +225,7 @@ bool MolineauxInfection::update_density(LocalRng&, double survival_factor, SimTi
     } else {
         double sum = 0.0;
         for (size_t i = 0; i < variants.size(); i++) {
-            double new_p = survival_factor * variants[i].pi1;
+            const double new_p = survival_factor * variants[i].pi1;
             pi[i] = new_p;
             variants[i].pi1 = static_cast<float>(survival_factor * variants[i].pi2);
             sum += new_p;
@@ -253,7 +243,7 @@ bool MolineauxInfection::update_density(LocalRng&, double survival_factor, SimTi
     // Every other step (if bsAge is even) we calculate new densities (the
     // Molineaux model uses a 2-day step; we have simply added interpolation
     // for the interleaving densities). In other cases we are finished now.
-    if (mod_nn(int(age_bs), 2) != 0) {
+    if (mod_nn(age_bs, 2) != 0) {
         return false; // end of update, not extinct
     }
 
@@ -284,8 +274,8 @@ bool MolineauxInfection::update_density(LocalRng&, double survival_factor, SimTi
     const double sm = (1.0 - Beta) / (1.0 + sm_summation / pm_star) + Beta;
 
     // ———  4. variant-specific immune response (equation 6)  ———
-    double si[V];           // calculate value for each variant
-    double sum_qj_sj = 0.0; // simultaneously calculation summataion in equation 4
+    std::array<double, V> si{}; // calculate value for each variant
+    double sum_qj_sj = 0.0;     // simultaneously calculation summataion in equation 4
 
     for (size_t i = 0; i < V; i++) {
         if (i < variants.size()) {
@@ -317,7 +307,7 @@ bool MolineauxInfection::update_density(LocalRng&, double survival_factor, SimTi
 
         // 4.b) calculate P_i'(t+2) [eqn 1] then P_i(t+2) [eqn 2]
         // This is the growth rate after taking immune effect into account:
-        double growth_factor = mi[i] * si[i] * sc * sm; // part of eqn 1
+        const double growth_factor = mi[i] * si[i] * sc * sm; // part of eqn 1
         if (i < variants.size()) {
             // Pi_prime: the variant's density at time t+2 (eqn 1)
             double pi_prime = ((1.0 - S) * pi[i] + S * p_i * density) * growth_factor;
@@ -331,7 +321,7 @@ bool MolineauxInfection::update_density(LocalRng&, double survival_factor, SimTi
             // In this case P_i(τ) = 0 for all τ ≤ t, and we haven't allocated storage.
 
             // Pi_prime: the variant's density at time t+2 (eqn 1 in paper)
-            double pi_prime = (S * p_i * density) * growth_factor;
+            const double pi_prime = (S * p_i * density) * growth_factor;
 
             // Molineaux paper equation 2
             if (pi_prime >= elim_dens) { // [if not, P_i(t+2) = 0]
@@ -350,12 +340,12 @@ bool MolineauxInfection::update_density(LocalRng&, double survival_factor, SimTi
 MolineauxInfection::MolineauxInfection(const MolineauxInfectionParams& params, SimTime latent_p, istream& stream)
     : CommonInfection(latent_p, stream), params(&params) {
     sm_summation & stream;
-    for (float& i : mi) {
-        i & stream;
+    for (float& m : mi) {
+        m & stream;
     }
     variants & stream;
-    for (float& j : lagged_pc) {
-        j & stream;
+    for (float& pc : lagged_pc) {
+        pc & stream;
     }
     pc_star & stream;
     pm_star & stream;
@@ -365,12 +355,12 @@ void MolineauxInfection::checkpoint(ostream& stream) {
     CommonInfection::checkpoint(stream);
 
     sm_summation & stream;
-    for (float i : mi) {
-        i & stream;
+    for (const float m : mi) {
+        m & stream;
     }
     variants & stream;
-    for (float j : lagged_pc) {
-        j & stream;
+    for (const float pc : lagged_pc) {
+        pc & stream;
     }
     pc_star & stream;
     pm_star & stream;
@@ -383,23 +373,23 @@ void MolineauxInfection::Variant::operator&(istream& stream) {
         pi1 & stream;
         pi2 & stream;
         si_summation & stream;
-        for (float& i : lagged_pi) {
-            i & stream;
+        for (float& p : lagged_pi) {
+            p & stream;
         }
     }
     // else: all members are zero-initialised by the constructor, so don't do anything
 }
 
 void MolineauxInfection::Variant::operator&(ostream& stream) {
-    bool non_zero = pi1 != 0.0 || pi2 != 0.0 || si_summation != 0.0;
+    const bool non_zero = pi1 != 0.0 || pi2 != 0.0 || si_summation != 0.0;
 
     non_zero & stream;
     if (non_zero) {
         pi1 & stream;
         pi2 & stream;
         si_summation & stream;
-        for (float i : lagged_pi) {
-            i & stream;
+        for (const float p : lagged_pi) {
+            p & stream;
         }
     }
 }

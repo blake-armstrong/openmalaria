@@ -154,17 +154,10 @@ PennyInfection::PennyInfection(const PennyInfectionParams& params, SimTime laten
             threshold_v = exp(rng.gauss(MuTv, SigmaTv));
         } while (threshold_n <= threshold_c || threshold_n <= threshold_v);
     }
-
-    for (double& cir_densitie : cir_densities) {
-        cir_densitie = 0.0;
-    }
-    for (double& seq_densitie : seq_densities) {
-        seq_densitie = 0.0;
-    }
 }
 
 bool PennyInfection::update_density(LocalRng& rng, double survival_factor, SimTime bs_age, double) {
-    int age_days = bs_age; // lazy
+    const int age_days = bs_age; // lazy
     if (bs_age == Sim::zero()) {
         // assign initial densities (Y circulating, X sequestered)
         size_t today = mod_nn(age_days, DeltaC);
@@ -186,8 +179,8 @@ bool PennyInfection::update_density(LocalRng& rng, double survival_factor, SimTi
     } else /*not first day*/
     {
         // save yesterday's density (since getVariantSpecificSummation may reset it to zero)
-        size_t yesterday_v = mod_nn(age_days - 1, DeltaV);
-        double seq_density_yesterday = seq_densities[yesterday_v];
+        const size_t yesterday_v = mod_nn(age_days - 1, DeltaV);
+        const double seq_density_yesterday = seq_densities[yesterday_v];
 
         // The immune responses are represented by the variables
         // R_Nx, RNy (probability that a parasite escapes control by clonal immune response)
@@ -195,21 +188,21 @@ bool PennyInfection::update_density(LocalRng& rng, double survival_factor, SimTi
         // R_Vx,    (probability that a parasite escapes control by clonal immune response)
 
         // innate immunity
-        size_t yesterday_c = mod_nn(age_days - 1, DeltaC);
-        double base_n = cir_densities[yesterday_c] / threshold_n;
-        double base_npow = pow(base_n, KappaN);
-        double r_nx = (1.0 - BetaN) / (1.0 + base_npow) + BetaN;
-        double r_ny = (1.0 - PsiN) / (1.0 + base_npow) + PsiN;
+        const size_t yesterday_c = mod_nn(age_days - 1, DeltaC);
+        const double base_n = cir_densities[yesterday_c] / threshold_n;
+        const double base_npow = pow(base_n, KappaN);
+        const double r_nx = (1.0 - BetaN) / (1.0 + base_npow) + BetaN;
+        const double r_ny = (1.0 - PsiN) / (1.0 + base_npow) + PsiN;
 
         // clonal immunity
-        double base_c = get_clonal_summation(age_days) / threshold_c;
-        double base_cpow = pow(base_c, KappaC);
-        double r_cx = (1.0 - BetaC) / (1.0 + base_cpow) + BetaC;
-        double r_cy = (1.0 - PsiC) / (1.0 + base_cpow) + PsiC;
+        const double base_c = get_clonal_summation(age_days) / threshold_c;
+        const double base_cpow = pow(base_c, KappaC);
+        const double r_cx = (1.0 - BetaC) / (1.0 + base_cpow) + BetaC;
+        const double r_cy = (1.0 - PsiC) / (1.0 + base_cpow) + PsiC;
 
         // variant specific immunity
-        double base_v = get_variant_specific_summation(rng, age_days) / threshold_v;
-        double r_vx = (1.0 - BetaV) / (1.0 + pow(base_v, KappaV)) + BetaV;
+        const double base_v = get_variant_specific_summation(rng, age_days) / threshold_v;
+        const double r_vx = (1.0 - BetaV) / (1.0 + pow(base_v, KappaV)) + BetaV;
 
         // cirDensity: circulating density of circulating at t
         // seqDensity: sequestered density of circulating at t
@@ -227,8 +220,8 @@ bool PennyInfection::update_density(LocalRng& rng, double survival_factor, SimTi
         } else {
 
             if (params->update_density_gamma) {
-                double a_cir_dens = pow(log(cir_density_new), 2) / pow(SigmaEpsilon, 2);
-                double b_cir_dens = pow(SigmaEpsilon, 2) / log(cir_density_new);
+                const double a_cir_dens = pow(log(cir_density_new), 2) / pow(SigmaEpsilon, 2);
+                const double b_cir_dens = pow(SigmaEpsilon, 2) / log(cir_density_new);
                 cir_density_new = exp(rng.gamma(a_cir_dens, b_cir_dens)) * survival_factor;
             } else {
                 cir_density_new = exp(rng.gauss(log(cir_density_new), SigmaEpsilon)) * survival_factor;
@@ -247,11 +240,11 @@ bool PennyInfection::update_density(LocalRng& rng, double survival_factor, SimTi
             seq_density_new = 0.0;
         }
 
-        size_t today_c = mod_nn(age_days, DeltaC);
+        const size_t today_c = mod_nn(age_days, DeltaC);
         cir_densities[today_c] = cir_density_new;
         density = cir_densities[today_c];
 
-        size_t today_v = mod_nn(age_days, DeltaV);
+        const size_t today_v = mod_nn(age_days, DeltaV);
         seq_densities[today_v] = seq_density_new;
     }
 
@@ -264,17 +257,15 @@ bool PennyInfection::update_density(LocalRng& rng, double survival_factor, SimTi
 
 double PennyInfection::get_variant_specific_summation(LocalRng& rng, int age_days) {
     // check if new dominant variant has arrived
-    bool new_var_dominant = rng.bernoulli(ProbLambdaV);
+    const bool new_var_dominant = rng.bernoulli(ProbLambdaV);
     //draw from bernouli distrb, prob 1/lambda_V
     if (new_var_dominant) {
         variant_specific_summation = 0;
-        for (double& seq_densitie : seq_densities) {
-            seq_densitie = 0.0;
-        }
+        seq_densities.fill(0.0);
     }
     //The effective exposure is computed by adding in the delta_V-day lagged parasite density
     //and decaying the previous value for the effective exposure with decay parameter rho_V
-    size_t index = mod_nn(age_days, DeltaV);
+    const size_t index = mod_nn(age_days, DeltaV);
     variant_specific_summation = (variant_specific_summation * ExpNegRhoV) + seq_densities[index];
 
     return variant_specific_summation;
@@ -283,7 +274,7 @@ double PennyInfection::get_variant_specific_summation(LocalRng& rng, int age_day
 double PennyInfection::get_clonal_summation(int age_days) {
     //The effective exposure is computed by adding in the delta_C-day lagged parasite density
     //and decaying the previous value for the effective exposure with decay parameter rho_C
-    size_t index = mod_nn(age_days, DeltaC);
+    const size_t index = mod_nn(age_days, DeltaC);
     clonal_summation = (clonal_summation * ExpNegRhoC) + cir_densities[index];
 
     return clonal_summation;
@@ -291,11 +282,11 @@ double PennyInfection::get_clonal_summation(int age_days) {
 
 PennyInfection::PennyInfection(const PennyInfectionParams& params, SimTime latent_p, istream& stream)
     : CommonInfection(latent_p, stream), params(&params) {
-    for (double& cir_densitie : cir_densities) {
-        cir_densitie & stream;
+    for (double& cir : cir_densities) {
+        cir & stream;
     }
-    for (double& seq_densitie : seq_densities) {
-        seq_densitie & stream;
+    for (double& seq : seq_densities) {
+        seq & stream;
     }
     threshold_n & stream;
     threshold_v & stream;
@@ -306,11 +297,11 @@ PennyInfection::PennyInfection(const PennyInfectionParams& params, SimTime laten
 
 void PennyInfection::checkpoint(ostream& stream) {
     CommonInfection::checkpoint(stream);
-    for (double cir_densitie : cir_densities) {
-        cir_densitie & stream;
+    for (const double cir : cir_densities) {
+        cir & stream;
     }
-    for (double seq_densitie : seq_densities) {
-        seq_densitie & stream;
+    for (const double seq : seq_densities) {
+        seq & stream;
     }
     threshold_n & stream;
     threshold_v & stream;

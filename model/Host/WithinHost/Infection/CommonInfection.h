@@ -56,7 +56,7 @@ public:
      * @param body_mass Body mass of host in kg
      * @returns True when the infection goes extinct. */
     inline bool update(LocalRng& rng, double survival_factor, SimTime now, double body_mass) {
-        SimTime bs_age = now - start_date - latent_period(); // age of post-latent-period blood stage
+        const SimTime bs_age = now - start_date - latent_period(); // age of post-latent-period blood stage
         if (bs_age < Sim::zero())
             return false; // latent period (liver stage) — don't do anything
         else

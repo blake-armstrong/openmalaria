@@ -59,7 +59,7 @@ DescriptiveInfectionParams::DescriptiveInfectionParams(const Parameters& paramet
     x_nu_star = parameters[Parameter::XNuStar];
 
     // Read file empirical parasite densities
-    string densities_filename = command_line.lookup_resource("densities.csv");
+    const string densities_filename = command_line.lookup_resource("densities.csv");
     ifstream f_m_therapy_densities(densities_filename.c_str());
     if (!f_m_therapy_densities.good()) {
         throw util::base_exception(string("Cannot read ").append(densities_filename), util::Error::FileIO);
@@ -116,9 +116,9 @@ DescriptiveInfection::DescriptiveInfection(const DescriptiveInfectionParams& par
 
 SimTime DescriptiveInfection::infection_duration(LocalRng& rng) {
     // Forgive the excess precision; it just avoids having to update all expected results
-    double dur_mean = 5.1300001144409179688;
-    double dur_sigma = 0.80000001192092895508;
-    double dur = rng.log_normal(dur_mean, dur_sigma);
+    const double dur_mean = 5.1300001144409179688;
+    const double dur_sigma = 0.80000001192092895508;
+    const double dur = rng.log_normal(dur_mean, dur_sigma);
 
     //TODO:
     // Model did say infection is cleared on day dur+1 converted to a time-step
@@ -134,7 +134,7 @@ void DescriptiveInfection::determine_densities(LocalRng& rng, double cumulativeh
                                                double imm_surv_fact, double innate_imm_surv_fact, double bsv_factor) {
     // Age of patent blood stage infection. Note: liver stage is fixed at one
     // 5-day time step and prepatent blood stage is latentp - 1 time steps.
-    SimTime infage = Sim::ts0() - start_date - latent_period();
+    const SimTime infage = Sim::ts0() - start_date - latent_period();
     if (infage < Sim::zero()) {
         density = 0.0;
         if (params->bugfix_max_dens)
@@ -142,8 +142,8 @@ void DescriptiveInfection::determine_densities(LocalRng& rng, double cumulativeh
     } else {
         time_step_max_density = 0.0;
 
-        int32_t inf_age = min(Sim::in_steps(infage), MaxDurationTs);
-        int32_t inf_dur = min(Sim::in_steps(duration), MaxDurationTs);
+        const int32_t inf_age = min(Sim::in_steps(infage), MaxDurationTs);
+        const int32_t inf_dur = min(Sim::in_steps(duration), MaxDurationTs);
         density = max(params->mean_log_parasite_count[inf_age][inf_dur], 0.0);
 
         // The expected parasite density in the non naive host (AJTM p.9 eq. 9)
@@ -151,8 +151,8 @@ void DescriptiveInfection::determine_densities(LocalRng& rng, double cumulativeh
         density = density * imm_surv_fact;
 
         //Perturb m_density using a lognormal
-        double varlog = params->sigma0_sq / (1.0 + (cumulativeh / params->x_nu_star));
-        double stdlog = sqrt(varlog);
+        const double varlog = params->sigma0_sq / (1.0 + (cumulativeh / params->x_nu_star));
+        const double stdlog = sqrt(varlog);
 
         /*
         This code samples from a log normal distribution with mean equal to the predicted density
@@ -161,7 +161,7 @@ void DescriptiveInfection::determine_densities(LocalRng& rng, double cumulativeh
         */
         if (stdlog > 0.0000001) {
             // Calculate the expected density on the day of sampling:
-            double meanlog = density - stdlog * stdlog / 2.0;
+            const double meanlog = density - stdlog * stdlog / 2.0;
             density = rng.log_normal(meanlog, stdlog);
             // Calculate additional samples for T-1 days (T=days per step):
             if (true /*sim::oneTS() > 1, always true for this model*/) {
