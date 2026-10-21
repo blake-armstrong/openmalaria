@@ -25,7 +25,8 @@
 #include "util/errors.h"
 #include "schema/util.h"
 
-#include <sstream>
+#include <array>
+#include <format>
 #include <iostream>
 
 namespace OM::util {
@@ -93,17 +94,15 @@ public:
             return IGNORE;
         }
 
-        ostringstream msg;
-        if (s == "PENALISATION_EPISODES" || s == "ATTENUATION_ASEXUAL_DENSITY") {
-            msg << "Please use schema 31 or earlier to use option " << s << "; it is not available in later versions.";
-        } else if (s == "IPTI_SP_MODEL") {
-            msg << "The IPT model is no longer available. Use MDA instead.";
-        } else if (s == "REPORT_ONLY_AT_RISK") {
-            msg << "Option " << s << " has been replaced by <SurveyOptions onlyNewEpisode=\"true\">.";
-        } else {
-            msg << "Unrecognised model option: " << s;
-        }
-        throw xml_scenario_error(msg.str());
+        if (s == "PENALISATION_EPISODES" || s == "ATTENUATION_ASEXUAL_DENSITY")
+            throw xml_scenario_error(std::format(
+                "Please use schema 31 or earlier to use option {}; it is not available in later versions.", s));
+        if (s == "IPTI_SP_MODEL")
+            throw xml_scenario_error("The IPT model is no longer available. Use MDA instead.");
+        if (s == "REPORT_ONLY_AT_RISK")
+            throw xml_scenario_error(
+                std::format("Option {} has been replaced by <SurveyOptions onlyNewEpisode=\"true\">.", s));
+        throw xml_scenario_error(std::format("Unrecognised model option: {}", s));
     }
     // reverse-lookup in map; only used for error/debug printing so efficiency is unimportant
     // doesn't ensure code is unique in the map either
@@ -160,7 +159,7 @@ ModelOptionFlags::ModelOptionFlags(const scnXml::Model::ModelOptionsOptional& op
     if (options_elt.present()) {
         const scnXml::OptionSet::OptionSequence& opt_seq = options_elt.get().getOption();
         for (const auto& it : opt_seq) {
-            OptionCodes opt = code_map[it.getName()];
+            const OptionCodes opt = code_map[it.getName()];
             if (opt != IGNORE)
                 options[opt] = it.getValue();
         }
@@ -182,7 +181,7 @@ ModelOptionFlags::ModelOptionFlags(const scnXml::Model::ModelOptionsOptional& op
     // An incompatibility triangle, listing options incompatible with each option
     // Doesn't check required versions
     // Originally from "description of variables for interface" excel sheet
-    bitset<NumOptions> incompatibilities[NumOptions]; // all default to 0
+    std::array<bitset<NumOptions>, NumOptions> incompatibilities{};
 
     incompatibilities[NegativeBinomialMassAction]
         .set(LognormalMassAction)
@@ -243,15 +242,14 @@ ModelOptionFlags::ModelOptionFlags(const scnXml::Model::ModelOptionsOptional& op
 
     for (size_t i = 0; i < NumOptions; ++i) {
         if (options[i] && (options & incompatibilities[i]).any()) {
-            ostringstream msg;
-            msg << "Incompatible model options: " << code_map.to_string(OptionCodes(i)) << "=" << options[i]
-                << " is incompatible with flags:";
-            bitset<NumOptions> incompat = (options & incompatibilities[i]);
-            for (int j = 0; j < NumOptions; ++j) {
+            std::string msg = std::format("Incompatible model options: {}={:d} is incompatible with flags:",
+                                          code_map.to_string(OptionCodes(i)), options.test(i));
+            const bitset<NumOptions> incompat = (options & incompatibilities[i]);
+            for (size_t j = 0; j < NumOptions; ++j) {
                 if (incompat[j])
-                    msg << "\t" << code_map.to_string(OptionCodes(j)) << "=" << options[j];
+                    msg += std::format("\t{}={:d}", code_map.to_string(OptionCodes(j)), options.test(j));
             }
-            throw xml_scenario_error(msg.str());
+            throw xml_scenario_error(msg);
         }
     }
 
@@ -271,18 +269,14 @@ ModelOptionFlags::ModelOptionFlags(const scnXml::Model::ModelOptionsOptional& op
 
         for (size_t i = 0; i < NumOptions; ++i) {
             if (options[i] && require_one_day_ts[i]) {
-                ostringstream msg;
-                msg << "Model option " << code_map.to_string(OptionCodes(i))
-                    << " is only compatible with a 1-day time step.";
-                throw xml_scenario_error(msg.str());
+                throw xml_scenario_error(std::format("Model option {} is only compatible with a 1-day time step.",
+                                                     code_map.to_string(OptionCodes(i))));
             }
         }
     } else if (one_ts == Sim::from_days(1)) {
         // 1 day TS is also okay
     } else {
-        ostringstream msg;
-        msg << "Time step set to " << one_ts << " days but only 1 and 5 days are supported.";
-        throw xml_scenario_error(msg.str());
+        throw xml_scenario_error(std::format("Time step set to {} days but only 1 and 5 days are supported.", one_ts));
     }
 }
 

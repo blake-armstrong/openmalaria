@@ -182,8 +182,8 @@ public:
      */
     double operator[](Parameter name) const {
         // First check the parameter actually exists and has a value.
-        const bool param_has_a_value_set = name_to_value_map.at(name) != std::nullopt;
-        if (!param_has_a_value_set) {
+        const std::optional<double>& value = name_to_value_map.at(name);
+        if (!value.has_value()) {
             for (const std::pair<int, Parameter> pair : id_code_to_name_map()) {
                 if (pair.second == name) {
                     const int param_code = pair.first;
@@ -195,7 +195,7 @@ public:
                 "A parameter required by this simulation is missing a definition for its ID in C++ code.");
         }
 
-        return name_to_value_map.at(name).value();
+        return *value;
     }
 
 private:

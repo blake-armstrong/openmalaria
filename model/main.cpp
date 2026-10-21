@@ -57,7 +57,7 @@ int main(int argc, char* argv[]) {
     try {
         util::set_gsl_handler();
 
-        util::CommandLineOptions command_line = util::CommandLine::parse(argc, argv);
+        util::CommandLineOptions command_line = util::CommandLine::parse({argv, static_cast<size_t>(argc)});
         scenario_file = command_line.scenario_path();
         unique_ptr<scnXml::Scenario> scenario = util::loadScenario(scenario_file);
 

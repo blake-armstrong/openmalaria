@@ -29,16 +29,17 @@
 #include "util/version.h"
 
 #include <filesystem>
+#include <span>
 #include <sstream>
 #include <iostream>
 #include <cassert>
 
 namespace OM::util {
-string parseNextArg(int argc, char* argv[], int& i) {
+string parse_next_arg(std::span<char* const> args, size_t& i) {
     ++i;
-    if (i >= argc)
+    if (i >= args.size())
         throw cmd_exception("Expected an argument following the last option");
-    return string(argv[i]);
+    return args[i];
 }
 
 void resolve_output_name(string& name, CommandLine::OutputFormat format, bool compressed) {
@@ -55,19 +56,14 @@ void resolve_output_name(string& name, CommandLine::OutputFormat format, bool co
 }
 
 string CommandLineOptions::lookup_resource(const string& path) const {
-    string ret;
-    if (path.size() >= 1 && path[0] == '/') {
-        // UNIX absolute path
-    } else if (path.size() >= 3 && path[1] == ':' && (path[2] == '\\' || path[2] == '/')) {
-        // Windows absolute path.. at least probably
-    } else { // relative
-        ret = resource_path;
-    }
-    ret.append(path);
-    return ret;
+    const bool unix_absolute = path.starts_with('/');
+    const bool windows_absolute = path.size() >= 3 && path[1] == ':' && (path[2] == '\\' || path[2] == '/');
+    if (unix_absolute || windows_absolute)
+        return path;
+    return resource_path + path;
 }
 
-CommandLineOptions CommandLine::parse(int argc, char* argv[]) {
+CommandLineOptions CommandLine::parse(std::span<char* const> args) {
     CommandLineOptions result;
     bool clo_help = false, clo_version = false, clo_error = false;
     string scenario_file = "";
@@ -80,11 +76,11 @@ CommandLineOptions CommandLine::parse(int argc, char* argv[]) {
 
     /* Simple command line parser. Seems to work fine.
 	* If an extension is wanted, http://tclap.sourceforge.net/ looks good. */
-    for (int i = 1; i < argc; ++i) {
-        string clo = argv[i];
+    for (size_t i = 1; i < args.size(); ++i) {
+        string clo = args[i];
 
         // starts "--"
-        if (clo.size() >= 2 && *clo.data() == '-' && clo.data()[1] == '-') {
+        if (clo.starts_with("--")) {
             clo.assign(clo, 2, clo.size() - 2);
             if (clo == "verbose") {
                 result.flags.set(VERBOSE);
@@ -93,19 +89,19 @@ CommandLineOptions CommandLine::parse(int argc, char* argv[]) {
             } else if (clo == "resource-path") {
                 if (result.resource_path.size())
                     throw cmd_exception("--resource-path (or -p) may only be given once");
-                result.resource_path = parseNextArg(argc, argv, i).append("/");
+                result.resource_path = parse_next_arg(args, i).append("/");
             } else if (clo == "scenario") {
                 if (scenario_file != "") {
                     throw cmd_exception("--scenario argument may only be given once");
                 }
-                scenario_file = parseNextArg(argc, argv, i);
+                scenario_file = parse_next_arg(args, i);
             } else if (clo == "output") {
                 if (result.output != "") {
                     throw cmd_exception("--output argument may only be given once");
                 }
-                result.output = parseNextArg(argc, argv, i);
+                result.output = parse_next_arg(args, i);
             } else if (clo == "output-format") {
-                string format = parseNextArg(argc, argv, i);
+                const string format = parse_next_arg(args, i);
                 if (format == "txt") {
                     result.format = OutputFormat::TXT;
                 } else if (format == "bin") {
@@ -119,12 +115,12 @@ CommandLineOptions CommandLine::parse(int argc, char* argv[]) {
                 if (result.ctsout != "") {
                     throw cmd_exception("--ctsout argument may only be given once");
                 }
-                result.ctsout = parseNextArg(argc, argv, i);
+                result.ctsout = parse_next_arg(args, i);
             } else if (clo == "name") {
                 if (result.ctsout != "" || result.output != "" || scenario_file != "") {
                     throw cmd_exception("--name may not be used along with --scenario, --output or --ctsout");
                 }
-                string name = parseNextArg(argc, argv, i);
+                const string name = parse_next_arg(args, i);
                 (scenario_file = "scenario").append(name).append(".xml");
                 (result.output = "output").append(name);
                 (result.ctsout = "ctsout").append(name).append(".txt");
@@ -157,7 +153,7 @@ CommandLineOptions CommandLine::parse(int argc, char* argv[]) {
                     throw cmd_exception("--checkpoint-file argument may only be given once");
                 }
                 result.flags.set(CHECKPOINT);
-                result.checkpoint_file = parseNextArg(argc, argv, i);
+                result.checkpoint_file = parse_next_arg(args, i);
             } else if (clo == "checkpoint-stop") {
                 result.flags.set(CHECKPOINT);
                 result.flags.set(CheckpointStop);
@@ -167,7 +163,7 @@ CommandLineOptions CommandLine::parse(int argc, char* argv[]) {
             } else if (clo == "stream-validator") {
                 if (sVFile.size())
                     throw cmd_exception("--stream-validator may only be given once");
-                sVFile = parseNextArg(argc, argv, i);
+                sVFile = parse_next_arg(args, i);
 #endif
             } else if (clo == "version") {
                 clo_version = true;
@@ -177,7 +173,7 @@ CommandLineOptions CommandLine::parse(int argc, char* argv[]) {
                 cerr << "Unrecognised command-line option: --" << clo << endl;
                 clo_error = true;
             }
-        } else if (clo.size() >= 1 && *clo.data() == '-') { // single - (not --)
+        } else if (clo.starts_with('-')) { // single - (not --)
             for (size_t j = 1; j < clo.size(); ++j) {
                 if (clo[j] == 'V') {
                     result.flags.set(VERBOSE);
@@ -186,7 +182,7 @@ CommandLineOptions CommandLine::parse(int argc, char* argv[]) {
                         throw cmd_exception("a path must be given as next argument after -p");
                     if (result.resource_path.size())
                         throw cmd_exception("--resource-path (or -p) may only be given once");
-                    result.resource_path = parseNextArg(argc, argv, i).append("/");
+                    result.resource_path = parse_next_arg(args, i).append("/");
                 } else if (clo[j] == 'm') {
                     result.flags.set(PrintModelOptions);
                     result.flags.set(SkipSimulation);
@@ -194,17 +190,17 @@ CommandLineOptions CommandLine::parse(int argc, char* argv[]) {
                     if (scenario_file != "") {
                         throw cmd_exception("-s argument may only be given once");
                     }
-                    scenario_file = parseNextArg(argc, argv, i);
+                    scenario_file = parse_next_arg(args, i);
                 } else if (clo[j] == 'o') {
                     if (result.output != "") {
                         throw cmd_exception("-o argument may only be given once");
                     }
-                    result.output = parseNextArg(argc, argv, i);
+                    result.output = parse_next_arg(args, i);
                 } else if (clo[j] == 'n') {
                     if (result.ctsout != "" || result.output != "" || scenario_file != "") {
                         throw cmd_exception("--name may not be used along with --scenario, --output or --ctsout");
                     }
-                    string name = parseNextArg(argc, argv, i);
+                    const string name = parse_next_arg(args, i);
                     (scenario_file = "scenario").append(name).append(".xml");
                     (result.output = "output").append(name);
                     (result.ctsout = "ctsout").append(name).append(".txt");
@@ -249,7 +245,7 @@ CommandLineOptions CommandLine::parse(int argc, char* argv[]) {
     }
 
     if (clo_help || clo_error) {
-        cerr << "Usage: " << argv[0] << " [options]" << endl
+        cerr << "Usage: " << args[0] << " [options]" << endl // NOLINT(performance-avoid-endl)
              << endl
              << "Options:" << endl
              << " -V --verbose		Verbose output" << endl

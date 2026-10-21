@@ -30,6 +30,7 @@
 #include <cassert>
 #include <iosfwd>
 #include <limits>
+#include <span>
 using namespace std;
 
 namespace OM {
@@ -83,7 +84,7 @@ public:
 	*
 	* Throws cmd_exit in the case a help message is printed. Help
 	* is printed to cout. */
-    static CommandLineOptions parse(int argc, char* argv[]);
+    static CommandLineOptions parse(std::span<char* const> args);
 
     /** Return true if given option (from CommandLine::Options) is active. */
     static bool option(size_t code);
@@ -98,9 +99,6 @@ public:
 
     /** Get the name of the ctsout file. */
     static string ctsout_name();
-
-    /** Get the name of the checkpoint file. */
-    static string checkpoint_name();
 };
 
 class CommandLineOptions {
@@ -162,7 +160,6 @@ inline string CommandLine::lookup_resource(const string& path) { return bridge::
 inline string CommandLine::output_name() { return bridge::command_line().output_name(); }
 inline CommandLine::OutputFormat CommandLine::output_format() { return bridge::command_line().output_format(); }
 inline string CommandLine::ctsout_name() { return bridge::command_line().ctsout_name(); }
-inline string CommandLine::checkpoint_name() { return bridge::command_line().checkpoint_name(); }
 }
 }
 #endif
