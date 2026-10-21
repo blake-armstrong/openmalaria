@@ -20,6 +20,9 @@ CODE_NOISE_RE = re.compile(r'//[^\n]*|/\*.*?\*/|"(?:\\.|[^"\\\n])*"|\'(?:\\.|[^\
 CODE_NOISE_BYTES_RE = re.compile(CODE_NOISE_RE.pattern.encode(), re.DOTALL)
 DIRECTIVE_RE = re.compile(rb"^[ \t]*#[^\n]*", re.MULTILINE)
 NAMESPACE_DECL_RE = re.compile(r"\bnamespace\s+([A-Za-z_]\w*(?:\s*::\s*(?:inline\s+)?[A-Za-z_]\w*)*)\s*\{")
+CLASS_DEF_RE = re.compile(rb"\b(?:class|struct)\s+([A-Za-z_]\w*)\s*(?:final\s*)?(?:\{|:(?!:))")
+CLASS_BASES_RE = re.compile(rb"\b(?:class|struct)\s+([A-Za-z_]\w*)\s*(?:final\s*)?:(?!:)([^{;]*)\{")
+BASE_KEYWORDS = {b"public", b"protected", b"private", b"virtual"}
 TOKEN_RE = re.compile(r"[A-Za-z_]\w*|\d[\w.]*|\S")
 LOCAL_KINDS = {"parameter", "local constant", "local variable", "constant parameter"}
 MEMBER_KINDS = (
@@ -239,9 +242,20 @@ class Renamer:
     def add_textual_uses(self, entries):
         sources = {path: self.code_bytes(path) for path in self.tree_files()}
         classes = set()
+        bases = collections.defaultdict(set)
         for path, (_, code) in sources.items():
             if self.in_module(path):
-                classes.update(m.decode() for m in re.findall(rb"\b(?:class|struct)\s+([A-Za-z_]\w*)", code))
+                classes.update(m.decode() for m in CLASS_DEF_RE.findall(code))
+            for m in CLASS_BASES_RE.finditer(code):
+                names = re.findall(rb"[A-Za-z_]\w*(?=\s*(?:<[^>]*>)?\s*(?:,|$))", m.group(2).strip())
+                bases[m.group(1).decode()].update(n.decode() for n in names if n not in BASE_KEYWORDS)
+        derived = set(classes)
+        while True:
+            more = {cls for cls, parents in bases.items() if cls not in derived and parents & derived}
+            if not more:
+                break
+            derived |= more
+        classes = derived
         qualifier = b"|".join(re.escape(c.encode()) for c in sorted(classes))
         for e in entries:
             old = re.escape(e["old"].encode())
