@@ -34,3 +34,5 @@ b8df955e63941d358c0befb727337fbbba08cd2d
 89a7167b4800298a110586aab7d4014ea94d162a
 # D4b: rename model/Host/WithinHost/Infection identifiers (util/style.sh rename)
 4db8261740365bedcbe14e3c8ceeb34c671fedc3
+# D4b: model/Host/WithinHost/Infection safe modernize fix-its (util/style.sh modernize)
+808c0e48a0d682f8a2487a26ce96ff2c3a4db3e1
