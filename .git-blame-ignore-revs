@@ -44,3 +44,5 @@ f511b38927e557bfacad559dabe66818a16dd2e8
 e53617abd5e7652c744891a68c701e202e31f5d2
 # D4d: rename Genotypes, Diagnostic and Treatments identifiers (util/style.sh rename)
 85edc7ef21c151364a4ef39b51c3a4f858c519d9
+# D4d: Genotypes, Diagnostic and Treatments safe modernize fix-its (util/style.sh modernize)
+e67dbef97fb988c33e2f30416cd5afe3d2284415
