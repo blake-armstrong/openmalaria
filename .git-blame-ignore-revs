@@ -28,3 +28,5 @@ c98ffe6f3cedd05bf22bb4bb93cc4dfdf908fc42
 efb5ad9daaa0da4f800ffd94ea875f1b98cd9ce6
 # D3: rename the all-caps option enumerators (by hand)
 b8df955e63941d358c0befb727337fbbba08cd2d
+# D4a: rename the falciparum within-host files' identifiers (util/style.sh rename)
+06ddff713813398b43767f68efcb54d5ea67845a
