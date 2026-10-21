@@ -26,7 +26,7 @@ See `PLAN.md` for the session protocol, chunks and gates. Append one log entry p
 | C2 | done | 20e8bf39, (this log entry) |
 | D1 | done | 2e2cac5a, 72e14d9c, bda40963, 4252cba1, 1a0c0b58, 48d3476c, 186d32f5, 21e09c0d, (this log entry) |
 | D2 | done | 61fe9993, c98ffe6f, db1c50b1, 0808f323, fdd69348, 82e3c602, (this log entry) |
-| D2b | in progress | |
+| D2b | done | 33185613, 9447ccf7, 1647ef78, (this log entry) |
 | D3 | todo | |
 | D4 | todo | |
 | D5 | todo | |
@@ -749,8 +749,33 @@ See `PLAN.md` for the session protocol, chunks and gates. Append one log entry p
 - Follow-ups: D2b needs Decision 1 and regenerates all references again; F34 for whoever touches `run.py`; D7's rename should resolve `calculateEIR`'s `EIR_i`/`EIR_l` against its locals `eir_i`/`eir_l`.
 - Next: D2b (recommended order 11). **Ask the user Decision 1 first.**
 
-### D2b: Split into per-purpose RNG streams (in progress, 2026-10-21)
+### D2b: Split into per-purpose RNG streams (done, 2026-10-21)
 - Base: ed1222d1.
 - **Decision 1 (asked at the start of this chunk): only chunks whose purpose is to change draws (D2b, M4, M8)** may rely on G-stat instead of G-exact.
 - **Stream design, agreed with the user:** separate population and transmission master streams; four per-human streams (host, clinical, intervention, monitoring). See the D2b row in PLAN.md.
 - **Regeneration, agreed with the user:** keep the 51 statistical references (D2b is checked against them); regenerate `test/expected/` at the end of D2b, and again after M4.
+- Commits:
+  - 33185613: Decision 1 and the agreed design in PLAN.md and here.
+  - 9447ccf7: **logic, changes draws on purpose.** `util::MasterRngs` (in `random.h`) holds a population master (ChaCha stream 0), which seeds every `Human`, and a transmission master (ChaCha stream 1), which seeds `VectorModel`. The bridge became `bridge::current_master_rngs`/`master_rngs()` with `MasterRngsBinding`. Each `Human` has `host_rng`, `clinical_rng`, `intervention_rng` and `monitoring_rng` (seeded in that order) in place of `rng`. Call sites by stream:
+    - host: heterogeneity, `WHInterface` creation, infection incidence, within-host update and infections, vaccine factor on new infections, pathogenesis, imported infections, drug effectiveness (`WHVivax::treatSimple`, PQ effectiveness).
+    - clinical: `ClinicalModel` neonatal death, `CM5DayCommon`, `DecisionTree5Day`, `EventScheduler`, `ImmediateOutcomes`, neonatal mortality's maternal prevalence diagnostic, vivax PQ receipt.
+    - intervention: `Deployments.h` coverage, `HumanInterventionComponents` (coverage, screening), ITN/IRS/GVI deployment, ITN holes, vaccine sampling.
+    - monitoring: `summarize`'s monitoring diagnostics in `CommonWithinHost`/`DescriptiveWithinHost`, ctsout `patent hosts`.
+    - `CMHostData` now carries the stream to draw from (`rng`), so a decision tree draws from the clinical stream when case management runs it and from the intervention stream when an intervention does.
+    - Checkpoints hold both masters and the four per-human streams, so a checkpoint from before D2b won't load.
+    - Style on the touched lines: a few locals to snake_case; `NOLINT` for `Human`'s four public streams (encapsulating `Human` is F6's) and for `CMHostData::rng`, a reference like its `human`; `Deployments.h` made self-contained (`using Host::Human`).
+  - 1647ef78: `test/expected` for all 51 scenarios, from plain runs at 9447ccf7 (`run.py -C`, `-j 4`); all exited 0 with the same rows as before. The commit message has the per-scenario table. The largest single-run moves come from old runs in the tails: against the reference mean the old runs reach |z| 6.0, the new ones at most 3.3 (both ModelNameModelOptionOverrides mean EIR, 10 people).
+- Gates:
+  - G-unit: CxxTest and Catch2 pass unchanged after 9447ccf7 (`CMDecisionTreeSuite` draws from the clinical stream now; F30 unaffected).
+  - G-stat against the **unchanged** references, at 9447ccf7: `ctest -L statistical` 51/51 `stat_*` (+2 tool tests); `ctest -C full -L statistical-full -j1` 51/51 in 434 s. The binary was rebuilt mid-run with a renames-only change, so it was rerun on the final binary: 51/51 again in 435 s.
+  - G-exact after 1647ef78: plain `ctest -j4` 106/106 (53 old incl. checkpoint stop/resume, 51 `stat_*`, 2 tool tests) on `build-rework/`; 53/53 `-LE statistical` on `build-debug/` (bridge asserts live).
+  - G-style: `util/style.sh check 33185613` clean.
+  - G-perf: `util/bench.sh --compare ../om-bench-base/build-rework` (base worktree moved to ed1222d1 and rebuilt): median per-pair ratio 1.0018 (+0.18%), base spread 2.8%, candidate 1.0%.
+- Findings: F38 new and settled (monitoring and interventions drew from the same per-person stream as infections).
+- Surprises: none in the gates. The per-human state grows by three Xoshiro RNGs (~100 bytes each, most of it the per-instance GSL adapter) with no measurable cost.
+- Follow-ups:
+  - M4 (next) changes draws again and regenerates `test/expected` once more.
+  - M8's counter-based streams can key on these four purposes plus (human, step).
+  - D7: `VectorModel` should take `MasterRngs::transmission` by injection instead of the bridge; whoever takes `Population`/`Human` (or D9) likewise for `population`.
+  - The S5/S6/V1 replicate dirs (`/Users/blaarm/git/om-s5`, `build-rework/stats-s6/`, `build-rework/stats-v1/`) were kept until D2b; the references stayed, so they are still the data behind them. Ask the user whether to remove them.
+- Next: M4 (recommended order 11).
