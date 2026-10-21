@@ -72,7 +72,7 @@ The work is split into **small, self-contained chunks**. Each chunk fits in one 
 
 | Gate | Command / check | Available from |
 |---|---|---|
-| **G-exact** | `ctest` in the build dir (or `./build.sh -t`): every existing scenario, including checkpoint-stop/resume, is byte-identical to `test/expected/` | A2 |
+| **G-exact** | `ctest` in a build dir configured with `-DOM_BOXTEST_STRICT=ON`: every scenario, including checkpoint-stop/resume, gives `output.txt` and `ctsout.txt` byte-identical to `test/expected/`. Without that option `run.py` accepts values within 1e-6 and ctsout column sums within 1e-6 (F49), which is not this gate | A2 (strict since b7b057e1, after D4c) |
 | **G-unit** | the CxxTest suites in `unittest/` pass | A2 |
 | **G-style** | `OM_BUILD_DIR=build-rework util/style.sh check <chunk's base commit>`: `git-clang-format --diff` and `clang-tidy-diff` report nothing on changed lines (see `docs/refactor/STYLE.md`) | B1 |
 | **G-perf** | `OM_BUILD_DIR=build-rework util/bench.sh --compare <base build>`, where the base build is the chunk's base commit configured the same way (recipe in `util/bench.sh -h`): the median per-pair candidate/base wall-time ratio is ≤ 1.03. The stored baseline in `PROGRESS.md` is a sanity check only | P1 |
@@ -131,6 +131,8 @@ The dependency graph allows many orders. Follow this one unless the user says ot
 
 Practical notes for every chunk:
 - Use `build-rework/` as the build dir (see the A2 entry in `PROGRESS.md`). Set `OM_BUILD_DIR=build-rework` for `util/style.sh`.
+- `build-rework/` and `build-debug/` are configured with `-DOM_BOXTEST_STRICT=ON` (G-exact). A new build dir needs it too; check with `grep -c -- --strict <build>/test/CTestTestfile.cmake` (one per scenario).
+- A chunk that changes behaviour ctest cannot see (error paths, stderr, checkpoint bytes, model paths no scenario reaches) adds variants to `util/ab_scenarios.py` and runs it against the base build, or adds a scenario test whose expected output comes from the base build.
 - Wrap long `ctest` or benchmark runs in `caffeinate -i`. During B1, idle sleep stalled a test run for 990 s.
 - Commit each logical step as it lands, in its own small commit, not one commit per chunk.
 
@@ -603,7 +605,7 @@ Licence notes: OpenMalaria is GPL-2.0-or-later. MIT, BSD, BSL and MPL-2.0 code m
 - **Rename churn.** Renames happen per module, in separate commits made by tools.
 
 ## Open decisions (ask the user before the chunk that needs them)
-1. **Before D2b:** which changes may give up byte-for-byte equality and rely on G-stat instead? (Recommended: only chunks whose purpose is to change draw order.) **Answered (2026-10-21): only chunks whose purpose is to change draws: D2b, M4, M8.** Every other chunk, M5/M6 included, stays G-exact.
+1. **Before D2b:** which changes may give up byte-for-byte equality and rely on G-stat instead? (Recommended: only chunks whose purpose is to change draw order.) **Answered (2026-10-21): only chunks whose purpose is to change draws: D2b, M4, M8.** Every other chunk, M5/M6 included, stays G-exact. Since G-exact became byte-exact (b7b057e1), a library swap in M5/M6 will likely differ in the last bits even with the same draws; if it does, bring it back to the user before M5 rather than loosening the check.
 2. **Before H1:** are Python bindings a primary goal? If so, move stage J to directly after H2.
 3. **Before E1:** does XML stay the primary user format, or is YAML/JSON or Python-built config added?
 4. **Before I2:** must the existing CLI flags stay backward compatible, and for how long?
