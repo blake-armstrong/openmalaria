@@ -92,6 +92,8 @@ public:
     WHInterface() = default;
     virtual ~WHInterface() = default;
 
+    WHInterface(const WHInterface&) = delete;
+    WHInterface& operator=(const WHInterface&) = delete;
     WHInterface(WHInterface&&) = default;
     WHInterface& operator=(WHInterface&&) = default;
 

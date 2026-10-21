@@ -78,32 +78,24 @@ CommonWithinHost::CommonWithinHost(const FalciparumParams& params, const CommonW
     } while (het_mass_multiplier < common_params.min_het_mass_mult);
 }
 
-CommonWithinHost::~CommonWithinHost() {
-    for (auto& infection : infections) {
-        delete infection;
-    }
-    infections.clear();
-}
-
 // -----  Simple infection adders/removers  -----
 
 void CommonWithinHost::clear_infections(Treatments::Stages stage) {
     for (auto inf = infections.begin(); inf != infections.end();) {
         if (stage == Treatments::BOTH || (stage == Treatments::LIVER && !(*inf)->bloodStage()) ||
             (stage == Treatments::BLOOD && (*inf)->bloodStage())) {
-            delete *inf;
             inf = infections.erase(inf);
         } else {
             ++inf;
         }
     }
-    num_infs = infections.size();
+    num_infs = static_cast<int>(infections.size());
 }
 
 // -----  interventions -----
 
 void CommonWithinHost::treat_pk_pd(size_t schedule, size_t dosage, double age, double delay_d) {
-    double mass = common_params->mass_by_age.eval(age) * het_mass_multiplier;
+    const double mass = common_params->mass_by_age.eval(age) * het_mass_multiplier;
     pkpd_model.prescribe(schedule, dosage, age, mass, delay_d);
 }
 void CommonWithinHost::clear_immunity() {
@@ -120,8 +112,8 @@ void CommonWithinHost::import_infection(LocalRng& rng) {
         // This is a hook, used by interventions. The newly imported infections
         // should use initial frequencies to select genotypes.
         vector<double> weights(0); // zero length: signal to use initial frequencies
-        uint32_t genotype = Genotypes::sampleGenotype(rng, weights);
-        infections.push_back(create_infection(rng, genotype, WithinHost::InfectionOrigin::Imported));
+        const uint32_t genotype = Genotypes::sampleGenotype(rng, weights);
+        infections.emplace_back(create_infection(rng, genotype, WithinHost::InfectionOrigin::Imported));
     }
     assert(num_infs == static_cast<int>(infections.size()));
 }
@@ -136,23 +128,23 @@ void CommonWithinHost::update(Host::Human& human, LocalRng& rng, int& n_new_infs
     n_new_infs_l = min(n_new_infs_l, MaxInfections - num_infs);
     n_new_infs_i = min(n_new_infs_i, MaxInfections - num_infs - n_new_infs_l);
 
-    int n_new_infs_ignored = n_new_infs_i + n_new_infs_l - (MaxInfections - num_infs);
+    const int n_new_infs_ignored = n_new_infs_i + n_new_infs_l - (MaxInfections - num_infs);
 
     assert(num_infs >= 0 && num_infs <= MaxInfections);
 
     int n_new_infs_discarded = 0;
     for (int i = 0; i < n_new_infs_i; ++i) {
-        uint32_t genotype = Genotypes::sampleGenotype(rng, genotype_weights_i);
+        const uint32_t genotype = Genotypes::sampleGenotype(rng, genotype_weights_i);
 
         // If opt_vaccine_genotype is true the infection is discarded with probability 1-vaccineFactor
         if (opt_vaccine_genotype) {
-            double vaccine_factor = human.vaccine.getFactor(interventions::Vaccine::PEV, genotype);
+            const double vaccine_factor = human.vaccine.getFactor(interventions::Vaccine::PEV, genotype);
             if (vaccine_factor == 1.0 || human.host_rng.bernoulli(vaccine_factor))
-                infections.push_back(create_infection(rng, genotype, InfectionOrigin::Introduced));
+                infections.emplace_back(create_infection(rng, genotype, InfectionOrigin::Introduced));
             else
                 n_new_infs_discarded++;
         } else if (opt_vaccine_genotype == false)
-            infections.push_back(create_infection(rng, genotype, InfectionOrigin::Introduced));
+            infections.emplace_back(create_infection(rng, genotype, InfectionOrigin::Introduced));
     }
     // Update nNewInfs, this is the number that will be reported in Human
     n_new_infs_i -= n_new_infs_discarded;
@@ -160,17 +152,17 @@ void CommonWithinHost::update(Host::Human& human, LocalRng& rng, int& n_new_infs
 
     n_new_infs_discarded = 0;
     for (int i = 0; i < n_new_infs_l; ++i) {
-        uint32_t genotype = Genotypes::sampleGenotype(rng, genotype_weights_l);
+        const uint32_t genotype = Genotypes::sampleGenotype(rng, genotype_weights_l);
 
         // If opt_vaccine_genotype is true the infection is discarded with probability 1-vaccineFactor
         if (opt_vaccine_genotype) {
-            double vaccine_factor = human.vaccine.getFactor(interventions::Vaccine::PEV, genotype);
+            const double vaccine_factor = human.vaccine.getFactor(interventions::Vaccine::PEV, genotype);
             if (vaccine_factor == 1.0 || human.host_rng.bernoulli(vaccine_factor))
-                infections.push_back(create_infection(rng, genotype, InfectionOrigin::Indigenous));
+                infections.emplace_back(create_infection(rng, genotype, InfectionOrigin::Indigenous));
             else
                 n_new_infs_discarded++;
         } else if (opt_vaccine_genotype == false)
-            infections.push_back(create_infection(rng, genotype, InfectionOrigin::Indigenous));
+            infections.emplace_back(create_infection(rng, genotype, InfectionOrigin::Indigenous));
     }
     // Update nNewInfs, this is the number that will be reported in Human
     n_new_infs_l -= n_new_infs_discarded;
@@ -184,10 +176,10 @@ void CommonWithinHost::update(Host::Human& human, LocalRng& rng, int& n_new_infs
     hrp2_density = 0.0;
     time_step_max_density = 0.0;
 
-    bool treatment_liver = treat_expiry_liver > Sim::ts0();
-    bool treatment_blood = treat_expiry_blood > Sim::ts0();
+    const bool treatment_liver = treat_expiry_liver > Sim::ts0();
+    const bool treatment_blood = treat_expiry_blood > Sim::ts0();
 
-    double body_mass = common_params->mass_by_age.eval(age_in_years) * het_mass_multiplier;
+    const double body_mass = common_params->mass_by_age.eval(age_in_years) * het_mass_multiplier;
 
     for (SimTime now = Sim::ts0(), end = Sim::ts0() + Sim::one_ts(); now < end; now = now + Sim::one_day()) {
         // every day, medicate drugs, update each infection, then decay drugs
@@ -200,7 +192,7 @@ void CommonWithinHost::update(Host::Human& human, LocalRng& rng, int& n_new_infs
             bool expires = ((*inf)->bloodStage() ? treatment_blood : treatment_liver);
 
             if (!expires) { /* no expiry due to simple treatment model; do update */
-                const double drug_factor = pkpd_model.get_drug_factor(rng, *inf, body_mass);
+                const double drug_factor = pkpd_model.get_drug_factor(rng, inf->get(), body_mass);
                 const double imm_factor = immunity_survival_factor(age_in_years, (*inf)->cumulativeExposureJ());
                 const double bsv_factor =
                     human.vaccine.getFactor(interventions::Vaccine::BSV, opt_vaccine_genotype ? (*inf)->genotype() : 0);
@@ -210,11 +202,10 @@ void CommonWithinHost::update(Host::Human& human, LocalRng& rng, int& n_new_infs
             }
 
             if (expires) {
-                delete *inf;
                 inf = infections.erase(inf); // inf points to next infection now so don't increment with ++inf
                 --num_infs;
             } else {
-                double density = (*inf)->getDensity();
+                const double density = (*inf)->getDensity();
                 total_density += density;
                 if (!(*inf)->isHrp2Deficient()) {
                     hrp2_density += density;
@@ -241,7 +232,7 @@ void CommonWithinHost::update(Host::Human& human, LocalRng& rng, int& n_new_infs
     assert((std::isfinite)(total_density)); // inf probably wouldn't be a problem but NaN would be
 
     // Cache total density for infectiousness calculations
-    int y_lag_i = Sim::modulo_steps(Sim::ts1(), params().y_lag_len);
+    const int y_lag_i = Sim::modulo_steps(Sim::ts1(), params().y_lag_len);
     for (size_t g = 0; g < Genotypes::N(); ++g) {
         y_lag_imported[y_lag_i * Genotypes::N() + g] = 0.0;
         y_lag_local[y_lag_i * Genotypes::N() + g] = 0.0;
@@ -268,15 +259,11 @@ InfectionOrigin CommonWithinHost::infection_origin() const { return get_infectio
 
 // -----  Summarize  -----
 
-struct InfGenotypeSorter {
-    bool operator()(CommonInfection* i, CommonInfection* j) { return i->genotype() < j->genotype(); }
-} inf_genotype_sorter;
-
 bool CommonWithinHost::summarize(Host::Human& human) const {
     pathogenesis_model->summarize(human);
     pkpd_model.summarize(human);
 
-    InfectionOrigin infection_type = get_infection_origin(infections);
+    const InfectionOrigin infection_type = get_infection_origin(infections);
 
     // If the number of infections is 0 and parasite density is positive we default to Indigenous
     if (infections.size() > 0) {
@@ -289,8 +276,8 @@ bool CommonWithinHost::summarize(Host::Human& human) const {
             mon::recordStat(mon::measure("nInfect_Imported"), human);
 
         if (common_params->report_infected_or_patent_infected) {
-            for (auto infection : infections) {
-                uint32_t genotype = infection->genotype();
+            for (const auto& infection : infections) {
+                const uint32_t genotype = infection->genotype();
                 mon::recordStat(mon::measure("totalInfs"), human, 1, 0, genotype, 0);
                 if (infection->origin() == InfectionOrigin::Indigenous)
                     mon::recordStat(mon::measure("totalInfs_Indigenous"), human, 1, 0, genotype, 0);
@@ -318,11 +305,14 @@ bool CommonWithinHost::summarize(Host::Human& human) const {
             // We don't sort in place since that would affect random number sampling
             // order when updating, and the monitoring system should not in my
             // opinion affect outputs (since it would make testing harder).
-            vector<CommonInfection*> sorted_infs(infections.begin(), infections.end());
-            std::ranges::sort(sorted_infs, inf_genotype_sorter);
+            vector<CommonInfection*> sorted_infs;
+            sorted_infs.reserve(infections.size());
+            for (const auto& infection : infections)
+                sorted_infs.push_back(infection.get());
+            std::ranges::sort(sorted_infs, std::ranges::less{}, &CommonInfection::genotype);
             auto inf = sorted_infs.begin();
             while (inf != sorted_infs.end()) {
-                uint32_t genotype = (*inf)->genotype();
+                const uint32_t genotype = (*inf)->genotype();
                 double dens = 0.0;
                 do { // at start: genotype is that of the current infection, dens is 0
                     dens += (*inf)->getDensity();
@@ -366,7 +356,7 @@ void CommonWithinHost::checkpoint(istream& stream) {
     het_mass_multiplier & stream;
     pkpd_model & stream;
     for (int i = 0; i < num_infs; ++i) {
-        infections.push_back(checkpointed_infection(stream));
+        infections.emplace_back(checkpointed_infection(stream));
     }
     assert(num_infs == static_cast<int>(infections.size()));
 }

@@ -30,6 +30,8 @@
 #include "util/AgeGroupInterpolation.h"
 
 #include <limits>
+#include <list>
+#include <memory>
 
 using namespace std;
 
@@ -55,7 +57,6 @@ class CommonWithinHost : public WHFalciparum {
 public:
     CommonWithinHost(const FalciparumParams& params, const CommonWithinHostParams& common_params, LocalRng& rng,
                      double comorbidity_factor);
-    ~CommonWithinHost() override;
 
     void import_infection(LocalRng& rng) override;
 
@@ -100,7 +101,7 @@ private:
      * Since infection models and within host models are very much intertwined,
      * the idea is that each WithinHostModel has its own list of infections. */
     //TODO: better to template class over infection type than use dynamic type?
-    std::list<CommonInfection*> infections;
+    std::list<std::unique_ptr<CommonInfection>> infections;
 
     bool opt_vaccine_genotype = false;
 

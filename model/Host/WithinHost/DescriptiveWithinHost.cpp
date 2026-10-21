@@ -47,30 +47,22 @@ DescriptiveWithinHostModel::DescriptiveWithinHostModel(const FalciparumParams& p
     opt_vaccine_genotype = params.vaccine_genotype;
 }
 
-DescriptiveWithinHostModel::~DescriptiveWithinHostModel() {
-    for (auto& infection : infections) {
-        delete infection;
-    }
-    infections.clear();
-}
-
 // -----  Simple infection adders/removers  -----
 
 void DescriptiveWithinHostModel::load_infection(istream& stream) {
-    infections.push_back(new DescriptiveInfection(stream));
+    infections.push_back(std::make_unique<DescriptiveInfection>(stream));
 }
 
 void DescriptiveWithinHostModel::clear_infections(Treatments::Stages stage) {
     for (auto inf = infections.begin(); inf != infections.end();) {
         if (stage == Treatments::BOTH || (stage == Treatments::LIVER && !(*inf)->bloodStage()) ||
             (stage == Treatments::BLOOD && (*inf)->bloodStage())) {
-            delete *inf;
             inf = infections.erase(inf);
         } else {
             ++inf;
         }
     }
-    num_infs = infections.size();
+    num_infs = static_cast<int>(infections.size());
 }
 
 // -----  Interventions  -----
@@ -90,8 +82,9 @@ void DescriptiveWithinHostModel::import_infection(LocalRng& rng) {
         // This is a hook, used by interventions. The newly imported infections
         // should use initial frequencies to select genotypes.
         vector<double> weights(0); // zero length: signal to use initial frequencies
-        uint32_t genotype = Genotypes::sampleGenotype(rng, weights);
-        infections.push_back(new DescriptiveInfection(rng, genotype, WithinHost::InfectionOrigin::Imported));
+        const uint32_t genotype = Genotypes::sampleGenotype(rng, weights);
+        infections.push_back(
+            std::make_unique<DescriptiveInfection>(rng, genotype, WithinHost::InfectionOrigin::Imported));
     }
     assert(num_infs == static_cast<int>(infections.size()));
 }
@@ -103,8 +96,8 @@ void DescriptiveWithinHostModel::update(Host::Human& human, LocalRng& rng, int& 
                                         double age_in_years) {
     // Note: adding infections at the beginning of the update instead of the end
     // shouldn't be significant since before latentp delay nothing is updated.
-    int n_new_infs_to_be_created_i = n_new_infs_i;
-    int n_new_infs_to_be_created_l = n_new_infs_l;
+    const int n_new_infs_to_be_created_i = n_new_infs_i;
+    const int n_new_infs_to_be_created_l = n_new_infs_l;
 
     n_new_infs_l = min(n_new_infs_l, MaxInfections - num_infs);
     n_new_infs_i = min(n_new_infs_i, MaxInfections - num_infs - n_new_infs_l);
@@ -112,30 +105,32 @@ void DescriptiveWithinHostModel::update(Host::Human& human, LocalRng& rng, int& 
     num_infs += n_new_infs_i;
     assert(num_infs >= 0 && num_infs <= MaxInfections);
     for (int i = 0; i < n_new_infs_i; ++i) {
-        uint32_t genotype = Genotypes::sampleGenotype(rng, genotype_weights_i);
+        const uint32_t genotype = Genotypes::sampleGenotype(rng, genotype_weights_i);
 
         // If opt_vaccine_genotype is true the infection is discarded with probability 1-vaccineFactor
         if (opt_vaccine_genotype) {
-            double vaccine_factor = human.vaccine.getFactor(interventions::Vaccine::PEV, genotype);
+            const double vaccine_factor = human.vaccine.getFactor(interventions::Vaccine::PEV, genotype);
             if (vaccine_factor == 1.0 || human.host_rng.bernoulli(vaccine_factor))
-                infections.push_back(new DescriptiveInfection(rng, genotype, InfectionOrigin::Introduced));
+                infections.push_back(
+                    std::make_unique<DescriptiveInfection>(rng, genotype, InfectionOrigin::Introduced));
         } else if (opt_vaccine_genotype == false)
-            infections.push_back(new DescriptiveInfection(rng, genotype, InfectionOrigin::Introduced));
+            infections.push_back(std::make_unique<DescriptiveInfection>(rng, genotype, InfectionOrigin::Introduced));
     }
     assert(num_infs == static_cast<int>(infections.size()));
 
     num_infs += n_new_infs_l;
     assert(num_infs >= 0 && num_infs <= MaxInfections);
     for (int i = 0; i < n_new_infs_l; ++i) {
-        uint32_t genotype = Genotypes::sampleGenotype(rng, genotype_weights_l);
+        const uint32_t genotype = Genotypes::sampleGenotype(rng, genotype_weights_l);
 
         // If opt_vaccine_genotype is true the infection is discarded with probability 1-vaccineFactor
         if (opt_vaccine_genotype) {
-            double vaccine_factor = human.vaccine.getFactor(interventions::Vaccine::PEV, genotype);
+            const double vaccine_factor = human.vaccine.getFactor(interventions::Vaccine::PEV, genotype);
             if (vaccine_factor == 1.0 || human.host_rng.bernoulli(vaccine_factor))
-                infections.push_back(new DescriptiveInfection(rng, genotype, InfectionOrigin::Indigenous));
+                infections.push_back(
+                    std::make_unique<DescriptiveInfection>(rng, genotype, InfectionOrigin::Indigenous));
         } else if (opt_vaccine_genotype == false)
-            infections.push_back(new DescriptiveInfection(rng, genotype, InfectionOrigin::Indigenous));
+            infections.push_back(std::make_unique<DescriptiveInfection>(rng, genotype, InfectionOrigin::Indigenous));
     }
     assert(num_infs == static_cast<int>(infections.size()));
 
@@ -145,8 +140,8 @@ void DescriptiveWithinHostModel::update(Host::Human& human, LocalRng& rng, int& 
     hrp2_density = 0.0;
     time_step_max_density = 0.0;
 
-    bool treatment_liver = treat_expiry_liver > Sim::ts0();
-    bool treatment_blood = treat_expiry_blood > Sim::ts0();
+    const bool treatment_liver = treat_expiry_liver > Sim::ts0();
+    const bool treatment_blood = treat_expiry_blood > Sim::ts0();
 
     for (auto inf = infections.begin(); inf != infections.end();) {
         //NOTE: it would be nice to combine this code with that in
@@ -158,7 +153,6 @@ void DescriptiveWithinHostModel::update(Host::Human& human, LocalRng& rng, int& 
         // behind a common interface.
         if ((*inf)->expired() /* infection has self-terminated */ ||
             ((*inf)->bloodStage() ? treatment_blood : treatment_liver)) {
-            delete *inf;
             inf = infections.erase(inf);
             num_infs--;
             continue;
@@ -167,8 +161,8 @@ void DescriptiveWithinHostModel::update(Host::Human& human, LocalRng& rng, int& 
         // Should be: infStepMaxDens = 0.0, but has some history.
         // See MAX_DENS_CORRECTION in DescriptiveInfection.cpp.
         double inf_step_max_dens = time_step_max_density;
-        double imm_surv_fact = immunity_survival_factor(age_in_years, (*inf)->cumulativeExposureJ());
-        double bsv_factor =
+        const double imm_surv_fact = immunity_survival_factor(age_in_years, (*inf)->cumulativeExposureJ());
+        const double bsv_factor =
             human.vaccine.getFactor(interventions::Vaccine::BSV, opt_vaccine_genotype ? (*inf)->genotype() : 0);
 
         (*inf)->determineDensities(rng, cumulative_h, inf_step_max_dens, imm_surv_fact, innate_imm_surv_fact,
@@ -178,7 +172,7 @@ void DescriptiveWithinHostModel::update(Host::Human& human, LocalRng& rng, int& 
             inf_step_max_dens = std::max(inf_step_max_dens, time_step_max_density);
         time_step_max_density = inf_step_max_dens;
 
-        double density = (*inf)->getDensity();
+        const double density = (*inf)->getDensity();
         total_density += density;
         if (!(*inf)->isHrp2Deficient()) {
             hrp2_density += density;
@@ -197,7 +191,7 @@ void DescriptiveWithinHostModel::update(Host::Human& human, LocalRng& rng, int& 
     assert((std::isfinite)(total_density)); // inf probably wouldn't be a problem but NaN would be
 
     // Cache total density for infectiousness calculations
-    int y_lag_i = Sim::modulo_steps(Sim::ts1(), params().y_lag_len);
+    const int y_lag_i = Sim::modulo_steps(Sim::ts1(), params().y_lag_len);
 
     for (size_t g = 0; g < Genotypes::N(); ++g) {
         y_lag_imported[y_lag_i * Genotypes::N() + g] = 0.0;
@@ -225,7 +219,7 @@ InfectionOrigin DescriptiveWithinHostModel::infection_origin() const { return ge
 bool DescriptiveWithinHostModel::summarize(Host::Human& human) const {
     pathogenesis_model->summarize(human);
 
-    InfectionOrigin infection_type = get_infection_origin(infections);
+    const InfectionOrigin infection_type = get_infection_origin(infections);
 
     // If the number of infections is 0 and parasite density is positive we default to Indigenous
     if (infections.size() > 0) {
@@ -238,7 +232,7 @@ bool DescriptiveWithinHostModel::summarize(Host::Human& human) const {
             mon::recordStat(mon::measure("nInfect_Imported"), human);
 
         int n_imported = 0, n_introduced = 0, n_indigenous = 0;
-        for (auto infection : infections) {
+        for (const auto& infection : infections) {
             if (infection->origin() == InfectionOrigin::Indigenous)
                 n_indigenous++;
             else if (infection->origin() == InfectionOrigin::Introduced)
@@ -255,7 +249,7 @@ bool DescriptiveWithinHostModel::summarize(Host::Human& human) const {
         mon::recordStat(mon::measure("totalInfs_Indigenous"), human, n_indigenous);
 
         if (descriptive_params->report_patent_infected) {
-            for (auto infection : infections) {
+            for (const auto& infection : infections) {
                 if (diagnostics::monitoringDiagnostic().isPositive(human.monitoring_rng, infection->getDensity(),
                                                                    std::numeric_limits<double>::quiet_NaN())) {
                     mon::recordStat(mon::measure("totalPatentInf"), human);
@@ -271,7 +265,7 @@ bool DescriptiveWithinHostModel::summarize(Host::Human& human) const {
         if (params().report_infections_by_genotype) {
             // accumulate total density by genotype
             map<uint32_t, double> dens_by_gtype;
-            for (auto infection : infections)
+            for (const auto& infection : infections)
                 dens_by_gtype[infection->genotype()] += infection->getDensity();
 
             for (auto gtype : dens_by_gtype) {
@@ -317,7 +311,7 @@ void DescriptiveWithinHostModel::checkpoint(istream& stream) {
 }
 void DescriptiveWithinHostModel::checkpoint(ostream& stream) {
     WHFalciparum::checkpoint(stream);
-    for (DescriptiveInfection* inf : infections)
+    for (const auto& inf : infections)
         *inf& stream;
 }
 

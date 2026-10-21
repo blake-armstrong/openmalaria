@@ -132,7 +132,7 @@ protected:
     friend class ::UnittestUtil;
 };
 
-template <typename T> InfectionOrigin get_infection_origin(const std::list<T*>& infections) {
+template <typename T> InfectionOrigin get_infection_origin(const std::list<T>& infections) {
     if (infections.empty())
         return InfectionOrigin::Indigenous;
 

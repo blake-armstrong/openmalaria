@@ -115,15 +115,15 @@ inline double compute_y_lag(const vector<double>& y_lag, int y_lag_len, vector<d
 
     // Take weighted sum of total asexual blood stage density 10, 15 and 20 days
     // before. Add y_lag_len to index to ensure positive.
-    size_t d10 = mod_nn(y_lag_len + Sim::in_steps(Sim::ts1() - Sim::from_days(10)), y_lag_len);
-    size_t d15 = mod_nn(y_lag_len + Sim::in_steps(Sim::ts1() - Sim::from_days(15)), y_lag_len);
-    size_t d20 = mod_nn(y_lag_len + Sim::in_steps(Sim::ts1() - Sim::from_days(20)), y_lag_len);
+    const size_t d10 = mod_nn(y_lag_len + Sim::in_steps(Sim::ts1() - Sim::from_days(10)), y_lag_len);
+    const size_t d15 = mod_nn(y_lag_len + Sim::in_steps(Sim::ts1() - Sim::from_days(15)), y_lag_len);
+    const size_t d20 = mod_nn(y_lag_len + Sim::in_steps(Sim::ts1() - Sim::from_days(20)), y_lag_len);
 
     double y10_sum = 0.0, y15_sum = 0.0, y20_sum = 0.0;
     for (size_t g = 0; g < n; ++g) {
-        double y10 = y_lag[d10 * n + g];
-        double y15 = y_lag[d15 * n + g];
-        double y20 = y_lag[d20 * n + g];
+        const double y10 = y_lag[d10 * n + g];
+        const double y15 = y_lag[d15 * n + g];
+        const double y20 = y_lag[d20 * n + g];
         y10_sum += y10;
         y15_sum += y15;
         y20_sum += y20;
@@ -191,14 +191,14 @@ bool WHFalciparum::treat_simple(Host::Human& human, SimTime time_liver, SimTime 
         if (time_liver < Sim::zero())
             clear_infections(Treatments::LIVER);
         else
-            treat_expiry_liver = max(int(treat_expiry_liver), int(Sim::now_or_ts1()) + time_liver);
+            treat_expiry_liver = max(treat_expiry_liver, Sim::now_or_ts1() + time_liver);
         mon::recordEvent(mon::measure("nLiverStageTreatments"), human);
     }
     if (time_blood != Sim::zero()) {
         if (time_blood < Sim::zero())
             clear_infections(Treatments::BLOOD);
         else
-            treat_expiry_blood = max(int(treat_expiry_blood), int(Sim::now_or_ts1()) + time_blood);
+            treat_expiry_blood = max(treat_expiry_blood, Sim::now_or_ts1() + time_blood);
         return true; // blood stage treatment
     }
     return false; // no blood stage treatment

@@ -26,6 +26,9 @@
 #include "Host/WithinHost/WHFalciparum.h"
 #include "Host/WithinHost/Infection/DescriptiveInfection.h"
 
+#include <list>
+#include <memory>
+
 using namespace std;
 
 namespace OM::WithinHost {
@@ -45,7 +48,6 @@ public:
     /// Create a new WHM
     DescriptiveWithinHostModel(const FalciparumParams& params, const DescriptiveWithinHostParams& descriptive_params,
                                LocalRng& rng, double comorbidity_factor);
-    ~DescriptiveWithinHostModel() override;
 
     void import_infection(LocalRng& rng) override;
 
@@ -69,15 +71,15 @@ protected:
     // Doesn't do anything in this model:
     void treat_pk_pd(size_t schedule, size_t dosages, double age, double delay_d) override;
 
+private:
     /** The list of all infections this human has.
      * 
      * Since infection models and within host models are very much intertwined,
      * the idea is that each WithinHostModel has its own list of infections. */
-    std::list<DescriptiveInfection*> infections;
+    std::list<std::unique_ptr<DescriptiveInfection>> infections;
 
     bool opt_vaccine_genotype = false;
 
-private:
     const DescriptiveWithinHostParams* descriptive_params;
 };
 
