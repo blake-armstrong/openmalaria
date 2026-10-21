@@ -347,6 +347,37 @@ TEST_CASE("normal variates match GSL and the normal CDF", "[util][random][g-diff
     check_cases({normal_case(0.0, 1.0), normal_case(5.0, 0.1), normal_case(-3.0, 20.0)}, 100);
 }
 
+TEST_CASE("normal variates reproduce GSL's polar method draw for draw", "[util][random][g-diff]") {
+    constexpr uint64_t Stream = 50;
+    ChaCha<8> seeder(Seed, Stream);
+    Gen gen(seeder);
+    GslAdapter adapter(Stream);
+    std::size_t first_difference = SampleSize;
+    for (std::size_t i = 0; i < SampleSize && first_difference == SampleSize; ++i) {
+        if (standard_normal(gen) != gsl_ran_gaussian(adapter.get(), 1.0)) {
+            first_difference = i;
+        }
+    }
+    CHECK(first_difference == SampleSize);
+}
+
+TEST_CASE("Poisson variates below a mean of 10 reproduce GSL draw for draw", "[util][random][g-diff]") {
+    for (const double mean : {0.01, 0.5, 3.0, 9.99}) {
+        CAPTURE(mean);
+        constexpr uint64_t Stream = 60;
+        ChaCha<8> seeder(Seed, Stream);
+        Gen gen(seeder);
+        GslAdapter adapter(Stream);
+        std::size_t first_difference = SampleSize;
+        for (std::size_t i = 0; i < SampleSize && first_difference == SampleSize; ++i) {
+            if (poisson(gen, mean) != static_cast<int>(gsl_ran_poisson(adapter.get(), mean))) {
+                first_difference = i;
+            }
+        }
+        CHECK(first_difference == SampleSize);
+    }
+}
+
 TEST_CASE("gamma variates match GSL and the gamma CDF", "[util][random][g-diff]") {
     check_cases({gamma_case(0.05, 1.0), gamma_case(0.3, 2.5), gamma_case(0.9, 1.0), gamma_case(1.0, 1.0),
                  gamma_case(1.5, 0.2), gamma_case(4.0, 1.0), gamma_case(30.0, 2.5), gamma_case(500.0, 0.01)},
@@ -380,6 +411,21 @@ TEST_CASE("Poisson of a non-positive mean is zero", "[util][random]") {
 
 TEST_CASE("Weibull variates match GSL and the Weibull CDF", "[util][random][g-diff]") {
     check_cases({weibull_case(1.0, 0.5), weibull_case(2.5, 1.0), weibull_case(0.3, 3.0)}, 600);
+}
+
+TEST_CASE("LocalRng draws its distributions from the in-tree variates", "[util][random]") {
+    constexpr uint64_t Stream = 7;
+    OM::util::LocalRng rng(Seed, Stream);
+    Gen gen(Seed, Stream);
+    for (int i = 0; i < 1000; ++i) {
+        CHECK(rng.gauss(2.0, 3.0) == 2.0 + 3.0 * standard_normal(gen));
+        CHECK(rng.gamma(0.7, 4.0) == gamma(gen, 0.7, 4.0));
+        CHECK(rng.log_normal(1.0, 0.5) == std::exp(1.0 + 0.5 * standard_normal(gen)));
+        CHECK(rng.beta(2.0, 0.5) == beta(gen, 2.0, 0.5));
+        CHECK(rng.beta_with_mean(0.25, 3.0) == beta(gen, 1.0, 3.0));
+        CHECK(rng.poisson(12.5) == poisson(gen, 12.5));
+        CHECK(rng.weibull(2.0, 1.5) == weibull(gen, 2.0, 1.5));
+    }
 }
 
 } // namespace
