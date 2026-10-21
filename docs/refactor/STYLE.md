@@ -207,7 +207,11 @@ How it works, and why:
 - clang-tidy misses two kinds of use, which the tool adds textually:
   - the out-of-line definition of an override (`LSTMDrugOneComp::getIndex`). The
     in-class override declaration is renamed with the base method, but the definition
-    is not. The tool renames `Class::old` for every class declared in the module.
+    is not. The tool renames `Class::old` for every class defined in the module and
+    every class in the tree that derives from one of them (D4a: `WHVivax.cpp` and
+    `WHMock.cpp` kept their old override names otherwise). Only definitions count:
+    a `friend class Treatments;` once made `Treatments::addTreatment` look like a
+    module method.
   - header guards: only the `#define` is renamed, not `#ifndef` or the `#endif` comment.
     The tool renames the old macro name on every preprocessor line.
 - Before applying, it reports possible collisions: a new name that already appears in

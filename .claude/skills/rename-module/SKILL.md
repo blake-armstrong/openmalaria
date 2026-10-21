@@ -22,7 +22,8 @@ list of files instead of `<dir>`; everything below then applies to those files.
   its own rename.
 - A second pass finds members with `m_` or `_` prefixes (clang-tidy's case conversion
   keeps them) and strips the prefix.
-- Adds what clang-tidy misses: out-of-line definitions of overrides (`Derived::oldName`)
+- Adds what clang-tidy misses: out-of-line definitions of overrides (`Derived::oldName`,
+  including derived classes outside the module)
   and the `#ifndef` / `#endif` lines of header guards.
 - Applies all fixes once with `clang-apply-replacements`, then `format-changed HEAD`.
 - Reports possible collisions before applying; after applying, reports old names still
