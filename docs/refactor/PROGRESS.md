@@ -27,7 +27,7 @@ See `PLAN.md` for the session protocol, chunks and gates. Append one log entry p
 | D1 | done | 2e2cac5a, 72e14d9c, bda40963, 4252cba1, 1a0c0b58, 48d3476c, 186d32f5, 21e09c0d, (this log entry) |
 | D2 | done | 61fe9993, c98ffe6f, db1c50b1, 0808f323, fdd69348, 82e3c602, (this log entry) |
 | D2b | done | 33185613, 9447ccf7, 1647ef78, (this log entry) |
-| D3 | done | cfe2250e, b074dcd3, 79d7e9ae, 6e96d1cf, a653b976, efb5ad9d, cf709072, 39f23abd, (this log entry) |
+| D3 | done | cfe2250e, b074dcd3, 79d7e9ae, 6e96d1cf, a653b976, efb5ad9d, cf709072, 39f23abd, b8df955e, fbb7c714, (this log entry) |
 | D4 | todo | |
 | D5 | todo | |
 | D6 | todo | |
@@ -847,6 +847,7 @@ See `PLAN.md` for the session protocol, chunks and gates. Append one log entry p
   - Both checkpoint functions and `parse` used to rely on statics that persisted across calls (e.g. `resourcePath` was never reset). With one parse per process this made no difference.
 - Follow-ups:
   - D4–D8: pass `const util::ModelOptionFlags&`, `const util::CommandLineOptions&` and `const Parameters&` to the components their chunk converts, instead of `ModelOptions::option`/`CommandLine::` and `init(parameters)`; D9 drops the two bridge pointers.
-  - The 8 all-caps enumerators: rename by hand in a small mechanical commit, or teach `rename_module.py` a forced rename. Ask the user which.
+  - The 8 all-caps enumerators: **done after the log entry, at the user's choice (a hand commit)**: b8df955e renames them at their 32 sites (text replacement; grep and the build confirm no old name is left), and fbb7c714 lists it in `.git-blame-ignore-revs`. G-exact / G-unit 53/53 on Release and Debug; `util/style.sh check 389ee2e9` clean. Later modules with all-caps single-word names need the same hand step, since the tool can't see them.
+  - **Replicate data: the user decided (2026-10-21) to keep `/Users/blaarm/git/om-s5`, `build-rework/stats-s6/` and `build-rework/stats-v1/` until the refactor is finished or the data becomes stale** (e.g. the references they back are regenerated). Don't ask again at each chunk.
   - F41 is a CLI behaviour change; it fits I2, or earlier if the user wants.
 - Next: D4 (recommended order 12).
