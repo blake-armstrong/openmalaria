@@ -34,11 +34,12 @@ namespace WithinHost {
 
 // ———  Diagnostic (non-static)  ———
 
-Diagnostic::Diagnostic(const Parameters& parameters, const scnXml::Diagnostic& elt) {
+Diagnostic::Diagnostic(const Parameters& parameters, const util::ModelOptionFlags& options,
+                       const scnXml::Diagnostic& elt) {
     dens_lim = numeric_limits<double>::quiet_NaN();
     specificity = numeric_limits<double>::quiet_NaN();
 
-    if (util::ModelOptions::option(util::VivaxSimpleModel)) {
+    if (options.option(util::VivaxSimpleModel)) {
         return; // both parameters NaN (set above)
     }
 
@@ -73,7 +74,7 @@ Diagnostic::Diagnostic(const Parameters& parameters, const scnXml::Diagnostic& e
     // non-Garki sources are not equivalent to those from the Malariatherapy
     // data (which is used internally).
     if (!elt.getUnits().present()) {
-        if (util::ModelOptions::option(util::GarkiDensityBias)) {
+        if (options.option(util::GarkiDensityBias)) {
             // User must be explicit in this case, because presumably the Garki
             // bias is to be used for some diagnostics but likely not all
             // (e.g. neonatal mortality).
@@ -122,21 +123,15 @@ bool Diagnostic::allowsFalsePositives() const {
     return specificity < 1.0;
 }
 
-// ———  diagnostics (static)  ———
+// ———  DiagnosticRegistry  ———
 
-map<string, Diagnostic> diagnostic_set;
-const Diagnostic* diagnostics::monitoring_diagnostic = 0;
-
-void diagnostics::clear() { diagnostic_set.clear(); }
-
-void diagnostics::init(const Parameters& parameters, const scnXml::Scenario& scenario) {
-    diagnostic_set.clear(); // compatibility with unit tests
-
+DiagnosticRegistry::DiagnosticRegistry(const Parameters& parameters, const util::ModelOptionFlags& options,
+                                       const util::CommandLineOptions& command_line, const scnXml::Scenario& scenario) {
     if (scenario.getDiagnostics().present()) {
         for (const scnXml::Diagnostic& diagnostic : scenario.getDiagnostics().get().getDiagnostic()) {
             string name = diagnostic.getName(); // conversion fails without this extra line
             bool inserted =
-                diagnostic_set.insert(make_pair(std::move(name), Diagnostic(parameters, diagnostic))).second;
+                diagnostic_set.insert(make_pair(std::move(name), Diagnostic(parameters, options, diagnostic))).second;
             if (!inserted) {
                 throw util::xml_scenario_error(
                     string("diagnostic with this name already set: ").append(diagnostic.getName()));
@@ -145,16 +140,16 @@ void diagnostics::init(const Parameters& parameters, const scnXml::Scenario& sce
     }
 
     const scnXml::Surveys& surveys = scenario.getMonitoring().getSurveys();
-    if (util::ModelOptions::option(util::VivaxSimpleModel)) {
+    if (options.option(util::VivaxSimpleModel)) {
         // So far the implemented Vivax code does not produce parasite
         // densities, thus this diagnostic model cannot be used.
-        diagnostics::monitoring_diagnostic = &diagnostics::make_deterministic(numeric_limits<double>::quiet_NaN());
+        monitoring = &make_deterministic(numeric_limits<double>::quiet_NaN());
     } else if (surveys.getDetectionLimit().present()) {
         if (surveys.getDiagnostic().present()) {
             throw util::xml_scenario_error("monitoring/surveys: do not "
                                            "specify both detectionLimit and diagnostic");
         }
-        if (util::CommandLine::option(util::CommandLine::DeprecationWarnings)) {
+        if (command_line.option(util::CommandLine::DeprecationWarnings)) {
             std::cerr << "Deprecation warning: monitoring/surveys: "
                          "specification of \"diagnostic\" is suggested over \"detectionLimit\""
                       << std::endl;
@@ -163,7 +158,7 @@ void diagnostics::init(const Parameters& parameters, const scnXml::Scenario& sce
         // This controls whether the detection limit is specified relative to
         // the Garki or other methods.
         double densitybias = numeric_limits<double>::quiet_NaN();
-        if (util::ModelOptions::option(util::GarkiDensityBias)) {
+        if (options.option(util::GarkiDensityBias)) {
             densitybias = parameters[Parameter::DensityBiasGarki];
         } else {
             if (scenario.getAnalysisNo().present()) {
@@ -178,26 +173,26 @@ void diagnostics::init(const Parameters& parameters, const scnXml::Scenario& sce
             densitybias = parameters[Parameter::DensityBiasNonGarki];
         }
         double detectionLimit = surveys.getDetectionLimit().get() * densitybias;
-        diagnostics::monitoring_diagnostic = &diagnostics::make_deterministic(detectionLimit);
+        monitoring = &make_deterministic(detectionLimit);
     } else {
         if (!surveys.getDiagnostic().present()) {
             throw util::xml_scenario_error("monitoring/surveys: require "
                                            "either detectionLimit or diagnostic");
         }
-        if (util::ModelOptions::option(util::GarkiDensityBias)) {
+        if (options.option(util::GarkiDensityBias)) {
             throw util::xml_scenario_error("Use of GARKI_DENSITY_BIAS is not "
                                            "appropriate when monitoring/surveys/diagnostic is used.");
         }
-        diagnostics::monitoring_diagnostic = &diagnostics::get(surveys.getDiagnostic().get());
+        monitoring = &get(surveys.getDiagnostic().get());
     }
 
-    if (diagnostics::monitoring_diagnostic->uses_hrp2) {
+    if (monitoring->uses_hrp2) {
         throw util::xml_scenario_error("the diagnostic used for "
                                        "monitoring may not use HRP2 as its mechanism");
     }
 }
 
-const Diagnostic& diagnostics::get(const string& name) {
+const Diagnostic& DiagnosticRegistry::get(const string& name) const {
     auto it = diagnostic_set.find(name);
     if (it == diagnostic_set.end()) {
         throw util::xml_scenario_error(string("diagnostic not found: ").append(name));
@@ -205,7 +200,7 @@ const Diagnostic& diagnostics::get(const string& name) {
     return it->second;
 }
 
-const Diagnostic& diagnostics::make_deterministic(double minDens) {
+const Diagnostic& DiagnosticRegistry::make_deterministic(double minDens) {
     string name = ""; // anything not matching an existing name is fine
     assert(diagnostic_set.count(name) ==
            0); // we shouldn't need to call make_deterministic more than once, so I think this will do

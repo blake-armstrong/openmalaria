@@ -76,7 +76,7 @@ Simulation::Simulation(std::unique_ptr<scnXml::Scenario> scenario, util::Command
       scenario_xml(std::move(scenario)),
       only_new_episode(scenario_xml->getMonitoring().getSurveyOptions().getOnlyNewEpisode()) {
     // 1) elements with no dependencies on other elements initialised here:
-    WithinHost::Genotypes::init(*scenario_xml);
+    genotypes = WithinHost::GenotypeRegistry(*scenario_xml, command_line);
     const util::ModelNameProvider model_name_provider(scenario_xml->getModel());
 
     // 2) elements depending on only elements initialised in (1):
@@ -89,7 +89,8 @@ Simulation::Simulation(std::unique_ptr<scnXml::Scenario> scenario, util::Command
                                            command_line, clock.one_ts()); // Depends on ModelNameProvider.
 
     // 4) elements depending on only elements initialised in (3).
-    WithinHost::diagnostics::init(parameters, *scenario_xml); // Depends on Parameters.
+    diagnostics = WithinHost::DiagnosticRegistry(parameters, model_options, command_line,
+                                                 *scenario_xml); // Depends on Parameters.
 
     // 5) elements depending on only elements initialised in (4).
     mon::initReporting(*scenario_xml); // Reporting init depends on diagnostics and monitoring
@@ -159,8 +160,8 @@ void Simulation::run(const CheckpointOptions& checkpointing) {
 
 void Simulation::resume(const std::string& checkpoint_file) {
     mon::Continuous::init(scenario_xml->getMonitoring(), true);
-    read_checkpoint(checkpoint_file, command_line, clock, master_rngs, end_time, est_end_time, *population_model,
-                    *transmission_model);
+    read_checkpoint(checkpoint_file, command_line, clock, master_rngs, genotypes, end_time, est_end_time,
+                    *population_model, *transmission_model);
 
     /** Calculate ento availability percentiles **/
     Transmission::PerHostAnophParams::calcAvailabilityPercentiles();
@@ -204,14 +205,14 @@ void Simulation::start_new(const CheckpointOptions& checkpointing) {
     clock.start_intervention_period();
     Host::InfectionIncidenceModel::preMainSimInit();
     Clinical::InfantMortality::preMainSimInit();
-    WithinHost::Genotypes::preMainSimInit();
+    genotypes.pre_main_sim_init();
     population_model->resetRecentBirths();
     transmission_model->summarize(); // Only to reset TransmissionModel::inoculationsPerAgeGroup
     mon::initMainSim();
 
     if (checkpointing.enabled) {
-        write_checkpoint(false, checkpointing.file_name, command_line, clock, master_rngs, end_time, est_end_time,
-                         *population_model, *transmission_model);
+        write_checkpoint(false, checkpointing.file_name, command_line, clock, master_rngs, genotypes, end_time,
+                         est_end_time, *population_model, *transmission_model);
         if (checkpointing.stop_after_write)
             throw util::cmd_exception("Checkpoint test: checkpoint written", util::Error::None);
     }

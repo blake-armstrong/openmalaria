@@ -42,6 +42,7 @@
 #include "Host/WithinHost/WithinHostModel.h"
 #include "Host/WithinHost/Infection/MolineauxInfection.h"
 #include "Host/WithinHost/Genotypes.h"
+#include "Host/WithinHost/Diagnostic.h"
 
 #include "schema/scenario.h"
 
@@ -227,6 +228,10 @@ util::ModelOptionFlags model_options;
 ModelOptionsBinding model_options_binding{model_options};
 WithinHost::WithinHostModel within_host_model;
 WithinHostModelBinding within_host_model_binding{within_host_model};
+WithinHost::GenotypeRegistry genotypes;
+GenotypesBinding genotypes_binding{genotypes};
+WithinHost::DiagnosticRegistry diagnostics;
+DiagnosticsBinding diagnostics_binding{diagnostics};
 // NOLINTEND(cppcoreguidelines-avoid-non-const-global-variables,bugprone-throwing-static-initialization)
 }
 
@@ -275,9 +280,6 @@ public:
 
     // Parameterise standard diagnostics
     static void setDiagnostics() {
-        // note that this is only ever called after initSurveys(), thus we
-        // don't need to call diagnostics::clear() (and shouldn't because it
-        // would leave a dangling pointer in Survey::m_diagnostic)
         scnXml::Diagnostic microscopy("microscopy");
         scnXml::Stochastic microscopyParams(20, 0.75);
         microscopy.setStochastic(microscopyParams);
@@ -294,12 +296,13 @@ public:
         dummyXML::surveys.setDetectionLimit(numeric_limits<double>::quiet_NaN());
         dummyXML::monitoring.setSurveys(dummyXML::surveys);
         dummyXML::scenario.setMonitoring(dummyXML::monitoring);
-        diagnostics::init(parameters, dummyXML::scenario);
+        unittest_options::diagnostics = WithinHost::DiagnosticRegistry(
+            parameters, unittest_options::model_options, unittest_options::command_line, dummyXML::scenario);
     }
 
     static void PkPdSuiteSetup() {
         unittest_options::model_options.reset();
-        WithinHost::Genotypes::initSingle();
+        unittest_options::genotypes.init_single();
 
         //Note: we fudge this call since it's not so easy to falsely initialize scenario element.
         //PkPdModel::init ();

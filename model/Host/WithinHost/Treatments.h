@@ -26,6 +26,9 @@
 #include "Host/WithinHost/WHInterface.h"
 #include "interventions/Interfaces.h"
 
+#include <cassert>
+#include <vector>
+
 using namespace std;
 
 namespace OM {
@@ -35,25 +38,10 @@ namespace WithinHost {
  * Objects of this class describe effects of a treatment, after selecting a
  * compliance/adherence/... group.
  * 
- * The static part provides a way to find objects.
- * 
  * For use within WithinHost only.
  */
 class Treatments : public interventions::TriggeredDeployments {
 public:
-    /// @brief Static methods
-    //@{
-    /** Configure a new treatment option, and return the code used to select
-     * that option later. */
-    static TreatmentId addTreatment(const scnXml::TreatmentOption& desc);
-
-    /** Return the corresponding treatment description. */
-    static inline const Treatments& select(TreatmentId treatId) {
-        assert(treatId.id < treatments.size());
-        return treatments[treatId.id];
-    }
-    //@}
-
     /// @brief Types used by the non-static methods
     //@{
     /// Stages effected
@@ -75,15 +63,27 @@ public:
     //@}
 
 private:
-    // static:
-    static vector<Treatments> treatments;
-
-    // non-static:
     Treatments(const scnXml::TreatmentOption& elt);
 
     SimTime timeLiver, timeBlood;
 
-    friend class ::UnittestUtil;
+    friend class TreatmentRegistry;
+};
+
+class TreatmentRegistry {
+public:
+    /** Configure a new treatment option, and return the code used to select
+     * that option later. */
+    TreatmentId add(const scnXml::TreatmentOption& desc);
+
+    /** Return the corresponding treatment description. */
+    const Treatments& select(TreatmentId treatId) const {
+        assert(treatId.id < treatments.size());
+        return treatments[treatId.id];
+    }
+
+private:
+    std::vector<Treatments> treatments;
 };
 
 }

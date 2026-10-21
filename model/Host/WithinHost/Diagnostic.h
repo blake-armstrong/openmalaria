@@ -26,14 +26,22 @@
 #include "Global.h"
 #include "util/random.h"
 
-class UnittestUtil;
+#include <cassert>
+#include <map>
+#include <string>
+
 namespace scnXml {
 class Diagnostics;
 class Diagnostic;
+class Scenario;
 }
 
 namespace OM {
 class Parameters;
+namespace util {
+class CommandLineOptions;
+class ModelOptionFlags;
+}
 namespace WithinHost {
 
 using util::LocalRng;
@@ -56,7 +64,7 @@ public:
 
 private:
     /** Construct from XML parameters. */
-    Diagnostic(const Parameters& parameters, const scnXml::Diagnostic& elt);
+    Diagnostic(const Parameters& parameters, const util::ModelOptionFlags& options, const scnXml::Diagnostic& elt);
     /** Construct as deterministic. */
     explicit Diagnostic(double minDens);
 
@@ -69,36 +77,86 @@ private:
     // if true, the diagnostic is dependent on the HRP2 antigen
     bool uses_hrp2;
 
-    friend class diagnostics;
+    friend class DiagnosticRegistry;
 };
 
-/** Static members to do with Diagnostic: library of parameterised Diagnostic
- * objects. */
-class diagnostics {
+/** Library of parameterised Diagnostic objects. */
+class DiagnosticRegistry {
 public:
+    DiagnosticRegistry() = default;
     /** Initialise from input data. */
-    static void init(const Parameters& parameters, const scnXml::Scenario& scenario);
+    DiagnosticRegistry(const Parameters& parameters, const util::ModelOptionFlags& options,
+                       const util::CommandLineOptions& command_line, const scnXml::Scenario& scenario);
+    DiagnosticRegistry(const DiagnosticRegistry&) = delete;
+    DiagnosticRegistry& operator=(const DiagnosticRegistry&) = delete;
+    DiagnosticRegistry(DiagnosticRegistry&&) = default;
+    DiagnosticRegistry& operator=(DiagnosticRegistry&&) = default;
+    ~DiagnosticRegistry() = default;
 
     /** Look up a diagnostic by name and get a reference to it.
      * 
      * @throws util::xml_scenario_error on failure
      */
-    static const Diagnostic& get(const std::string& name);
+    const Diagnostic& get(const std::string& name) const;
 
-    /** Make a new diagnostic with deterministic density and return a reference. */
-    static const Diagnostic& make_deterministic(double minDens);
-
-    /// Static access functions
-
-    static inline const Diagnostic& monitoringDiagnostic() {
-        assert(monitoring_diagnostic != 0);
-        return *monitoring_diagnostic;
+    const Diagnostic& monitoring_diagnostic() const {
+        assert(monitoring != nullptr);
+        return *monitoring;
     }
 
 private:
-    static void clear(); // for unit tests
-    static const Diagnostic* monitoring_diagnostic;
-    friend class ::UnittestUtil;
+    /** Make a new diagnostic with deterministic density and return a reference. */
+    const Diagnostic& make_deterministic(double minDens);
+
+    std::map<std::string, Diagnostic> diagnostic_set;
+    const Diagnostic* monitoring = nullptr;
+};
+
+}
+
+namespace bridge {
+
+// NOLINTNEXTLINE(cppcoreguidelines-avoid-non-const-global-variables)
+inline const WithinHost::DiagnosticRegistry* current_diagnostics = nullptr;
+
+inline const WithinHost::DiagnosticRegistry& diagnostics() {
+    assert(current_diagnostics != nullptr);
+    return *current_diagnostics;
+}
+
+}
+
+class DiagnosticsBinding {
+public:
+    explicit DiagnosticsBinding(const WithinHost::DiagnosticRegistry& diagnostics)
+        : previous(bridge::current_diagnostics) {
+        bridge::current_diagnostics = &diagnostics;
+    }
+    DiagnosticsBinding(const DiagnosticsBinding&) = delete;
+    DiagnosticsBinding& operator=(const DiagnosticsBinding&) = delete;
+    DiagnosticsBinding(DiagnosticsBinding&&) = delete;
+    DiagnosticsBinding& operator=(DiagnosticsBinding&&) = delete;
+    ~DiagnosticsBinding() { bridge::current_diagnostics = previous; }
+
+private:
+    const WithinHost::DiagnosticRegistry* previous;
+};
+
+namespace WithinHost {
+
+/** Static members to do with Diagnostic: library of parameterised Diagnostic
+ * objects. */
+class diagnostics {
+public:
+    /** Look up a diagnostic by name and get a reference to it.
+     * 
+     * @throws util::xml_scenario_error on failure
+     */
+    static const Diagnostic& get(const std::string& name) { return bridge::diagnostics().get(name); }
+
+    /// Static access functions
+
+    static inline const Diagnostic& monitoringDiagnostic() { return bridge::diagnostics().monitoring_diagnostic(); }
 };
 
 }

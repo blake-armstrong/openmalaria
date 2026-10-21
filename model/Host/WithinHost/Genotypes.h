@@ -25,39 +25,50 @@
 
 #include "Global.h"
 #include "util/random.h"
+#include <cassert>
+#include <cstdint>
 #include <iostream>
+#include <map>
 #include <set>
+#include <string>
+#include <vector>
+
+namespace scnXml {
+class Scenario;
+}
 
 namespace OM {
+namespace util {
+class CommandLineOptions;
+}
 namespace WithinHost {
 
 using util::LocalRng;
 
-/** Represents infection genotypes. */
-class Genotypes {
+/// Represent a combination of alleles, each from a different locus
+struct Genotype {
+    Genotype(uint32_t allele, double iFreq, double fit, bool hrp2_del)
+        : init_freq(iFreq), fitness(fit), hrp2_deficient(hrp2_del) {
+        alleles.insert(allele);
+    }
+    Genotype cross(const Genotype& that) const;
+    std::set<uint32_t> alleles; // set of codes of all alleles
+    double init_freq;
+    double fitness;
+    bool hrp2_deficient;
+};
+
+class GenotypeRegistry {
 public:
-    /// Represent a combination of alleles, each from a different locus
-    struct Genotype {
-        Genotype(uint32_t allele, double iFreq, double fit, bool hrp2_del)
-            : init_freq(iFreq), fitness(fit), hrp2_deficient(hrp2_del) {
-            alleles.insert(allele);
-        }
-        Genotype cross(const Genotype& that) const;
-        std::set<uint32_t> alleles; // set of codes of all alleles
-        double init_freq;
-        double fitness;
-        bool hrp2_deficient;
-    };
+    GenotypeRegistry() = default;
+    /** Initialise from XML data. */
+    GenotypeRegistry(const scnXml::Scenario& scenario, const util::CommandLineOptions& command_line);
 
     /** Initialise with a single genotype. */
-    static void initSingle();
-
-    /** Initialise from XML data. Call this before other static methods are
-     * used (from PK/PD code). */
-    static void init(const scnXml::Scenario& scenario);
+    void init_single();
 
     /** Switch to whichever mode has been enabled for the main simulation. */
-    static void preMainSimInit();
+    void pre_main_sim_init() { current_mode = interv_mode; }
 
     /** Map a locus name and allele name to an allele code.
      * 
@@ -65,10 +76,9 @@ public:
      * codes.
      * 
      * Returns max value when no match is found. */
-    static uint32_t findAlleleCode(const string& locus, const string& allele);
+    uint32_t find_allele_code(const std::string& locus, const std::string& allele) const;
 
-    /** Get a reference to the list of all genotypes. */
-    static const vector<Genotype>& getGenotypes();
+    const std::vector<Genotype>& genotypes() const { return genotype_list; }
 
     /** Sample the genotype using the configured approach.
      * 
@@ -76,20 +86,87 @@ public:
      *  weights of each genotype for use in sampling. Total need not be one.
      *  Also, passing a zero-length vector is a signal to use initial
      *  frequencies in sampling. */
-    static uint32_t sampleGenotype(LocalRng& rng, std::vector<double>& genotype_weights);
+    uint32_t sample_genotype(LocalRng& rng, std::vector<double>& genotype_weights) const;
 
-    /** Get the number of genotypes. Functions like sampleGenotype use values
+    /** Get the number of genotypes. Functions like sample_genotype use values
      * from 0 to one less than this. */
-    inline static size_t N() { return N_genotypes; }
+    size_t count() const { return n_genotypes; }
 
     /** Get the initial frequency of some genotype. */
-    static double initialFreq(size_t genotype);
+    double initial_freq(size_t genotype) const;
 
-    static void staticCheckpoint(std::ostream& stream);
-    static void staticCheckpoint(std::istream& stream);
+    void checkpoint(std::ostream& stream) const;
+    void checkpoint(std::istream& stream);
 
 private:
-    static size_t N_genotypes;
+    enum SampleMode {
+        SAMPLE_FIRST,   // always choose first genotype (essentially the off switch)
+        SAMPLE_INITIAL, // sample from initial probabilities
+        SAMPLE_TRACKING // sample from tracked success at genotype level (no recombination)
+    };
+
+    void print_genotypes() const;
+
+    // keys are cumulative probabilities; last entry should equal 1; values are genotype codes
+    std::map<double, uint32_t> cum_initial_freqs;
+    // we give each allele of each loci a unique code
+    std::map<std::string, std::map<std::string, uint32_t>> allele_codes;
+    uint32_t next_allele_code = 0;
+    std::vector<Genotype> genotype_list;
+    size_t n_genotypes = 1;
+    // Mode to use now (until switched) and from the start of the intervention period.
+    SampleMode current_mode = SAMPLE_FIRST, interv_mode = SAMPLE_FIRST;
+};
+
+}
+
+namespace bridge {
+
+// NOLINTNEXTLINE(cppcoreguidelines-avoid-non-const-global-variables)
+inline const WithinHost::GenotypeRegistry* current_genotypes = nullptr;
+
+inline const WithinHost::GenotypeRegistry& genotypes() {
+    assert(current_genotypes != nullptr);
+    return *current_genotypes;
+}
+
+}
+
+class GenotypesBinding {
+public:
+    explicit GenotypesBinding(const WithinHost::GenotypeRegistry& genotypes) : previous(bridge::current_genotypes) {
+        bridge::current_genotypes = &genotypes;
+    }
+    GenotypesBinding(const GenotypesBinding&) = delete;
+    GenotypesBinding& operator=(const GenotypesBinding&) = delete;
+    GenotypesBinding(GenotypesBinding&&) = delete;
+    GenotypesBinding& operator=(GenotypesBinding&&) = delete;
+    ~GenotypesBinding() { bridge::current_genotypes = previous; }
+
+private:
+    const WithinHost::GenotypeRegistry* previous;
+};
+
+namespace WithinHost {
+
+/** Represents infection genotypes. */
+class Genotypes {
+public:
+    using Genotype = WithinHost::Genotype;
+
+    static uint32_t findAlleleCode(const string& locus, const string& allele) {
+        return bridge::genotypes().find_allele_code(locus, allele);
+    }
+
+    static const vector<Genotype>& getGenotypes() { return bridge::genotypes().genotypes(); }
+
+    static uint32_t sampleGenotype(LocalRng& rng, std::vector<double>& genotype_weights) {
+        return bridge::genotypes().sample_genotype(rng, genotype_weights);
+    }
+
+    static size_t N() { return bridge::genotypes().count(); }
+
+    static double initialFreq(size_t genotype) { return bridge::genotypes().initial_freq(genotype); }
 };
 
 }

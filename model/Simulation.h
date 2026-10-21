@@ -24,6 +24,8 @@
 #define HMOD_SIMULATION
 
 #include "Global.h"
+#include "Host/WithinHost/Diagnostic.h"
+#include "Host/WithinHost/Genotypes.h"
 #include "Host/WithinHost/WithinHostModel.h"
 #include "Parameters.h"
 #include "Population.h"
@@ -79,6 +81,10 @@ private:
     util::ModelOptionFlags model_options;
     ModelOptionsBinding model_options_binding{model_options};
     Parameters parameters;
+    WithinHost::GenotypeRegistry genotypes;
+    GenotypesBinding genotypes_binding{genotypes};
+    WithinHost::DiagnosticRegistry diagnostics;
+    DiagnosticsBinding diagnostics_binding{diagnostics};
     WithinHost::WithinHostModel within_host_model;
     WithinHostModelBinding within_host_model_binding{within_host_model};
     std::unique_ptr<scnXml::Scenario> scenario_xml;

@@ -28,11 +28,9 @@
 namespace OM {
 namespace WithinHost {
 
-// ———  static  ———
+// ———  TreatmentRegistry  ———
 
-vector<Treatments> Treatments::treatments;
-
-TreatmentId Treatments::addTreatment(const scnXml::TreatmentOption& desc) {
+TreatmentId TreatmentRegistry::add(const scnXml::TreatmentOption& desc) {
     Treatments treatment(desc);
     TreatmentId id(treatments.size());
     treatments.push_back(std::move(treatment));

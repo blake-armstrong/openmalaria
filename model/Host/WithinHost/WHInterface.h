@@ -66,7 +66,7 @@ struct TreatmentId {
 private:
     explicit TreatmentId(uint32_t id) : id(id) {}
     uint32_t id;
-    friend class Treatments;
+    friend class TreatmentRegistry;
 };
 
 /**

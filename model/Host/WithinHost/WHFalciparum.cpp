@@ -30,6 +30,7 @@
 #include "Host/WithinHost/Pathogenesis/PathogenesisModel.h"
 #include "Host/WithinHost/Diagnostic.h"
 #include "Host/WithinHost/Treatments.h"
+#include "Host/WithinHost/WithinHostModel.h"
 #include "Host/WithinHost/Genotypes.h"
 #include "mon/Monitoring.h"
 #include "util/random.h"
@@ -178,7 +179,7 @@ bool WHFalciparum::diagnostic_result(LocalRng& rng, const Diagnostic& diagnostic
 }
 
 void WHFalciparum::treatment(Host::Human& human, TreatmentId treat_id) {
-    const Treatments& treat = Treatments::select(treat_id);
+    const Treatments& treat = bridge::within_host_model().treatments.select(treat_id);
     treat_simple(human, treat.liverEffect(), treat.bloodEffect());
 
     // triggered intervention deployments:

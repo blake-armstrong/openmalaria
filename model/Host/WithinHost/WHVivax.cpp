@@ -484,7 +484,7 @@ Pathogenesis::StatePair WHVivax::determine_morbidity(Host::Human& human, double 
 void WHVivax::clear_immunity() { throw TRACED_EXCEPTION_DEFAULT("vivax model does not include immune suppression"); }
 
 void WHVivax::treatment(Host::Human& human, TreatmentId treat_id) {
-    const Treatments& treat = Treatments::select(treat_id);
+    const Treatments& treat = bridge::within_host_model().treatments.select(treat_id);
     treat_simple(human, treat.liverEffect(), treat.bloodEffect());
 
     // triggered intervention deployments:
