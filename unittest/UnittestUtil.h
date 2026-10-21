@@ -378,7 +378,7 @@ public:
     // But do set latentP.
     static void Infection_init_latentP_and_NaN() { Infection::s_latentP = Sim::from_days(15); }
 
-    static void DescriptiveInfection_init() { ModelOptions::reset(); }
+    static void descriptive_infection_init() { ModelOptions::reset(); }
 
     static void EmpiricalWHM_setup() {
         ModelOptions::reset();
