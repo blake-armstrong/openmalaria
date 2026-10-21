@@ -777,5 +777,5 @@ See `PLAN.md` for the session protocol, chunks and gates. Append one log entry p
   - M4 (next) changes draws again and regenerates `test/expected` once more.
   - M8's counter-based streams can key on these four purposes plus (human, step).
   - D7: `VectorModel` should take `MasterRngs::transmission` by injection instead of the bridge; whoever takes `Population`/`Human` (or D9) likewise for `population`.
-  - The S5/S6/V1 replicate dirs (`/Users/blaarm/git/om-s5`, `build-rework/stats-s6/`, `build-rework/stats-v1/`) were kept until D2b; the references stayed, so they are still the data behind them. Ask the user whether to remove them.
+  - The S5/S6/V1 replicate dirs (`/Users/blaarm/git/om-s5`, `build-rework/stats-s6/`, `build-rework/stats-v1/`) were kept until D2b; the references stayed, so they are still the data behind them. **The user decided (2026-10-21): keep them until M4 is done**; ask again then.
 - Next: M4 (recommended order 11).
