@@ -53,20 +53,20 @@ public:
      * @param dens Current parasite density in parasites per µL
      * @param densHRP2 Equivalent density for diagnostics dependent on HRP2
      * @returns True if outcome is positive. */
-    bool isPositive(LocalRng& rng, double dens, double densHRP2) const;
+    bool is_positive(LocalRng& rng, double dens, double dens_hrp2) const;
 
     inline bool operator!=(const Diagnostic& that) const {
         return specificity != that.specificity || dens_lim != that.dens_lim;
     }
 
     /// True if false positives are possible
-    bool allowsFalsePositives() const;
+    bool allows_false_positives() const;
 
 private:
     /** Construct from XML parameters. */
     Diagnostic(const Parameters& parameters, const util::ModelOptionFlags& options, const scnXml::Diagnostic& elt);
     /** Construct as deterministic. */
-    explicit Diagnostic(double minDens);
+    explicit Diagnostic(double min_dens);
 
     // switch: either not-a-number indicating a deterministic test, or specificity
     double specificity;
@@ -106,7 +106,7 @@ public:
 
 private:
     /** Make a new diagnostic with deterministic density and return a reference. */
-    const Diagnostic& make_deterministic(double minDens);
+    const Diagnostic& make_deterministic(double min_dens);
 
     std::map<std::string, Diagnostic> diagnostic_set;
     const Diagnostic* monitoring = nullptr;
@@ -146,7 +146,7 @@ namespace WithinHost {
 
 /** Static members to do with Diagnostic: library of parameterised Diagnostic
  * objects. */
-class diagnostics {
+class Diagnostics {
 public:
     /** Look up a diagnostic by name and get a reference to it.
      * 
@@ -156,7 +156,7 @@ public:
 
     /// Static access functions
 
-    static inline const Diagnostic& monitoringDiagnostic() { return bridge::diagnostics().monitoring_diagnostic(); }
+    static inline const Diagnostic& monitoring_diagnostic() { return bridge::diagnostics().monitoring_diagnostic(); }
 };
 
 }

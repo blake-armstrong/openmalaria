@@ -81,7 +81,7 @@ public:
     inline double cumulative_exposure_j() { return cum_exposure_j; }
 
     /// Get whether the infection is HRP2-deficient
-    bool is_hrp2_deficient() const { return Genotypes::getGenotypes()[genotype_code].hrp2_deficient; }
+    bool is_hrp2_deficient() const { return Genotypes::get_genotypes()[genotype_code].hrp2_deficient; }
 
     /** Get the infection's genotype. */
     uint32_t genotype() const { return genotype_code; }

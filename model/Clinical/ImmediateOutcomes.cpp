@@ -193,7 +193,7 @@ void ImmediateOutcomes::uncomplicatedEvent(Human& human, Episode::State pgState)
 
         if (useDiagnosticUC) {
             mon::recordEvent(mon::measure("nTreatDiagnostics"), human);
-            auto diag = WithinHost::diagnostics::monitoringDiagnostic();
+            auto diag = WithinHost::Diagnostics::monitoring_diagnostic();
             if (!human.withinHostModel->diagnostic_result(human.clinical_rng, diag))
                 return; // negative outcome: no treatment
         }

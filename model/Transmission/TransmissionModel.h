@@ -253,8 +253,8 @@ public:
                 human.perHostTransmission.relativeAvailabilityHetAge(Sim::in_years(human.age(Sim::ts1())));
             sumWeight += avail;
 
-            vector<double> probTransGenotype_i(WithinHost::Genotypes::N());
-            vector<double> probTransGenotype_l(WithinHost::Genotypes::N());
+            vector<double> probTransGenotype_i(WithinHost::Genotypes::count());
+            vector<double> probTransGenotype_l(WithinHost::Genotypes::count());
             const double pTransmit =
                 human.withinHostModel->prob_transmission_to_mosquito(probTransGenotype_i, probTransGenotype_l);
 
@@ -265,7 +265,7 @@ public:
             if (opt_vaccine_genotype == false)
                 riskTrans = avail * pTransmit * human.vaccine.getFactor(interventions::Vaccine::TBV);
             else {
-                for (size_t g = 0; g < WithinHost::Genotypes::N(); ++g)
+                for (size_t g = 0; g < WithinHost::Genotypes::count(); ++g)
                     riskTrans += (probTransGenotype_i[g] + probTransGenotype_l[g]) *
                                  human.vaccine.getFactor(interventions::Vaccine::TBV, g);
                 riskTrans *= avail;

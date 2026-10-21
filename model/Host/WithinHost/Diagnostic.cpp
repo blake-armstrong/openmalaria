@@ -95,29 +95,29 @@ Diagnostic::Diagnostic(const Parameters& parameters, const util::ModelOptionFlag
     uses_hrp2 = elt.getMechanism() == "HRP2";
 }
 
-Diagnostic::Diagnostic(double minDens) {
+Diagnostic::Diagnostic(double min_dens) {
     specificity = numeric_limits<double>::quiet_NaN();
-    dens_lim = minDens;
+    dens_lim = min_dens;
     uses_hrp2 = false;
 }
 
-bool Diagnostic::isPositive(LocalRng& rng, double dens, double densHRP2) const {
+bool Diagnostic::is_positive(LocalRng& rng, double dens, double dens_hrp2) const {
     if (uses_hrp2) {
-        assert(densHRP2 == densHRP2); // monitoring diagnostic passes NaN; use of HRP2 is not supported
-        dens = densHRP2;
+        assert(dens_hrp2 == dens_hrp2); // monitoring diagnostic passes NaN; use of HRP2 is not supported
+        dens = dens_hrp2;
     }
     if ((std::isnan)(specificity)) {
         // use deterministic test
         return dens >= dens_lim;
     } else {
         // dens_lim is dens_50 in this case
-        double pPositive = 1.0 + specificity * (dens / (dens + dens_lim) - 1.0);
+        double p_positive = 1.0 + specificity * (dens / (dens + dens_lim) - 1.0);
         //         double pPositive = (dens + dens_lim - dens_lim * specificity) / (dens + dens_lim);       // equivalent
-        return rng.bernoulli(pPositive);
+        return rng.bernoulli(p_positive);
     }
 }
 
-bool Diagnostic::allowsFalsePositives() const {
+bool Diagnostic::allows_false_positives() const {
     if ((std::isnan)(specificity))
         return dens_lim <= 0.0;
     return specificity < 1.0;
@@ -162,8 +162,8 @@ DiagnosticRegistry::DiagnosticRegistry(const Parameters& parameters, const util:
             densitybias = parameters[Parameter::DensityBiasGarki];
         } else {
             if (scenario.getAnalysisNo().present()) {
-                int analysisNo = scenario.getAnalysisNo().get();
-                if ((analysisNo >= 22) && (analysisNo <= 30)) {
+                int analysis_no = scenario.getAnalysisNo().get();
+                if ((analysis_no >= 22) && (analysis_no <= 30)) {
                     cerr << "Warning: these analysis numbers used to mean "
                             "use Garki density bias. If you do want to use this, "
                             "specify the option GARKI_DENSITY_BIAS; if not, nothing's wrong."
@@ -172,8 +172,8 @@ DiagnosticRegistry::DiagnosticRegistry(const Parameters& parameters, const util:
             }
             densitybias = parameters[Parameter::DensityBiasNonGarki];
         }
-        double detectionLimit = surveys.getDetectionLimit().get() * densitybias;
-        monitoring = &make_deterministic(detectionLimit);
+        double detection_limit = surveys.getDetectionLimit().get() * densitybias;
+        monitoring = &make_deterministic(detection_limit);
     } else {
         if (!surveys.getDiagnostic().present()) {
             throw util::xml_scenario_error("monitoring/surveys: require "
@@ -200,11 +200,11 @@ const Diagnostic& DiagnosticRegistry::get(const string& name) const {
     return it->second;
 }
 
-const Diagnostic& DiagnosticRegistry::make_deterministic(double minDens) {
+const Diagnostic& DiagnosticRegistry::make_deterministic(double min_dens) {
     string name = ""; // anything not matching an existing name is fine
     assert(diagnostic_set.count(name) ==
            0); // we shouldn't need to call make_deterministic more than once, so I think this will do
-    auto ret = diagnostic_set.insert(make_pair(std::move(name), Diagnostic(minDens)));
+    auto ret = diagnostic_set.insert(make_pair(std::move(name), Diagnostic(min_dens)));
     assert(ret.second);
     return ret.first->second;
 }

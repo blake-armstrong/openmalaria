@@ -20,8 +20,8 @@
  * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301, USA.
  */
 
-#ifndef Hmod_WithinHost_Treatments
-#define Hmod_WithinHost_Treatments
+#ifndef HMOD_WITHIN_HOST_TREATMENTS
+#define HMOD_WITHIN_HOST_TREATMENTS
 
 #include "Host/WithinHost/WHInterface.h"
 #include "interventions/Interfaces.h"
@@ -54,18 +54,18 @@ public:
      *
      * 0 implies no action, <0 implies retrospective action, and n>0
      * implies treatment for next n time steps. */
-    inline SimTime liverEffect() const { return timeLiver; }
+    inline SimTime liver_effect() const { return time_liver; }
     /** Get the blood stage action.
      *
      * 0 implies no action, <0 implies retrospective action, and n>0
      * implies treatment for next n time steps. */
-    inline SimTime bloodEffect() const { return timeBlood; }
+    inline SimTime blood_effect() const { return time_blood; }
     //@}
 
 private:
     Treatments(const scnXml::TreatmentOption& elt);
 
-    SimTime timeLiver, timeBlood;
+    SimTime time_liver, time_blood;
 
     friend class TreatmentRegistry;
 };
@@ -77,9 +77,9 @@ public:
     TreatmentId add(const scnXml::TreatmentOption& desc);
 
     /** Return the corresponding treatment description. */
-    const Treatments& select(TreatmentId treatId) const {
-        assert(treatId.id < treatments.size());
-        return treatments[treatId.id];
+    const Treatments& select(TreatmentId treat_id) const {
+        assert(treat_id.id < treatments.size());
+        return treatments[treat_id.id];
     }
 
 private:

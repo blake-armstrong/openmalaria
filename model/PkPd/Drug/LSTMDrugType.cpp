@@ -270,7 +270,7 @@ LSTMDrugType::LSTMDrugType(size_t index, const scnXml::PKPDDrug& drug_data)
         map<string, size_t> loci;
         vector<vector<uint32_t>> loc_alleles;
         for (const scnXml::Restriction& restriction : phenotype.getRestriction()) {
-            const uint32_t allele = Genotypes::findAlleleCode(restriction.getOnLocus(), restriction.getToAllele());
+            const uint32_t allele = Genotypes::find_allele_code(restriction.getOnLocus(), restriction.getToAllele());
             if (allele == numeric_limits<uint32_t>::max()) {
                 throw util::xml_scenario_error("phenotype has "
                                                "restriction on locus " +
@@ -297,10 +297,10 @@ LSTMDrugType::LSTMDrugType(size_t index, const scnXml::PKPDDrug& drug_data)
                                            " restrictions required when num. phenotypes > 1");
         } else {
             // All genotypes map to phenotype 0
-            genotype_mapping.assign(Genotypes::getGenotypes().size(), 0);
+            genotype_mapping.assign(Genotypes::get_genotypes().size(), 0);
         }
     } else {
-        const vector<Genotypes::Genotype>& genotypes = Genotypes::getGenotypes();
+        const vector<Genotypes::Genotype>& genotypes = Genotypes::get_genotypes();
         genotype_mapping.assign(genotypes.size(), 0);
         for (size_t j = 0; j < genotypes.size(); ++j) {
             uint32_t phenotype = numeric_limits<uint32_t>::max();

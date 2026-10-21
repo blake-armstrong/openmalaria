@@ -20,8 +20,8 @@
  * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301, USA.
  */
 
-#ifndef Hmod_WH_Genotypes
-#define Hmod_WH_Genotypes
+#ifndef HMOD_WH_GENOTYPES
+#define HMOD_WH_GENOTYPES
 
 #include "Global.h"
 #include "util/random.h"
@@ -47,8 +47,8 @@ using util::LocalRng;
 
 /// Represent a combination of alleles, each from a different locus
 struct Genotype {
-    Genotype(uint32_t allele, double iFreq, double fit, bool hrp2_del)
-        : init_freq(iFreq), fitness(fit), hrp2_deficient(hrp2_del) {
+    Genotype(uint32_t allele, double freq, double fit, bool hrp2_del)
+        : init_freq(freq), fitness(fit), hrp2_deficient(hrp2_del) {
         alleles.insert(allele);
     }
     Genotype cross(const Genotype& that) const;
@@ -100,9 +100,9 @@ public:
 
 private:
     enum SampleMode {
-        SAMPLE_FIRST,   // always choose first genotype (essentially the off switch)
-        SAMPLE_INITIAL, // sample from initial probabilities
-        SAMPLE_TRACKING // sample from tracked success at genotype level (no recombination)
+        SampleFirst,   // always choose first genotype (essentially the off switch)
+        SampleInitial, // sample from initial probabilities
+        SampleTracking // sample from tracked success at genotype level (no recombination)
     };
 
     void print_genotypes() const;
@@ -115,7 +115,7 @@ private:
     std::vector<Genotype> genotype_list;
     size_t n_genotypes = 1;
     // Mode to use now (until switched) and from the start of the intervention period.
-    SampleMode current_mode = SAMPLE_FIRST, interv_mode = SAMPLE_FIRST;
+    SampleMode current_mode = SampleFirst, interv_mode = SampleFirst;
 };
 
 }
@@ -154,19 +154,19 @@ class Genotypes {
 public:
     using Genotype = WithinHost::Genotype;
 
-    static uint32_t findAlleleCode(const string& locus, const string& allele) {
+    static uint32_t find_allele_code(const string& locus, const string& allele) {
         return bridge::genotypes().find_allele_code(locus, allele);
     }
 
-    static const vector<Genotype>& getGenotypes() { return bridge::genotypes().genotypes(); }
+    static const vector<Genotype>& get_genotypes() { return bridge::genotypes().genotypes(); }
 
-    static uint32_t sampleGenotype(LocalRng& rng, std::vector<double>& genotype_weights) {
+    static uint32_t sample_genotype(LocalRng& rng, std::vector<double>& genotype_weights) {
         return bridge::genotypes().sample_genotype(rng, genotype_weights);
     }
 
-    static size_t N() { return bridge::genotypes().count(); }
+    static size_t count() { return bridge::genotypes().count(); }
 
-    static double initialFreq(size_t genotype) { return bridge::genotypes().initial_freq(genotype); }
+    static double initial_freq(size_t genotype) { return bridge::genotypes().initial_freq(genotype); }
 };
 
 }

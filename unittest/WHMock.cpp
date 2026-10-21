@@ -66,7 +66,7 @@ void WHMock::update(Host::Human& human, LocalRng& rng, int& nNewInfs_i, int& nNe
 inline double WHMock::get_total_density() const { return totalDensity; }
 
 bool WHMock::diagnostic_result(LocalRng& rng, const Diagnostic& diagnostic) const {
-    return diagnostic.isPositive(rng, totalDensity, numeric_limits<double>::quiet_NaN());
+    return diagnostic.is_positive(rng, totalDensity, numeric_limits<double>::quiet_NaN());
 }
 
 void WHMock::treatment(Host::Human& human, TreatmentId treatId) { nTreatments += 1; }

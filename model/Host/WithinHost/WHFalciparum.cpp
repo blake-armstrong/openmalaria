@@ -72,8 +72,8 @@ WHFalciparum::WHFalciparum(const FalciparumParams& params, LocalRng& rng, double
       innate_imm_surv_fact(exp(-rng.gauss(0.0, params.sigma_i))),
       pathogenesis_model(Pathogenesis::PathogenesisModel::createPathogenesisModel(comorbidity_factor)),
       falciparum_params(&params) {
-    y_lag_imported.resize(params.y_lag_len * Genotypes::N());
-    y_lag_local.resize(params.y_lag_len * Genotypes::N());
+    y_lag_imported.resize(params.y_lag_len * Genotypes::count());
+    y_lag_local.resize(params.y_lag_len * Genotypes::count());
 }
 
 WHFalciparum::~WHFalciparum() = default;
@@ -110,7 +110,7 @@ const double PtmTauPrime = 1.0 / sqrt(1.0 / PtmTau);
 const double PtmMu = -8.1;
 
 inline double compute_y_lag(const vector<double>& y_lag, int y_lag_len, vector<double>& y_lag_g) {
-    const size_t n = Genotypes::N();
+    const size_t n = Genotypes::count();
 
     // Take weighted sum of total asexual blood stage density 10, 15 and 20 days
     // before. Add y_lag_len to index to ensure positive.
@@ -141,7 +141,7 @@ double WHFalciparum::prob_transmission_to_mosquito(vector<double>& prob_trans_ge
     // model. Description: AJTMH pp.32-33 and p9.
 
     // Note: we don't allow for gametocydal treatments (e.g. Primaquine).
-    const size_t n = Genotypes::N();
+    const size_t n = Genotypes::count();
 
     // Sum lagged densities across genotypes:
     vector<double> y_lag_g_i(n), y_lag_g_l(n);
@@ -175,12 +175,12 @@ double WHFalciparum::prob_transmission_to_mosquito(vector<double>& prob_trans_ge
 }
 
 bool WHFalciparum::diagnostic_result(LocalRng& rng, const Diagnostic& diagnostic) const {
-    return diagnostic.isPositive(rng, total_density, hrp2_density);
+    return diagnostic.is_positive(rng, total_density, hrp2_density);
 }
 
 void WHFalciparum::treatment(Host::Human& human, TreatmentId treat_id) {
     const Treatments& treat = bridge::within_host_model().treatments.select(treat_id);
-    treat_simple(human, treat.liverEffect(), treat.bloodEffect());
+    treat_simple(human, treat.liver_effect(), treat.blood_effect());
 
     // triggered intervention deployments:
     treat.deploy(human, mon::Deploy::TREAT, interventions::VaccineLimits(/*default initialise: no limits*/));

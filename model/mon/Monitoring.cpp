@@ -89,7 +89,7 @@ void addStore(const OutMeasure& om, size_t nSpecies, size_t nDrugs, bool forceNo
     store.nAges = forceNoCategories ? 1 : (om.dims & Dim::Age ? runtime.ageGroupUpperBound.size() : 1);
     store.nCohorts = forceNoCategories ? 1 : (om.dims & Dim::Cohort ? runtime.nCohorts : 1);
     store.nSpecies = forceNoCategories ? 1 : (om.dims & Dim::Species ? nSpecies : 1);
-    store.nGenotypes = forceNoCategories ? 1 : (om.dims & Dim::Genotype ? WithinHost::Genotypes::N() : 1);
+    store.nGenotypes = forceNoCategories ? 1 : (om.dims & Dim::Genotype ? WithinHost::Genotypes::count() : 1);
     store.nDrugs = forceNoCategories ? 1 : (om.dims & Dim::Drug ? nDrugs : 1);
     const size_t reportCount = store.size() * runtime.nSurveys;
     if (om.isDouble)

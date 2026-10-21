@@ -40,7 +40,7 @@ namespace OM {
 namespace Clinical {
 
 using WithinHost::Diagnostic;
-using WithinHost::diagnostics;
+using WithinHost::Diagnostics;
 using namespace OM::util;
 using std::map;
 using std::vector;
@@ -746,7 +746,7 @@ const CMDecisionTree& CMDTInfectionOrigin::create(const scnXml::DTInfectionOrigi
 }
 
 const CMDecisionTree& CMDTDiagnostic::create(const scnXml::DTDiagnostic& node, bool isUC) {
-    return save_decision(new CMDTDiagnostic(diagnostics::get(node.getDiagnostic()),
+    return save_decision(new CMDTDiagnostic(Diagnostics::get(node.getDiagnostic()),
                                             CMDecisionTree::create(node.getPositive(), isUC),
                                             CMDecisionTree::create(node.getNegative(), isUC)));
 }

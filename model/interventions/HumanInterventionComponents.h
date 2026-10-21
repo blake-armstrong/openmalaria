@@ -42,7 +42,7 @@ namespace OM {
 namespace interventions {
 using Host::Human;
 using WithinHost::Diagnostic;
-using WithinHost::diagnostics;
+using WithinHost::Diagnostics;
 
 // ———  HumanIntervention  ———
 
@@ -206,7 +206,7 @@ public:
 class ScreenComponent : public HumanInterventionComponent {
 public:
     ScreenComponent(ComponentId id, const scnXml::Screen& elt)
-        : HumanInterventionComponent(id), diagnostic(diagnostics::get(elt.getDiagnostic())),
+        : HumanInterventionComponent(id), diagnostic(Diagnostics::get(elt.getDiagnostic())),
           positive(elt.getPositive()), negative(elt.getNegative()) {}
 
     void deploy(Human& human, mon::Deploy::Method method, VaccineLimits vaccLimits) const {

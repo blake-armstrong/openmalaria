@@ -39,7 +39,7 @@ TreatmentId TreatmentRegistry::add(const scnXml::TreatmentOption& desc) {
 
 // ———   non-static  ———
 
-Treatments::Stages stageFromString(const std::string& str) {
+Treatments::Stages stage_from_string(const std::string& str) {
     if (str == "liver")
         return Treatments::LIVER;
     if (str == "blood")
@@ -49,7 +49,7 @@ Treatments::Stages stageFromString(const std::string& str) {
     throw util::format_error(std::string("stage must be liver, blood or both, not ").append(str));
 }
 Treatments::Treatments(const scnXml::TreatmentOption& elt)
-    : TriggeredDeployments(elt), timeLiver(Sim::zero()), timeBlood(Sim::zero()) {
+    : TriggeredDeployments(elt), time_liver(Sim::zero()), time_blood(Sim::zero()) {
     for (auto it = elt.getClearInfections().begin(), end = elt.getClearInfections().end(); it != end; ++it) {
         try {
             //NOTE: if changing XSD, this should not be called "timesteps" or have a default unit
@@ -57,16 +57,16 @@ Treatments::Treatments(const scnXml::TreatmentOption& elt)
             if (len < -Sim::one_ts() || len == Sim::zero()) {
                 throw util::format_error("timesteps must be ≥ 1 or have special value -1");
             }
-            Stages stage = stageFromString(it->getStage());
+            Stages stage = stage_from_string(it->getStage());
             if (stage & LIVER) {
-                if (timeLiver != Sim::zero()) // existing treatment configuration
+                if (time_liver != Sim::zero()) // existing treatment configuration
                     throw util::format_error("multiple specification of liver stage effect");
-                timeLiver = len;
+                time_liver = len;
             }
             if (stage & BLOOD) {
-                if (timeBlood != Sim::zero()) // existing treatment configuration
+                if (time_blood != Sim::zero()) // existing treatment configuration
                     throw util::format_error("multiple specification of blood stage effect");
-                timeBlood = len;
+                time_blood = len;
             }
         } catch (const util::format_error& e) {
             throw util::xml_scenario_error(string(".../clearInfections/timesteps: ").append(e.message()));

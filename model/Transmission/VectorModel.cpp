@@ -165,7 +165,7 @@ VectorModel::VectorModel(vector<double> initEIR, int interventionMode,
                          vector<std::unique_ptr<Anopheles::AnophelesModel>> speciesList,
                          vector<std::unique_ptr<Anopheles::EmergenceRateEstimator>> emergenceRateEstimatorsList,
                          map<string, size_t> speciesIndexList, int populationSize)
-    : TransmissionModel(std::move(initEIR), interventionMode, WithinHost::Genotypes::N()),
+    : TransmissionModel(std::move(initEIR), interventionMode, WithinHost::Genotypes::count()),
       m_rng(bridge::master_rngs().transmission), initIterations(0), quinquennial_kappa(5 * Sim::steps_per_year(), 0.0),
       species(std::move(speciesList)), emergenceRateEstimators(std::move(emergenceRateEstimatorsList)),
       speciesIndex(std::move(speciesIndexList)) {
@@ -393,8 +393,8 @@ void VectorModel::calculateEIR(Host::Human& human, double ageYears, vector<doubl
         }
     } else {
         assert(simulationMode == dynamicEIR);
-        EIR_i.assign(WithinHost::Genotypes::N(), 0.0);
-        EIR_l.assign(WithinHost::Genotypes::N(), 0.0);
+        EIR_i.assign(WithinHost::Genotypes::count(), 0.0);
+        EIR_l.assign(WithinHost::Genotypes::count(), 0.0);
         const double ageFactor = host.relativeAvailabilityAge(ageYears);
         for (size_t i = 0; i < speciesIndex.size(); ++i) {
             const vector<double>& partialEIR_i = species[i]->getPartialEIRImported();
@@ -423,7 +423,7 @@ void VectorModel::calculateEIR(Host::Human& human, double ageYears, vector<doubl
 
 // Every Global::interval days:
 void VectorModel::vectorUpdate(const vector<Host::Human>& population) {
-    const size_t nGenotypes = WithinHost::Genotypes::N();
+    const size_t nGenotypes = WithinHost::Genotypes::count();
     std::vector<double> probTransmission_i, probTransmission_l;
     std::vector<double> sum_avail(speciesIndex.size());
     std::vector<double> sigma_df(speciesIndex.size());

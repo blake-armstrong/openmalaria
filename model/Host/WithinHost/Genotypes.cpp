@@ -37,16 +37,16 @@ namespace {
 // Represent a set of loci: all possible combinations of alleles
 // This is actually just machinery to calculate the list of all genotypes
 struct LocusSet {
-    LocusSet(const scnXml::ParasiteLocus& elt_l, map<string, map<string, uint32_t>>& alleleCodes,
-             uint32_t& nextAlleleCode) {
+    LocusSet(const scnXml::ParasiteLocus& elt_l, map<string, map<string, uint32_t>>& allele_codes,
+             uint32_t& next_allele_code) {
         alleles.reserve(elt_l.getAllele().size());
         double cum_p = 0.0;
         for (const scnXml::ParasiteAllele& elt_a : elt_l.getAllele()) {
-            uint32_t alleleCode = (nextAlleleCode++);
-            alleleCodes[elt_l.getName()][elt_a.getName()] = alleleCode;
+            uint32_t allele_code = (next_allele_code++);
+            allele_codes[elt_l.getName()][elt_a.getName()] = allele_code;
             cum_p += elt_a.getInitialFrequency();
             alleles.push_back(
-                Genotype(alleleCode, elt_a.getInitialFrequency(), elt_a.getFitness(), elt_a.getHrp2_deletion()));
+                Genotype(allele_code, elt_a.getInitialFrequency(), elt_a.getFitness(), elt_a.getHrp2_deletion()));
         }
         if (cum_p < 0.999 || cum_p > 1.001)
             throw util::xml_scenario_error("expected sum of initial probabilities of alleles to be 1, but for the " +
@@ -56,15 +56,15 @@ struct LocusSet {
         alleles[0].init_freq += 1.0 - cum_p; // account for any small errors by adjusting the first frequency
     }
     void include(LocusSet& that) {
-        vector<Genotype> newAlleles;
-        newAlleles.reserve(alleles.size() * that.alleles.size());
+        vector<Genotype> new_alleles;
+        new_alleles.reserve(alleles.size() * that.alleles.size());
         for (size_t i = 0; i < alleles.size(); i += 1) {
             for (size_t j = 0; j < that.alleles.size(); j += 1) {
                 // note that we generate new codes each time; we just waste the old ones
-                newAlleles.push_back(alleles[i].cross(that.alleles[j]));
+                new_alleles.push_back(alleles[i].cross(that.alleles[j]));
             }
         }
-        alleles.swap(newAlleles);
+        alleles.swap(new_alleles);
     }
 
     vector<Genotype> alleles;
@@ -99,11 +99,11 @@ GenotypeRegistry::GenotypeRegistry(const scnXml::Scenario& scenario, const util:
     if (scenario.getParasiteGenetics().present()) {
         const scnXml::ParasiteGenetics& genetics = scenario.getParasiteGenetics().get();
 
-        current_mode = SAMPLE_INITIAL; // turn on sampling
+        current_mode = SampleInitial; // turn on sampling
         if (genetics.getSamplingMode() == "initial") {
-            interv_mode = SAMPLE_INITIAL;
+            interv_mode = SampleInitial;
         } else if (genetics.getSamplingMode() == "tracking") {
-            interv_mode = SAMPLE_TRACKING;
+            interv_mode = SampleTracking;
             if (!scenario.getEntomology().getVector().present()) {
                 throw util::xml_scenario_error("incompatibility; either use "
                                                "entomology/vector (not nonVector) or set "
@@ -121,8 +121,8 @@ GenotypeRegistry::GenotypeRegistry(const scnXml::Scenario& scenario, const util:
         // Build the list of all allele combinations by iterating over loci (plural of locus):
         LocusSet loci(genetics.getLocus()[0], allele_codes, next_allele_code);
         for (size_t i = 1; i < genetics.getLocus().size(); i += 1) {
-            LocusSet newLocus(genetics.getLocus()[i], allele_codes, next_allele_code);
-            loci.include(newLocus);
+            LocusSet new_locus(genetics.getLocus()[i], allele_codes, next_allele_code);
+            loci.include(new_locus);
         }
         genotype_list.swap(loci.alleles);
         n_genotypes = genotype_list.size();
@@ -250,15 +250,15 @@ uint32_t GenotypeRegistry::find_allele_code(const string& locus, const string& a
 }
 
 uint32_t GenotypeRegistry::sample_genotype(LocalRng& rng, vector<double>& genotype_weights) const {
-    if (current_mode == SAMPLE_FIRST) {
+    if (current_mode == SampleFirst) {
         return 0; // always the first genotype code
-    } else if (current_mode == SAMPLE_INITIAL || genotype_weights.size() == 0) {
+    } else if (current_mode == SampleInitial || genotype_weights.size() == 0) {
         double sample = rng.uniform_01();
         auto it = cum_initial_freqs.upper_bound(sample);
         assert(it != cum_initial_freqs.end());
         return it->second;
     } else {
-        assert(current_mode == SAMPLE_TRACKING);
+        assert(current_mode == SampleTracking);
         assert(genotype_weights.size() == n_genotypes);
         double weight_sum = util::vectors::sum(genotype_weights);
         assert(weight_sum >= 0.0 && weight_sum < 1e5); // possible loss of precision or other error
@@ -293,7 +293,7 @@ void GenotypeRegistry::checkpoint(istream& stream) {
     int t;
     t & stream;
     current_mode = static_cast<SampleMode>(t);
-    assert(current_mode == SAMPLE_FIRST || current_mode == SAMPLE_INITIAL || current_mode == SAMPLE_TRACKING);
+    assert(current_mode == SampleFirst || current_mode == SampleInitial || current_mode == SampleTracking);
 }
 
 }

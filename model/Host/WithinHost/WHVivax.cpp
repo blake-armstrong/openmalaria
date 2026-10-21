@@ -337,7 +337,7 @@ WHVivax::~WHVivax() {
 
 double WHVivax::prob_transmission_to_mosquito(vector<double>& prob_trans_genotype_i,
                                               vector<double>& prob_trans_genotype_l) const {
-    assert(WithinHost::Genotypes::N() == 1);
+    assert(WithinHost::Genotypes::count() == 1);
     for (const auto& infection : infections) {
         if (infection.is_patent()) {
             // we have gametocytes from at least one brood
@@ -485,7 +485,7 @@ void WHVivax::clear_immunity() { throw TRACED_EXCEPTION_DEFAULT("vivax model doe
 
 void WHVivax::treatment(Host::Human& human, TreatmentId treat_id) {
     const Treatments& treat = bridge::within_host_model().treatments.select(treat_id);
-    treat_simple(human, treat.liverEffect(), treat.bloodEffect());
+    treat_simple(human, treat.liver_effect(), treat.blood_effect());
 
     // triggered intervention deployments:
     treat.deploy(human, mon::Deploy::TREAT, interventions::VaccineLimits(/*default initialise: no limits*/));

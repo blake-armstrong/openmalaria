@@ -65,7 +65,7 @@ void NeonatalMortality::init(const scnXml::Clinical& clinical) {
     prevByGestationalAge.assign(Sim::in_steps(fiveMonths), 0.0);
 
     if (clinical.getNeonatalMortality().present()) {
-        neonatalDiagnostic = &WithinHost::diagnostics::get(clinical.getNeonatalMortality().get().getDiagnostic());
+        neonatalDiagnostic = &WithinHost::Diagnostics::get(clinical.getNeonatalMortality().get().getDiagnostic());
     } else {
         //NOTE: this is a compatibility option for older scenarios
         if (CommandLine::option(CommandLine::DeprecationWarnings)) {
@@ -74,7 +74,7 @@ void NeonatalMortality::init(const scnXml::Clinical& clinical) {
                     "(model/clinical/neonatalMortality)"
                  << endl;
         }
-        neonatalDiagnostic = &WithinHost::diagnostics::monitoringDiagnostic();
+        neonatalDiagnostic = &WithinHost::Diagnostics::monitoring_diagnostic();
     }
 }
 
