@@ -388,7 +388,7 @@ void concludeSurvey() {
 
 void writeSurveyData() {
     string filename = util::CommandLine::output_name();
-    const bool binary = util::CommandLine::output_format() == util::CommandLine::OutputFormat::BIN;
+    const bool binary = util::CommandLine::output_format() == util::CommandLine::OutputFormat::Bin;
     const auto writer = binary ? writeBinary : writeText;
     const ios::openmode mode = ios::out | ios::binary;
 

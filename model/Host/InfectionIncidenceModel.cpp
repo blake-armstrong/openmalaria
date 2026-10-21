@@ -76,7 +76,7 @@ void InfectionIncidenceModel::init(const Parameters& parameters) {
 
     gamma_p = parameters[Parameter::GammaP];
     Sinf = 1 - exp(-parameters[Parameter::NegLogOneMinusSinf]);
-    Simm = parameters[Parameter::SIMM];
+    Simm = parameters[Parameter::Simm];
     EstarInv = 1.0 / parameters[Parameter::EStar];
     Xstar_pInv = 1.0 / parameters[Parameter::XStarP];
 

@@ -284,7 +284,7 @@ enum OptionCodes {
     // Used by tests; should be 1 more than largest option
     NumOptions,
 
-    IGNORE // special value for use in string to enum lookup
+    Ignore // special value for use in string to enum lookup
 };
 
 /// Encapsulation for "modelVersion" xml attribute

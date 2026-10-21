@@ -43,7 +43,7 @@ string parse_next_arg(std::span<char* const> args, size_t& i) {
 }
 
 void resolve_output_name(string& name, CommandLine::OutputFormat format, bool compressed) {
-    string extension = format == CommandLine::OutputFormat::BIN ? ".bin" : ".txt";
+    string extension = format == CommandLine::OutputFormat::Bin ? ".bin" : ".txt";
     if (compressed)
         extension.append(".gz");
     if (name == "")
@@ -83,9 +83,9 @@ CommandLineOptions CommandLine::parse(std::span<char* const> args) {
         if (clo.starts_with("--")) {
             clo.assign(clo, 2, clo.size() - 2);
             if (clo == "verbose") {
-                result.flags.set(VERBOSE);
+                result.flags.set(Verbose);
             } else if (clo == "progress") {
-                result.flags.set(PROGRESS);
+                result.flags.set(Progress);
             } else if (clo == "resource-path") {
                 if (result.resource_path.size())
                     throw cmd_exception("--resource-path (or -p) may only be given once");
@@ -103,9 +103,9 @@ CommandLineOptions CommandLine::parse(std::span<char* const> args) {
             } else if (clo == "output-format") {
                 const string format = parse_next_arg(args, i);
                 if (format == "txt") {
-                    result.format = OutputFormat::TXT;
+                    result.format = OutputFormat::Txt;
                 } else if (format == "bin") {
-                    result.format = OutputFormat::BIN;
+                    result.format = OutputFormat::Bin;
                 } else {
                     throw cmd_exception("--output-format must be txt or bin");
                 }
@@ -147,15 +147,15 @@ CommandLineOptions CommandLine::parse(std::span<char* const> args) {
                 result.flags.set(SampleInterpolations);
                 result.flags.set(SkipSimulation);
             } else if (clo == "checkpoint") {
-                result.flags.set(CHECKPOINT);
+                result.flags.set(Checkpoint);
             } else if (clo == "checkpoint-file") {
                 if (result.checkpoint_file != "") {
                     throw cmd_exception("--checkpoint-file argument may only be given once");
                 }
-                result.flags.set(CHECKPOINT);
+                result.flags.set(Checkpoint);
                 result.checkpoint_file = parse_next_arg(args, i);
             } else if (clo == "checkpoint-stop") {
-                result.flags.set(CHECKPOINT);
+                result.flags.set(Checkpoint);
                 result.flags.set(CheckpointStop);
             } else if (clo == "debug-vector-fitting") {
                 result.flags.set(DebugVectorFitting);
@@ -176,7 +176,7 @@ CommandLineOptions CommandLine::parse(std::span<char* const> args) {
         } else if (clo.starts_with('-')) { // single - (not --)
             for (size_t j = 1; j < clo.size(); ++j) {
                 if (clo[j] == 'V') {
-                    result.flags.set(VERBOSE);
+                    result.flags.set(Verbose);
                 } else if (clo[j] == 'p') {
                     if (j + 1 != clo.size())
                         throw cmd_exception("a path must be given as next argument after -p");
@@ -205,7 +205,7 @@ CommandLineOptions CommandLine::parse(std::span<char* const> args) {
                     (result.output = "output").append(name);
                     (result.ctsout = "ctsout").append(name).append(".txt");
                 } else if (clo[j] == 'c') {
-                    result.flags.set(CHECKPOINT);
+                    result.flags.set(Checkpoint);
                 } else if (clo[j] == 'v') {
                     clo_version = true;
                 } else if (clo[j] == 'z') {

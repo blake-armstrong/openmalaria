@@ -231,12 +231,12 @@ void Simulation::finish() {
 }
 
 void Simulation::run_phase(const std::string& phase, SimTime end) {
-    if (command_line.option(util::CommandLine::VERBOSE))
+    if (command_line.option(util::CommandLine::Verbose))
         cout << "Starting " << phase << "..." << endl; // NOLINT(performance-avoid-endl)
 
     run_until(end);
 
-    if (command_line.option(util::CommandLine::VERBOSE))
+    if (command_line.option(util::CommandLine::Verbose))
         cout << "Finishing " << phase << "..." << endl; // NOLINT(performance-avoid-endl)
 }
 
@@ -249,7 +249,7 @@ void Simulation::step() {
     Population& population = *population_model;
     Transmission::TransmissionModel& transmission = *transmission_model;
 
-    if (command_line.option(util::CommandLine::VERBOSE) && clock.interv_date() > 0)
+    if (command_line.option(util::CommandLine::Verbose) && clock.interv_date() > 0)
         cout << "Time step: " << clock.now() / clock.one_ts() << ", internal days: " << clock.now() << " | "
              << est_end_time << ", Intervention Date: " << clock.interv_date()
              << endl; // NOLINT(performance-avoid-endl)
@@ -293,7 +293,7 @@ void Simulation::step() {
 
     clock.end_update();
 
-    if (command_line.option(util::CommandLine::PROGRESS))
+    if (command_line.option(util::CommandLine::Progress))
         print_progress(last_percent, clock.now(), est_end_time);
     print_errno(clock.now());
 }

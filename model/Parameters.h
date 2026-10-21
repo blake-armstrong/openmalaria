@@ -51,7 +51,7 @@ enum class Parameter {
     //@{
     NegLogOneMinusSinf,
     EStar,
-    SIMM,
+    Simm,
     XStarP,
     GammaP,
     //@}
@@ -71,7 +71,7 @@ enum class Parameter {
     /// @b Used in PathogenesisModel
     //@{
     YStarSq,
-    ALPHA,
+    Alpha,
     //@}
     DensityBiasNonGarki,       ///< Used in Diagnostic
     BaselineAvailabilityShape, ///< Used in InfectionIncidenceModel
@@ -318,7 +318,7 @@ private:
         static const std::unordered_map<int, Parameter> IdCodeToName{
             {1, Parameter::NegLogOneMinusSinf},
             {2, Parameter::EStar},
-            {3, Parameter::SIMM},
+            {3, Parameter::Simm},
             {4, Parameter::XStarP},
             {5, Parameter::GammaP},
             {6, Parameter::SigmaISq},
@@ -329,7 +329,7 @@ private:
             {11, Parameter::Sigma0Sq},
             {12, Parameter::XNuStar},
             {13, Parameter::YStarSq},
-            {14, Parameter::ALPHA},
+            {14, Parameter::Alpha},
             {15, Parameter::DensityBiasNonGarki},
             {16, Parameter::BaselineAvailabilityShape},
             {17, Parameter::LogOddsRatioCfCommunity},

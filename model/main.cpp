@@ -42,7 +42,7 @@ CheckpointOptions checkpoint_options(const util::CommandLineOptions& command_lin
     const string& name = command_line.checkpoint_name();
     if (!name.empty())
         options.file_name = name;
-    options.enabled = command_line.option(util::CommandLine::CHECKPOINT);
+    options.enabled = command_line.option(util::CommandLine::Checkpoint);
     options.stop_after_write = command_line.option(util::CommandLine::CheckpointStop);
     return options;
 }

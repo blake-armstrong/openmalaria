@@ -45,11 +45,11 @@ public:
         /** Outputs non-default "ModelOptions" values in a human-readable form. */
         PrintModelOptions = 0,
         /// Verbose output
-        VERBOSE,
+        Verbose,
         /// Show progress
-        PROGRESS,
+        Progress,
         /// Forces checkpointing just before starting the main phase.
-        CHECKPOINT,
+        Checkpoint,
         /// Exit after writing checkpoint
         CheckpointStop,
         /** Do initialisation and error checks, but don't run simulation. */
@@ -76,7 +76,7 @@ public:
         NumOptions
     };
 
-    enum class OutputFormat { TXT, BIN };
+    enum class OutputFormat { Txt, Bin };
 
     /** Looks through all command line options.
 	*
@@ -121,7 +121,7 @@ private:
     std::string resource_path;
     std::string scenario;
     std::string output;
-    CommandLine::OutputFormat format = CommandLine::OutputFormat::TXT;
+    CommandLine::OutputFormat format = CommandLine::OutputFormat::Txt;
     std::string ctsout;
     std::string checkpoint_file;
 };

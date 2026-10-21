@@ -91,7 +91,7 @@ public:
             if (deprecation_warnings) {
                 cerr << "Deprecation warning: model option " << s << " is no longer used" << endl;
             }
-            return IGNORE;
+            return Ignore;
         }
 
         if (s == "PENALISATION_EPISODES" || s == "ATTENUATION_ASEXUAL_DENSITY")
@@ -160,7 +160,7 @@ ModelOptionFlags::ModelOptionFlags(const scnXml::Model::ModelOptionsOptional& op
         const scnXml::OptionSet::OptionSequence& opt_seq = options_elt.get().getOption();
         for (const auto& it : opt_seq) {
             const OptionCodes opt = code_map[it.getName()];
-            if (opt != IGNORE)
+            if (opt != Ignore)
                 options[opt] = it.getValue();
         }
     }

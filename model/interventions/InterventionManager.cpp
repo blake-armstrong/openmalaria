@@ -466,7 +466,7 @@ void InterventionManager::deploy(vector<Host::Human>& population, Transmission::
     // deploy timed interventions
     SimTime now = Sim::interv_date();
     while (timed[nextTimed]->date <= now) {
-        if (util::CommandLine::option(util::CommandLine::VERBOSE)) {
+        if (util::CommandLine::option(util::CommandLine::Verbose)) {
             cout << "deploy::" << now << "::Timed";
             timed[nextTimed]->print_details(cout);
             cout << endl;
@@ -481,7 +481,7 @@ void InterventionManager::deploy(vector<Host::Human>& population, Transmission::
         uint32_t nextCtsDist = human.nextCtsDist;
         // deploy continuous interventions
         while (nextCtsDist < continuous.size()) {
-            if (util::CommandLine::option(util::CommandLine::VERBOSE)) {
+            if (util::CommandLine::option(util::CommandLine::Verbose)) {
                 cout << "deploy::" << now << "::Continuous";
                 continuous[nextCtsDist].print_details(cout);
                 cout << endl;
