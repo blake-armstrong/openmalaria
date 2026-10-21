@@ -36,7 +36,6 @@ namespace OM::WithinHost {
 Diagnostic::Diagnostic(const Parameters& parameters, const util::ModelOptionFlags& options,
                        const scnXml::Diagnostic& elt)
     : specificity(numeric_limits<double>::quiet_NaN()), dens_lim(numeric_limits<double>::quiet_NaN()) {
-
     if (options.option(util::VivaxSimpleModel)) {
         return; // both parameters NaN (set above)
     }
@@ -93,8 +92,7 @@ Diagnostic::Diagnostic(const Parameters& parameters, const util::ModelOptionFlag
     uses_hrp2 = elt.getMechanism() == "HRP2";
 }
 
-Diagnostic::Diagnostic(double min_dens)
-    : specificity(numeric_limits<double>::quiet_NaN()), dens_lim(min_dens), uses_hrp2(false) {}
+Diagnostic::Diagnostic(double min_dens) : specificity(numeric_limits<double>::quiet_NaN()), dens_lim(min_dens) {}
 
 bool Diagnostic::is_positive(LocalRng& rng, double dens, double dens_hrp2) const {
     if (uses_hrp2) {
@@ -106,7 +104,7 @@ bool Diagnostic::is_positive(LocalRng& rng, double dens, double dens_hrp2) const
         return dens >= dens_lim;
     } else {
         // dens_lim is dens_50 in this case
-        double p_positive = 1.0 + specificity * (dens / (dens + dens_lim) - 1.0);
+        const double p_positive = 1.0 + specificity * (dens / (dens + dens_lim) - 1.0);
         //         double pPositive = (dens + dens_lim - dens_lim * specificity) / (dens + dens_lim);       // equivalent
         return rng.bernoulli(p_positive);
     }
@@ -125,7 +123,7 @@ DiagnosticRegistry::DiagnosticRegistry(const Parameters& parameters, const util:
     if (scenario.getDiagnostics().present()) {
         for (const scnXml::Diagnostic& diagnostic : scenario.getDiagnostics().get().getDiagnostic()) {
             string name = diagnostic.getName(); // conversion fails without this extra line
-            bool inserted =
+            const bool inserted =
                 diagnostic_set.insert(make_pair(std::move(name), Diagnostic(parameters, options, diagnostic))).second;
             if (!inserted) {
                 throw util::xml_scenario_error(
@@ -157,7 +155,7 @@ DiagnosticRegistry::DiagnosticRegistry(const Parameters& parameters, const util:
             densitybias = parameters[Parameter::DensityBiasGarki];
         } else {
             if (scenario.getAnalysisNo().present()) {
-                int analysis_no = scenario.getAnalysisNo().get();
+                const int analysis_no = scenario.getAnalysisNo().get();
                 if ((analysis_no >= 22) && (analysis_no <= 30)) {
                     cerr << "Warning: these analysis numbers used to mean "
                             "use Garki density bias. If you do want to use this, "
@@ -167,7 +165,7 @@ DiagnosticRegistry::DiagnosticRegistry(const Parameters& parameters, const util:
             }
             densitybias = parameters[Parameter::DensityBiasNonGarki];
         }
-        double detection_limit = surveys.getDetectionLimit().get() * densitybias;
+        const double detection_limit = surveys.getDetectionLimit().get() * densitybias;
         monitoring = &make_deterministic(detection_limit);
     } else {
         if (!surveys.getDiagnostic().present()) {

@@ -99,10 +99,10 @@ public:
     void checkpoint(std::istream& stream);
 
 private:
-    enum SampleMode {
-        SampleFirst,   // always choose first genotype (essentially the off switch)
-        SampleInitial, // sample from initial probabilities
-        SampleTracking // sample from tracked success at genotype level (no recombination)
+    enum class SampleMode : std::uint8_t {
+        First,   // always choose first genotype (essentially the off switch)
+        Initial, // sample from initial probabilities
+        Tracking // sample from tracked success at genotype level (no recombination)
     };
 
     void print_genotypes() const;
@@ -115,7 +115,7 @@ private:
     std::vector<Genotype> genotype_list;
     size_t n_genotypes = 1;
     // Mode to use now (until switched) and from the start of the intervention period.
-    SampleMode current_mode = SampleFirst, interv_mode = SampleFirst;
+    SampleMode current_mode = SampleMode::First, interv_mode = SampleMode::First;
 };
 
 }

@@ -75,7 +75,7 @@ private:
     double dens_lim;
 
     // if true, the diagnostic is dependent on the HRP2 antigen
-    bool uses_hrp2;
+    bool uses_hrp2 = false;
 
     friend class DiagnosticRegistry;
 };

@@ -27,6 +27,7 @@
 #include "util/CommandLine.h"
 #include "schema/scenario.h"
 
+#include <algorithm>
 #include <iomanip>
 
 namespace OM::WithinHost {
@@ -41,7 +42,7 @@ struct LocusSet {
         alleles.reserve(elt_l.getAllele().size());
         double cum_p = 0.0;
         for (const scnXml::ParasiteAllele& elt_a : elt_l.getAllele()) {
-            uint32_t allele_code = (next_allele_code++);
+            const uint32_t allele_code = (next_allele_code++);
             allele_codes[elt_l.getName()][elt_a.getName()] = allele_code;
             cum_p += elt_a.getInitialFrequency();
             alleles.emplace_back(allele_code, elt_a.getInitialFrequency(), elt_a.getFitness(),
@@ -69,15 +70,6 @@ struct LocusSet {
     vector<Genotype> alleles;
 };
 
-// utility function: does a vector contain an element?
-template <class T> bool contains(const vector<T>& vec, const T& x) {
-    for (auto it = vec.begin(), end = vec.end(); it != end; ++it) {
-        if (*it == x)
-            return true;
-    }
-    return false;
-}
-
 }
 
 Genotype Genotype::cross(const Genotype& that) const {
@@ -98,11 +90,11 @@ GenotypeRegistry::GenotypeRegistry(const scnXml::Scenario& scenario, const util:
     if (scenario.getParasiteGenetics().present()) {
         const scnXml::ParasiteGenetics& genetics = scenario.getParasiteGenetics().get();
 
-        current_mode = SampleInitial; // turn on sampling
+        current_mode = SampleMode::Initial; // turn on sampling
         if (genetics.getSamplingMode() == "initial") {
-            interv_mode = SampleInitial;
+            interv_mode = SampleMode::Initial;
         } else if (genetics.getSamplingMode() == "tracking") {
-            interv_mode = SampleTracking;
+            interv_mode = SampleMode::Tracking;
             if (!scenario.getEntomology().getVector().present()) {
                 throw util::xml_scenario_error("incompatibility; either use "
                                                "entomology/vector (not nonVector) or set "
@@ -114,7 +106,7 @@ GenotypeRegistry::GenotypeRegistry(const scnXml::Scenario& scenario, const util:
                                                "parasiteGenetics/samplingMode to \"initial\" (not \"tracking\")");
             }
         } else {
-            throw util::xml_scenario_error("parasiteGenetics/samplingMode: expected \"initial\" or \"tracking\"");
+            throw util::xml_scenario_error(R"(parasiteGenetics/samplingMode: expected "initial" or "tracking")");
         }
 
         // Build the list of all allele combinations by iterating over loci (plural of locus):
@@ -129,7 +121,7 @@ GenotypeRegistry::GenotypeRegistry(const scnXml::Scenario& scenario, const util:
         double cum_p = 0.0;
         for (size_t i = 0; i < genotype_list.size(); ++i) {
             cum_p += genotype_list[i].init_freq;
-            uint32_t genotype_id = static_cast<uint32_t>(i);
+            const auto genotype_id = static_cast<uint32_t>(i);
             assert(genotype_id == i);
             cum_initial_freqs.insert(make_pair(cum_p, genotype_id));
         }
@@ -153,11 +145,8 @@ GenotypeRegistry::GenotypeRegistry(const scnXml::Scenario& scenario, const util:
 void GenotypeRegistry::print_genotypes() const {
     // reorganise allele_codes so that we can look up codes, not names
     vector<pair<string, string>> allele_names(cum_initial_freqs.size());
-    for (const auto& allele_code : allele_codes) {
-        const string locus = allele_code.first;
-        for (const auto& j : allele_code.second) {
-            uint32_t code = j.second;
-            const string allele = j.first;
+    for (const auto& [locus, codes] : allele_codes) {
+        for (const auto& [allele, code] : codes) {
             assert(code < allele_names.size());
             allele_names[code] = make_pair(locus, allele);
         }
@@ -165,20 +154,20 @@ void GenotypeRegistry::print_genotypes() const {
 
     // determine our columns
     map<string, uint32_t> longest; // longest name in column; key is locus
-    for (auto i = genotype_list.begin(), iend = genotype_list.end(); i != iend; ++i) {
+    for (const Genotype& genotype : genotype_list) {
         if (longest.size() == 0) {
-            for (unsigned int allele : i->alleles) {
+            for (const uint32_t allele : genotype.alleles) {
                 const string& locus = allele_names[allele].first;
 
                 longest[locus] = locus.length(); // locus name is included in column
             }
         } else
-            assert(longest.size() == i->alleles.size());
+            assert(longest.size() == genotype.alleles.size());
 
-        for (unsigned int allele : i->alleles) {
+        for (const uint32_t allele : genotype.alleles) {
             auto it = longest.find(allele_names[allele].first);
             assert(it != longest.end());
-            uint32_t len_allele = allele_names[allele].second.length();
+            const uint32_t len_allele = allele_names[allele].second.length();
             if (len_allele > it->second)
                 it->second = len_allele;
         }
@@ -190,51 +179,48 @@ void GenotypeRegistry::print_genotypes() const {
     for (size_t i = 0; loci.size() < longest.size(); ++i) {
         assert(i < allele_names.size());
         const string& locus = allele_names[i].first;
-        if (!contains(loci, locus)) {
+        if (std::ranges::find(loci, locus) == loci.end()) {
             loci.push_back(locus);
         }
     }
 
-    //         string fm = "|%1$-12d|%|14t|%2$-12d|";
-    cout << endl;
-    stringstream fmt;
-    fmt << "|%8d|";
-    for (auto& it : loci)
-        fmt << "%" << longest[it] << "s|";
-    fmt << "%9.3f|%7.3f|";
+    cout << endl; // NOLINT(performance-avoid-endl)
 
     // Table header:
     cout << "|" << std::setw(8) << "Genotype";
-    for (auto& it : loci)
-        cout << "|" << std::setw(longest[it]) << it;
-    cout << "|" << std::setw(9) << "init freq" << "|" << std::setw(7) << "fitness" << "|" << endl;
+    for (const auto& locus : loci)
+        cout << "|" << std::setw(static_cast<int>(longest[locus])) << locus;
+    cout << "|" << std::setw(9) << "init freq" << "|" << std::setw(7) << "fitness" << "|"
+         << endl; // NOLINT(performance-avoid-endl)
 
     cout << "|" << std::setw(8) << "--------";
-    for (auto& it : loci) {
-        if (longest[it] > 0)
+    for (const auto& locus : loci) {
+        if (longest[locus] > 0)
             cout << "|" << "---------";
         else
             cout << "|";
     }
 
-    cout << "|" << std::setw(9) << "---------" << "|" << std::setw(7) << "-------" << "|" << endl;
+    cout << "|" << std::setw(9) << "---------" << "|" << std::setw(7) << "-------" << "|"
+         << endl; // NOLINT(performance-avoid-endl)
 
     cout << std::fixed << setprecision(3);
     for (size_t i = 0; i < genotype_list.size(); ++i) {
         const Genotype& genotype = genotype_list[i];
         map<string, string> locus_allele; // to find allele for each locus
-        for (unsigned int allele : genotype.alleles) {
+        for (const uint32_t allele : genotype.alleles) {
             assert(allele < allele_names.size());
             locus_allele[allele_names[allele].first] = allele_names[allele].second;
         }
 
         cout << "|" << std::setw(8) << (i * 100000);
-        for (auto& it : loci) {
-            auto la = locus_allele.find(it);
+        for (const auto& locus : loci) {
+            auto la = locus_allele.find(locus);
             assert(la != locus_allele.end());
-            cout << "|" << std::setw(longest[it]) << la->second << "|";
+            cout << "|" << std::setw(static_cast<int>(longest[locus])) << la->second << "|";
         }
-        cout << std::setw(9) << genotype.init_freq << "|" << std::setw(7) << genotype.fitness << "|" << endl;
+        cout << std::setw(9) << genotype.init_freq << "|" << std::setw(7) << genotype.fitness << "|"
+             << endl; // NOLINT(performance-avoid-endl)
     }
 }
 
@@ -249,19 +235,19 @@ uint32_t GenotypeRegistry::find_allele_code(const string& locus, const string& a
 }
 
 uint32_t GenotypeRegistry::sample_genotype(LocalRng& rng, vector<double>& genotype_weights) const {
-    if (current_mode == SampleFirst) {
+    if (current_mode == SampleMode::First) {
         return 0; // always the first genotype code
-    } else if (current_mode == SampleInitial || genotype_weights.size() == 0) {
-        double sample = rng.uniform_01();
+    } else if (current_mode == SampleMode::Initial || genotype_weights.size() == 0) {
+        const double sample = rng.uniform_01();
         auto it = cum_initial_freqs.upper_bound(sample);
         assert(it != cum_initial_freqs.end());
         return it->second;
     } else {
-        assert(current_mode == SampleTracking);
+        assert(current_mode == SampleMode::Tracking);
         assert(genotype_weights.size() == n_genotypes);
-        double weight_sum = util::vectors::sum(genotype_weights);
+        const double weight_sum = util::vectors::sum(genotype_weights);
         assert(weight_sum >= 0.0 && weight_sum < 1e5); // possible loss of precision or other error
-        double sample = rng.uniform_01() * weight_sum;
+        const double sample = rng.uniform_01() * weight_sum;
         double cum = 0.0;
         for (size_t g = 0; g < n_genotypes; ++g) {
             cum += genotype_weights[g];
@@ -285,14 +271,15 @@ double GenotypeRegistry::initial_freq(size_t genotype) const {
 // ———  checkpointing  ———
 
 void GenotypeRegistry::checkpoint(ostream& stream) const {
-    int t = current_mode;
+    const int t = static_cast<int>(current_mode);
     t & stream;
 }
 void GenotypeRegistry::checkpoint(istream& stream) {
     int t = 0;
     t & stream;
     current_mode = static_cast<SampleMode>(t);
-    assert(current_mode == SampleFirst || current_mode == SampleInitial || current_mode == SampleTracking);
+    assert(current_mode == SampleMode::First || current_mode == SampleMode::Initial ||
+           current_mode == SampleMode::Tracking);
 }
 
 }

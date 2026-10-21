@@ -52,11 +52,11 @@ Treatments::Treatments(const scnXml::TreatmentOption& elt)
     for (const auto& it : elt.getClearInfections()) {
         try {
             //NOTE: if changing XSD, this should not be called "timesteps" or have a default unit
-            SimTime len = UnitParse::readShortDuration(it.getTimesteps(), UnitParse::STEPS);
+            const SimTime len = UnitParse::readShortDuration(it.getTimesteps(), UnitParse::STEPS);
             if (len < -Sim::one_ts() || len == Sim::zero()) {
                 throw util::format_error("timesteps must be ≥ 1 or have special value -1");
             }
-            Stages stage = stage_from_string(it.getStage());
+            const Stages stage = stage_from_string(it.getStage());
             if (stage & LIVER) {
                 if (time_liver != Sim::zero()) // existing treatment configuration
                     throw util::format_error("multiple specification of liver stage effect");
