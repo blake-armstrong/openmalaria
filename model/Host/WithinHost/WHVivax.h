@@ -25,22 +25,78 @@
 
 #include "Global.h"
 #include "Host/WithinHost/WHInterface.h"
+#include "util/sampler.h"
 
+#include <limits>
 #include <list>
+#include <map>
 #include <memory>
+#include <string>
 
 using namespace std;
 
 class UnittestUtil;
 
 namespace scnXml {
+class HypnozoiteReleaseDistribution;
 class LiverStageDrug;
+class Model;
 }
 namespace OM {
+namespace util {
+class CommandLineOptions;
+}
 namespace WithinHost {
 namespace Pathogenesis {
 class PathogenesisModel;
 }
+
+class HypnozoiteReleaseDistribution {
+public:
+    explicit HypnozoiteReleaseDistribution(const scnXml::HypnozoiteReleaseDistribution& elt);
+
+    /// Sample the time until next release
+    SimTime sample_release_delay(LocalRng& rng) const;
+
+private:
+    std::unique_ptr<util::LognormalSampler> sampler;
+    double latent_relapse; // days
+};
+
+struct VivaxHealthSystemParams {
+    bool ignore_no_pq = false;
+    double p_het_no_pq = std::numeric_limits<double>::signaling_NaN();
+    double p_receive_pq = std::numeric_limits<double>::signaling_NaN();
+    double effectiveness_pq = std::numeric_limits<double>::signaling_NaN();
+};
+
+struct VivaxParams {
+    SimTime latent_p = Sim::never();
+    double prob_blood_stage_infectious_to_mosq = std::numeric_limits<double>::signaling_NaN();
+    std::unique_ptr<HypnozoiteReleaseDistribution> latent_relapse_1st, latent_relapse_2nd;
+    double p_second_release = std::numeric_limits<double>::signaling_NaN();
+    SimTime blood_stage_protection_latency = Sim::never();
+    util::WeibullSampler blood_stage_length; // units: days
+    double p_primary_a = std::numeric_limits<double>::signaling_NaN();
+    double p_primary_b = std::numeric_limits<double>::signaling_NaN();
+    double p_relapse_one_a = std::numeric_limits<double>::signaling_NaN();
+    double p_relapse_one_b = std::numeric_limits<double>::signaling_NaN();
+    double p_relapse_two_a = std::numeric_limits<double>::signaling_NaN();
+    double p_relapse_two_b = std::numeric_limits<double>::signaling_NaN();
+    double p_event_is_severe = std::numeric_limits<double>::signaling_NaN();
+    std::string vivax_clin_option = " ";
+    std::map<double, int> n_hypnozoites_prob_map;
+    VivaxHealthSystemParams health_system;
+
+    VivaxParams() = default;
+    VivaxParams(const scnXml::Model& model, SimTime latent_p);
+
+    void set_health_system(const scnXml::LiverStageDrug* elt, const util::CommandLineOptions& command_line);
+
+    int sample_n_hypnozoites(LocalRng& rng) const;
+    /// Time to hypnozoite release after initial release
+    SimTime sample_release_delay(LocalRng& rng) const;
+};
 
 class WHVivax;
 /**
@@ -59,7 +115,7 @@ public:
      * @param host      The host creating this. Not really needed, except to
      * prevent VivaxBrood being default-constructed by its container.
      */
-    VivaxBrood(LocalRng& rng, int origin, WHVivax* host);
+    VivaxBrood(LocalRng& rng, const VivaxParams& params, int origin, WHVivax* host);
     ~VivaxBrood();
     /** Save a checkpoint. */
     void checkpoint(ostream& stream);
@@ -78,7 +134,7 @@ public:
      *  or liver stages) and whether a new primary blood-stage has started (to
      *  update cumPrimInf)
      */
-    UpdResult update(LocalRng& rng);
+    UpdResult update(LocalRng& rng, const VivaxParams& params);
 
     inline void setHadEvent(bool hadEvent) { this->hadEvent = hadEvent; }
     inline bool hasHadEvent() const { return hadEvent; }
@@ -131,21 +187,15 @@ private:
  */
 class WHVivax : public WHInterface {
 public:
-    /// @brief Static methods
-    //@{
-    /// Initialise static parameters
-    static void init(const OM::Parameters& parameters, const scnXml::Model& model);
-
     /** Called when health system parameters are loaded.
      * 
      * If no "LiverStageDrug" parameters are present, this is still called but with null pointer.
      */
     static void setHSParameters(const scnXml::LiverStageDrug*);
-    //@}
 
     /// @brief Constructors, destructors and checkpointing functions
     //@{
-    WHVivax(LocalRng& rng, double comorbidityFactor);
+    WHVivax(const VivaxParams& params, LocalRng& rng, double comorbidityFactor);
     virtual ~WHVivax();
     //@}
 
@@ -185,6 +235,8 @@ private:
     // not copy constructible
     WHVivax(const WHVivax&) = delete;
     WHVivax& operator=(const WHVivax&) = delete;
+
+    const VivaxParams* params;
 
     list<VivaxBrood> infections;
 

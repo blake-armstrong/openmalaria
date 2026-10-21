@@ -28,6 +28,7 @@
 #include "Host/WithinHost/DescriptiveWithinHost.h"
 #include "Host/WithinHost/WHFalciparum.h"
 #include "Host/WithinHost/WHInterface.h"
+#include "Host/WithinHost/WHVivax.h"
 #include "Parameters.h"
 #include "util/CommandLine.h"
 #include "util/ModelOptions.h"
@@ -57,6 +58,7 @@ struct WithinHostModel {
     FalciparumParams falciparum;
     CommonWithinHostParams common;
     DescriptiveWithinHostParams descriptive;
+    VivaxParams vivax;
 };
 
 }
@@ -64,9 +66,14 @@ struct WithinHostModel {
 namespace bridge {
 
 // NOLINTNEXTLINE(cppcoreguidelines-avoid-non-const-global-variables)
-inline const WithinHost::WithinHostModel* current_within_host_model = nullptr;
+inline WithinHost::WithinHostModel* current_within_host_model = nullptr;
 
 inline const WithinHost::WithinHostModel& within_host_model() {
+    assert(current_within_host_model != nullptr);
+    return *current_within_host_model;
+}
+
+inline WithinHost::WithinHostModel& mutable_within_host_model() {
     assert(current_within_host_model != nullptr);
     return *current_within_host_model;
 }
@@ -75,8 +82,7 @@ inline const WithinHost::WithinHostModel& within_host_model() {
 
 class WithinHostModelBinding {
 public:
-    explicit WithinHostModelBinding(const WithinHost::WithinHostModel& model)
-        : previous(bridge::current_within_host_model) {
+    explicit WithinHostModelBinding(WithinHost::WithinHostModel& model) : previous(bridge::current_within_host_model) {
         bridge::current_within_host_model = &model;
     }
     WithinHostModelBinding(const WithinHostModelBinding&) = delete;
@@ -86,7 +92,7 @@ public:
     ~WithinHostModelBinding() { bridge::current_within_host_model = previous; }
 
 private:
-    const WithinHost::WithinHostModel* previous;
+    WithinHost::WithinHostModel* previous;
 };
 
 }

@@ -25,7 +25,6 @@
 #include "Host/WithinHost/Infection/CommonInfectionModel.h"
 #include "Host/WithinHost/Infection/DescriptiveInfection.h"
 #include "Host/WithinHost/Pathogenesis/PathogenesisModel.h"
-#include "Host/WithinHost/WHVivax.h"
 #include "PkPd/LSTMModel.h"
 #include "mon/Monitoring.h"
 #include "util/UnitParse.h"
@@ -64,7 +63,8 @@ WithinHostModel::WithinHostModel(const OM::Parameters& parameters, const util::M
                                  const util::CommandLineOptions& command_line, const scnXml::Scenario& scenario) {
     if (options.option(util::VivaxSimpleModel)) {
         kind = Kind::Vivax;
-        WHVivax::init(parameters, scenario.getModel());
+        vivax = VivaxParams(scenario.getModel(), read_latent_p(scenario.getModel()));
+        Pathogenesis::PathogenesisModel::init(parameters, scenario.getModel().getClinical(), true);
         return;
     }
 
@@ -103,7 +103,7 @@ WithinHostModel::WithinHostModel(const OM::Parameters& parameters, const util::M
 std::unique_ptr<WHInterface> WithinHostModel::create(util::LocalRng& rng, double comorbidity_factor) const {
     switch (kind) {
     case Kind::Vivax:
-        return std::make_unique<WHVivax>(rng, comorbidity_factor);
+        return std::make_unique<WHVivax>(vivax, rng, comorbidity_factor);
     case Kind::Common:
         return std::make_unique<CommonWithinHost>(falciparum, common, rng, comorbidity_factor);
     case Kind::Descriptive:
