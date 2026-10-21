@@ -805,5 +805,5 @@ See `PLAN.md` for the session protocol, chunks and gates. Append one log entry p
   - M6: move the G-diff test's CDFs to Boost.Math and drop its `gsl_ran_*` comparisons (keep the one-sample and moment checks). `max_multi_log_normal`'s `gsl_cdf_ugaussian_Pinv` goes then too.
   - M8: counter-based per-human streams only need a generator with `gen_double()` for these samplers.
   - M9: F39 (pinned unit-test values) when porting the suites to Catch2.
-  - The S5/S6/V1 replicate dirs (`/Users/blaarm/git/om-s5` 4.5 GB, `build-rework/stats-s6/` 3.0 GB, `build-rework/stats-v1/` 8.0 GB) were kept until M4 at the user's request; **ask the user** whether to remove them. The references they back are unchanged by M4.
+  - The S5/S6/V1 replicate dirs (`/Users/blaarm/git/om-s5` 4.5 GB, `build-rework/stats-s6/` 3.0 GB, `build-rework/stats-v1/` 8.0 GB) were kept until M4 at the user's request. The references they back are unchanged by M4. **The user decided (2026-10-21): keep them until D3 is done**; ask again then.
 - Next: D3 (recommended order 12).
