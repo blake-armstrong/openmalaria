@@ -32,8 +32,7 @@
 #include <fstream>
 #include <cmath>
 
-namespace OM {
-namespace WithinHost {
+namespace OM::WithinHost {
 
 using namespace OM::util;
 
@@ -166,24 +165,22 @@ MolineauxInfectionParams::MolineauxInfectionParams(const Parameters& parameters,
 MolineauxInfection::MolineauxInfection(const MolineauxInfectionParams& params, SimTime latent_p, LocalRng& rng,
                                        uint32_t genotype, int origin)
     : CommonInfection(latent_p, genotype, origin), params(&params) {
-    for (size_t i = 0; i < V; i++) {
+    for (float& i : mi) {
         // Molineaux paper, equation 11
         if (params.multi_factor_gamma) {
             do {
-                mi[i] = static_cast<float>(rng.gamma(ShapeM, ScaleM));
-            } while (mi[i] < 1.0);
+                i = static_cast<float>(rng.gamma(ShapeM, ScaleM));
+            } while (i < 1.0);
         } else {
             do {
-                mi[i] = static_cast<float>(rng.gauss(MuM, SigmaM));
-            } while (mi[i] < 1.0);
+                i = static_cast<float>(rng.gauss(MuM, SigmaM));
+            } while (i < 1.0);
         }
     }
 
-    for (size_t tau = 0; tau < Taus; tau++) {
-        lagged_pc[tau] = 0.0;
+    for (float& tau : lagged_pc) {
+        tau = 0.0;
     }
-
-    sm_summation = 0.0;
 
     if (params.pairwise_p_star_sample) {
         int patient = rng.uniform(35);
@@ -210,9 +207,9 @@ MolineauxInfection::MolineauxInfection(const MolineauxInfectionParams& params, S
     }
 }
 
-MolineauxInfection::Variant::Variant() : pi1(0.0), pi2(0.0), si_summation(0.0) {
-    for (size_t tau = 0; tau < Taus; tau++) {
-        lagged_pi[tau] = 0.0;
+MolineauxInfection::Variant::Variant() {
+    for (float& tau : lagged_pi) {
+        tau = 0.0;
     }
 }
 
@@ -353,12 +350,12 @@ bool MolineauxInfection::update_density(LocalRng&, double survival_factor, SimTi
 MolineauxInfection::MolineauxInfection(const MolineauxInfectionParams& params, SimTime latent_p, istream& stream)
     : CommonInfection(latent_p, stream), params(&params) {
     sm_summation & stream;
-    for (size_t i = 0; i < V; i++) {
-        mi[i] & stream;
+    for (float& i : mi) {
+        i & stream;
     }
     variants & stream;
-    for (size_t j = 0; j < Taus; j++) {
-        lagged_pc[j] & stream;
+    for (float& j : lagged_pc) {
+        j & stream;
     }
     pc_star & stream;
     pm_star & stream;
@@ -368,26 +365,26 @@ void MolineauxInfection::checkpoint(ostream& stream) {
     CommonInfection::checkpoint(stream);
 
     sm_summation & stream;
-    for (size_t i = 0; i < V; i++) {
-        mi[i] & stream;
+    for (float i : mi) {
+        i & stream;
     }
     variants & stream;
-    for (size_t j = 0; j < Taus; j++) {
-        lagged_pc[j] & stream;
+    for (float j : lagged_pc) {
+        j & stream;
     }
     pc_star & stream;
     pm_star & stream;
 }
 
 void MolineauxInfection::Variant::operator&(istream& stream) {
-    bool non_zero;
+    bool non_zero = false;
     non_zero & stream;
     if (non_zero) {
         pi1 & stream;
         pi2 & stream;
         si_summation & stream;
-        for (size_t i = 0; i < Taus; ++i) {
-            lagged_pi[i] & stream;
+        for (float& i : lagged_pi) {
+            i & stream;
         }
     }
     // else: all members are zero-initialised by the constructor, so don't do anything
@@ -401,11 +398,10 @@ void MolineauxInfection::Variant::operator&(ostream& stream) {
         pi1 & stream;
         pi2 & stream;
         si_summation & stream;
-        for (size_t i = 0; i < Taus; ++i) {
-            lagged_pi[i] & stream;
+        for (float i : lagged_pi) {
+            i & stream;
         }
     }
 }
 
-}
 }

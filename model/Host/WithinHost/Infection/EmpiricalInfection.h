@@ -28,8 +28,7 @@
 
 #include <array>
 
-namespace OM {
-namespace WithinHost {
+namespace OM::WithinHost {
 
 struct EmpiricalInfectionParams;
 
@@ -48,17 +47,17 @@ public:
    * 
    * Note: this destructor does nothing in order to allow shallow copying to
    * the population list. */
-    virtual ~EmpiricalInfection() {}
+    ~EmpiricalInfection() override = default;
     //@}
 
     /// Set patent growth rate multiplier.
     /// This was used for independant parameterization.
     void set_patent_growth_rate_multiplier(double multiplier);
 
-    virtual bool update_density(LocalRng& rng, double survival_factor, SimTime bs_age, double);
+    bool update_density(LocalRng& rng, double survival_factor, SimTime bs_age, double) override;
 
 protected:
-    virtual void checkpoint(ostream& stream);
+    void checkpoint(ostream& stream) override;
 
 private:
     double get_inflated_density(LocalRng& rng, double non_inflated_density);
@@ -66,8 +65,8 @@ private:
     double sample_patent_value(LocalRng& rng, double mu, double sigma, double lower_bound);
     double sample_sub_patent_value(LocalRng& rng, double mu, double sigma, double upper_bound);
 
-    double _laggedLogDensities[3];
-    double patent_growth_rate_multiplier;
+    double _laggedLogDensities[3]{};
+    double patent_growth_rate_multiplier{};
 
     const EmpiricalInfectionParams* params;
 };
@@ -104,5 +103,5 @@ struct EmpiricalInfectionParams {
 };
 
 }
-}
+
 #endif

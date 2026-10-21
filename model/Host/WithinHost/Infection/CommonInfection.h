@@ -26,8 +26,7 @@
 #include "Host/WithinHost/Infection/Infection.h"
 #include "util/random.h"
 
-namespace OM {
-namespace WithinHost {
+namespace OM::WithinHost {
 
 using util::LocalRng;
 
@@ -47,7 +46,7 @@ public:
     CommonInfection(SimTime latent_p, istream& stream) : Infection(latent_p, stream) {}
     /// Per instance initialisation; create new inf.
     CommonInfection(SimTime latent_p, uint32_t genotype, int origin) : Infection(latent_p, genotype, origin) {}
-    virtual ~CommonInfection();
+    ~CommonInfection() override;
     //@}
 
     /** Update: calculate new density. Call this once per day.
@@ -78,9 +77,9 @@ protected:
      * @returns True when the infection goes extinct. */
     virtual bool update_density(LocalRng& rng, double survival_factor, SimTime bs_age, double body_mass) = 0;
 
-    virtual void checkpoint(ostream& stream);
+    void checkpoint(ostream& stream) override;
 };
 
 }
-}
+
 #endif

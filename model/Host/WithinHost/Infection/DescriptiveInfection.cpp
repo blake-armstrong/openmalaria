@@ -32,8 +32,7 @@
 #include <cmath>
 #include <fstream>
 
-namespace OM {
-namespace WithinHost {
+namespace OM::WithinHost {
 using namespace util;
 
 // ———  parameters  ———
@@ -74,9 +73,9 @@ DescriptiveInfectionParams::DescriptiveInfectionParams(const Parameters& paramet
     while (getline(f_m_therapy_densities, csv_line)) {
         //Empirical description of single Malaria infections in naive individuals
         //counter variables, i stands for 5 day time interval, j for duration of infection
-        int i;
-        int j;
-        double meanlogdens;
+        int i = 0;
+        int j = 0;
+        double meanlogdens = NAN;
 
         std::istringstream csv_stream(csv_line);
 
@@ -205,5 +204,4 @@ void DescriptiveInfection::checkpoint(ostream& stream) {
     not_printed_md_warning & stream;
 }
 
-}
 }

@@ -30,8 +30,7 @@
 
 #include <array>
 
-namespace OM {
-namespace WithinHost {
+namespace OM::WithinHost {
 
 using util::LocalRng;
 
@@ -124,17 +123,17 @@ public:
     virtual void ipt_attenuate_asexual_density() {}
 
 protected:
-    virtual void checkpoint(ostream& stream);
+    void checkpoint(ostream& stream) override;
 
     // Arbitrary predetermined maximum duration of the infection
     SimTime duration = Sim::never();
 
-    bool not_printed_md_warning;
+    bool not_printed_md_warning{};
 
 private:
     const DescriptiveInfectionParams* params;
 };
 
 }
-}
+
 #endif

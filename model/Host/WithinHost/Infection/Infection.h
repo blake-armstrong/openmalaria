@@ -29,8 +29,7 @@
 
 class UnittestUtil;
 
-namespace OM {
-namespace WithinHost {
+namespace OM::WithinHost {
 
 enum InfectionOrigin {
     /** Imported infections are directly added to the human population dependent on the importation rate. **/
@@ -46,8 +45,7 @@ enum InfectionOrigin {
 class Infection {
 public:
     Infection(SimTime latent_p, uint32_t genotype, int origin)
-        : start_date(Sim::now_or_ts0()), density(0.0), cum_exposure_j(0.0), genotype_code(genotype),
-          origin_code(origin), latent_p(latent_p) {}
+        : start_date(Sim::now_or_ts0()), genotype_code(genotype), origin_code(origin), latent_p(latent_p) {}
     Infection(SimTime latent_p, istream& stream) : start_date(Sim::never()), latent_p(latent_p) {
         start_date & stream;
         density & stream;
@@ -55,7 +53,7 @@ public:
         genotype_code & stream;
         origin_code & stream;
     }
-    virtual ~Infection() {}
+    virtual ~Infection() = default;
 
     /** Return true if infection is blood stage.
      * 
@@ -112,18 +110,18 @@ protected:
     SimTime start_date = Sim::never();
 
     /// Current density of the infection
-    double density;
+    double density{};
 
     /// Cumulative parasite density, since start of this infection
-    double cum_exposure_j;
+    double cum_exposure_j{};
 
     SimTime latent_period() const { return latent_p; }
 
 private:
     /// Genotype of infection (a code; see Genotypes class).
-    uint32_t genotype_code;
+    uint32_t genotype_code{};
 
-    int origin_code;
+    int origin_code{};
 
     SimTime latent_p;
 
@@ -157,5 +155,5 @@ template <typename T> InfectionOrigin get_infection_origin(const std::list<T>& i
 }
 
 }
-}
+
 #endif

@@ -31,8 +31,7 @@
 #include <string>
 #include <cmath>
 
-namespace OM {
-namespace WithinHost {
+namespace OM::WithinHost {
 using namespace ::OM::util;
 
 // -----  parameters  -----
@@ -77,7 +76,7 @@ EmpiricalInfectionParams::EmpiricalInfectionParams(const util::CommandLineOption
         istringstream csv_num1(csv_field1), csv_num2(csv_field2), csv_num3(csv_field3), csv_num4(csv_field4),
             csv_num5(csv_field5), csv_num6(csv_field6), csv_num7(csv_field7);
 
-        int day;
+        int day = 0;
         csv_num1 >> day;
         if (day < 0 || day >= EmpiricalInfection::MaximumDurationInDays)
             throw TRACED_EXCEPTION_DEFAULT("EmpiricalInfection::init(): invalid day");
@@ -97,7 +96,8 @@ EmpiricalInfectionParams::EmpiricalInfectionParams(const util::CommandLineOption
 */
 EmpiricalInfection::EmpiricalInfection(const EmpiricalInfectionParams& params, SimTime latent_p, LocalRng& rng,
                                        uint32_t prot_id, int origin, double growth_rate_multiplier)
-    : CommonInfection(latent_p, prot_id, origin), params(&params) {
+    : CommonInfection(latent_p, prot_id, origin), patent_growth_rate_multiplier(growth_rate_multiplier),
+      params(&params) {
     //sample the parasite densities for the last 3 prepatent days
     //note that the lag decreases with time
     _laggedLogDensities[0] = sample_sub_patent_value(rng, params.alpha1, params.mu1, log(params.sub_patent_limit));
@@ -105,7 +105,6 @@ EmpiricalInfection::EmpiricalInfection(const EmpiricalInfectionParams& params, S
     _laggedLogDensities[2] = sample_sub_patent_value(rng, params.alpha3, params.mu3, log(params.sub_patent_limit));
     //only the immediately preceding value is modified by the growth rate multiplier
     _laggedLogDensities[0] += log(growth_rate_multiplier);
-    patent_growth_rate_multiplier = growth_rate_multiplier;
 }
 
 // -----  non-static class members (other functions)  -----
@@ -126,11 +125,11 @@ bool EmpiricalInfection::update_density(LocalRng& rng, double survival_factor, S
     // constraints to ensure the density is defined and not exploding
     double upper_limit_of_log_density =
         log(params->maximum_permitted_amplification_per_cycle * exp(L[1]) / params->inflation_mean);
-    double amplification_per_cycle;
-    double local_density; // density before scaling by overall_multiplier
+    double amplification_per_cycle = NAN;
+    double local_density = NAN; // density before scaling by overall_multiplier
     size_t age_days = bs_age;
     for (int tries0 = 0; tries0 < EiMaxSamples; ++tries0) {
-        double log_density;
+        double log_density = NAN;
         for (int tries1 = 0; tries1 < EiMaxSamples; ++tries1) {
             double b_1 = rng.gauss(params->mu_beta1[age_days], params->sigma_beta1[age_days]);
             double b_2 = rng.gauss(params->mu_beta2[age_days], params->sigma_beta2[age_days]);
@@ -184,7 +183,7 @@ bool EmpiricalInfection::update_density(LocalRng& rng, double survival_factor, S
 double EmpiricalInfection::sample_sub_patent_value(LocalRng& rng, double alpha, double mu, double upper_bound) {
     double beta = alpha * (1.0 - mu) / mu;
     double non_inflated_value = upper_bound + log(rng.beta(alpha, beta));
-    double inflated_value;
+    double inflated_value = NAN;
     int tries = 0;
     do {
         inflated_value = get_inflated_density(rng, non_inflated_value);
@@ -197,7 +196,7 @@ double EmpiricalInfection::sample_sub_patent_value(LocalRng& rng, double alpha, 
 
 // NOTE: method is unused — why?
 double EmpiricalInfection::sample_patent_value(LocalRng& rng, double mu, double sigma, double lower_bound) {
-    double return_value;
+    double return_value = NAN;
     do {
         double non_inflated_value = rng.gauss(mu, sigma);
         return_value = get_inflated_density(rng, non_inflated_value);
@@ -241,5 +240,4 @@ void EmpiricalInfection::checkpoint(ostream& stream) {
     patent_growth_rate_multiplier & stream;
 }
 
-}
 }

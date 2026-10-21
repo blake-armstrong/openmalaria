@@ -31,8 +31,7 @@
 
 class PennyInfectionSuite;
 
-namespace OM {
-namespace WithinHost {
+namespace OM::WithinHost {
 
 struct PennyInfectionParams {
     bool immune_threshold_gamma = false;
@@ -49,9 +48,9 @@ public:
     /// Resume from a checkpoint
     PennyInfection(const PennyInfectionParams& params, SimTime latent_p, istream& stream);
     /// Destructor
-    virtual ~PennyInfection() {};
+    ~PennyInfection() override = default;
 
-    virtual bool update_density(LocalRng& rng, double survival_factor, SimTime bs_age, double);
+    bool update_density(LocalRng& rng, double survival_factor, SimTime bs_age, double) override;
 
     /** Get the density of sequestered parasites. */
     inline double seq_density(int age_days) {
@@ -60,7 +59,7 @@ public:
     }
 
 protected:
-    virtual void checkpoint(ostream& stream);
+    void checkpoint(ostream& stream) override;
 
 private:
     // function to obtain the summation component of variant specific immunity
@@ -75,21 +74,21 @@ private:
 
     // Circulating densities, 1 to delta_C days ago.
     // index (age mod delta_C) corresponds to delta_C days ago.
-    double cir_densities[DeltaC];
+    double cir_densities[DeltaC]{};
     // as above, but length delta_V
-    double seq_densities[DeltaV];
+    double seq_densities[DeltaV]{};
 
     // threshold_N is critical threshold for innate immunity (for sigmoidal immune function)
-    double threshold_n;
+    double threshold_n{};
     // threshold_V is critical threshold for variant specific immunity (for sigmoidal immune function)
-    double threshold_v;
+    double threshold_v{};
     // threshold_C is critical threshold for clonal immunity (for sigmoidal immune function)
-    double threshold_c;
+    double threshold_c{};
 
     // tracked summation of densities with decay for variant specific immunity (sigmoidal function)
-    double variant_specific_summation;
+    double variant_specific_summation{};
     // tracked summation of densities with decay for clonal immunity (sigmoidal function)
-    double clonal_summation;
+    double clonal_summation{};
 
     const PennyInfectionParams* params;
 
@@ -98,5 +97,5 @@ private:
 };
 
 }
-}
+
 #endif

@@ -25,10 +25,9 @@
 
 #include <algorithm>
 #include <sstream>
-#include <string.h>
+#include <cstring>
 
-namespace OM {
-namespace WithinHost {
+namespace OM::WithinHost {
 
 DummyInfection::DummyInfection(SimTime latent_p, LocalRng& rng, uint32_t prot_id, int origin)
     : CommonInfection(latent_p, prot_id, origin) {
@@ -51,5 +50,4 @@ bool DummyInfection::update_density(LocalRng& rng, double survival_factor, SimTi
 
 DummyInfection::DummyInfection(SimTime latent_p, istream& stream) : CommonInfection(latent_p, stream) {}
 
-}
 }

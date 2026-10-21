@@ -22,12 +22,10 @@
 
 #include "Host/WithinHost/Infection/CommonInfection.h"
 
-namespace OM {
-namespace WithinHost {
+namespace OM::WithinHost {
 
-CommonInfection::~CommonInfection() {}
+CommonInfection::~CommonInfection() = default;
 
 void CommonInfection::checkpoint(ostream& stream) { Infection::checkpoint(stream); }
 
-}
 }

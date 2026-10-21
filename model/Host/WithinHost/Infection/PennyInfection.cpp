@@ -31,8 +31,7 @@
 #include <fstream>
 #include <cmath>
 
-namespace OM {
-namespace WithinHost {
+namespace OM::WithinHost {
 
 using namespace OM::util;
 
@@ -140,7 +139,7 @@ PennyInfectionParams::PennyInfectionParams(const util::ModelOptionFlags& options
 
 PennyInfection::PennyInfection(const PennyInfectionParams& params, SimTime latent_p, LocalRng& rng, uint32_t prot_id,
                                int origin)
-    : CommonInfection(latent_p, prot_id, origin), variant_specific_summation(0), clonal_summation(0), params(&params) {
+    : CommonInfection(latent_p, prot_id, origin), params(&params) {
     // assign infection dependent immune thresholds
     if (params.immune_threshold_gamma) /* using gamma distribution */ {
         do {
@@ -156,11 +155,11 @@ PennyInfection::PennyInfection(const PennyInfectionParams& params, SimTime laten
         } while (threshold_n <= threshold_c || threshold_n <= threshold_v);
     }
 
-    for (int i = 0; i < DeltaC; ++i) {
-        cir_densities[i] = 0.0;
+    for (double& cir_densitie : cir_densities) {
+        cir_densitie = 0.0;
     }
-    for (int i = 0; i < DeltaV; ++i) {
-        seq_densities[i] = 0.0;
+    for (double& seq_densitie : seq_densities) {
+        seq_densitie = 0.0;
     }
 }
 
@@ -269,8 +268,8 @@ double PennyInfection::get_variant_specific_summation(LocalRng& rng, int age_day
     //draw from bernouli distrb, prob 1/lambda_V
     if (new_var_dominant) {
         variant_specific_summation = 0;
-        for (int i = 0; i < DeltaV; ++i) {
-            seq_densities[i] = 0.0;
+        for (double& seq_densitie : seq_densities) {
+            seq_densitie = 0.0;
         }
     }
     //The effective exposure is computed by adding in the delta_V-day lagged parasite density
@@ -292,11 +291,11 @@ double PennyInfection::get_clonal_summation(int age_days) {
 
 PennyInfection::PennyInfection(const PennyInfectionParams& params, SimTime latent_p, istream& stream)
     : CommonInfection(latent_p, stream), params(&params) {
-    for (int i = 0; i < DeltaC; ++i) {
-        cir_densities[i] & stream;
+    for (double& cir_densitie : cir_densities) {
+        cir_densitie & stream;
     }
-    for (int i = 0; i < DeltaV; ++i) {
-        seq_densities[i] & stream;
+    for (double& seq_densitie : seq_densities) {
+        seq_densitie & stream;
     }
     threshold_n & stream;
     threshold_v & stream;
@@ -307,11 +306,11 @@ PennyInfection::PennyInfection(const PennyInfectionParams& params, SimTime laten
 
 void PennyInfection::checkpoint(ostream& stream) {
     CommonInfection::checkpoint(stream);
-    for (int i = 0; i < DeltaC; ++i) {
-        cir_densities[i] & stream;
+    for (double cir_densitie : cir_densities) {
+        cir_densitie & stream;
     }
-    for (int i = 0; i < DeltaV; ++i) {
-        seq_densities[i] & stream;
+    for (double seq_densitie : seq_densities) {
+        seq_densitie & stream;
     }
     threshold_n & stream;
     threshold_v & stream;
@@ -320,5 +319,4 @@ void PennyInfection::checkpoint(ostream& stream) {
     clonal_summation & stream;
 }
 
-}
 }

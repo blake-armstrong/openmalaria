@@ -31,8 +31,7 @@
 
 class MolineauxInfectionSuite;
 
-namespace OM {
-namespace WithinHost {
+namespace OM::WithinHost {
 
 struct MolineauxInfectionParams;
 
@@ -62,12 +61,12 @@ public:
                        int origin);
     // Load from a checkpoint:
     MolineauxInfection(const MolineauxInfectionParams& params, SimTime latent_p, istream& stream);
-    virtual ~MolineauxInfection() {};
+    ~MolineauxInfection() override = default;
 
-    virtual bool update_density(LocalRng& rng, double survival_factor, SimTime bs_age, double body_mass);
+    bool update_density(LocalRng& rng, double survival_factor, SimTime bs_age, double body_mass) override;
 
 protected:
-    virtual void checkpoint(ostream& stream);
+    void checkpoint(ostream& stream) override;
 
 private:
     double get_variant_specific_summation(int i, double p_current);
@@ -77,14 +76,14 @@ private:
     // m_density is equivalent to Pc in paper
     // m_cumulativeExposureJ is cumulative parasite density (used by external immunity function)
 
-    float mi[V];        // base multiplication factor per two-day cycle of variant i
-    float sm_summation; // sum in eqn 7
+    float mi[V]{};        // base multiplication factor per two-day cycle of variant i
+    float sm_summation{}; // sum in eqn 7
     // index: we use ((bsAge/2) mod 4) for τ = t - δ_v respectively τ = t
-    float lagged_pc[Taus]; // Pc(τ) for τ ∈ {t - δ_v, ..., t - 2}
+    float lagged_pc[Taus]{}; // Pc(τ) for τ ∈ {t - δ_v, ..., t - 2}
     /* Pc_star, Pm_star: two host-specific critical densities.
      * These two values depend on the first local maximum or the difference
      * between the last positive day and the first positive day. */
-    float pc_star, pm_star;
+    float pc_star{}, pm_star{};
 
     struct Variant {
         // Initialise all variables to 0
@@ -94,10 +93,10 @@ private:
         void operator&(ostream& stream);
         void operator&(istream& stream);
 
-        float pi1, pi2;     // Pi(t+1), Pi(t+2): variant's i density (PRBC/μl blood)
-        float si_summation; // sum in eqn 6
+        float pi1{0.0}, pi2{0.0}; // Pi(t+1), Pi(t+2): variant's i density (PRBC/μl blood)
+        float si_summation{0.0};  // sum in eqn 6
         // index: we use ((bsAge/2) mod 4) for τ = t - δ_v respectively τ = t
-        float lagged_pi[Taus]; // Pi(τ) for τ ∈ {t - δ_v, ..., t - 2}
+        float lagged_pi[Taus]{}; // Pi(τ) for τ ∈ {t - δ_v, ..., t - 2}
     };
     // variant-specific data; variants[i-1] corresponds to variant i in the paper
     vector<Variant> variants;
@@ -137,5 +136,5 @@ struct MolineauxInfectionParams {
 };
 
 }
-}
+
 #endif

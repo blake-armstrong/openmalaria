@@ -25,8 +25,7 @@
 
 #include "Host/WithinHost/Infection/CommonInfection.h"
 
-namespace OM {
-namespace WithinHost {
+namespace OM::WithinHost {
 
 //!  Models of infection.
 /*!
@@ -39,11 +38,11 @@ public:
     //! Constructor
     DummyInfection(SimTime latent_p, LocalRng& rng, uint32_t prot_id, int origin);
 
-    virtual ~DummyInfection() {}
+    ~DummyInfection() override = default;
 
-    virtual bool update_density(LocalRng& rng, double survival_factor, SimTime bs_age, double);
+    bool update_density(LocalRng& rng, double survival_factor, SimTime bs_age, double) override;
 };
 
 }
-}
+
 #endif
