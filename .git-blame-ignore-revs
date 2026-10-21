@@ -32,3 +32,5 @@ b8df955e63941d358c0befb727337fbbba08cd2d
 06ddff713813398b43767f68efcb54d5ea67845a
 # D4a: falciparum within-host files safe modernize fix-its (util/style.sh modernize)
 89a7167b4800298a110586aab7d4014ea94d162a
+# D4b: rename model/Host/WithinHost/Infection identifiers (util/style.sh rename)
+4db8261740365bedcbe14e3c8ceeb34c671fedc3
