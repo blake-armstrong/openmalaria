@@ -20,8 +20,8 @@
  * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301, USA.
  */
 
-#ifndef Hmod_WithinHost_Descriptive
-#define Hmod_WithinHost_Descriptive
+#ifndef HMOD_WITHIN_HOST_DESCRIPTIVE
+#define HMOD_WITHIN_HOST_DESCRIPTIVE
 
 #include "Host/WithinHost/WHFalciparum.h"
 #include "Host/WithinHost/Infection/DescriptiveInfection.h"
@@ -48,27 +48,27 @@ public:
                                LocalRng& rng, double comorbidity_factor);
     virtual ~DescriptiveWithinHostModel();
 
-    virtual void importInfection(LocalRng& rng);
+    virtual void import_infection(LocalRng& rng);
 
     /// load an infection from a checkpoint
-    virtual void loadInfection(istream& stream);
-    virtual void clearImmunity();
+    virtual void load_infection(istream& stream);
+    virtual void clear_immunity();
 
-    virtual void update(Host::Human& human, LocalRng& rng, int& nNewInfs_i, int& nNewInfs_l,
-                        vector<double>& genotype_weights_i, vector<double>& genotype_weights_l, double ageInYears);
+    virtual void update(Host::Human& human, LocalRng& rng, int& n_new_infs_i, int& n_new_infs_l,
+                        vector<double>& genotype_weights_i, vector<double>& genotype_weights_l, double age_in_years);
 
-    virtual InfectionOrigin getInfectionOrigin() const;
+    virtual InfectionOrigin infection_origin() const;
 
     virtual bool summarize(Host::Human& human) const;
 
 protected:
-    virtual void clearInfections(Treatments::Stages stage);
+    virtual void clear_infections(Treatments::Stages stage);
 
     virtual void checkpoint(istream& stream);
     virtual void checkpoint(ostream& stream);
 
     // Doesn't do anything in this model:
-    virtual void treatPkPd(size_t schedule, size_t dosages, double age, double delay_d);
+    virtual void treat_pk_pd(size_t schedule, size_t dosages, double age, double delay_d);
 
     /** The list of all infections this human has.
      * 

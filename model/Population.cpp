@@ -168,7 +168,7 @@ void ctsPatentHosts(Population& population, ostream& stream) {
     int patent = 0;
     for (Host::Human& human : population.humans) {
         auto diag = WithinHost::diagnostics::monitoringDiagnostic();
-        if (human.withinHostModel->diagnosticResult(human.monitoring_rng, diag))
+        if (human.withinHostModel->diagnostic_result(human.monitoring_rng, diag))
             ++patent;
     }
     stream << '\t' << patent;
@@ -177,7 +177,7 @@ void ctsPatentHosts(Population& population, ostream& stream) {
 void ctsImmunityh(Population& population, ostream& stream) {
     double x = 0.0;
     for (const Host::Human& human : population.humans) {
-        x += human.withinHostModel->getCumulative_h();
+        x += human.withinHostModel->get_cumulative_h();
     }
     x /= population.getSize();
     stream << '\t' << x;
@@ -186,7 +186,7 @@ void ctsImmunityh(Population& population, ostream& stream) {
 void ctsImmunityY(Population& population, ostream& stream) {
     double x = 0.0;
     for (const Host::Human& human : population.humans) {
-        x += human.withinHostModel->getCumulative_Y();
+        x += human.withinHostModel->get_cumulative_y();
     }
     x /= population.getSize();
     stream << '\t' << x;
@@ -196,7 +196,7 @@ void ctsMedianImmunityY(Population& population, ostream& stream) {
     vector<double> list;
     list.reserve(population.getSize());
     for (const Host::Human& human : population.humans) {
-        list.push_back(human.withinHostModel->getCumulative_Y());
+        list.push_back(human.withinHostModel->get_cumulative_y());
     }
     sort(list.begin(), list.end());
     double x;

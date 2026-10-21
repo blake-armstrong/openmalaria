@@ -65,8 +65,8 @@ CommonInfection* createEmpiricalInfection(LocalRng& rng, uint32_t protID, int or
 CommonInfection* checkpointedEmpiricalInfection(istream& stream) { return new EmpiricalInfection(stream); }
 
 void EmpiricalInfection::init() {
-    CommonWithinHost::createInfection = &createEmpiricalInfection;
-    CommonWithinHost::checkpointedInfection = &checkpointedEmpiricalInfection;
+    CommonWithinHost::create_infection = &createEmpiricalInfection;
+    CommonWithinHost::checkpointed_infection = &checkpointedEmpiricalInfection;
 
     // alpha1 corresponds to 1 day before first patent, alpha2 2 days before first patent etc.
     _alpha1 = 0.2647;

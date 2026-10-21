@@ -114,7 +114,7 @@ Human::Human(SimTime dateOfBirth)
     assert(dateOfBirth == Sim::now_or_ts1() || (Sim::now() == Sim::zero() && dateOfBirth < Sim::now()));
 
     HumanHet het = hetSample(host_rng);
-    withinHostModel = WithinHost::WHInterface::createWithinHostModel(host_rng, het.comorbidityFactor);
+    withinHostModel = WithinHost::WHInterface::create_within_host_model(host_rng, het.comorbidityFactor);
     double ii_factor = infIncidence->getAvailabilityFactor(host_rng, 1.0);
     perHostTransmission.initialise(host_rng, het.availabilityFactor * ii_factor);
     clinicalModel = Clinical::ClinicalModel::createClinicalModel(het.treatmentSeekingFactor);

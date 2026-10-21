@@ -32,21 +32,21 @@ using namespace OM::util;
 
 // -----  static functions  -----
 
-TreatmentId WHInterface::addTreatment(const scnXml::TreatmentOption& desc) { return Treatments::addTreatment(desc); }
+TreatmentId WHInterface::add_treatment(const scnXml::TreatmentOption& desc) { return Treatments::addTreatment(desc); }
 
-unique_ptr<WHInterface> WHInterface::createWithinHostModel(LocalRng& rng, double comorbidityFactor) {
-    return bridge::within_host_model().create(rng, comorbidityFactor);
+unique_ptr<WHInterface> WHInterface::create_within_host_model(LocalRng& rng, double comorbidity_factor) {
+    return bridge::within_host_model().create(rng, comorbidity_factor);
 }
 
 // -----  Non-static  -----
 
 void WHInterface::checkpoint(istream& stream) {
-    numInfs & stream;
+    num_infs & stream;
 
-    if (numInfs > MAX_INFECTIONS)
-        throw util::checkpoint_error("numInfs: " + to_string(numInfs));
+    if (num_infs > MaxInfections)
+        throw util::checkpoint_error("numInfs: " + to_string(num_infs));
 }
-void WHInterface::checkpoint(ostream& stream) { numInfs & stream; }
+void WHInterface::checkpoint(ostream& stream) { num_infs & stream; }
 
 }
 }

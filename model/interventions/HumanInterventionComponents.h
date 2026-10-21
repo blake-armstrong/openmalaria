@@ -211,7 +211,7 @@ public:
 
     void deploy(Human& human, mon::Deploy::Method method, VaccineLimits vaccLimits) const {
         mon::recordDeploy(mon::measure("nMassScreenings"), mon::measure("nCtsScreenings"), human, method);
-        if (human.withinHostModel->diagnosticResult(human.intervention_rng, diagnostic)) {
+        if (human.withinHostModel->diagnostic_result(human.intervention_rng, diagnostic)) {
             positive.deploy(human, method, vaccLimits);
         } else {
             negative.deploy(human, method, vaccLimits);
@@ -254,7 +254,7 @@ public:
 
     void deploy(Human& human, mon::Deploy::Method method, VaccineLimits) const {
         mon::recordDeploy(mon::measure("nMDAs"), mon::measure("nCtsMDA"), human, method);
-        human.withinHostModel->treatSimple(human, timeLiver, timeBlood);
+        human.withinHostModel->treat_simple(human, timeLiver, timeBlood);
     }
 
     virtual Component::Type componentType() const { return Component::TREAT_SIMPLE; }
@@ -276,7 +276,7 @@ public:
     void deploy(Human& human, mon::Deploy::Method method, VaccineLimits) const {
         mon::recordDeploy(mon::measure("nMDAs"), mon::measure("nCtsMDA"), human, method);
         double age = Sim::in_years(human.age(Sim::now_or_ts1()));
-        human.withinHostModel->treatPkPd(schedule, dosage, age, delay_d);
+        human.withinHostModel->treat_pk_pd(schedule, dosage, age, delay_d);
     }
 
     virtual Component::Type componentType() const { return Component::TREAT_PKPD; }
@@ -319,7 +319,7 @@ public:
     ClearImmunityComponent(ComponentId id) : HumanInterventionComponent(id) {}
 
     void deploy(Human& human, mon::Deploy::Method method, VaccineLimits) const {
-        human.withinHostModel->clearImmunity();
+        human.withinHostModel->clear_immunity();
         //NOTE: not reported
     }
 

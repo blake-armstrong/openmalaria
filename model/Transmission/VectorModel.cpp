@@ -436,7 +436,7 @@ void VectorModel::vectorUpdate(const vector<Host::Human>& population) {
 
         probTransmission_i.assign(nGenotypes, 0.0);
         probTransmission_l.assign(nGenotypes, 0.0);
-        whm.probTransmissionToMosquito(probTransmission_i, probTransmission_l);
+        whm.prob_transmission_to_mosquito(probTransmission_i, probTransmission_l);
 
         for (size_t s = 0; s < speciesIndex.size(); ++s) {
             // NOTE: calculate availability relative to age at end of time step;

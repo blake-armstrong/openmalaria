@@ -57,11 +57,11 @@ DescriptiveWithinHostModel::~DescriptiveWithinHostModel() {
 
 // -----  Simple infection adders/removers  -----
 
-void DescriptiveWithinHostModel::loadInfection(istream& stream) {
+void DescriptiveWithinHostModel::load_infection(istream& stream) {
     infections.push_back(new DescriptiveInfection(stream));
 }
 
-void DescriptiveWithinHostModel::clearInfections(Treatments::Stages stage) {
+void DescriptiveWithinHostModel::clear_infections(Treatments::Stages stage) {
     for (auto inf = infections.begin(); inf != infections.end();) {
         if (stage == Treatments::BOTH || (stage == Treatments::LIVER && !(*inf)->bloodStage()) ||
             (stage == Treatments::BLOOD && (*inf)->bloodStage())) {
@@ -71,83 +71,83 @@ void DescriptiveWithinHostModel::clearInfections(Treatments::Stages stage) {
             ++inf;
         }
     }
-    numInfs = infections.size();
+    num_infs = infections.size();
 }
 
 // -----  Interventions  -----
 
-void DescriptiveWithinHostModel::clearImmunity() {
+void DescriptiveWithinHostModel::clear_immunity() {
     for (auto inf = infections.begin(); inf != infections.end(); ++inf) {
         (*inf)->clearImmunity();
     }
-    m_cumulative_h = 0.0;
-    m_cumulative_Y_lag = 0.0;
+    cumulative_h = 0.0;
+    cumulative_y_lag = 0.0;
 }
 
-void DescriptiveWithinHostModel::importInfection(LocalRng& rng) {
-    if (numInfs < MAX_INFECTIONS) {
-        m_cumulative_h += 1;
-        numInfs += 1;
+void DescriptiveWithinHostModel::import_infection(LocalRng& rng) {
+    if (num_infs < MaxInfections) {
+        cumulative_h += 1;
+        num_infs += 1;
         // This is a hook, used by interventions. The newly imported infections
         // should use initial frequencies to select genotypes.
         vector<double> weights(0); // zero length: signal to use initial frequencies
         uint32_t genotype = Genotypes::sampleGenotype(rng, weights);
         infections.push_back(new DescriptiveInfection(rng, genotype, WithinHost::InfectionOrigin::Imported));
     }
-    assert(numInfs == static_cast<int>(infections.size()));
+    assert(num_infs == static_cast<int>(infections.size()));
 }
 
 // -----  Density calculations  -----
 
-void DescriptiveWithinHostModel::update(Host::Human& human, LocalRng& rng, int& nNewInfs_i, int& nNewInfs_l,
+void DescriptiveWithinHostModel::update(Host::Human& human, LocalRng& rng, int& n_new_infs_i, int& n_new_infs_l,
                                         vector<double>& genotype_weights_i, vector<double>& genotype_weights_l,
-                                        double ageInYears) {
+                                        double age_in_years) {
     // Note: adding infections at the beginning of the update instead of the end
     // shouldn't be significant since before latentp delay nothing is updated.
-    int nNewInfsToBeCreated_i = nNewInfs_i;
-    int nNewInfsToBeCreated_l = nNewInfs_l;
+    int n_new_infs_to_be_created_i = n_new_infs_i;
+    int n_new_infs_to_be_created_l = n_new_infs_l;
 
-    nNewInfs_l = min(nNewInfs_l, MAX_INFECTIONS - numInfs);
-    nNewInfs_i = min(nNewInfs_i, MAX_INFECTIONS - numInfs - nNewInfs_l);
+    n_new_infs_l = min(n_new_infs_l, MaxInfections - num_infs);
+    n_new_infs_i = min(n_new_infs_i, MaxInfections - num_infs - n_new_infs_l);
 
-    numInfs += nNewInfs_i;
-    assert(numInfs >= 0 && numInfs <= MAX_INFECTIONS);
-    for (int i = 0; i < nNewInfs_i; ++i) {
+    num_infs += n_new_infs_i;
+    assert(num_infs >= 0 && num_infs <= MaxInfections);
+    for (int i = 0; i < n_new_infs_i; ++i) {
         uint32_t genotype = Genotypes::sampleGenotype(rng, genotype_weights_i);
 
         // If opt_vaccine_genotype is true the infection is discarded with probability 1-vaccineFactor
         if (opt_vaccine_genotype) {
-            double vaccineFactor = human.vaccine.getFactor(interventions::Vaccine::PEV, genotype);
-            if (vaccineFactor == 1.0 || human.host_rng.bernoulli(vaccineFactor))
+            double vaccine_factor = human.vaccine.getFactor(interventions::Vaccine::PEV, genotype);
+            if (vaccine_factor == 1.0 || human.host_rng.bernoulli(vaccine_factor))
                 infections.push_back(new DescriptiveInfection(rng, genotype, InfectionOrigin::Introduced));
         } else if (opt_vaccine_genotype == false)
             infections.push_back(new DescriptiveInfection(rng, genotype, InfectionOrigin::Introduced));
     }
-    assert(numInfs == static_cast<int>(infections.size()));
+    assert(num_infs == static_cast<int>(infections.size()));
 
-    numInfs += nNewInfs_l;
-    assert(numInfs >= 0 && numInfs <= MAX_INFECTIONS);
-    for (int i = 0; i < nNewInfs_l; ++i) {
+    num_infs += n_new_infs_l;
+    assert(num_infs >= 0 && num_infs <= MaxInfections);
+    for (int i = 0; i < n_new_infs_l; ++i) {
         uint32_t genotype = Genotypes::sampleGenotype(rng, genotype_weights_l);
 
         // If opt_vaccine_genotype is true the infection is discarded with probability 1-vaccineFactor
         if (opt_vaccine_genotype) {
-            double vaccineFactor = human.vaccine.getFactor(interventions::Vaccine::PEV, genotype);
-            if (vaccineFactor == 1.0 || human.host_rng.bernoulli(vaccineFactor))
+            double vaccine_factor = human.vaccine.getFactor(interventions::Vaccine::PEV, genotype);
+            if (vaccine_factor == 1.0 || human.host_rng.bernoulli(vaccine_factor))
                 infections.push_back(new DescriptiveInfection(rng, genotype, InfectionOrigin::Indigenous));
         } else if (opt_vaccine_genotype == false)
             infections.push_back(new DescriptiveInfection(rng, genotype, InfectionOrigin::Indigenous));
     }
-    assert(numInfs == static_cast<int>(infections.size()));
+    assert(num_infs == static_cast<int>(infections.size()));
 
-    updateImmuneStatus();
+    update_immune_status();
 
-    totalDensity = 0.0;
-    hrp2Density = 0.0;
-    timeStepMaxDensity = 0.0;
+    total_density = 0.0;
+    hrp2_density = 0.0;
+    time_step_max_density = 0.0;
 
-    bool treatmentLiver = treatExpiryLiver > Sim::ts0();
-    bool treatmentBlood = treatExpiryBlood > Sim::ts0();
+    bool treatment_liver = treat_expiry_liver > Sim::ts0();
+    bool treatment_blood = treat_expiry_blood > Sim::ts0();
 
     for (auto inf = infections.begin(); inf != infections.end();) {
         //NOTE: it would be nice to combine this code with that in
@@ -158,30 +158,31 @@ void DescriptiveWithinHostModel::update(Host::Human& human, LocalRng& rng, int& 
         // SP drug action and the PK/PD model would need to be abstracted
         // behind a common interface.
         if ((*inf)->expired() /* infection has self-terminated */ ||
-            ((*inf)->bloodStage() ? treatmentBlood : treatmentLiver)) {
+            ((*inf)->bloodStage() ? treatment_blood : treatment_liver)) {
             delete *inf;
             inf = infections.erase(inf);
-            numInfs--;
+            num_infs--;
             continue;
         }
 
         // Should be: infStepMaxDens = 0.0, but has some history.
         // See MAX_DENS_CORRECTION in DescriptiveInfection.cpp.
-        double infStepMaxDens = timeStepMaxDensity;
-        double immSurvFact = immunitySurvivalFactor(ageInYears, (*inf)->cumulativeExposureJ());
-        double bsvFactor =
+        double inf_step_max_dens = time_step_max_density;
+        double imm_surv_fact = immunity_survival_factor(age_in_years, (*inf)->cumulativeExposureJ());
+        double bsv_factor =
             human.vaccine.getFactor(interventions::Vaccine::BSV, opt_vaccine_genotype ? (*inf)->genotype() : 0);
 
-        (*inf)->determineDensities(rng, m_cumulative_h, infStepMaxDens, immSurvFact, _innateImmSurvFact, bsvFactor);
+        (*inf)->determineDensities(rng, cumulative_h, inf_step_max_dens, imm_surv_fact, innate_imm_surv_fact,
+                                   bsv_factor);
 
         if (bugfix_max_dens)
-            infStepMaxDens = std::max(infStepMaxDens, timeStepMaxDensity);
-        timeStepMaxDensity = infStepMaxDens;
+            inf_step_max_dens = std::max(inf_step_max_dens, time_step_max_density);
+        time_step_max_density = inf_step_max_dens;
 
         double density = (*inf)->getDensity();
-        totalDensity += density;
+        total_density += density;
         if (!(*inf)->isHrp2Deficient()) {
-            hrp2Density += density;
+            hrp2_density += density;
         }
 
         ++inf;
@@ -189,70 +190,70 @@ void DescriptiveWithinHostModel::update(Host::Human& human, LocalRng& rng, int& 
 
     // As in AJTMH p22, cumulative_h (X_h + 1) doesn't include infections added
     // this time-step and cumulative_Y only includes past densities.
-    m_cumulative_h += nNewInfs_i + nNewInfs_l;
-    m_cumulative_Y += Sim::one_ts() * totalDensity;
+    cumulative_h += n_new_infs_i + n_new_infs_l;
+    cumulative_y += Sim::one_ts() * total_density;
 
-    util::streamValidate(totalDensity);
-    util::streamValidate(hrp2Density);
-    assert((std::isfinite)(totalDensity)); // inf probably wouldn't be a problem but NaN would be
+    util::streamValidate(total_density);
+    util::streamValidate(hrp2_density);
+    assert((std::isfinite)(total_density)); // inf probably wouldn't be a problem but NaN would be
 
     // Cache total density for infectiousness calculations
     int y_lag_i = Sim::modulo_steps(Sim::ts1(), params().y_lag_len);
 
     for (size_t g = 0; g < Genotypes::N(); ++g) {
-        m_y_lag_i[y_lag_i * Genotypes::N() + g] = 0.0;
-        m_y_lag_l[y_lag_i * Genotypes::N() + g] = 0.0;
+        y_lag_imported[y_lag_i * Genotypes::N() + g] = 0.0;
+        y_lag_local[y_lag_i * Genotypes::N() + g] = 0.0;
     }
 
     for (auto inf = infections.begin(); inf != infections.end(); ++inf) {
         if ((*inf)->origin() == InfectionOrigin::Imported)
-            m_y_lag_i[y_lag_i * Genotypes::N() + (*inf)->genotype()] += (*inf)->getDensity();
+            y_lag_imported[y_lag_i * Genotypes::N() + (*inf)->genotype()] += (*inf)->getDensity();
         else
-            m_y_lag_l[y_lag_i * Genotypes::N() + (*inf)->genotype()] += (*inf)->getDensity();
+            y_lag_local[y_lag_i * Genotypes::N() + (*inf)->genotype()] += (*inf)->getDensity();
     }
 
     // This is a bug, we keep it this way to be consistent with old simulations
     if (opt_vaccine_genotype == false) {
-        nNewInfs_i = nNewInfsToBeCreated_i;
-        nNewInfs_l = nNewInfsToBeCreated_l;
+        n_new_infs_i = n_new_infs_to_be_created_i;
+        n_new_infs_l = n_new_infs_to_be_created_l;
     }
 }
 
-InfectionOrigin DescriptiveWithinHostModel::getInfectionOrigin() const { return get_infection_origin(infections); }
+InfectionOrigin DescriptiveWithinHostModel::infection_origin() const { return get_infection_origin(infections); }
 
 // -----  Summarize  -----
 
 bool DescriptiveWithinHostModel::summarize(Host::Human& human) const {
-    pathogenesisModel->summarize(human);
+    pathogenesis_model->summarize(human);
 
-    InfectionOrigin infectionType = get_infection_origin(infections);
+    InfectionOrigin infection_type = get_infection_origin(infections);
 
     // If the number of infections is 0 and parasite density is positive we default to Indigenous
     if (infections.size() > 0) {
         mon::recordStat(mon::measure("nInfect"), human);
-        if (infectionType == InfectionOrigin::Indigenous)
+        if (infection_type == InfectionOrigin::Indigenous)
             mon::recordStat(mon::measure("nInfect_Indigenous"), human);
-        else if (infectionType == InfectionOrigin::Introduced)
+        else if (infection_type == InfectionOrigin::Introduced)
             mon::recordStat(mon::measure("nInfect_Introduced"), human);
         else
             mon::recordStat(mon::measure("nInfect_Imported"), human);
 
-        int nImported = 0, nIntroduced = 0, nIndigenous = 0;
+        int n_imported = 0, n_introduced = 0, n_indigenous = 0;
         for (auto inf = infections.begin(); inf != infections.end(); ++inf) {
             if ((*inf)->origin() == InfectionOrigin::Indigenous)
-                nIndigenous++;
+                n_indigenous++;
             else if ((*inf)->origin() == InfectionOrigin::Introduced)
-                nIntroduced++;
+                n_introduced++;
             else
-                nImported++;
+                n_imported++;
         }
 
         // (patent) infections are reported by genotype, even though we don't have
         // genotype in this model
         mon::recordStat(mon::measure("totalInfs"), human, static_cast<int>(infections.size()));
-        mon::recordStat(mon::measure("totalInfs_Imported"), human, nImported);
-        mon::recordStat(mon::measure("totalInfs_Introduced"), human, nIntroduced);
-        mon::recordStat(mon::measure("totalInfs_Indigenous"), human, nIndigenous);
+        mon::recordStat(mon::measure("totalInfs_Imported"), human, n_imported);
+        mon::recordStat(mon::measure("totalInfs_Introduced"), human, n_introduced);
+        mon::recordStat(mon::measure("totalInfs_Indigenous"), human, n_indigenous);
 
         if (descriptive_params->report_patent_infected) {
             for (auto inf = infections.begin(); inf != infections.end(); ++inf) {
@@ -289,18 +290,18 @@ bool DescriptiveWithinHostModel::summarize(Host::Human& human) const {
     // Some treatments (simpleTreat with steps=-1) clear infections immediately
     // (and are applied after update()), thus infections.size() may be 0 while
     // totalDensity > 0. Here we report the last calculated density.
-    if (diagnostics::monitoringDiagnostic().isPositive(human.monitoring_rng, totalDensity,
+    if (diagnostics::monitoringDiagnostic().isPositive(human.monitoring_rng, total_density,
                                                        std::numeric_limits<double>::quiet_NaN())) {
         mon::recordStat(mon::measure("nPatent"), human);
-        if (infectionType == InfectionOrigin::Imported)
+        if (infection_type == InfectionOrigin::Imported)
             mon::recordStat(mon::measure("nPatent_Imported"), human);
-        else if (infectionType == InfectionOrigin::Introduced)
+        else if (infection_type == InfectionOrigin::Introduced)
             mon::recordStat(mon::measure("nPatent_Introduced"), human);
-        else if (infectionType == InfectionOrigin::Indigenous)
+        else if (infection_type == InfectionOrigin::Indigenous)
             mon::recordStat(mon::measure("nPatent_Indigenous"), human);
 
-        if (totalDensity > 1e-10)
-            mon::recordStat(mon::measure("sumlogDens"), human, log(totalDensity));
+        if (total_density > 1e-10)
+            mon::recordStat(mon::measure("sumlogDens"), human, log(total_density));
         return true; // patent
     }
     return false; // not patent
@@ -310,10 +311,10 @@ bool DescriptiveWithinHostModel::summarize(Host::Human& human) const {
 
 void DescriptiveWithinHostModel::checkpoint(istream& stream) {
     WHFalciparum::checkpoint(stream);
-    for (int i = 0; i < numInfs; ++i) {
-        loadInfection(stream); // create infections using a virtual function call
+    for (int i = 0; i < num_infs; ++i) {
+        load_infection(stream); // create infections using a virtual function call
     }
-    assert(numInfs == static_cast<int>(infections.size()));
+    assert(num_infs == static_cast<int>(infections.size()));
 }
 void DescriptiveWithinHostModel::checkpoint(ostream& stream) {
     WHFalciparum::checkpoint(stream);
@@ -321,9 +322,9 @@ void DescriptiveWithinHostModel::checkpoint(ostream& stream) {
         *inf& stream;
 }
 
-char const* const not_impl = "feature not available with the \"descriptive\" within-host model";
-void DescriptiveWithinHostModel::treatPkPd(size_t schedule, size_t dosages, double age, double delay_d) {
-    throw TRACED_EXCEPTION(not_impl, util::Error::WHFeatures);
+char const* const NotImpl = "feature not available with the \"descriptive\" within-host model";
+void DescriptiveWithinHostModel::treat_pk_pd(size_t schedule, size_t dosages, double age, double delay_d) {
+    throw TRACED_EXCEPTION(NotImpl, util::Error::WHFeatures);
 }
 
 }

@@ -279,7 +279,7 @@ void ClinicalEventScheduler::doClinicalUpdate(Human& human, double ageYears, Wit
                 // Human is killed at end of time at risk
                 //timeOfRecovery += extraDaysAtRisk;	(no point updating; will be set later: ATORWD)
             }
-            previousDensity = withinHostModel.getTotalDensity();
+            previousDensity = withinHostModel.get_total_density();
         }
 
         if (opt_non_malaria_fevers) {
@@ -348,8 +348,8 @@ void ClinicalEventScheduler::doClinicalUpdate(Human& human, double ageYears, Wit
             // for parasite density Y(t). v_neg below is -v.
             // TODO: this model should be revisited, and if possible placed
             // within the WHFalciparum class (or a subclass).
-            if (withinHostModel.getTotalDensity() > 0.0) { // avoid division by zero
-                double parasiteReductionEffect = withinHostModel.getTotalDensity() / previousDensity;
+            if (withinHostModel.get_total_density() > 0.0) { // avoid division by zero
+                double parasiteReductionEffect = withinHostModel.get_total_density() / previousDensity;
                 double pDeath = 1.0 - exp(neg_v * parasiteReductionEffect);
                 // community fatality rate when not in hospital
                 if (!(pgState & Episode::EVENT_IN_HOSPITAL))
@@ -363,7 +363,7 @@ void ClinicalEventScheduler::doClinicalUpdate(Human& human, double ageYears, Wit
                     timeOfRecovery = timeOfRecovery + extraDaysAtRisk; // may be re-set later (see ATORWD)
                 }
             }
-            previousDensity = withinHostModel.getTotalDensity();
+            previousDensity = withinHostModel.get_total_density();
         }
     }
 

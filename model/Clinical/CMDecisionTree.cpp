@@ -153,7 +153,7 @@ protected:
     }
 
     virtual CMDTOut exec(CMHostData hostData) const {
-        WithinHost::InfectionOrigin InfectionOrigin = hostData.withinHost().getInfectionOrigin();
+        WithinHost::InfectionOrigin InfectionOrigin = hostData.withinHost().infection_origin();
         if (InfectionOrigin == WithinHost::InfectionOrigin::Imported)
             return imported.exec(hostData);
         else if (InfectionOrigin == WithinHost::InfectionOrigin::Introduced)
@@ -196,7 +196,7 @@ protected:
     virtual CMDTOut exec(CMHostData hostData) const {
         CMDTOut result;
 
-        if (hostData.withinHost().diagnosticResult(hostData.rng, diagnostic))
+        if (hostData.withinHost().diagnostic_result(hostData.rng, diagnostic))
             result = positive.exec(hostData);
         else
             result = negative.exec(hostData);
@@ -477,7 +477,7 @@ protected:
 
     virtual CMDTOut exec(CMHostData hostData) const {
         for (const TreatInfo& treatment : treatments) {
-            hostData.withinHost().treatPkPd(treatment.schedule, treatment.dosage, hostData.ageYears, 0.0);
+            hostData.withinHost().treat_pk_pd(treatment.schedule, treatment.dosage, hostData.ageYears, 0.0);
         }
         return CMDTOut(true);
     }
@@ -543,7 +543,7 @@ protected:
     virtual CMDTOut exec(CMHostData hostData) const {
         bool bsTreatment = false;
         for (size_t i = 0; i < timeLiver.size(); i++) {
-            bsTreatment = hostData.withinHost().treatSimple(hostData.human, timeLiver[i], timeBlood[i]);
+            bsTreatment = hostData.withinHost().treat_simple(hostData.human, timeLiver[i], timeBlood[i]);
         }
         return CMDTOut(bsTreatment);
     }

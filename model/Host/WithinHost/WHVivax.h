@@ -149,37 +149,37 @@ public:
     virtual ~WHVivax();
     //@}
 
-    virtual double probTransmissionToMosquito(vector<double>& probTransGenotype_i,
-                                              vector<double>& probTransGenotype_l) const;
+    virtual double prob_transmission_to_mosquito(vector<double>& probTransGenotype_i,
+                                                 vector<double>& probTransGenotype_l) const;
 
     virtual bool summarize(Host::Human& human) const;
 
-    virtual void importInfection(LocalRng& rng);
+    virtual void import_infection(LocalRng& rng);
 
     virtual void update(Host::Human& human, LocalRng& rng, int& nNewInfs_i, int& nNewInfs_l,
                         vector<double>& genotype_weights_i, vector<double>& genotype_weights_l, double ageInYears);
 
-    virtual bool diagnosticResult(LocalRng& rng, const Diagnostic& diagnostic) const;
+    virtual bool diagnostic_result(LocalRng& rng, const Diagnostic& diagnostic) const;
 
-    virtual Pathogenesis::StatePair determineMorbidity(Host::Human& human, double ageYears, bool);
+    virtual Pathogenesis::StatePair determine_morbidity(Host::Human& human, double ageYears, bool);
 
-    virtual void clearImmunity();
+    virtual void clear_immunity();
 
-    virtual InfectionOrigin getInfectionOrigin() const { return InfectionOrigin::Indigenous; }
+    virtual InfectionOrigin infection_origin() const { return InfectionOrigin::Indigenous; }
 
 protected:
     virtual void treatment(Host::Human& human, TreatmentId treatId);
-    virtual bool treatSimple(Host::Human& human, SimTime timeLiver, SimTime timeBlood);
-    virtual void optionalPqTreatment(Host::Human& human);
+    virtual bool treat_simple(Host::Human& human, SimTime timeLiver, SimTime timeBlood);
+    virtual void optional_pq_treatment(Host::Human& human);
 
     virtual void checkpoint(istream& stream);
     virtual void checkpoint(ostream& stream);
 
     // None of these do anything in this model:
-    virtual void treatPkPd(size_t schedule, size_t dosages, double age, double delay_d);
-    virtual double getTotalDensity() const;
-    virtual double getCumulative_h() const;
-    virtual double getCumulative_Y() const;
+    virtual void treat_pk_pd(size_t schedule, size_t dosages, double age, double delay_d);
+    virtual double get_total_density() const;
+    virtual double get_cumulative_h() const;
+    virtual double get_cumulative_y() const;
 
 private:
     // not copy constructible

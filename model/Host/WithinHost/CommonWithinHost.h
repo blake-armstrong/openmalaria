@@ -20,8 +20,8 @@
  * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301, USA.
  */
 
-#ifndef Hmod_CommonWithinHost
-#define Hmod_CommonWithinHost
+#ifndef HMOD_COMMON_WITHIN_HOST
+#define HMOD_COMMON_WITHIN_HOST
 
 #include "Global.h"
 #include "Host/WithinHost/WHFalciparum.h"
@@ -58,15 +58,15 @@ public:
                      double comorbidity_factor);
     virtual ~CommonWithinHost();
 
-    virtual void importInfection(LocalRng& rng);
+    virtual void import_infection(LocalRng& rng);
 
-    virtual void treatPkPd(size_t schedule, size_t dosage, double age, double delay_d);
-    virtual void clearImmunity();
+    virtual void treat_pk_pd(size_t schedule, size_t dosage, double age, double delay_d);
+    virtual void clear_immunity();
 
-    virtual void update(Host::Human& human, LocalRng& rng, int& nNewInfs_i, int& nNewInfs_l,
-                        vector<double>& genotype_weights_i, vector<double>& genotype_weights_l, double ageInYears);
+    virtual void update(Host::Human& human, LocalRng& rng, int& n_new_infs_i, int& n_new_infs_l,
+                        vector<double>& genotype_weights_i, vector<double>& genotype_weights_l, double age_in_years);
 
-    virtual void addProphylacticEffects(const vector<double>& pClearanceByTime);
+    virtual void add_prophylactic_effects(const vector<double>& p_clearance_by_time);
 
     /** \brief Factory functions to create infections.
      *
@@ -75,26 +75,26 @@ public:
      * The first variant is for creating a new infection, the second for loading
      * one from a checkpoint. */
     //@{
-    static CommonInfection* (*createInfection)(LocalRng& rng, uint32_t protID, int origin);
-    static CommonInfection* (*checkpointedInfection)(istream& stream);
+    static CommonInfection* (*create_infection)(LocalRng& rng, uint32_t prot_id, int origin);
+    static CommonInfection* (*checkpointed_infection)(istream& stream);
     //@}
 
-    virtual InfectionOrigin getInfectionOrigin() const;
+    virtual InfectionOrigin infection_origin() const;
 
     virtual bool summarize(Host::Human& human) const;
 
 protected:
-    virtual void clearInfections(Treatments::Stages stage);
+    virtual void clear_infections(Treatments::Stages stage);
 
     virtual void checkpoint(istream& stream);
     virtual void checkpoint(ostream& stream);
 
 private:
     /// Multiplies the mean mass (for this age) as a heterogeneity factor.
-    double hetMassMultiplier;
+    double het_mass_multiplier;
 
     /// Encapsulates drug code for each human
-    pk_pd::LSTMModel pkpdModel;
+    pk_pd::LSTMModel pkpd_model;
 
     /** The list of all infections this human has.
      *

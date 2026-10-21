@@ -256,7 +256,7 @@ public:
             vector<double> probTransGenotype_i(WithinHost::Genotypes::N());
             vector<double> probTransGenotype_l(WithinHost::Genotypes::N());
             const double pTransmit =
-                human.withinHostModel->probTransmissionToMosquito(probTransGenotype_i, probTransGenotype_l);
+                human.withinHostModel->prob_transmission_to_mosquito(probTransGenotype_i, probTransGenotype_l);
 
             double riskTrans = 0.0;
 

@@ -158,8 +158,8 @@ CommonInfection* createMolineauxInfection(LocalRng& rng, uint32_t protID, int or
 CommonInfection* checkpointedMolineauxInfection(istream& stream) { return new MolineauxInfection(stream); }
 
 void MolineauxInfection::init(const Parameters& parameters) {
-    CommonWithinHost::createInfection = &createMolineauxInfection;
-    CommonWithinHost::checkpointedInfection = &checkpointedMolineauxInfection;
+    CommonWithinHost::create_infection = &createMolineauxInfection;
+    CommonWithinHost::checkpointed_infection = &checkpointedMolineauxInfection;
 
     multi_factor_gamma = util::ModelOptions::option(util::ParasiteReplicationGamma);
 

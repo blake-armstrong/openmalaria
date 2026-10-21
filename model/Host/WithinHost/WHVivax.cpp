@@ -312,8 +312,8 @@ WHVivax::~WHVivax() {
 #endif
 }
 
-double WHVivax::probTransmissionToMosquito(vector<double>& probTransGenotype_i,
-                                           vector<double>& probTransGenotype_l) const {
+double WHVivax::prob_transmission_to_mosquito(vector<double>& probTransGenotype_i,
+                                              vector<double>& probTransGenotype_l) const {
     assert(WithinHost::Genotypes::N() == 1);
     for (auto inf = infections.begin(); inf != infections.end(); ++inf) {
         if (inf->isPatent()) {
@@ -343,7 +343,7 @@ bool WHVivax::summarize(Host::Human& human) const {
     return patentHost;
 }
 
-void WHVivax::importInfection(LocalRng& rng) {
+void WHVivax::import_infection(LocalRng& rng) {
     // this means one new liver stage infection, which can result in multiple blood stages
     infections.push_back(VivaxBrood(rng, WithinHost::InfectionOrigin::Imported, this));
 }
@@ -436,7 +436,7 @@ void WHVivax::update(Host::Human& human, LocalRng& rng, int& nNewInfs_i, int& nN
     }
 }
 
-bool WHVivax::diagnosticResult(LocalRng& rng, const Diagnostic& diagnostic) const {
+bool WHVivax::diagnostic_result(LocalRng& rng, const Diagnostic& diagnostic) const {
     //TODO(monitoring): this shouldn't ignore the diagnostic (especially since
     // it should always return true if diagnostic.density=0)
     for (auto inf = infections.begin(); inf != infections.end(); ++inf) {
@@ -446,23 +446,23 @@ bool WHVivax::diagnosticResult(LocalRng& rng, const Diagnostic& diagnostic) cons
     return false;
 }
 
-Pathogenesis::StatePair WHVivax::determineMorbidity(Host::Human& human, double ageYears, bool) {
+Pathogenesis::StatePair WHVivax::determine_morbidity(Host::Human& human, double ageYears, bool) {
     mon::recordStat(mon::measure("expectedSevere"), human, pSevere);
     Pathogenesis::StatePair result; // no indirect mortality in the vivax model
     result.state = morbidity;
     return result;
 }
 
-void WHVivax::clearImmunity() { throw TRACED_EXCEPTION_DEFAULT("vivax model does not include immune suppression"); }
+void WHVivax::clear_immunity() { throw TRACED_EXCEPTION_DEFAULT("vivax model does not include immune suppression"); }
 
 void WHVivax::treatment(Host::Human& human, TreatmentId treatId) {
     const Treatments& treat = Treatments::select(treatId);
-    treatSimple(human, treat.liverEffect(), treat.bloodEffect());
+    treat_simple(human, treat.liverEffect(), treat.bloodEffect());
 
     // triggered intervention deployments:
     treat.deploy(human, mon::Deploy::TREAT, interventions::VaccineLimits(/*default initialise: no limits*/));
 }
-void WHVivax::optionalPqTreatment(Host::Human& human) {
+void WHVivax::optional_pq_treatment(Host::Human& human) {
     // PQ clears liver stages. We don't worry about the effect of PQ on
     // gametocytes, because these are always cleared by blood-stage drugs with
     // Vivax, and PQ is not given without BS drugs. NOTE: this ignores drug failure.
@@ -475,7 +475,7 @@ void WHVivax::optionalPqTreatment(Host::Human& human) {
         mon::recordEvent(mon::measure("nLiverStageTreatments"), human);
     }
 }
-bool WHVivax::treatSimple(Host::Human& human, SimTime timeLiver, SimTime timeBlood) {
+bool WHVivax::treat_simple(Host::Human& human, SimTime timeLiver, SimTime timeBlood) {
     //TODO: this should be implemented properly (allowing effects on next
     // update instead of now)
 
@@ -550,12 +550,12 @@ void WHVivax::checkpoint(ostream& stream) {
 }
 
 char const* const not_impl = "feature not available in Vivax model";
-void WHVivax::treatPkPd(size_t schedule, size_t dosages, double age, double delay_d) {
+void WHVivax::treat_pk_pd(size_t schedule, size_t dosages, double age, double delay_d) {
     throw TRACED_EXCEPTION(not_impl, util::Error::WHFeatures);
 }
-double WHVivax::getTotalDensity() const { throw TRACED_EXCEPTION(not_impl, util::Error::WHFeatures); }
-double WHVivax::getCumulative_h() const { throw TRACED_EXCEPTION(not_impl, util::Error::WHFeatures); }
-double WHVivax::getCumulative_Y() const { throw TRACED_EXCEPTION(not_impl, util::Error::WHFeatures); }
+double WHVivax::get_total_density() const { throw TRACED_EXCEPTION(not_impl, util::Error::WHFeatures); }
+double WHVivax::get_cumulative_h() const { throw TRACED_EXCEPTION(not_impl, util::Error::WHFeatures); }
+double WHVivax::get_cumulative_y() const { throw TRACED_EXCEPTION(not_impl, util::Error::WHFeatures); }
 
 void WHVivax::init(const OM::Parameters& parameters, const scnXml::Model& model) {
 

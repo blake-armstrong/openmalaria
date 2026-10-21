@@ -241,8 +241,8 @@ int InfectionIncidenceModel::numNewInfections(Human& human, double expectedNumIn
     if (expectedNumInfections > 0.0000001) {
         int n = human.host_rng.poisson(expectedNumInfections);
 
-        if (n > WithinHost::WHInterface::MAX_INFECTIONS)
-            n = WithinHost::WHInterface::MAX_INFECTIONS;
+        if (n > WithinHost::WHInterface::MaxInfections)
+            n = WithinHost::WHInterface::MaxInfections;
         return n;
     }
 

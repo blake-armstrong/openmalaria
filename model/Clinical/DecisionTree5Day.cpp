@@ -63,7 +63,7 @@ void DecisionTree5Day::setHealthSystem(const scnXml::HSDT5Day& hsDescription) {
     treeUCSelfTreat = &CMDecisionTree::create(hsDescription.getTreeUCSelfTreat(), true);
 
     cureRateSevere = hsDescription.getCureRateSevere().getValue();
-    treatmentSevere = WHInterface::addTreatment(hsDescription.getTreatmentSevere());
+    treatmentSevere = WHInterface::add_treatment(hsDescription.getTreatmentSevere());
 
     if (ModelOptions::option(util::VivaxSimpleModel)) {
         WithinHost::WHVivax::setHSParameters(
@@ -101,7 +101,7 @@ void DecisionTree5Day::uncomplicatedEvent(Human& human, Episode::State pgState) 
             mon::recordEvent(mon::measure("nTreatDiagnostics"), human);
         }
 
-        human.withinHostModel->optionalPqTreatment(human);
+        human.withinHostModel->optional_pq_treatment(human);
     } else {
         // No care sought
     }

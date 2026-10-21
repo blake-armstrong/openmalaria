@@ -37,8 +37,8 @@ CommonInfection* createDummyInfection(LocalRng& rng, uint32_t protID, int origin
 CommonInfection* checkpointedDummyInfection(istream& stream) { return new DummyInfection(stream); }
 
 void DummyInfection::init() {
-    CommonWithinHost::createInfection = &createDummyInfection;
-    CommonWithinHost::checkpointedInfection = &checkpointedDummyInfection;
+    CommonWithinHost::create_infection = &createDummyInfection;
+    CommonWithinHost::checkpointed_infection = &checkpointedDummyInfection;
 }
 
 DummyInfection::DummyInfection(LocalRng& rng, uint32_t protID, int origin) : CommonInfection(protID, origin) {

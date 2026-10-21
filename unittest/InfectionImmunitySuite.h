@@ -50,21 +50,21 @@ public:
 
     void testImmunity() {
         // Base case: virtually no immunity due to mother's immunity or past infections
-        wh->m_cumulative_h = 0.0;
-        wh->m_cumulative_Y = 0.0;
+        wh->cumulative_h = 0.0;
+        wh->cumulative_y = 0.0;
         double cumExposureJ = 0.0;
-        TS_ASSERT_APPROX(wh->immunitySurvivalFactor(100., cumExposureJ), 1.0);
+        TS_ASSERT_APPROX(wh->immunity_survival_factor(100., cumExposureJ), 1.0);
 
         // maternal immunity
-        TS_ASSERT_APPROX(wh->immunitySurvivalFactor(0.1, cumExposureJ), 0.30631938551881299);
+        TS_ASSERT_APPROX(wh->immunity_survival_factor(0.1, cumExposureJ), 0.30631938551881299);
 
         // past infections, no density
-        wh->m_cumulative_h = 100.0;
-        TS_ASSERT_APPROX(wh->immunitySurvivalFactor(100., cumExposureJ), 0.41995608739475931);
+        wh->cumulative_h = 100.0;
+        TS_ASSERT_APPROX(wh->immunity_survival_factor(100., cumExposureJ), 0.41995608739475931);
 
         // previous with cum. density of 1e8 (but none from current infection)
-        wh->m_cumulative_Y = 1e8;
-        TS_ASSERT_APPROX(wh->immunitySurvivalFactor(100., cumExposureJ), 0.17081918453312689);
+        wh->cumulative_y = 1e8;
+        TS_ASSERT_APPROX(wh->immunity_survival_factor(100., cumExposureJ), 0.17081918453312689);
     }
 
 private:

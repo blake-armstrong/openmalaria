@@ -71,19 +71,19 @@ WHFalciparum::WHFalciparum(const FalciparumParams& params, LocalRng& rng, double
       // the individual samples change. In any case the overhead is negligible.
       //FIXME: Should this be allowed to be greater than 1?
       // Oldest code on GoogleCode: _innateImmunity=(double)(W_GAUSS((0), (sigma_i)));
-      _innateImmSurvFact(exp(-rng.gauss(0.0, params.sigma_i))), m_cumulative_h(0.0), m_cumulative_Y(0.0),
-      m_cumulative_Y_lag(0.0), totalDensity(0.0), hrp2Density(0.0), timeStepMaxDensity(0.0),
-      pathogenesisModel(Pathogenesis::PathogenesisModel::createPathogenesisModel(comorbidity_factor)),
-      treatExpiryLiver(0), treatExpiryBlood(0), falciparum_params(&params) {
-    m_y_lag_i.resize(params.y_lag_len * Genotypes::N());
-    m_y_lag_l.resize(params.y_lag_len * Genotypes::N());
+      innate_imm_surv_fact(exp(-rng.gauss(0.0, params.sigma_i))), cumulative_h(0.0), cumulative_y(0.0),
+      cumulative_y_lag(0.0), total_density(0.0), hrp2_density(0.0), time_step_max_density(0.0),
+      pathogenesis_model(Pathogenesis::PathogenesisModel::createPathogenesisModel(comorbidity_factor)),
+      treat_expiry_liver(0), treat_expiry_blood(0), falciparum_params(&params) {
+    y_lag_imported.resize(params.y_lag_len * Genotypes::N());
+    y_lag_local.resize(params.y_lag_len * Genotypes::N());
 }
 
 WHFalciparum::~WHFalciparum() {}
 
-double WHFalciparum::immunitySurvivalFactor(double ageInYears, double cumulativeExposureJ) {
-    if (std::isnan(ageInYears) || std::isnan(cumulativeExposureJ) || std::isnan(m_cumulative_h) ||
-        std::isnan(m_cumulative_Y)) {
+double WHFalciparum::immunity_survival_factor(double age_in_years, double cumulative_exposure_j) {
+    if (std::isnan(age_in_years) || std::isnan(cumulative_exposure_j) || std::isnan(cumulative_h) ||
+        std::isnan(cumulative_y)) {
         throw base_exception("nan in immunitySurvivalFactor");
     }
 
@@ -93,24 +93,24 @@ double WHFalciparum::immunitySurvivalFactor(double ageInYears, double cumulative
     double d_y = 1.0;
     // Effect of number of infections experienced since birth (named Dh in AJTM)
     double d_h = 1.0;
-    if (m_cumulative_h > 1.0) {
-        d_h = 1.0 / (1.0 + (m_cumulative_h - 1.0) * params().inv_cumulative_h_star);
-        d_y = 1.0 / (1.0 + (m_cumulative_Y - cumulativeExposureJ) * params().inv_cumulative_y_star);
+    if (cumulative_h > 1.0) {
+        d_h = 1.0 / (1.0 + (cumulative_h - 1.0) * params().inv_cumulative_h_star);
+        d_y = 1.0 / (1.0 + (cumulative_y - cumulative_exposure_j) * params().inv_cumulative_y_star);
     }
 
     // Effect of age-dependent maternal immunity (named Dm in AJTM)
-    const double d_a = 1.0 - params().alpha_m * exp(-params().decay_m * ageInYears);
+    const double d_a = 1.0 - params().alpha_m * exp(-params().decay_m * age_in_years);
 
     return util::streamValidate(std::min(d_y * d_h * d_a, 1.0));
 }
 
 // Infectiousness parameters: see AJTMH p.33; tau=1/sigmag**2
-const double PTM_beta1 = 1.0;
-const double PTM_beta2 = 0.46;
-const double PTM_beta3 = 0.17;
-const double PTM_tau = 0.066;
-const double PTM_tau_prime = 1.0 / sqrt(1.0 / PTM_tau);
-const double PTM_mu = -8.1;
+const double PtmBeta1 = 1.0;
+const double PtmBeta2 = 0.46;
+const double PtmBeta3 = 0.17;
+const double PtmTau = 0.066;
+const double PtmTauPrime = 1.0 / sqrt(1.0 / PtmTau);
+const double PtmMu = -8.1;
 
 inline double compute_y_lag(const vector<double>& y_lag, int y_lag_len, vector<double>& y_lag_g) {
     const size_t n = Genotypes::N();
@@ -129,15 +129,15 @@ inline double compute_y_lag(const vector<double>& y_lag, int y_lag_len, vector<d
         y10_sum += y10;
         y15_sum += y15;
         y20_sum += y20;
-        y_lag_g[g] = PTM_beta1 * y10 + PTM_beta2 * y15 + PTM_beta3 * y20;
+        y_lag_g[g] = PtmBeta1 * y10 + PtmBeta2 * y15 + PtmBeta3 * y20;
     }
 
     // Weighted sum:
-    return PTM_beta1 * y10_sum + PTM_beta2 * y15_sum + PTM_beta3 * y20_sum;
+    return PtmBeta1 * y10_sum + PtmBeta2 * y15_sum + PtmBeta3 * y20_sum;
 }
 
-double WHFalciparum::probTransmissionToMosquito(vector<double>& probTransGenotype_i,
-                                                vector<double>& probTransGenotype_l) const {
+double WHFalciparum::prob_transmission_to_mosquito(vector<double>& prob_trans_genotype_i,
+                                                   vector<double>& prob_trans_genotype_l) const {
     // This model (often referred to as the gametocyte model) was designed for
     // 5-day time steps. We use the same model (sampling 10, 15 and 20 days
     // ago) for 1-day time steps to avoid having to design and analyse a new
@@ -148,67 +148,67 @@ double WHFalciparum::probTransmissionToMosquito(vector<double>& probTransGenotyp
 
     // Sum lagged densities across genotypes:
     vector<double> y_lag_g_i(n), y_lag_g_l(n);
-    const double y_lag_sum_i = compute_y_lag(m_y_lag_i, params().y_lag_len, y_lag_g_i);
-    const double y_lag_sum_l = compute_y_lag(m_y_lag_l, params().y_lag_len, y_lag_g_l);
+    const double y_lag_sum_i = compute_y_lag(y_lag_imported, params().y_lag_len, y_lag_g_i);
+    const double y_lag_sum_l = compute_y_lag(y_lag_local, params().y_lag_len, y_lag_g_l);
     const double y_lag_sum = y_lag_sum_i + y_lag_sum_l;
 
     if (y_lag_sum < 0.001)
         return 0.0; // cut off for uninfectious humans
 
     // Get a zval, convert to equivalent Normal sample:
-    const double zval = (log(y_lag_sum) + PTM_mu) * PTM_tau_prime;
+    const double zval = (log(y_lag_sum) + PtmMu) * PtmTauPrime;
     const double pone = gsl_cdf_ugaussian_P(zval);
-    double pTransmit = pone * pone;
+    double p_transmit = pone * pone;
 
     // pTransmit has to be between 0 and 1:
-    pTransmit = std::max(pTransmit, 0.0);
-    pTransmit = std::min(pTransmit, 1.0);
+    p_transmit = std::max(p_transmit, 0.0);
+    p_transmit = std::min(p_transmit, 1.0);
 
-    if (pTransmit <= 0.0)
-        return pTransmit;
+    if (p_transmit <= 0.0)
+        return p_transmit;
 
     for (size_t g = 0; g < n; ++g) {
-        probTransGenotype_i[g] = pTransmit * y_lag_g_i[g] / y_lag_sum;
-        probTransGenotype_l[g] = pTransmit * y_lag_g_l[g] / y_lag_sum;
+        prob_trans_genotype_i[g] = p_transmit * y_lag_g_i[g] / y_lag_sum;
+        prob_trans_genotype_l[g] = p_transmit * y_lag_g_l[g] / y_lag_sum;
     }
 
     // Include here the effect of transmission-blocking vaccination:
-    util::streamValidate(pTransmit);
-    return pTransmit;
+    util::streamValidate(p_transmit);
+    return p_transmit;
 }
 
-bool WHFalciparum::diagnosticResult(LocalRng& rng, const Diagnostic& diagnostic) const {
-    return diagnostic.isPositive(rng, totalDensity, hrp2Density);
+bool WHFalciparum::diagnostic_result(LocalRng& rng, const Diagnostic& diagnostic) const {
+    return diagnostic.isPositive(rng, total_density, hrp2_density);
 }
 
-void WHFalciparum::treatment(Host::Human& human, TreatmentId treatId) {
-    const Treatments& treat = Treatments::select(treatId);
-    treatSimple(human, treat.liverEffect(), treat.bloodEffect());
+void WHFalciparum::treatment(Host::Human& human, TreatmentId treat_id) {
+    const Treatments& treat = Treatments::select(treat_id);
+    treat_simple(human, treat.liverEffect(), treat.bloodEffect());
 
     // triggered intervention deployments:
     treat.deploy(human, mon::Deploy::TREAT, interventions::VaccineLimits(/*default initialise: no limits*/));
 }
-bool WHFalciparum::treatSimple(Host::Human& human, SimTime timeLiver, SimTime timeBlood) {
-    if (timeLiver != Sim::zero()) {
-        if (timeLiver < Sim::zero())
-            clearInfections(Treatments::LIVER);
+bool WHFalciparum::treat_simple(Host::Human& human, SimTime time_liver, SimTime time_blood) {
+    if (time_liver != Sim::zero()) {
+        if (time_liver < Sim::zero())
+            clear_infections(Treatments::LIVER);
         else
-            treatExpiryLiver = max(int(treatExpiryLiver), int(Sim::now_or_ts1()) + timeLiver);
+            treat_expiry_liver = max(int(treat_expiry_liver), int(Sim::now_or_ts1()) + time_liver);
         mon::recordEvent(mon::measure("nLiverStageTreatments"), human);
     }
-    if (timeBlood != Sim::zero()) {
-        if (timeBlood < Sim::zero())
-            clearInfections(Treatments::BLOOD);
+    if (time_blood != Sim::zero()) {
+        if (time_blood < Sim::zero())
+            clear_infections(Treatments::BLOOD);
         else
-            treatExpiryBlood = max(int(treatExpiryBlood), int(Sim::now_or_ts1()) + timeBlood);
+            treat_expiry_blood = max(int(treat_expiry_blood), int(Sim::now_or_ts1()) + time_blood);
         return true; // blood stage treatment
     }
     return false; // no blood stage treatment
 }
 
-Pathogenesis::StatePair WHFalciparum::determineMorbidity(Host::Human& human, double ageYears, bool isDoomed) {
+Pathogenesis::StatePair WHFalciparum::determine_morbidity(Host::Human& human, double age_years, bool is_doomed) {
     Pathogenesis::StatePair result =
-        pathogenesisModel->determineState(human, ageYears, timeStepMaxDensity, totalDensity, isDoomed);
+        pathogenesis_model->determineState(human, age_years, time_step_max_density, total_density, is_doomed);
 
     /* Note: this model can easily be re-enabled, but is not used and not considered to be a good model.
     if( (result.state & Pathogenesis::MALARIA) && util::ModelOptions::option( util::PENALISATION_EPISODES ) ){
@@ -224,52 +224,50 @@ Pathogenesis::StatePair WHFalciparum::determineMorbidity(Host::Human& human, dou
 
 // -----  immunity  -----
 
-void WHFalciparum::updateImmuneStatus() {
+void WHFalciparum::update_immune_status() {
     const FalciparumParams& p = params();
     if (p.imm_effector_remain < 1) {
-        m_cumulative_h *= p.imm_effector_remain;
-        m_cumulative_Y *= p.imm_effector_remain;
+        cumulative_h *= p.imm_effector_remain;
+        cumulative_y *= p.imm_effector_remain;
     }
     if (p.asex_imm_remain < 1) {
-        m_cumulative_h *=
-            p.asex_imm_remain / (1 + (m_cumulative_h * (1 - p.asex_imm_remain) * p.inv_cumulative_h_star));
-        m_cumulative_Y *=
-            p.asex_imm_remain / (1 + (m_cumulative_Y * (1 - p.asex_imm_remain) * p.inv_cumulative_y_star));
+        cumulative_h *= p.asex_imm_remain / (1 + (cumulative_h * (1 - p.asex_imm_remain) * p.inv_cumulative_h_star));
+        cumulative_y *= p.asex_imm_remain / (1 + (cumulative_y * (1 - p.asex_imm_remain) * p.inv_cumulative_y_star));
     }
-    m_cumulative_Y_lag = m_cumulative_Y;
+    cumulative_y_lag = cumulative_y;
 }
 
 // -----  Checkpointing  -----
 
 void WHFalciparum::checkpoint(istream& stream) {
     WHInterface::checkpoint(stream);
-    _innateImmSurvFact & stream;
-    m_cumulative_h & stream;
-    m_cumulative_Y & stream;
-    m_cumulative_Y_lag & stream;
-    totalDensity & stream;
-    hrp2Density & stream;
-    timeStepMaxDensity & stream;
-    m_y_lag_i & stream;
-    m_y_lag_l & stream;
-    (*pathogenesisModel) & stream;
-    treatExpiryLiver & stream;
-    treatExpiryBlood & stream;
+    innate_imm_surv_fact & stream;
+    cumulative_h & stream;
+    cumulative_y & stream;
+    cumulative_y_lag & stream;
+    total_density & stream;
+    hrp2_density & stream;
+    time_step_max_density & stream;
+    y_lag_imported & stream;
+    y_lag_local & stream;
+    (*pathogenesis_model) & stream;
+    treat_expiry_liver & stream;
+    treat_expiry_blood & stream;
 }
 void WHFalciparum::checkpoint(ostream& stream) {
     WHInterface::checkpoint(stream);
-    _innateImmSurvFact & stream;
-    m_cumulative_h & stream;
-    m_cumulative_Y & stream;
-    m_cumulative_Y_lag & stream;
-    totalDensity & stream;
-    hrp2Density & stream;
-    timeStepMaxDensity & stream;
-    m_y_lag_i & stream;
-    m_y_lag_l & stream;
-    (*pathogenesisModel) & stream;
-    treatExpiryLiver & stream;
-    treatExpiryBlood & stream;
+    innate_imm_surv_fact & stream;
+    cumulative_h & stream;
+    cumulative_y & stream;
+    cumulative_y_lag & stream;
+    total_density & stream;
+    hrp2_density & stream;
+    time_step_max_density & stream;
+    y_lag_imported & stream;
+    y_lag_local & stream;
+    (*pathogenesis_model) & stream;
+    treat_expiry_liver & stream;
+    treat_expiry_blood & stream;
 }
 
 }

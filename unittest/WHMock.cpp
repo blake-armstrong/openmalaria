@@ -34,24 +34,26 @@ WHMock::WHMock()
       lastTimeBlood(Sim::never()) {}
 WHMock::~WHMock() {}
 
-double WHMock::probTransmissionToMosquito(vector<double>&, vector<double>&) const {
+double WHMock::prob_transmission_to_mosquito(vector<double>&, vector<double>&) const {
     throw util::unimplemented_exception("not needed in unit test");
 }
 
 bool WHMock::summarize(Host::Human& human) const { throw util::unimplemented_exception("not needed in unit test"); }
 
-void WHMock::importInfection(LocalRng& rng) { throw util::unimplemented_exception("not needed in unit test"); }
+void WHMock::import_infection(LocalRng& rng) { throw util::unimplemented_exception("not needed in unit test"); }
 
-void WHMock::optionalPqTreatment(Host::Human& human) { throw util::unimplemented_exception("not needed in unit test"); }
+void WHMock::optional_pq_treatment(Host::Human& human) {
+    throw util::unimplemented_exception("not needed in unit test");
+}
 
-bool WHMock::treatSimple(Host::Human& human, SimTime timeLiver, SimTime timeBlood) {
+bool WHMock::treat_simple(Host::Human& human, SimTime timeLiver, SimTime timeBlood) {
     nTreatments += 1;
     lastTimeLiver = timeLiver;
     lastTimeBlood = timeBlood;
     return timeBlood != Sim::zero();
 }
 
-void WHMock::treatPkPd(size_t schedule, size_t dosages, double age, double delay_d) {
+void WHMock::treat_pk_pd(size_t schedule, size_t dosages, double age, double delay_d) {
     nTreatments += 1;
     pkpd.prescribe(schedule, dosages, age, numeric_limits<double>::quiet_NaN(), delay_d);
 }
@@ -61,25 +63,25 @@ void WHMock::update(Host::Human& human, LocalRng& rng, int& nNewInfs_i, int& nNe
     throw util::unimplemented_exception("not needed in unit test");
 }
 
-inline double WHMock::getTotalDensity() const { return totalDensity; }
+inline double WHMock::get_total_density() const { return totalDensity; }
 
-bool WHMock::diagnosticResult(LocalRng& rng, const Diagnostic& diagnostic) const {
+bool WHMock::diagnostic_result(LocalRng& rng, const Diagnostic& diagnostic) const {
     return diagnostic.isPositive(rng, totalDensity, numeric_limits<double>::quiet_NaN());
 }
 
 void WHMock::treatment(Host::Human& human, TreatmentId treatId) { nTreatments += 1; }
 
-Pathogenesis::StatePair WHMock::determineMorbidity(Host::Human& human, double ageYears, bool isDoomed) {
+Pathogenesis::StatePair WHMock::determine_morbidity(Host::Human& human, double ageYears, bool isDoomed) {
     throw util::unimplemented_exception("not needed in unit test");
 }
 
-void WHMock::clearImmunity() { throw util::unimplemented_exception("not needed in unit test"); }
+void WHMock::clear_immunity() { throw util::unimplemented_exception("not needed in unit test"); }
 
-double WHMock::getCumulative_h() const { throw util::unimplemented_exception("not needed in unit test"); }
+double WHMock::get_cumulative_h() const { throw util::unimplemented_exception("not needed in unit test"); }
 
-double WHMock::getCumulative_Y() const { throw util::unimplemented_exception("not needed in unit test"); }
+double WHMock::get_cumulative_y() const { throw util::unimplemented_exception("not needed in unit test"); }
 
-InfectionOrigin WHMock::getInfectionOrigin() const { return InfectionOrigin::Indigenous; }
+InfectionOrigin WHMock::infection_origin() const { return InfectionOrigin::Indigenous; }
 
 void WHMock::checkpoint(istream& stream) { throw util::unimplemented_exception("not needed in unit test"); }
 void WHMock::checkpoint(ostream& stream) { throw util::unimplemented_exception("not needed in unit test"); }

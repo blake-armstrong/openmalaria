@@ -88,7 +88,7 @@ WithinHost::TreatmentId getHealthSystemTreatmentByName(const scnXml::TreatmentAc
     const scnXml::TreatmentActions::CQOptional& elt = getHealthSystemTreatmentOptional(treatActs, drug);
     if (!elt.present())
         throw util::xml_scenario_error(string("healthSystem.treatmentActions: description required for ").append(drug));
-    return WithinHost::WHInterface::addTreatment(elt.get());
+    return WithinHost::WHInterface::add_treatment(elt.get());
 }
 
 // ———  static, init  ———
@@ -194,7 +194,7 @@ void ImmediateOutcomes::uncomplicatedEvent(Human& human, Episode::State pgState)
         if (useDiagnosticUC) {
             mon::recordEvent(mon::measure("nTreatDiagnostics"), human);
             auto diag = WithinHost::diagnostics::monitoringDiagnostic();
-            if (!human.withinHostModel->diagnosticResult(human.clinical_rng, diag))
+            if (!human.withinHostModel->diagnostic_result(human.clinical_rng, diag))
                 return; // negative outcome: no treatment
         }
 
@@ -211,7 +211,7 @@ void ImmediateOutcomes::uncomplicatedEvent(Human& human, Episode::State pgState)
             // No change in parasitological status: treated outside of hospital
         }
 
-        human.withinHostModel->optionalPqTreatment(human);
+        human.withinHostModel->optional_pq_treatment(human);
     } else {
         // No change in parasitological status: non-treated
     }

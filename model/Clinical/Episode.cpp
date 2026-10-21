@@ -44,7 +44,7 @@ void Episode::update(const Host::Human& human, Episode::State newState) {
         toReport = true;
 
     if (toReport) {
-        infectionType = human.withinHostModel->getInfectionOrigin();
+        infectionType = human.withinHostModel->infection_origin();
 
         report();
 

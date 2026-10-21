@@ -155,7 +155,7 @@ void ClinicalModel::update(Human& human, double ageYears, bool newBorn) {
     }
 
     const bool isDoomed = doomed != NOT_DOOMED;
-    WithinHost::Pathogenesis::StatePair pg = human.withinHostModel->determineMorbidity(human, ageYears, isDoomed);
+    WithinHost::Pathogenesis::StatePair pg = human.withinHostModel->determine_morbidity(human, ageYears, isDoomed);
     latestState = static_cast<Episode::State>(pg.state);
 
     doClinicalUpdate(human, ageYears, pg);

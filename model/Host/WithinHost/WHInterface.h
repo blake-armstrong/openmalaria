@@ -20,8 +20,8 @@
  * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301, USA.
  */
 
-#ifndef Hmod_WithinHost_Interface
-#define Hmod_WithinHost_Interface
+#ifndef HMOD_WITHIN_HOST_INTERFACE
+#define HMOD_WITHIN_HOST_INTERFACE
 
 #include "Global.h"
 #include "util/random.h"
@@ -81,15 +81,15 @@ public:
     //@{
     /** Configure a new treatment option, and return the code used to select
      * that option later. */
-    static TreatmentId addTreatment(const scnXml::TreatmentOption& desc);
+    static TreatmentId add_treatment(const scnXml::TreatmentOption& desc);
 
     /// Create an instance using the appropriate model
-    static unique_ptr<WHInterface> createWithinHostModel(LocalRng& rng, double comorbidityFactor);
+    static unique_ptr<WHInterface> create_within_host_model(LocalRng& rng, double comorbidity_factor);
     //@}
 
     /// @brief Constructors, destructors and checkpointing functions
     //@{
-    WHInterface() : numInfs(0) {}
+    WHInterface() : num_infs(0) {}
     virtual ~WHInterface() = default;
 
     WHInterface(WHInterface&&) = default;
@@ -110,14 +110,14 @@ public:
      * 
      * Calulates the probability for imported infections _i and
      * for local infections _l */
-    virtual double probTransmissionToMosquito(vector<double>& probTransGenotype_i,
-                                              vector<double>& probTransGenotype_l) const = 0;
+    virtual double prob_transmission_to_mosquito(vector<double>& prob_trans_genotype_i,
+                                                 vector<double>& prob_trans_genotype_l) const = 0;
 
     /// @returns true if host has patent parasites
     virtual bool summarize(Host::Human& human) const = 0;
 
     /// Create a new infection within this human
-    virtual void importInfection(LocalRng& rng) = 0;
+    virtual void import_infection(LocalRng& rng) = 0;
 
     /**
      * Carry out the effects of some treatment option, optionally with intervention deployment.
@@ -126,14 +126,14 @@ public:
      * 
      * This may be used by intervention deployment, thus should use time 
      * sim::nowOrTs1(). */
-    virtual void treatment(Host::Human& human, TreatmentId treatId) = 0;
+    virtual void treatment(Host::Human& human, TreatmentId treat_id) = 0;
 
     /// Conditionally gives Primaquine as a treatment. Reports as appropriate.
-    virtual void optionalPqTreatment(Host::Human& human) = 0;
+    virtual void optional_pq_treatment(Host::Human& human) = 0;
 
     /** Treat a patient via the simple treatment model. Return true if any
      * blood-stage treatment is administered. Report any liver-stage treatments. */
-    virtual bool treatSimple(Host::Human& human, SimTime timeLiver, SimTime timeBlood) = 0;
+    virtual bool treat_simple(Host::Human& human, SimTime time_liver, SimTime time_blood) = 0;
 
     /** Give a patient a course of drugs, via the Pk/Pd model
      * 
@@ -144,7 +144,7 @@ public:
      * @param dosages Index of a dosage table
      * @param age Age of human in years
      */
-    virtual void treatPkPd(size_t schedule, size_t dosages, double age, double delay_d) = 0;
+    virtual void treat_pk_pd(size_t schedule, size_t dosages, double age, double delay_d) = 0;
 
     /** Add new infections and update the parasite densities of existing
      * infections. Also update immune status.
@@ -155,13 +155,14 @@ public:
      * @param ageInYears Age of human
      * @param bsvFactor Parasite survival factor for blood-stage vaccines
      */
-    virtual void update(Host::Human& human, LocalRng& rng, int& nNewInfs_i, int& nNewInfs_l,
-                        vector<double>& genotype_weights_i, vector<double>& genotype_weights_l, double ageInYears) = 0;
+    virtual void update(Host::Human& human, LocalRng& rng, int& n_new_infs_i, int& n_new_infs_l,
+                        vector<double>& genotype_weights_i, vector<double>& genotype_weights_l,
+                        double age_in_years) = 0;
 
     /** TODO: this should not need to be exposed. It is currently used by a
      * severe outcome (pDeath) model inside the EventScheduler "case
      * management" model, and case management diagnostics. */
-    virtual double getTotalDensity() const = 0;
+    virtual double get_total_density() const = 0;
 
     /** Simulate use of a diagnostic test.
      *
@@ -171,7 +172,7 @@ public:
      * 
      * @returns true when the diagnostic is positive
      */
-    virtual bool diagnosticResult(LocalRng& rng, const Diagnostic& diagnostic) const = 0;
+    virtual bool diagnostic_result(LocalRng& rng, const Diagnostic& diagnostic) const = 0;
 
     /** Use the pathogenesis model to determine, based on infection status
      * and random draw, this person't morbidity.
@@ -182,30 +183,30 @@ public:
      * @param ageYears Age of human host in years
      * @param isDoomed True if the human is already doomed to die, used for reporting
      */
-    virtual Pathogenesis::StatePair determineMorbidity(Host::Human& human, double ageYears, bool isDoomed) = 0;
+    virtual Pathogenesis::StatePair determine_morbidity(Host::Human& human, double age_years, bool is_doomed) = 0;
 
     /// Special intervention: clears all immunity
-    virtual void clearImmunity() = 0;
+    virtual void clear_immunity() = 0;
 
     // TODO(monitoring): these shouldn't have to be exposed (perhaps use summarize to report the data):
-    virtual double getCumulative_h() const = 0;
-    virtual double getCumulative_Y() const = 0;
+    virtual double get_cumulative_h() const = 0;
+    virtual double get_cumulative_y() const = 0;
 
-    virtual InfectionOrigin getInfectionOrigin() const = 0;
+    virtual InfectionOrigin infection_origin() const = 0;
 
     /** The maximum number of infections a human can have. The only real reason
      * for this limit is to prevent incase bad input from causing the number of
      * infections to baloon stupidly.
      *
      * Exact constraint is: _MOI <= MAX_INFECTIONS. */
-    static const int MAX_INFECTIONS = 21;
+    static const int MaxInfections = 21;
 
 protected:
     virtual void checkpoint(istream& stream);
     virtual void checkpoint(ostream& stream);
 
     /// Multiplicity of infection
-    int numInfs;
+    int num_infs;
 
     friend class ::UnittestUtil;
 };

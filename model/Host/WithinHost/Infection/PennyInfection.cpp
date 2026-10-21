@@ -146,8 +146,8 @@ CommonInfection* createPennyInfection(LocalRng& rng, uint32_t protID, int origin
 CommonInfection* checkpointedPennyInfection(istream& stream) { return new PennyInfection(stream); }
 
 void PennyInfection::init() {
-    CommonWithinHost::createInfection = &createPennyInfection;
-    CommonWithinHost::checkpointedInfection = &checkpointedPennyInfection;
+    CommonWithinHost::create_infection = &createPennyInfection;
+    CommonWithinHost::checkpointed_infection = &checkpointedPennyInfection;
 
     if (util::ModelOptions::option(util::ImmuneThresholdGamma)) {
         immune_threshold_gamma = true;
