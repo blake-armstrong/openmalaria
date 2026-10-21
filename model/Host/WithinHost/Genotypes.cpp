@@ -29,8 +29,7 @@
 
 #include <iomanip>
 
-namespace OM {
-namespace WithinHost {
+namespace OM::WithinHost {
 
 namespace {
 
@@ -45,8 +44,8 @@ struct LocusSet {
             uint32_t allele_code = (next_allele_code++);
             allele_codes[elt_l.getName()][elt_a.getName()] = allele_code;
             cum_p += elt_a.getInitialFrequency();
-            alleles.push_back(
-                Genotype(allele_code, elt_a.getInitialFrequency(), elt_a.getFitness(), elt_a.getHrp2_deletion()));
+            alleles.emplace_back(allele_code, elt_a.getInitialFrequency(), elt_a.getFitness(),
+                                 elt_a.getHrp2_deletion());
         }
         if (cum_p < 0.999 || cum_p > 1.001)
             throw util::xml_scenario_error("expected sum of initial probabilities of alleles to be 1, but for the " +
@@ -154,11 +153,11 @@ GenotypeRegistry::GenotypeRegistry(const scnXml::Scenario& scenario, const util:
 void GenotypeRegistry::print_genotypes() const {
     // reorganise allele_codes so that we can look up codes, not names
     vector<pair<string, string>> allele_names(cum_initial_freqs.size());
-    for (auto i = allele_codes.begin(), iend = allele_codes.end(); i != iend; ++i) {
-        const string locus = i->first;
-        for (auto j = i->second.begin(), jend = i->second.end(); j != jend; ++j) {
-            uint32_t code = j->second;
-            const string allele = j->first;
+    for (const auto& allele_code : allele_codes) {
+        const string locus = allele_code.first;
+        for (const auto& j : allele_code.second) {
+            uint32_t code = j.second;
+            const string allele = j.first;
             assert(code < allele_names.size());
             allele_names[code] = make_pair(locus, allele);
         }
@@ -168,18 +167,18 @@ void GenotypeRegistry::print_genotypes() const {
     map<string, uint32_t> longest; // longest name in column; key is locus
     for (auto i = genotype_list.begin(), iend = genotype_list.end(); i != iend; ++i) {
         if (longest.size() == 0) {
-            for (auto j = i->alleles.begin(); j != i->alleles.end(); ++j) {
-                const string& locus = allele_names[*j].first;
+            for (unsigned int allele : i->alleles) {
+                const string& locus = allele_names[allele].first;
 
                 longest[locus] = locus.length(); // locus name is included in column
             }
         } else
             assert(longest.size() == i->alleles.size());
 
-        for (auto j = i->alleles.begin(); j != i->alleles.end(); ++j) {
-            auto it = longest.find(allele_names[*j].first);
+        for (unsigned int allele : i->alleles) {
+            auto it = longest.find(allele_names[allele].first);
             assert(it != longest.end());
-            uint32_t len_allele = allele_names[*j].second.length();
+            uint32_t len_allele = allele_names[allele].second.length();
             if (len_allele > it->second)
                 it->second = len_allele;
         }
@@ -200,19 +199,19 @@ void GenotypeRegistry::print_genotypes() const {
     cout << endl;
     stringstream fmt;
     fmt << "|%8d|";
-    for (auto it = loci.begin(); it != loci.end(); ++it)
-        fmt << "%" << longest[*it] << "s|";
+    for (auto& it : loci)
+        fmt << "%" << longest[it] << "s|";
     fmt << "%9.3f|%7.3f|";
 
     // Table header:
     cout << "|" << std::setw(8) << "Genotype";
-    for (auto it = loci.begin(); it != loci.end(); ++it)
-        cout << "|" << std::setw(longest[*it]) << *it;
+    for (auto& it : loci)
+        cout << "|" << std::setw(longest[it]) << it;
     cout << "|" << std::setw(9) << "init freq" << "|" << std::setw(7) << "fitness" << "|" << endl;
 
     cout << "|" << std::setw(8) << "--------";
-    for (auto it = loci.begin(); it != loci.end(); ++it) {
-        if (longest[*it] > 0)
+    for (auto& it : loci) {
+        if (longest[it] > 0)
             cout << "|" << "---------";
         else
             cout << "|";
@@ -224,16 +223,16 @@ void GenotypeRegistry::print_genotypes() const {
     for (size_t i = 0; i < genotype_list.size(); ++i) {
         const Genotype& genotype = genotype_list[i];
         map<string, string> locus_allele; // to find allele for each locus
-        for (auto a = genotype.alleles.begin(); a != genotype.alleles.end(); ++a) {
-            assert(*a < allele_names.size());
-            locus_allele[allele_names[*a].first] = allele_names[*a].second;
+        for (unsigned int allele : genotype.alleles) {
+            assert(allele < allele_names.size());
+            locus_allele[allele_names[allele].first] = allele_names[allele].second;
         }
 
         cout << "|" << std::setw(8) << (i * 100000);
-        for (auto it = loci.begin(); it != loci.end(); ++it) {
-            auto la = locus_allele.find(*it);
+        for (auto& it : loci) {
+            auto la = locus_allele.find(it);
             assert(la != locus_allele.end());
-            cout << "|" << std::setw(longest[*it]) << la->second << "|";
+            cout << "|" << std::setw(longest[it]) << la->second << "|";
         }
         cout << std::setw(9) << genotype.init_freq << "|" << std::setw(7) << genotype.fitness << "|" << endl;
     }
@@ -290,11 +289,10 @@ void GenotypeRegistry::checkpoint(ostream& stream) const {
     t & stream;
 }
 void GenotypeRegistry::checkpoint(istream& stream) {
-    int t;
+    int t = 0;
     t & stream;
     current_mode = static_cast<SampleMode>(t);
     assert(current_mode == SampleFirst || current_mode == SampleInitial || current_mode == SampleTracking);
 }
 
-}
 }

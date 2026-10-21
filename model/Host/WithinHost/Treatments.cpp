@@ -25,8 +25,7 @@
 #include "util/UnitParse.h"
 #include "schema/healthSystem.h"
 
-namespace OM {
-namespace WithinHost {
+namespace OM::WithinHost {
 
 // ———  TreatmentRegistry  ———
 
@@ -50,14 +49,14 @@ Treatments::Stages stage_from_string(const std::string& str) {
 }
 Treatments::Treatments(const scnXml::TreatmentOption& elt)
     : TriggeredDeployments(elt), time_liver(Sim::zero()), time_blood(Sim::zero()) {
-    for (auto it = elt.getClearInfections().begin(), end = elt.getClearInfections().end(); it != end; ++it) {
+    for (const auto& it : elt.getClearInfections()) {
         try {
             //NOTE: if changing XSD, this should not be called "timesteps" or have a default unit
-            SimTime len = UnitParse::readShortDuration(it->getTimesteps(), UnitParse::STEPS);
+            SimTime len = UnitParse::readShortDuration(it.getTimesteps(), UnitParse::STEPS);
             if (len < -Sim::one_ts() || len == Sim::zero()) {
                 throw util::format_error("timesteps must be ≥ 1 or have special value -1");
             }
-            Stages stage = stage_from_string(it->getStage());
+            Stages stage = stage_from_string(it.getStage());
             if (stage & LIVER) {
                 if (time_liver != Sim::zero()) // existing treatment configuration
                     throw util::format_error("multiple specification of liver stage effect");
@@ -74,5 +73,4 @@ Treatments::Treatments(const scnXml::TreatmentOption& elt)
     }
 }
 
-}
 }

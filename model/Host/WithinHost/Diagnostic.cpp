@@ -29,15 +29,13 @@
 #include "schema/scenario.h"
 #include <limits>
 
-namespace OM {
-namespace WithinHost {
+namespace OM::WithinHost {
 
 // ———  Diagnostic (non-static)  ———
 
 Diagnostic::Diagnostic(const Parameters& parameters, const util::ModelOptionFlags& options,
-                       const scnXml::Diagnostic& elt) {
-    dens_lim = numeric_limits<double>::quiet_NaN();
-    specificity = numeric_limits<double>::quiet_NaN();
+                       const scnXml::Diagnostic& elt)
+    : specificity(numeric_limits<double>::quiet_NaN()), dens_lim(numeric_limits<double>::quiet_NaN()) {
 
     if (options.option(util::VivaxSimpleModel)) {
         return; // both parameters NaN (set above)
@@ -95,11 +93,8 @@ Diagnostic::Diagnostic(const Parameters& parameters, const util::ModelOptionFlag
     uses_hrp2 = elt.getMechanism() == "HRP2";
 }
 
-Diagnostic::Diagnostic(double min_dens) {
-    specificity = numeric_limits<double>::quiet_NaN();
-    dens_lim = min_dens;
-    uses_hrp2 = false;
-}
+Diagnostic::Diagnostic(double min_dens)
+    : specificity(numeric_limits<double>::quiet_NaN()), dens_lim(min_dens), uses_hrp2(false) {}
 
 bool Diagnostic::is_positive(LocalRng& rng, double dens, double dens_hrp2) const {
     if (uses_hrp2) {
@@ -209,5 +204,4 @@ const Diagnostic& DiagnosticRegistry::make_deterministic(double min_dens) {
     return ret.first->second;
 }
 
-}
 }

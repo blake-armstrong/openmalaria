@@ -31,8 +31,7 @@
 
 using namespace std;
 
-namespace OM {
-namespace WithinHost {
+namespace OM::WithinHost {
 
 /**
  * Objects of this class describe effects of a treatment, after selecting a
@@ -87,5 +86,5 @@ private:
 };
 
 }
-}
+
 #endif
