@@ -31,7 +31,7 @@ See `PLAN.md` for the session protocol, chunks and gates. Append one log entry p
 | D4 | split | D4a–D4d |
 | D4a | done | fa7f275c, 49271693, 02029c1e, a07021c4, 06ddff71, 4b223446, 89a7167b, f28d6070, acb0e0c0, f28ffcbe, (this log entry) |
 | D4b | done | 1dd81ae7, 7ffc4e6c, 4db82617, 0ddf6209, 808c0e48, 3e1394d2, b4063a76, 7a828ea1, dd059491, (this log entry) |
-| D4c | todo | |
+| D4c | done | 25afa630, f511b389, 24fec740, 73829aad, e53617ab, c7ee238b, d527bbbf, 20f29f45, cc748c60, (this log entry) |
 | D4d | todo | |
 | D5 | todo | |
 | D6 | todo | |
@@ -923,3 +923,31 @@ See `PLAN.md` for the session protocol, chunks and gates. Append one log entry p
   - D6: `PathogenesisModel::init` likewise; `Pathogenesis/` still needs its rename (D4a follow-up).
   - D9: `Sim::` calls in the infection code (`now_or_ts0`, `ts0`, `one_ts`, `latest_ts0`) still go through the clock bridge.
 - Next: D4c.
+
+### D4c: `WHVivax` statics → `VivaxParams` in `WithinHostModel` (done, 2026-10-21)
+- Base: 2b44c979. The G-perf base worktree `../om-bench-base` was moved to 2b44c979 and rebuilt.
+- Commits:
+  - 25afa630: **logic.**
+    - `WHVivax.cpp`'s file statics → `VivaxParams` (in `WHVivax.h`), a member of `WithinHostModel` built where `WHVivax::init` ran, with every read and error in the old order: the latent period (now the shared `read_latent_p`, the D4b follow-up), the `<vivax>` element, the `vivaxClinOption` check, the hypnozoite-count table, then `PathogenesisModel::init` (D6). `HypnozoiteReleaseDistribution` moved to the header; `sampleNHypnozoites`/`sampleReleaseDelay` became `VivaxParams` methods.
+    - The liverStageDrug values (`ignoreNoPQ`, `pHetNoPQ`, `pReceivePQ`, `effectivenessPQ`) → `VivaxParams::health_system`, set by `VivaxParams::set_health_system`, which takes the `CommandLineOptions` for its deprecation warning. They still change at run time with each `changeHS`, so they can't be immutable parameters: `bridge::current_within_host_model` is no longer a const pointer, and a new `bridge::mutable_within_host_model()` serves the static `WHVivax::setHSParameters` (called by `ImmediateOutcomes` and `DecisionTree5Day`), which now delegates to it. D6 can pass the `WithinHostModel` to the clinical models instead; D9 drops the bridge.
+    - Each `WHVivax` holds a `const VivaxParams*`; `VivaxBrood` takes them in its constructor and `update()`.
+  - f511b389 + 24fec740 + 73829aad: **rename**, 72 renames by the tool (22 parameter, 20 member, 19 variable, 8 method, header guard, 1 local constant, 1 global constant; no maps, no skips), then by hand `releaseDates` → `release_dates` in the two `#ifdef WHVivaxSamples` blocks the tool can't see (and in a comment and the commented-out partial-clearance code). Both listed in `.git-blame-ignore-revs`.
+  - e53617ab + c7ee238b: **modernise, tool:** 18 `use-override`, 13 `use-default-member-init`, 7 `loop-convert`, 4 `use-emplace`, 3 `pro-type-member-init`, 2 `init-variables`, 2 `use-equals-default`, 1 `concat-nested-namespaces`, 1 `use-nullptr`.
+  - d527bbbf: **modernise, hand:** 19 consts; redundant `int(...)` casts on `SimTime`; `WHVivax` copies and moves deleted in public; `VivaxBrood` copies and moves defaulted, its unused private default constructor removed; `morbidity` initialised; the unused, uncheckpointed `p_second_relapse_event` removed; `maxcount = 1000`. Left: the do-while rejection loop, `endl` (F14), the checkpointed-but-unused `p_event`/`p_first_relapse_event` (F47, H3), `origin` as a plain int.
+  - 20f29f45: `NOLINT` on the kept do-while and `endl`, which the logic commit moved, so G-style saw them.
+  - cc748c60: FINDINGS F47, F48; PLAN.md D4c row as built.
+- Gates:
+  - G-exact / G-unit: 53/53 on `build-rework/` (Release) and `build-debug/` (Debug) after every C++ commit.
+  - G-stat: plain `ctest -j4` at 20f29f45: 106/106.
+  - G-style: `util/style.sh check 2b44c979` clean at 20f29f45. The rename and modernise tool commits passed their skill checks (format half clean, second dry run with nothing to do, token check), and `check <tool commit>^` is clean after each ignore-revs commit. `WHVivax.cpp` compiles with `-DWHVivaxSamples` before and after the chunk.
+  - G-perf: `util/bench.sh --compare ../om-bench-base/build-rework`, candidate 20f29f45, load ~4.7 at the start: median per-pair ratio 0.9709 (−2.91%), spreads 6.4% / 4.2%. The benchmark is Molineaux, so it hardly runs D4c's code. The same comparison on `scenarioVivax.xml`: 1.0000, but its runs take 0.25 s, so that only rules out a gross slowdown.
+  - Vivax A/B against the base build (only `scenarioVivax` covers vivax in ctest, and it has no liverStageDrug): 18 runs of crafted variants: liverStageDrug with simple liver treatment (retroactive, forward, `effectivenessOnUse` 1), with `pUseUncomplicated` (with and without `--no-deprecation-warnings`), the incompatible combination (runtime error), `changeHS` with the same and with a changed `pHumanCannotReceive`, and from none to one, a `--checkpoint` run resumed with a `changeHS`, `B1j`, second releases (p 0.4 and 1), a bad clinical option, a bad and a `3t` latentp, no `<vivax>`. Identical stdout, stderr, outputs, checkpoint files and exit codes after the logic commit and again after the hand commit. The liverStageDrug variants record 79–262 liver-stage treatments, so the PQ paths ran. Script kept in this session's scratchpad only.
+- Findings: F47 (checkpointed but unused `WHVivax` members), F48 (`noPQ` is fixed per host at birth, so `changeHS` may not change `pHumanCannotReceive`, and adding liverStageDrug only through `changeHS` fails at the deployment).
+- Surprises:
+  - The health-system values are the first per-simulation state in `WithinHostModel` that changes after init, hence the non-const bridge accessor.
+  - The rename tool can't see `#ifdef WHVivaxSamples`, as with F23's disabled blocks. Its "old names still used" list showed them; the debug build would otherwise have stopped compiling silently, since no gate builds it.
+- Follow-ups:
+  - D6: pass the `WithinHostModel` (or its `VivaxParams`) to the clinical models' health-system setup instead of the static `WHVivax::set_hs_parameters` and `bridge::mutable_within_host_model`; `PathogenesisModel::init` is still called from `WithinHostModel`'s constructor for both branches.
+  - E1: `changeHS` re-sets the vivax health-system values from `scnXml` at run time; the config boundary needs them as plain config.
+  - D9: `Sim::` calls in `WHVivax` still go through the clock bridge.
+- Next: D4d.
