@@ -89,7 +89,7 @@ public:
 
     /// @brief Constructors, destructors and checkpointing functions
     //@{
-    WHInterface() : num_infs(0) {}
+    WHInterface() = default;
     virtual ~WHInterface() = default;
 
     WHInterface(WHInterface&&) = default;
@@ -206,7 +206,7 @@ protected:
     virtual void checkpoint(ostream& stream);
 
     /// Multiplicity of infection
-    int num_infs;
+    int num_infs{0};
 
     friend class ::UnittestUtil;
 };

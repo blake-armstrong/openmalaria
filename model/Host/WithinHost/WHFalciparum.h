@@ -36,8 +36,7 @@ using namespace std;
 
 class InfectionImmunitySuite;
 
-namespace OM {
-namespace WithinHost {
+namespace OM::WithinHost {
 namespace Pathogenesis {
 class PathogenesisModel;
 }
@@ -90,25 +89,25 @@ public:
     /// @brief Constructors, destructors and checkpointing functions
     //@{
     WHFalciparum(const FalciparumParams& params, LocalRng& rng, double comorbidity_factor);
-    virtual ~WHFalciparum();
+    ~WHFalciparum() override;
     //@}
 
-    virtual double prob_transmission_to_mosquito(vector<double>& prob_trans_genotype_i,
-                                                 vector<double>& prob_trans_genotype_l) const;
+    double prob_transmission_to_mosquito(vector<double>& prob_trans_genotype_i,
+                                         vector<double>& prob_trans_genotype_l) const override;
 
     // No PQ treatment for falciparum in current models:
-    virtual void optional_pq_treatment(Host::Human& human) {}
+    void optional_pq_treatment(Host::Human& human) override {}
 
-    virtual inline double get_total_density() const { return total_density; }
+    inline double get_total_density() const override { return total_density; }
 
-    virtual bool diagnostic_result(LocalRng& rng, const Diagnostic& diagnostic) const;
-    virtual void treatment(Host::Human& human, TreatmentId treat_id);
-    virtual bool treat_simple(Host::Human& human, SimTime time_liver, SimTime time_blood);
+    bool diagnostic_result(LocalRng& rng, const Diagnostic& diagnostic) const override;
+    void treatment(Host::Human& human, TreatmentId treat_id) override;
+    bool treat_simple(Host::Human& human, SimTime time_liver, SimTime time_blood) override;
 
-    virtual Pathogenesis::StatePair determine_morbidity(Host::Human& human, double age_years, bool is_doomed);
+    Pathogenesis::StatePair determine_morbidity(Host::Human& human, double age_years, bool is_doomed) override;
 
-    inline double get_cumulative_h() const { return cumulative_h; }
-    inline double get_cumulative_y() const { return cumulative_y; }
+    inline double get_cumulative_h() const override { return cumulative_h; }
+    inline double get_cumulative_y() const override { return cumulative_y; }
 
 protected:
     /** Clear infections of the appropriate stages.
@@ -138,24 +137,24 @@ protected:
     double innate_imm_surv_fact;
 
     /** Number of infections received since birth. */
-    double cumulative_h;
+    double cumulative_h{0.0};
     /// Cumulative parasite density since birth (units: days * units of density)
-    double cumulative_y;
+    double cumulative_y{0.0};
     /// m_cumulative_Y from previous time step
-    double cumulative_y_lag;
+    double cumulative_y_lag{0.0};
     //@}
 
     /// Total asexual blood stage density (sum of density of infections).
-    double total_density;
+    double total_density{0.0};
     /// Density from the point of view of diagnostics dependent on HRP2
-    double hrp2_density;
+    double hrp2_density{0.0};
 
     /** Maximum parasite density of any infection during the previous interval.
      *
      * With 5-day time steps, this is not just the maximum density of any infection
      * at the end of the time step, but something designed to emulate the maximum
      * of 5 daily samples. */
-    double time_step_max_density;
+    double time_step_max_density{0.0};
 
     /** Total asexual blood stage density over last 20 days (uses samples from
     * 10, 15 and 20 days ago).
@@ -168,10 +167,10 @@ protected:
     unique_ptr<Pathogenesis::PathogenesisModel> pathogenesis_model;
 
     /// End of step on which treatment expires = start of first step after expiry
-    SimTime treat_expiry_liver, treat_expiry_blood;
+    SimTime treat_expiry_liver{0}, treat_expiry_blood{0};
 
-    virtual void checkpoint(istream& stream);
-    virtual void checkpoint(ostream& stream);
+    void checkpoint(istream& stream) override;
+    void checkpoint(ostream& stream) override;
 
     const FalciparumParams& params() const { return *falciparum_params; }
 
@@ -182,5 +181,5 @@ private:
 };
 
 }
-}
+
 #endif

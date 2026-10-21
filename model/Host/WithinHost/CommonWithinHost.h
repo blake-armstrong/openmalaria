@@ -33,8 +33,7 @@
 
 using namespace std;
 
-namespace OM {
-namespace WithinHost {
+namespace OM::WithinHost {
 
 struct CommonWithinHostParams {
     util::AgeGroupInterpolator mass_by_age;
@@ -56,15 +55,15 @@ class CommonWithinHost : public WHFalciparum {
 public:
     CommonWithinHost(const FalciparumParams& params, const CommonWithinHostParams& common_params, LocalRng& rng,
                      double comorbidity_factor);
-    virtual ~CommonWithinHost();
+    ~CommonWithinHost() override;
 
-    virtual void import_infection(LocalRng& rng);
+    void import_infection(LocalRng& rng) override;
 
-    virtual void treat_pk_pd(size_t schedule, size_t dosage, double age, double delay_d);
-    virtual void clear_immunity();
+    void treat_pk_pd(size_t schedule, size_t dosage, double age, double delay_d) override;
+    void clear_immunity() override;
 
-    virtual void update(Host::Human& human, LocalRng& rng, int& n_new_infs_i, int& n_new_infs_l,
-                        vector<double>& genotype_weights_i, vector<double>& genotype_weights_l, double age_in_years);
+    void update(Host::Human& human, LocalRng& rng, int& n_new_infs_i, int& n_new_infs_l,
+                vector<double>& genotype_weights_i, vector<double>& genotype_weights_l, double age_in_years) override;
 
     virtual void add_prophylactic_effects(const vector<double>& p_clearance_by_time);
 
@@ -79,15 +78,15 @@ public:
     static CommonInfection* (*checkpointed_infection)(istream& stream);
     //@}
 
-    virtual InfectionOrigin infection_origin() const;
+    InfectionOrigin infection_origin() const override;
 
-    virtual bool summarize(Host::Human& human) const;
+    bool summarize(Host::Human& human) const override;
 
 protected:
-    virtual void clear_infections(Treatments::Stages stage);
+    void clear_infections(Treatments::Stages stage) override;
 
-    virtual void checkpoint(istream& stream);
-    virtual void checkpoint(ostream& stream);
+    void checkpoint(istream& stream) override;
+    void checkpoint(ostream& stream) override;
 
 private:
     /// Multiplies the mean mass (for this age) as a heterogeneity factor.
@@ -109,5 +108,5 @@ private:
 };
 
 }
-}
+
 #endif

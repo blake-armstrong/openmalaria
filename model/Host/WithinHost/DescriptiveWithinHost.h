@@ -28,8 +28,7 @@
 
 using namespace std;
 
-namespace OM {
-namespace WithinHost {
+namespace OM::WithinHost {
 
 struct DescriptiveWithinHostParams {
     bool report_patent_infected = false;
@@ -46,29 +45,29 @@ public:
     /// Create a new WHM
     DescriptiveWithinHostModel(const FalciparumParams& params, const DescriptiveWithinHostParams& descriptive_params,
                                LocalRng& rng, double comorbidity_factor);
-    virtual ~DescriptiveWithinHostModel();
+    ~DescriptiveWithinHostModel() override;
 
-    virtual void import_infection(LocalRng& rng);
+    void import_infection(LocalRng& rng) override;
 
     /// load an infection from a checkpoint
     virtual void load_infection(istream& stream);
-    virtual void clear_immunity();
+    void clear_immunity() override;
 
-    virtual void update(Host::Human& human, LocalRng& rng, int& n_new_infs_i, int& n_new_infs_l,
-                        vector<double>& genotype_weights_i, vector<double>& genotype_weights_l, double age_in_years);
+    void update(Host::Human& human, LocalRng& rng, int& n_new_infs_i, int& n_new_infs_l,
+                vector<double>& genotype_weights_i, vector<double>& genotype_weights_l, double age_in_years) override;
 
-    virtual InfectionOrigin infection_origin() const;
+    InfectionOrigin infection_origin() const override;
 
-    virtual bool summarize(Host::Human& human) const;
+    bool summarize(Host::Human& human) const override;
 
 protected:
-    virtual void clear_infections(Treatments::Stages stage);
+    void clear_infections(Treatments::Stages stage) override;
 
-    virtual void checkpoint(istream& stream);
-    virtual void checkpoint(ostream& stream);
+    void checkpoint(istream& stream) override;
+    void checkpoint(ostream& stream) override;
 
     // Doesn't do anything in this model:
-    virtual void treat_pk_pd(size_t schedule, size_t dosages, double age, double delay_d);
+    void treat_pk_pd(size_t schedule, size_t dosages, double age, double delay_d) override;
 
     /** The list of all infections this human has.
      * 
@@ -83,5 +82,5 @@ private:
 };
 
 }
-}
+
 #endif

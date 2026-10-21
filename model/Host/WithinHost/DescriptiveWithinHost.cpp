@@ -34,8 +34,7 @@
 
 using namespace std;
 
-namespace OM {
-namespace WithinHost {
+namespace OM::WithinHost {
 
 extern bool bugfix_max_dens; // DescriptiveInfection.cpp
 // -----  Initialization  -----
@@ -49,8 +48,8 @@ DescriptiveWithinHostModel::DescriptiveWithinHostModel(const FalciparumParams& p
 }
 
 DescriptiveWithinHostModel::~DescriptiveWithinHostModel() {
-    for (auto inf = infections.begin(); inf != infections.end(); ++inf) {
-        delete *inf;
+    for (auto& infection : infections) {
+        delete infection;
     }
     infections.clear();
 }
@@ -77,8 +76,8 @@ void DescriptiveWithinHostModel::clear_infections(Treatments::Stages stage) {
 // -----  Interventions  -----
 
 void DescriptiveWithinHostModel::clear_immunity() {
-    for (auto inf = infections.begin(); inf != infections.end(); ++inf) {
-        (*inf)->clearImmunity();
+    for (auto& infection : infections) {
+        infection->clearImmunity();
     }
     cumulative_h = 0.0;
     cumulative_y_lag = 0.0;
@@ -205,11 +204,11 @@ void DescriptiveWithinHostModel::update(Host::Human& human, LocalRng& rng, int& 
         y_lag_local[y_lag_i * Genotypes::N() + g] = 0.0;
     }
 
-    for (auto inf = infections.begin(); inf != infections.end(); ++inf) {
-        if ((*inf)->origin() == InfectionOrigin::Imported)
-            y_lag_imported[y_lag_i * Genotypes::N() + (*inf)->genotype()] += (*inf)->getDensity();
+    for (auto& infection : infections) {
+        if (infection->origin() == InfectionOrigin::Imported)
+            y_lag_imported[y_lag_i * Genotypes::N() + infection->genotype()] += infection->getDensity();
         else
-            y_lag_local[y_lag_i * Genotypes::N() + (*inf)->genotype()] += (*inf)->getDensity();
+            y_lag_local[y_lag_i * Genotypes::N() + infection->genotype()] += infection->getDensity();
     }
 
     // This is a bug, we keep it this way to be consistent with old simulations
@@ -239,10 +238,10 @@ bool DescriptiveWithinHostModel::summarize(Host::Human& human) const {
             mon::recordStat(mon::measure("nInfect_Imported"), human);
 
         int n_imported = 0, n_introduced = 0, n_indigenous = 0;
-        for (auto inf = infections.begin(); inf != infections.end(); ++inf) {
-            if ((*inf)->origin() == InfectionOrigin::Indigenous)
+        for (auto infection : infections) {
+            if (infection->origin() == InfectionOrigin::Indigenous)
                 n_indigenous++;
-            else if ((*inf)->origin() == InfectionOrigin::Introduced)
+            else if (infection->origin() == InfectionOrigin::Introduced)
                 n_introduced++;
             else
                 n_imported++;
@@ -256,13 +255,13 @@ bool DescriptiveWithinHostModel::summarize(Host::Human& human) const {
         mon::recordStat(mon::measure("totalInfs_Indigenous"), human, n_indigenous);
 
         if (descriptive_params->report_patent_infected) {
-            for (auto inf = infections.begin(); inf != infections.end(); ++inf) {
-                if (diagnostics::monitoringDiagnostic().isPositive(human.monitoring_rng, (*inf)->getDensity(),
+            for (auto infection : infections) {
+                if (diagnostics::monitoringDiagnostic().isPositive(human.monitoring_rng, infection->getDensity(),
                                                                    std::numeric_limits<double>::quiet_NaN())) {
                     mon::recordStat(mon::measure("totalPatentInf"), human);
-                    if ((*inf)->origin() == InfectionOrigin::Indigenous)
+                    if (infection->origin() == InfectionOrigin::Indigenous)
                         mon::recordStat(mon::measure("totalPatentInf_Indigenous"), human);
-                    else if ((*inf)->origin() == InfectionOrigin::Introduced)
+                    else if (infection->origin() == InfectionOrigin::Introduced)
                         mon::recordStat(mon::measure("totalPatentInf_Introduced"), human);
                     else
                         mon::recordStat(mon::measure("totalPatentInf_Imported"), human);
@@ -272,8 +271,8 @@ bool DescriptiveWithinHostModel::summarize(Host::Human& human) const {
         if (params().report_infections_by_genotype) {
             // accumulate total density by genotype
             map<uint32_t, double> dens_by_gtype;
-            for (auto inf = infections.begin(); inf != infections.end(); ++inf)
-                dens_by_gtype[(*inf)->genotype()] += (*inf)->getDensity();
+            for (auto infection : infections)
+                dens_by_gtype[infection->genotype()] += infection->getDensity();
 
             for (auto gtype : dens_by_gtype) {
                 // we had at least one infection of this genotype
@@ -327,5 +326,4 @@ void DescriptiveWithinHostModel::treat_pk_pd(size_t schedule, size_t dosages, do
     throw TRACED_EXCEPTION(NotImpl, util::Error::WHFeatures);
 }
 
-}
 }

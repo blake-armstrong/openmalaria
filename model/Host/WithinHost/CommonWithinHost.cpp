@@ -36,8 +36,7 @@
 
 using namespace std;
 
-namespace OM {
-namespace WithinHost {
+namespace OM::WithinHost {
 
 CommonInfection* (*CommonWithinHost::create_infection)(LocalRng& rng, uint32_t prot_id, int origin);
 CommonInfection* (*CommonWithinHost::checkpointed_infection)(istream& stream);
@@ -80,8 +79,8 @@ CommonWithinHost::CommonWithinHost(const FalciparumParams& params, const CommonW
 }
 
 CommonWithinHost::~CommonWithinHost() {
-    for (auto inf = infections.begin(); inf != infections.end(); ++inf) {
-        delete *inf;
+    for (auto& infection : infections) {
+        delete infection;
     }
     infections.clear();
 }
@@ -108,8 +107,8 @@ void CommonWithinHost::treat_pk_pd(size_t schedule, size_t dosage, double age, d
     pkpd_model.prescribe(schedule, dosage, age, mass, delay_d);
 }
 void CommonWithinHost::clear_immunity() {
-    for (auto inf = infections.begin(); inf != infections.end(); ++inf) {
-        (*inf)->clearImmunity();
+    for (auto& infection : infections) {
+        infection->clearImmunity();
     }
     cumulative_h = 0.0;
     cumulative_y_lag = 0.0;
@@ -248,11 +247,11 @@ void CommonWithinHost::update(Host::Human& human, LocalRng& rng, int& n_new_infs
         y_lag_local[y_lag_i * Genotypes::N() + g] = 0.0;
     }
 
-    for (auto inf = infections.begin(); inf != infections.end(); ++inf) {
-        if ((*inf)->origin() == InfectionOrigin::Imported)
-            y_lag_imported[y_lag_i * Genotypes::N() + (*inf)->genotype()] += (*inf)->getDensity();
+    for (auto& infection : infections) {
+        if (infection->origin() == InfectionOrigin::Imported)
+            y_lag_imported[y_lag_i * Genotypes::N() + infection->genotype()] += infection->getDensity();
         else
-            y_lag_local[y_lag_i * Genotypes::N() + (*inf)->genotype()] += (*inf)->getDensity();
+            y_lag_local[y_lag_i * Genotypes::N() + infection->genotype()] += infection->getDensity();
     }
 
     // This is a bug, we keep it this way to be consistent with old simulations
@@ -290,22 +289,22 @@ bool CommonWithinHost::summarize(Host::Human& human) const {
             mon::recordStat(mon::measure("nInfect_Imported"), human);
 
         if (common_params->report_infected_or_patent_infected) {
-            for (auto inf = infections.begin(); inf != infections.end(); ++inf) {
-                uint32_t genotype = (*inf)->genotype();
+            for (auto infection : infections) {
+                uint32_t genotype = infection->genotype();
                 mon::recordStat(mon::measure("totalInfs"), human, 1, 0, genotype, 0);
-                if ((*inf)->origin() == InfectionOrigin::Indigenous)
+                if (infection->origin() == InfectionOrigin::Indigenous)
                     mon::recordStat(mon::measure("totalInfs_Indigenous"), human, 1, 0, genotype, 0);
-                else if ((*inf)->origin() == InfectionOrigin::Introduced)
+                else if (infection->origin() == InfectionOrigin::Introduced)
                     mon::recordStat(mon::measure("totalInfs_Introduced"), human, 1, 0, genotype, 0);
                 else
                     mon::recordStat(mon::measure("totalInfs_Imported"), human, 1, 0, genotype, 0);
 
-                if (diagnostics::monitoringDiagnostic().isPositive(human.monitoring_rng, (*inf)->getDensity(),
+                if (diagnostics::monitoringDiagnostic().isPositive(human.monitoring_rng, infection->getDensity(),
                                                                    std::numeric_limits<double>::quiet_NaN())) {
                     mon::recordStat(mon::measure("totalPatentInf"), human, 1, 0, genotype, 0);
-                    if ((*inf)->origin() == InfectionOrigin::Indigenous)
+                    if (infection->origin() == InfectionOrigin::Indigenous)
                         mon::recordStat(mon::measure("totalPatentInf_Indigenous"), human, 1, 0, genotype, 0);
-                    else if ((*inf)->origin() == InfectionOrigin::Introduced)
+                    else if (infection->origin() == InfectionOrigin::Introduced)
                         mon::recordStat(mon::measure("totalPatentInf_Introduced"), human, 1, 0, genotype, 0);
                     else
                         mon::recordStat(mon::measure("totalPatentInf_Imported"), human, 1, 0, genotype, 0);
@@ -376,9 +375,8 @@ void CommonWithinHost::checkpoint(ostream& stream) {
     WHFalciparum::checkpoint(stream);
     het_mass_multiplier & stream;
     pkpd_model & stream;
-    for (auto inf = infections.begin(); inf != infections.end(); ++inf) {
-        (**inf) & stream;
+    for (auto& infection : infections) {
+        (*infection) & stream;
     }
-}
 }
 }

@@ -25,8 +25,7 @@
 #include "Host/WithinHost/WithinHostModel.h"
 #include "util/errors.h"
 
-namespace OM {
-namespace WithinHost {
+namespace OM::WithinHost {
 
 using namespace OM::util;
 
@@ -48,5 +47,4 @@ void WHInterface::checkpoint(istream& stream) {
 }
 void WHInterface::checkpoint(ostream& stream) { num_infs & stream; }
 
-}
 }

@@ -43,8 +43,7 @@
 #include <cmath>
 #include <gsl/gsl_cdf.h>
 
-namespace OM {
-namespace WithinHost {
+namespace OM::WithinHost {
 
 using namespace OM::util;
 
@@ -71,15 +70,14 @@ WHFalciparum::WHFalciparum(const FalciparumParams& params, LocalRng& rng, double
       // the individual samples change. In any case the overhead is negligible.
       //FIXME: Should this be allowed to be greater than 1?
       // Oldest code on GoogleCode: _innateImmunity=(double)(W_GAUSS((0), (sigma_i)));
-      innate_imm_surv_fact(exp(-rng.gauss(0.0, params.sigma_i))), cumulative_h(0.0), cumulative_y(0.0),
-      cumulative_y_lag(0.0), total_density(0.0), hrp2_density(0.0), time_step_max_density(0.0),
+      innate_imm_surv_fact(exp(-rng.gauss(0.0, params.sigma_i))),
       pathogenesis_model(Pathogenesis::PathogenesisModel::createPathogenesisModel(comorbidity_factor)),
-      treat_expiry_liver(0), treat_expiry_blood(0), falciparum_params(&params) {
+      falciparum_params(&params) {
     y_lag_imported.resize(params.y_lag_len * Genotypes::N());
     y_lag_local.resize(params.y_lag_len * Genotypes::N());
 }
 
-WHFalciparum::~WHFalciparum() {}
+WHFalciparum::~WHFalciparum() = default;
 
 double WHFalciparum::immunity_survival_factor(double age_in_years, double cumulative_exposure_j) {
     if (std::isnan(age_in_years) || std::isnan(cumulative_exposure_j) || std::isnan(cumulative_h) ||
@@ -270,5 +268,4 @@ void WHFalciparum::checkpoint(ostream& stream) {
     treat_expiry_blood & stream;
 }
 
-}
 }
