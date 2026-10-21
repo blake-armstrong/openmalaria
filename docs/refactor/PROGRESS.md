@@ -27,7 +27,7 @@ See `PLAN.md` for the session protocol, chunks and gates. Append one log entry p
 | D1 | done | 2e2cac5a, 72e14d9c, bda40963, 4252cba1, 1a0c0b58, 48d3476c, 186d32f5, 21e09c0d, (this log entry) |
 | D2 | done | 61fe9993, c98ffe6f, db1c50b1, 0808f323, fdd69348, 82e3c602, (this log entry) |
 | D2b | done | 33185613, 9447ccf7, 1647ef78, (this log entry) |
-| D3 | done | d9738c24, b074dcd3, 79d7e9ae, 6e96d1cf, a653b976, efb5ad9d, cf709072, 39f23abd, (this log entry) |
+| D3 | done | cfe2250e, b074dcd3, 79d7e9ae, 6e96d1cf, a653b976, efb5ad9d, cf709072, 39f23abd, (this log entry) |
 | D4 | todo | |
 | D5 | todo | |
 | D6 | todo | |
@@ -813,7 +813,7 @@ See `PLAN.md` for the session protocol, chunks and gates. Append one log entry p
 - Base: 389ee2e9. The G-perf base worktree `../om-bench-base` was moved to 389ee2e9 and rebuilt.
 - **Shape, a deviation from the plan's "a `ModelOptions` object":** three members, not one object, because they are built at three points of the init chain and the order is kept (an error or warning from one would otherwise be reported before another's). `Simulation` declares, in order: `util::CommandLineOptions command_line` (parsed in `main` and moved in, so it is bound before `Genotypes::init`, which reads `--print-genotypes`), the clock and RNGs, then `util::ModelOptionFlags model_options` and `Parameters parameters`, default-constructed and assigned once at their old place after `clock.init`. As in D1, the instance classes have new names and the old classes keep their static accessors as the bridge.
 - Commits:
-  - d9738c24: `UnittestUtil::DescriptiveInfection_init` → `descriptive_infection_init`, so the logic commit doesn't touch a legacy name. Its only caller, the uncompiled `DescriptiveInfectionSuite`, has rotted (F9) and was left alone.
+  - cfe2250e: `UnittestUtil::DescriptiveInfection_init` → `descriptive_infection_init`, so the logic commit doesn't touch a legacy name. Its only caller, the uncompiled `DescriptiveInfectionSuite`, has rotted (F9) and was left alone.
   - b074dcd3: **logic.**
     - `CommandLine::parse` returns a `CommandLineOptions`, which holds the flags, resource path, output, ctsout and checkpoint names, the output format and the resolved scenario path.
     - `ModelOptionFlags`' constructor is the old `ModelOptions::init`. It takes the command-line options and the step length instead of reading the globals.
