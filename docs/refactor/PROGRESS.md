@@ -21,7 +21,7 @@ See `PLAN.md` for the session protocol, chunks and gates. Append one log entry p
 | S5 | done | c155c7fb, 7a28ca71, 50fac6c1, ec9a409c, (this log entry) |
 | S6 | done | 350fdaf3, d4a84ef7, a382bc2c, c9f46c93, ecdac231, 5cd66064, (this log entry) |
 | S7 | done | bf62b4ff, 190ffc99, 9e1f093e, 5cdcf528, fb09fd66, a4f6904a, 109ea58f, (this log entry) |
-| V1 | in progress | 05fbf2e7, 15d07ae6, 402952ff, 184c4414, 4f101e8a, 0f73698e, 1b37cb08, 468377ae, c92f951c, 6b08d688, f82c3c8c, e6e53cdb, f046ed32, efe8c2f6, (this log entry) |
+| V1 | done | 05fbf2e7, 15d07ae6, 402952ff, 184c4414, 4f101e8a, 0f73698e, 1b37cb08, 468377ae, c92f951c, 6b08d688, f82c3c8c, e6e53cdb, f046ed32, efe8c2f6, 77bc655b, (this log entry) |
 | C1 | done | b02303db, (this log entry) |
 | C2 | done | 20e8bf39, (this log entry) |
 | D1 | done | 2e2cac5a, 72e14d9c, bda40963, 4252cba1, 1a0c0b58, 48d3476c, 186d32f5, 21e09c0d, (this log entry) |
@@ -709,7 +709,7 @@ See `PLAN.md` for the session protocol, chunks and gates. Append one log entry p
   - The group test sees means only. A spread or shape test (e.g. a variance ratio or KS on the K runs) would need its own calibration; it was out of scope here.
 - Next: V1 (recommended order 10b). Each of its fixes changes outputs, so ask the user first.
 
-### V1: Make vector warmup converge reliably (in progress, 2026-10-19)
+### V1: Make vector warmup converge reliably (done, 2026-10-21)
 - Base: 7f432114. Investigation in a scratch build (`build-v1/`, env-switched prototypes, reverted); sweeps at `-j 4`.
 - **Causes** (details in FINDINGS F16, F24, F26, F27):
   - `VectorModel::initIterate` stopped at the first species still needing a round, so later species were rarely re-fitted (F16, F26).
@@ -736,3 +736,15 @@ See `PLAN.md` for the session protocol, chunks and gates. Append one log entry p
   - efe8c2f6 (tooling, approved): the 4 ModelName references had failed because `simulatedEIR` (adult EIR) is NaN in surveys where all 10 people are under the adult age (0/0 in `TransmissionModel::surveyEIR`), in ~1.5% of runs. Averaging over steps with adults doesn't help: surveys are one step. Now a measure with a cell NaN in some replicates only is left out of per-cell checks and totals (listed in a new `nan_measures` metadata line; absent = none, format still 4), and `mean_eir` skips NaN surveys. Tool tests 44 + 26 pass.
 - **Replicates for the rotation-checked binary, stopped at the user's request (resumable):** `caffeinate -i build-rework/stats-v1/run2.sh >> build-rework/stats-v1/run2.log 2>&1` runs the 27 scenarios the rotation check can change. Done: Genotypes, MSAT_HRP2, NonHumanHosts, SimpleMPDLarviciding, MSAT, LifeNet1, LifeNet2, TrapTest (500 each); VecFullTest 395. Kept from the first pass, spot-checked byte-identical with the new binary (3 seeds each): PEV, BSV, TBV, SubPopRemoval, ExactNv0. Pre-rotation replicates of the 27 are in `build-rework/stats-v1-prerot/` (delete once V1 is done). Binary must stay at e6e53cdb's C++.
 - Remaining: as above, plus regenerate the 25 references and build the 7 new ones from `build-rework/stats-v1/` (`find`, not `ls`, to list dirs: `ls` is aliased to an icon-printing tool here), and compare new against old reference means (most shifts < 0.15 SD in the pre-rotation pass; NonHumanHosts, MSAT, MSAT_HRP2 were the outliers that led to the rotation check).
+- **Finished (2026-10-21).**
+  - 77bc655b: 25 references regenerated, 7 new (AvailabilityFilter, ExactNv0, SimpleMPDTest, ModelName×4), all N = 500, no seed aborted. Leave-one-out run failures 5–15 of 500 everywhere. Mean shifts against the old references are mostly < 0.25 SD; largest MSAT_HRP2 mean EIR −0.57, VecMonthly +0.52, neither consistently towards or away from the input EIR. NonHumanHosts −0.06 (−1.76 before the rotation check). Table in the commit message.
+- **Gates** (at 77bc655b, base 7f432114):
+  - G-exact / G-unit / G-stat: plain `ctest -j4` 106/106 (53 old, 51 `stat_*`: every registered scenario has a reference now, none disabled; 2 tool tests).
+  - G-stat full: `ctest -C full -L statistical-full -j1` 51/51 in 389 s. With the reference runs this covers the done-when: seeds 1001–1500 (the 32 regenerated scenarios; the other 19 are unchanged since S5) and 2001–2020 run for every registered scenario.
+  - G-style: `util/style.sh check 7f432114` clean; `uvx ruff check test/stats/` clean.
+  - G-perf: `util/bench.sh --compare ../om-bench-base/build-rework` (base worktree moved to 7f432114 and rebuilt): median per-pair ratio 0.930 (−7%). The benchmark scenario has three species with dynamic EIR, so it now runs fewer warmup rounds; not a hot-path change.
+- Findings: F16, F24, F26, F27, F29 closed; F34 new (open); F35, F36, F37 new and settled.
+- Cleanup: removed `build-v1/` (prototype build) and `build-rework/stats-v1-prerot/`. **Kept** `build-rework/stats-v1/` (8.0 GB, the replicates of the 32 new references), like the S5 (`/Users/blaarm/git/om-s5`) and S6 (`build-rework/stats-s6/`) data, until D2b; note that the S5 replicates of the 32 V1 scenarios are now outdated.
+- Surprises: the scenarios' own seeds always converged, so ctest never saw any of the four abort paths; the stop test ignored rotation in every upstream version; fixing the species gating exposed it (NonHumanHosts EIR 13% low) and was only caught by comparing references, not by G-exact or G-stat.
+- Follow-ups: D2b needs Decision 1 and regenerates all references again; F34 for whoever touches `run.py`; D7's rename should resolve `calculateEIR`'s `EIR_i`/`EIR_l` against its locals `eir_i`/`eir_l`.
+- Next: D2b (recommended order 11). **Ask the user Decision 1 first.**

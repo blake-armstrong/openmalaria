@@ -323,6 +323,7 @@ Added after S5, with the user's agreement. In S5, some scenarios aborted in vect
   - SimpleMPDTest writes ctsout during warmup (`duringInit`), so its length follows the number of calibration rounds (F29). Either V1 makes the round count fixed, or the stats tooling keys such rows by time from the end of the run and ignores the warmup rows.
   - Then build references for ModelName*, AvailabilityFilter, ExactNv0 and SimpleMPDTest and enable their `stat_*` tests.
 - **Done when:** seeds 1001–1500 and 2001–2005 run without an abort for every registered scenario, and every registered scenario has a reference.
+- **As built:** six fitter changes (every species fitted each round; 5-year mean S_v; 5-year mean kappa for the exact solver; SimpleMPD negative-resources guard; a rotation check in the stop test; `find_angle` keeps no rotation unless another fits better), a duringInit ctsout reader and NaN-only-sometimes measures in the stats tooling. Details in the V1 entry of `PROGRESS.md` and FINDINGS F16, F24, F26, F27, F29, F35–F37.
 - **Gates:** G-unit, G-style, G-perf. G-exact and G-stat on the scenarios the fix does not touch. For the ones it touches, the change is intended: show which measures moved, as for a reference regeneration.
 
 ## Stage C: Extract the Simulation (Phase 1)
