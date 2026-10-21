@@ -181,7 +181,7 @@ SimTime VivaxParams::sample_release_delay(LocalRng& rng) const {
 VivaxBrood::VivaxBrood(LocalRng& rng, const VivaxParams& params, int origin, WHVivax* host)
     : primary_has_started(false), relapse_has_started(false), relapseb_has_started(false), had_event(false),
       had_relapse(false), origin(origin) {
-    set<SimTime> releases; // used to initialise releaseDates; a set is better to use now but a vector later
+    set<SimTime> releases; // used to initialise release_dates; a set is better to use now but a vector later
 
     // primary blood stage plus hypnozoites (relapses)
     releases.insert(Sim::now_or_ts0() + params.latent_p);
@@ -203,7 +203,7 @@ VivaxBrood::VivaxBrood(LocalRng& rng, const VivaxParams& params, int origin, WHV
     if (sampleHost == host && sampleBrood == 0) {
         sampleBrood = this;
         cout << "New sample brood";
-        for (auto it = releaseDates.begin(); it != releaseDates.end(); ++it)
+        for (auto it = release_dates.begin(); it != release_dates.end(); ++it)
             cout << '\t' << *it;
         cout << endl;
     }
@@ -253,7 +253,7 @@ VivaxBrood::UpdResult VivaxBrood::update(LocalRng& rng, const VivaxParams& param
 #ifdef WHVivaxSamples
         if (sampleBrood == this) {
             cout << "Time\t" << Sim::ts0();
-            for (auto it = releaseDates.begin(); it != releaseDates.end(); ++it)
+            for (auto it = release_dates.begin(); it != release_dates.end(); ++it)
                 cout << '\t' << *it;
             cout << endl;
         }
@@ -301,13 +301,13 @@ void VivaxBrood::treatment_ls() {
 
     /* partial clearance code, in case of need:
     vector<SimTime> survivingZoites;
-    survivingZoites.reserve( releaseDates.size() );   // maximum size we need
-    for( auto it = releaseDates.begin(); it != releaseDates.end(); ++it ){
+    survivingZoites.reserve( release_dates.size() );   // maximum size we need
+    for( auto it = release_dates.begin(); it != release_dates.end(); ++it ){
         if( !rng.bernoulli( pClearEachHypnozoite ) ){
             survivingZoites.push_back( *it );    // copy            
         }
     }
-    swap( releaseDates, survivingZoites );
+    swap( release_dates, survivingZoites );
     */
 }
 
