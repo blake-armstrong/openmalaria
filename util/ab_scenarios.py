@@ -82,8 +82,77 @@ def clin_option(option):
     return lambda s: rep(s, "<vivaxClinOption>A2j</vivaxClinOption>", f"<vivaxClinOption>{option}</vivaxClinOption>")
 
 
+def rep_first(text, old, new):
+    if old not in text:
+        raise ValueError(f"expected {old!r}")
+    return text.replace(old, new, 1)
+
+
+def model_option(name):
+    return lambda s: rep(s, "<ModelOptions>", f'<ModelOptions>\n      <option name="{name}" value="true"/>')
+
+
+TRACKING = """<parasiteGenetics samplingMode="tracking">
+    <locus name="mdr">
+      <allele name="sensitive" initialFrequency="0.5" fitness="1"/>
+      <allele name="resistant" initialFrequency="0.5" fitness="1"/>
+    </locus>
+  </parasiteGenetics>"""
+SECOND_LOCUS = """</locus>
+    <locus name="hrp2">
+      <allele name="present" initialFrequency="0.7" fitness="1"/>
+      <allele name="deleted" initialFrequency="0.2" fitness="0.9" hrp2_deletion="true"/>
+      <allele name="partial" initialFrequency="0.1" fitness="0.95"/>
+    </locus>"""
+
+
 V = "scenarioVivax.xml"
+G = "scenarioGenotypes.xml"
+M = "scenarioMSAT_HRP2.xml"
 GROUPS = {
+    "registries": [
+        Variant("genotypes_print", G, args=["--print-genotypes"]),
+        Variant("genotypes_print_two_loci", G, lambda s: rep_first(s, "</locus>", SECOND_LOCUS),
+                ["--print-genotypes"]),
+        Variant("genotypes_print_molpairwise", "scenarioMolPairwise.xml", args=["--print-genotypes"]),
+        Variant("genotypes_print_none", "scenario5.xml", args=["--print-genotypes"]),
+        Variant("genotypes_tracking_checkpoint", G, args=["--checkpoint"], runs=2),
+        Variant("genotypes_initial_checkpoint", G, lambda s: rep(s, 'samplingMode="tracking"', 'samplingMode="initial"'),
+                ["--checkpoint"], runs=2),
+        Variant("genotypes_tracking_non_vector", "scenario5.xml",
+                lambda s: rep(s, "</entomology>", "</entomology>\n  " + TRACKING)),
+        Variant("genotypes_tracking_forced", G, lambda s: rep(s, '<entomology mode="dynamic"', '<entomology mode="forced"')),
+        Variant("genotypes_freq_sum", G, lambda s: rep(s, 'name="resistant" initialFrequency="0.5"',
+                                                         'name="resistant" initialFrequency="0.6"')),
+        Variant("diagnostics_duplicate", G, lambda s: rep(s, '<diagnostic name="neonatal"', '<diagnostic name="standard"')),
+        Variant("diagnostics_specificity", M, lambda s: rep(s, 'specificity=".942"', 'specificity="1.5"')),
+        Variant("diagnostics_negative_density", G, lambda s: rep_first(s, 'minDensity="40"', 'minDensity="-1"')),
+        Variant("diagnostics_garki_no_units", M, model_option("GARKI_DENSITY_BIAS")),
+        Variant("diagnostics_garki_survey_diagnostic", G, model_option("GARKI_DENSITY_BIAS")),
+        Variant("diagnostics_garki_detection_limit", "scenario5.xml", model_option("GARKI_DENSITY_BIAS")),
+        Variant("diagnostics_limit_and_diagnostic", "scenario5.xml",
+                lambda s: rep(s, '<surveys detectionLimit="40">', '<surveys detectionLimit="40" diagnostic="x">')),
+        Variant("diagnostics_neither", G, lambda s: rep(s, '<surveys diagnostic="standard">', "<surveys>")),
+        Variant("diagnostics_hrp2_monitoring", M, lambda s: rep(s, '<surveys diagnostic="standard">',
+                                                              '<surveys diagnostic="RDT">')),
+        Variant("diagnostics_unknown_survey", G, lambda s: rep(s, '<surveys diagnostic="standard">',
+                                                             '<surveys diagnostic="nope">')),
+        Variant("diagnostics_unknown_intervention", M,
+                lambda s: rep_first(s, '<diagnostic diagnostic="RDT">', '<diagnostic diagnostic="nope">')),
+        Variant("diagnostics_unknown_neonatal", G, lambda s: rep(s, '<NeonatalMortality diagnostic="neonatal"/>',
+                                                               '<NeonatalMortality diagnostic="nope"/>')),
+        Variant("diagnostics_detection_limit", "scenario5.xml"),
+        Variant("diagnostics_detection_limit_nodeprec", "scenario5.xml", args=["--no-deprecation-warnings"]),
+        Variant("diagnostics_analysis_no_22", "scenario5.xml", lambda s: rep(s, 'analysisNo="99"', 'analysisNo="22"')),
+        Variant("diagnostics_hrp2_msat", M),
+        Variant("treatments_zero_steps", "scenario5.xml",
+                lambda s: rep_first(s, '<clearInfections stage="both" timesteps="-1"/>',
+                                    '<clearInfections stage="both" timesteps="0"/>')),
+        Variant("treatments_liver_twice", "scenario5.xml",
+                lambda s: rep_first(s, '<clearInfections stage="both" timesteps="-1"/>',
+                                    '<clearInfections stage="both" timesteps="-1"/>'
+                                    '<clearInfections stage="liver" timesteps="1"/>')),
+    ],
     "vivax": [
         Variant("plain", V),
         Variant("lsd_neg", V, with_lsd(vivax_lsd(), "-1t")),
