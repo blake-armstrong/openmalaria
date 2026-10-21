@@ -123,8 +123,8 @@ public:
     VivaxBrood(istream& stream);
 
     struct UpdResult {
-        UpdResult() : new_primary_bs(false), new_relapse_bs(false), new_relapseb_bs(false), new_bs(false) {}
-        bool new_primary_bs, new_relapse_bs, new_relapseb_bs, new_bs, is_finished;
+        UpdResult() = default;
+        bool new_primary_bs{false}, new_relapse_bs{false}, new_relapseb_bs{false}, new_bs{false}, is_finished{};
     };
     /**
      * Do per time step update: remove finished blood stage infections and act
@@ -153,7 +153,7 @@ public:
     void treatment_ls();
 
 private:
-    VivaxBrood() {} // not default constructible
+    VivaxBrood() = default; // not default constructible
 
     // list of times at which the merozoite and hypnozoites release, ordered by
     // time of release, soonest last (i.e. last element is next one to release)
@@ -164,22 +164,22 @@ private:
     SimTime blood_stage_clear_date = Sim::never();
 
     // Whether the primary blood stage infection has started
-    bool primary_has_started;
+    bool primary_has_started{};
 
     // Whether the relapse blood stage infection has started
-    bool relapse_has_started;
+    bool relapse_has_started{};
 
     //Whether the later category of relapses has started
-    bool relapseb_has_started;
+    bool relapseb_has_started{};
 
     // Whether any clinical event has been triggered by this brood
-    bool had_event;
+    bool had_event{};
 
     // Whether a relapse event has been triggered by this brood
-    bool had_relapse;
+    bool had_relapse{};
 
     // Infection origin
-    int origin;
+    int origin{};
 };
 
 /**
@@ -196,40 +196,40 @@ public:
     /// @brief Constructors, destructors and checkpointing functions
     //@{
     WHVivax(const VivaxParams& params, LocalRng& rng, double comorbidity_factor);
-    virtual ~WHVivax();
+    ~WHVivax() override;
     //@}
 
-    virtual double prob_transmission_to_mosquito(vector<double>& prob_trans_genotype_i,
-                                                 vector<double>& prob_trans_genotype_l) const;
+    double prob_transmission_to_mosquito(vector<double>& prob_trans_genotype_i,
+                                         vector<double>& prob_trans_genotype_l) const override;
 
-    virtual bool summarize(Host::Human& human) const;
+    bool summarize(Host::Human& human) const override;
 
-    virtual void import_infection(LocalRng& rng);
+    void import_infection(LocalRng& rng) override;
 
-    virtual void update(Host::Human& human, LocalRng& rng, int& n_new_infs_i, int& n_new_infs_l,
-                        vector<double>& genotype_weights_i, vector<double>& genotype_weights_l, double age_in_years);
+    void update(Host::Human& human, LocalRng& rng, int& n_new_infs_i, int& n_new_infs_l,
+                vector<double>& genotype_weights_i, vector<double>& genotype_weights_l, double age_in_years) override;
 
-    virtual bool diagnostic_result(LocalRng& rng, const Diagnostic& diagnostic) const;
+    bool diagnostic_result(LocalRng& rng, const Diagnostic& diagnostic) const override;
 
-    virtual Pathogenesis::StatePair determine_morbidity(Host::Human& human, double age_years, bool);
+    Pathogenesis::StatePair determine_morbidity(Host::Human& human, double age_years, bool) override;
 
-    virtual void clear_immunity();
+    void clear_immunity() override;
 
-    virtual InfectionOrigin infection_origin() const { return InfectionOrigin::Indigenous; }
+    InfectionOrigin infection_origin() const override { return InfectionOrigin::Indigenous; }
 
 protected:
-    virtual void treatment(Host::Human& human, TreatmentId treat_id);
-    virtual bool treat_simple(Host::Human& human, SimTime time_liver, SimTime time_blood);
-    virtual void optional_pq_treatment(Host::Human& human);
+    void treatment(Host::Human& human, TreatmentId treat_id) override;
+    bool treat_simple(Host::Human& human, SimTime time_liver, SimTime time_blood) override;
+    void optional_pq_treatment(Host::Human& human) override;
 
-    virtual void checkpoint(istream& stream);
-    virtual void checkpoint(ostream& stream);
+    void checkpoint(istream& stream) override;
+    void checkpoint(ostream& stream) override;
 
     // None of these do anything in this model:
-    virtual void treat_pk_pd(size_t schedule, size_t dosages, double age, double delay_d);
-    virtual double get_total_density() const;
-    virtual double get_cumulative_h() const;
-    virtual double get_cumulative_y() const;
+    void treat_pk_pd(size_t schedule, size_t dosages, double age, double delay_d) override;
+    double get_total_density() const override;
+    double get_cumulative_h() const override;
+    double get_cumulative_y() const override;
 
 private:
     // not copy constructible
@@ -250,20 +250,20 @@ private:
 
     // The number of primary blood stage infections to have started since this
     // human was born.
-    uint32_t cum_prim_inf;
+    uint32_t cum_prim_inf{0};
 
     // Either never or expiry time of treatment
-    SimTime treat_expiry_liver, treat_expiry_blood;
+    SimTime treat_expiry_liver{0}, treat_expiry_blood{0};
 
     // The probability of a clinical event from a primary infection
     double p_event;
     // The probability of a clinical event from an early relapse
     double p_first_relapse_event;
     // The probability of a clinical event from a later relapse
-    double p_second_relapse_event;
+    double p_second_relapse_event{};
 
     // Used for reporting; updated by update()
-    double p_severe;
+    double p_severe{0.0};
 
     friend class ::UnittestUtil;
 };

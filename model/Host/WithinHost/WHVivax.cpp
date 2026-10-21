@@ -39,8 +39,7 @@
 #include <limits>
 #include <cmath>
 
-namespace OM {
-namespace WithinHost {
+namespace OM::WithinHost {
 
 using namespace OM::util;
 
@@ -130,7 +129,7 @@ VivaxParams::VivaxParams(const scnXml::Model& model, SimTime latent_p) : latent_
 void VivaxParams::set_health_system(const scnXml::LiverStageDrug* elt, const util::CommandLineOptions& command_line) {
     VivaxHealthSystemParams& hs = health_system;
     double old_p_het_no_pq = hs.p_het_no_pq;
-    if (elt == 0) {
+    if (elt == nullptr) {
         hs.ignore_no_pq = false;
         hs.p_het_no_pq = 0.0;
         hs.p_receive_pq = 0.0;
@@ -178,9 +177,7 @@ SimTime VivaxParams::sample_release_delay(LocalRng& rng) const {
 
 // ———  per-brood code  ———
 
-VivaxBrood::VivaxBrood(LocalRng& rng, const VivaxParams& params, int origin, WHVivax* host)
-    : primary_has_started(false), relapse_has_started(false), relapseb_has_started(false), had_event(false),
-      had_relapse(false), origin(origin) {
+VivaxBrood::VivaxBrood(LocalRng& rng, const VivaxParams& params, int origin, WHVivax* host) : origin(origin) {
     set<SimTime> releases; // used to initialise release_dates; a set is better to use now but a vector later
 
     // primary blood stage plus hypnozoites (relapses)
@@ -314,9 +311,8 @@ void VivaxBrood::treatment_ls() {
 // ———  per-host code  ———
 
 WHVivax::WHVivax(const VivaxParams& params, LocalRng& rng, double comorbidity_factor)
-    : params(&params), cum_prim_inf(0), treat_expiry_liver(0), treat_expiry_blood(0),
-      p_event(numeric_limits<double>::quiet_NaN()), p_first_relapse_event(numeric_limits<double>::quiet_NaN()),
-      p_severe(0.0) {
+    : params(&params), p_event(numeric_limits<double>::quiet_NaN()),
+      p_first_relapse_event(numeric_limits<double>::quiet_NaN()) {
     if (comorbidity_factor != 1.0) {
         throw TRACED_EXCEPTION_DEFAULT("This vivax model cannot be used with comorbidity heterogeneity");
     }
@@ -342,8 +338,8 @@ WHVivax::~WHVivax() {
 double WHVivax::prob_transmission_to_mosquito(vector<double>& prob_trans_genotype_i,
                                               vector<double>& prob_trans_genotype_l) const {
     assert(WithinHost::Genotypes::N() == 1);
-    for (auto inf = infections.begin(); inf != infections.end(); ++inf) {
-        if (inf->is_patent()) {
+    for (const auto& infection : infections) {
+        if (infection.is_patent()) {
             // we have gametocytes from at least one brood
             return params->prob_blood_stage_infectious_to_mosq;
         }
@@ -359,8 +355,8 @@ bool WHVivax::summarize(Host::Human& human) const {
     // (patent) infections are reported by genotype, even though we don't have
     // genotype in this model
     mon::recordStat(mon::measure("totalInfs"), human, static_cast<int>(infections.size()));
-    for (auto inf = infections.begin(); inf != infections.end(); ++inf) {
-        if (inf->is_patent()) {
+    for (const auto& infection : infections) {
+        if (infection.is_patent()) {
             mon::recordStat(mon::measure("totalPatentInf"), human);
             patent_host = true;
         }
@@ -372,7 +368,7 @@ bool WHVivax::summarize(Host::Human& human) const {
 
 void WHVivax::import_infection(LocalRng& rng) {
     // this means one new liver stage infection, which can result in multiple blood stages
-    infections.push_back(VivaxBrood(rng, *params, WithinHost::InfectionOrigin::Imported, this));
+    infections.emplace_back(rng, *params, WithinHost::InfectionOrigin::Imported, this);
 }
 
 void WHVivax::update(Host::Human& human, LocalRng& rng, int& n_new_infs_i, int& n_new_infs_l,
@@ -381,10 +377,10 @@ void WHVivax::update(Host::Human& human, LocalRng& rng, int& n_new_infs_i, int& 
 
     // create new infections, letting the constructor do the initialisation work:
     for (int i = 0; i < n_new_infs_i; ++i)
-        infections.push_back(VivaxBrood(rng, *params, InfectionOrigin::Introduced, this));
+        infections.emplace_back(rng, *params, InfectionOrigin::Introduced, this);
 
     for (int i = 0; i < n_new_infs_l; ++i)
-        infections.push_back(VivaxBrood(rng, *params, InfectionOrigin::Indigenous, this));
+        infections.emplace_back(rng, *params, InfectionOrigin::Indigenous, this);
 
     // update infections
     // NOTE: currently no BSV model
@@ -471,8 +467,8 @@ void WHVivax::update(Host::Human& human, LocalRng& rng, int& n_new_infs_i, int& 
 bool WHVivax::diagnostic_result(LocalRng& rng, const Diagnostic& diagnostic) const {
     //TODO(monitoring): this shouldn't ignore the diagnostic (especially since
     // it should always return true if diagnostic.density=0)
-    for (auto inf = infections.begin(); inf != infections.end(); ++inf) {
-        if (inf->is_patent())
+    for (const auto& infection : infections) {
+        if (infection.is_patent())
             return true; // at least one patent infection
     }
     return false;
@@ -501,8 +497,8 @@ void WHVivax::optional_pq_treatment(Host::Human& human) {
     const VivaxHealthSystemParams& hs = params->health_system;
     if (hs.p_receive_pq > 0.0 && (hs.ignore_no_pq || !no_pq) && human.clinical_rng.bernoulli(hs.p_receive_pq)) {
         if (human.host_rng.bernoulli(hs.effectiveness_pq)) {
-            for (auto it = infections.begin(); it != infections.end(); ++it) {
-                it->treatment_ls();
+            for (auto& infection : infections) {
+                infection.treatment_ls();
             }
         }
         mon::recordEvent(mon::measure("nLiverStageTreatments"), human);
@@ -527,8 +523,8 @@ bool WHVivax::treat_simple(Host::Human& human, SimTime time_liver, SimTime time_
             if (time_liver >= Sim::zero()) {
                 treat_expiry_liver = max(int(treat_expiry_liver), Sim::now_or_ts1() + time_liver);
             } else {
-                for (auto it = infections.begin(); it != infections.end(); ++it) {
-                    it->treatment_ls();
+                for (auto& infection : infections) {
+                    infection.treatment_ls();
                 }
             }
         }
@@ -539,8 +535,8 @@ bool WHVivax::treat_simple(Host::Human& human, SimTime time_liver, SimTime time_
     if (time_blood != Sim::zero()) {
         if (time_blood < Sim::zero()) {
             // legacy mode: retroactive clearance
-            for (auto it = infections.begin(); it != infections.end(); ++it) {
-                it->treatment_bs();
+            for (auto& infection : infections) {
+                infection.treatment_bs();
             }
         } else {
             treat_expiry_blood = max(int(treat_expiry_blood), Sim::now_or_ts1() + time_blood);
@@ -554,13 +550,13 @@ bool WHVivax::treat_simple(Host::Human& human, SimTime time_liver, SimTime time_
 
 void WHVivax::checkpoint(istream& stream) {
     WHInterface::checkpoint(stream);
-    size_t len;
+    size_t len = 0;
     len & stream;
     for (size_t i = 0; i < len; ++i) {
-        infections.push_back(VivaxBrood(stream));
+        infections.emplace_back(stream);
     }
     no_pq & stream;
-    int morbidity_i;
+    int morbidity_i = 0;
     morbidity_i & stream;
     morbidity = static_cast<Pathogenesis::State>(morbidity_i);
     cum_prim_inf & stream;
@@ -572,8 +568,8 @@ void WHVivax::checkpoint(istream& stream) {
 void WHVivax::checkpoint(ostream& stream) {
     WHInterface::checkpoint(stream);
     infections.size() & stream;
-    for (auto it = infections.begin(); it != infections.end(); ++it) {
-        it->checkpoint(stream);
+    for (auto& infection : infections) {
+        infection.checkpoint(stream);
     }
     no_pq & stream;
     static_cast<int>(morbidity) & stream;
@@ -596,5 +592,4 @@ void WHVivax::set_hs_parameters(const scnXml::LiverStageDrug* elt) {
     bridge::mutable_within_host_model().vivax.set_health_system(elt, bridge::command_line());
 }
 
-}
 }
