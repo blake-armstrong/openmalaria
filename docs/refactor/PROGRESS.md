@@ -30,7 +30,7 @@ See `PLAN.md` for the session protocol, chunks and gates. Append one log entry p
 | D3 | done | cfe2250e, b074dcd3, 79d7e9ae, 6e96d1cf, a653b976, efb5ad9d, cf709072, 39f23abd, b8df955e, fbb7c714, (this log entry) |
 | D4 | split | D4a–D4d |
 | D4a | done | fa7f275c, 49271693, 02029c1e, a07021c4, 06ddff71, 4b223446, 89a7167b, f28d6070, acb0e0c0, f28ffcbe, (this log entry) |
-| D4b | todo | |
+| D4b | done | 1dd81ae7, 7ffc4e6c, 4db82617, 0ddf6209, 808c0e48, 3e1394d2, b4063a76, 7a828ea1, dd059491, (this log entry) |
 | D4c | todo | |
 | D4d | todo | |
 | D5 | todo | |
@@ -891,3 +891,35 @@ See `PLAN.md` for the session protocol, chunks and gates. Append one log entry p
   - D4c: `WHVivax`'s statics; `WithinHostModel::create` already makes `WHVivax` instances, so its parameters can go into the same object.
   - The pre-F0 sweep or D6 should rename `Pathogenesis/` with the rest of the directory.
 - Next: D4b.
+
+### D4b: infection model statics → parameter structs in `WithinHostModel` (done, 2026-10-21)
+- Base: f4d1f6e7. The G-perf base worktree `../om-bench-base` was moved to f4d1f6e7 and rebuilt.
+- Commits:
+  - 1dd81ae7: **logic.**
+    - Each infection model's statics become a parameter struct built where its `init()` ran in `WithinHostModel`'s constructor, with every option read, parameter read, resource-file read and error in the old order: `DescriptiveInfectionParams` (mean log parasite counts, σ0², xν*, and the two bugfix flags that were globals, one read by `DescriptiveWithinHost` through `extern`), `EmpiricalInfectionParams` (autoregression constants and tables; `overrideInflationFactors` becomes its method), `MolineauxInfectionParams` (distribution flags, P* parameters, the qⁱ table), `PennyInfectionParams` (two gamma flags). Dummy has none.
+    - `Infection::s_latentP` → `FalciparumParams::latent_p`; each infection keeps the value it is created with (`latent_period()`), set on checkpoint load too, not written to the checkpoint.
+    - New `CommonInfectionModel` (`Infection/CommonInfectionModel.{h,cpp}`): the infection kind plus the Empirical, Molineaux and Penny params, with `create()`/`load()` returning `unique_ptr`. It replaces `CommonWithinHost::create_infection`/`checkpointed_infection` (function pointers set by each `init()`) and the `create*`/`checkpointed*` free functions, and lives in `CommonWithinHostParams` (passed to its constructor, built from a local so the read order is kept). `DescriptiveInfectionParams` lives in `DescriptiveWithinHostParams`. Each infection holds a pointer to its parameter struct; `CommonWithinHost` and `DescriptiveWithinHostModel` gained a private `new_infection` for their five creation sites.
+    - `WithinHostModel` takes the `CommonInfectionModel`'s resource lookups through a new `const util::CommandLineOptions&` parameter instead of the bridge.
+    - Unit tests: suites build the structs they used to init statically (`molineaux_whm_setup` returns `MolineauxInfectionParams`), and construct infections with `UnittestUtil::infection_latent_p()` (15 days, as `Infection_init_latentP_and_NaN` set). LSTMPkPd and PkPdCompliance construct `DummyInfection` directly; their latent period was `Sim::never()` or 15 days depending on suite order, and is unused (their infections never update).
+  - 7ffc4e6c: `UnittestUtil::MolineauxWHM_setup` → `molineaux_whm_setup` by hand (its declaration changed in the logic commit).
+  - 4db82617 + 0ddf6209: **rename**, 237 renames over 20 files. Maps: `m_genotype=genotype_code`, `m_origin=origin_code`, `m_cumulativeExposureJ=cum_exposure_j` (the tool's names are those of the accessor methods); `IPTattenuateAsexualDensity`, `upperLimitoflogDensity`, `expectedlogDensity` (bad case splits). Skip: `_laggedLogDensities` (F46), renamed by hand in b4063a76.
+  - 808c0e48 + 3e1394d2: **modernise, tool:** 16 `loop-convert`, 14 `use-override`, 13 `concat-nested-namespaces`, 10 `init-variables`, 9 `pro-type-member-init`, 8 `use-default-member-init`, 6 `use-equals-default`, 2 `prefer-member-initializer`, 1 `deprecated-headers`.
+  - b4063a76: **modernise, hand:** C arrays → `std::array` (Empirical's lagged densities, Molineaux's `mi`/`lagged_pc`/`lagged_pi`/patient table (`constexpr`)/`pi`/`si`, Penny's density rings); Empirical's `#define L` → a const reference; the unused private `sample_patent_value` and the never-defined `MolineauxInfection::getVariantSpecificSummation` declaration removed; zero-fill loops and `Variant()` dropped (default member initializers already zero them); casts; the `size_t` → `int` narrowing into `sigma_noise`; loop variables `loop-convert` named badly (`cir_densitie`, float `i`/`tau`); 56 consts. Left: do-while rejection loops, `Infection`'s protected data, `InfectionOrigin` as a plain enum (checkpointed as an int), `endl`, the CSV-parsing streams, three `exp()` constants flagged by `throwing-static-initialization`, and the uncompiled IPT files (F45).
+  - 7a828ea1: a test local renamed (`ageDays` in `PennyInfectionSuite`, on a line the logic commit touched).
+  - dd059491: FINDINGS F45, F46; PLAN.md D4b row as built.
+- Gates:
+  - G-exact / G-unit: 53/53 on `build-rework/` (Release) and `build-debug/` (Debug) after every C++ commit.
+  - G-stat: plain `ctest -j4` at 7a828ea1: 106/106 (53 old, 51 `stat_*`, 2 tool tests).
+  - G-style: `util/style.sh check f4d1f6e7` clean at 7a828ea1. The rename and modernise tool commits passed their skill checks (format half clean, second dry run with nothing to do, token check), and `check <tool commit>^` is clean after each ignore-revs commit.
+  - G-perf: `util/bench.sh --compare ../om-bench-base/build-rework`, candidate 7a828ea1, load ~10 at the start: median per-pair ratio 0.9980 (−0.20%), spreads 2.2% / 2.6%. The benchmark runs Molineaux, so the per-infection parameter pointer and the zero-initialised `si` cost nothing measurable.
+  - Init error paths, A/B against the base build (they now come from the parameter constructors): Descriptive with a 1-day interval, missing `densities.csv`, missing `autoRegressionParameters.csv`, scenario5 without parameter 2, Molineaux without parameter 34. Identical stdout, stderr and exit codes, apart from the work-dir path in the `In:` line.
+- Findings: F45 (uncompiled IPT files and uncalled Empirical setters), F46 (rename-tool gap for members used in a macro body).
+- Surprises:
+  - The rename tool renamed `_laggedLogDensities`' declaration but not its uses (F46); caught by the leftover list, reverted, re-run with `--skip`.
+  - The tool's member names would have collided with three accessor methods (`genotype()`, `origin()`, `cumulativeExposureJ()`); its collision report lists them, so the maps were set before applying.
+- Follow-ups:
+  - D4c: `WHVivax` still reads its own `latentP` file static from the same XML attribute; it can use the same `read_latent_p` and live in `WithinHostModel` with the rest of the vivax statics.
+  - D5: `pk_pd::LSTMModel::init` is still called from `WithinHostModel`'s constructor.
+  - D6: `PathogenesisModel::init` likewise; `Pathogenesis/` still needs its rename (D4a follow-up).
+  - D9: `Sim::` calls in the infection code (`now_or_ts0`, `ts0`, `one_ts`, `latest_ts0`) still go through the clock bridge.
+- Next: D4c.
