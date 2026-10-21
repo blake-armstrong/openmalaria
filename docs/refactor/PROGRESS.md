@@ -64,7 +64,7 @@ See `PLAN.md` for the session protocol, chunks and gates. Append one log entry p
 | M1 | done | de71bd96, c7293e4e, 80034802, 941c2e77, (this log entry) |
 | M2 | done | afd3fa8c, 9183ffe4, ca51c409, bff08fc0, b979260e, a0f1112c, d4869a62, d9d45adb, 7b330170, a592041f, 565239f1, (this log entry) |
 | M3 | todo | |
-| M4 | todo | |
+| M4 | done | 1d4cc809, 0cbf0d72, 1856ab43, (this log entry) |
 | M5 | todo | |
 | M6 | todo | |
 | M7 | todo | |
@@ -779,3 +779,31 @@ See `PLAN.md` for the session protocol, chunks and gates. Append one log entry p
   - D7: `VectorModel` should take `MasterRngs::transmission` by injection instead of the bridge; whoever takes `Population`/`Human` (or D9) likewise for `population`.
   - The S5/S6/V1 replicate dirs (`/Users/blaarm/git/om-s5`, `build-rework/stats-s6/`, `build-rework/stats-v1/`) were kept until D2b; the references stayed, so they are still the data behind them. **The user decided (2026-10-21): keep them until M4 is done**; ask again then.
 - Next: M4 (recommended order 11).
+
+### M4: Portable random distributions (done, 2026-10-21)
+- Base: e709d338. Changes draws on purpose (Decision 1), so gated by G-stat instead of G-exact before the regeneration.
+- **In-tree samplers, not Boost.Random.** The plan allowed either; the six distributions need ~150 lines and no new dependency. Written from the published algorithms (no GSL code copied, GSL being GPL-3.0): Marsaglia's polar method (normal), Marsaglia–Tsang (gamma; `U^(1/a)` boost for shape < 1), Jöhnk for beta with both parameters ≤ 1, else a gamma ratio, multiplication (Poisson mean < 10) and Hörmann's PTRS (mean ≥ 10, with an in-tree log-factorial: exact table below 10, Stirling series above), inversion (Weibull). Every sampler draws only `gen_double()` from the generator, so the same code serves Xoshiro and ChaCha; uniforms that go into a `log` use `1 − u ∈ (0, 1]`.
+- Commits:
+  - 1d4cc809: `model/util/random_variates.h` (unused yet) and the G-diff test `unittest/RandomVariatesTests.cpp` (Catch2).
+  - 0cbf0d72: **logic, changes draws.** `RNG`'s `gauss`, `gamma`, `log_normal`, `beta`, `poisson`, `weibull` call the variates on the underlying generator. The `gsl_rng` adapter (members, `void*` trampolines, hand-written moves that re-pointed it) is gone; moves are defaulted. `random.h` no longer includes `gsl_rng.h`/`gsl_randist.h`. `max_multi_log_normal` keeps `gsl_cdf_ugaussian_Pinv` (a CDF, M6). Unit-test pins re-pinned (F39), see below.
+  - 1856ab43: `test/expected` for the 39 changed scenarios (agreed in D2b: regenerate after D2b and again after M4), from plain runs at 0cbf0d72 (`run.py -C`, `-j 4`); all 51 exited 0 with the same rows. The commit message has the per-scenario table.
+- **Surprise: normal draws and Poisson draws with mean < 10 are unchanged.** GSL's `gsl_ran_gaussian` is the same polar method and its small-mean Poisson the same multiplication method, on the same uniform stream. The G-diff test now asserts this draw for draw (200,000 draws each). So the 12 scenarios that draw nothing else stay byte-identical: BSV, Cohort, ESTS, Genotypes, KK_20150612, Molineaux, MolPairwise, MSAT, MSAT_HRP2, PEV, Penny, TBV. GSL's gamma (via its ziggurat normal), beta, log-normal (uses the other polar coordinate), Weibull (`uniform_pos`) and large-mean Poisson differ.
+- **G-diff** (`unittest-catch2`, 11 test cases, ~1.5 s): per distribution over a grid of parameters (normal 3, gamma 8 with shapes 0.05–500, beta 7 incl. (0.1, 0.1) and (50, 60), log-normal 4 with σ up to 3, Poisson 8 with means 0.01–10⁴, Weibull 3), 200,000 draws against the GSL CDF (one-sample KS at α = 10⁻⁴; chi-square at 10⁻⁴ for Poisson), against 200,000 draws of the old `gsl_ran_*` (two-sample KS at 10⁻⁴), and against the analytic mean and variance (|z| < 5; skipped for log-normal σ = 3, whose moments are too heavy-tailed). Plus the two draw-for-draw checks and a check that each `LocalRng` method passes its parameters to the right variate (gamma shape/scale, Weibull scale/shape, `beta_with_mean`). The old routines stay callable from the test through a test-local `gsl_rng` adapter until M6 drops GSL.
+  - Mutation check (each reverted): a 1% wider normal, a wrong Marsaglia–Tsang `d`, a wrong Jöhnk exponent, a Marsaglia–Tsang squeeze that accepts every candidate, PTRS's `log_inv_alpha` 1.1239 → 1.3, PTRS's offset 0.43 → 0.93 and a 2% wrong multiplication limit all fail it. PTRS's offset 0.43 → 0.53 and its `v_r` + 0.05 pass: changes of that size move the Poisson pmf by less than 200,000 draws can see. The chi-square test was added for Poisson after the discrete KS alone missed the offset 0.43 → 0.53 mutation (it still does).
+- **Unit-test pins (F39).** `EmpiricalInfectionSuite`'s seven densities (beta draws) and `MolineauxStats{Orig,Pairwise}RG` (gamma draws) pin exact draw-dependent values. Re-pinned in 0cbf0d72: the densities from the suite's `dump_emprical` print, the stats files from its own `write()`. The quantile shifts look like sampling noise at N = 200 (medians within ~0.05 on the log scales). The normal-only Molineaux stats didn't change. `EmpiricalInfectionSuite.h` gained `#include <iomanip>` to pass G-style on its own.
+- Gates:
+  - G-diff: as above.
+  - G-unit: CxxTest 65/65 and Catch2 after 0cbf0d72.
+  - G-stat against the **unchanged** references, at 0cbf0d72: `ctest -L statistical -j4` 53/53 (51 `stat_*` + 2 tool tests); `ctest -C full -L statistical-full -j1` 51/51 in 385 s.
+  - G-exact after 1856ab43: plain `ctest -j4` 106/106 on `build-rework/` (incl. checkpoint stop/resume); `ctest -LE statistical -j4` 53/53 on `build-debug/`.
+  - G-style: `util/style.sh check e709d338` clean.
+  - G-perf: `util/bench.sh --compare ../om-bench-base/build-rework` (base worktree moved to e709d338 and rebuilt): median per-pair ratio 0.9756 (−2.4%), base spread 4.0%, candidate 0.5%, load ~6.9 at the start. The benchmark (MSAT) draws only normals and small Poissons, so its output is unchanged and the gain is the dropped `gsl_rng` function-pointer calls.
+- Single-run moves in the regenerated outputs (commit message of 1856ab43): mostly within ±2 SD of the N = 500 reference; the largest is −4.1 SD (ModelNameModelOptionOverrides mean EIR, 10 people), from an old run that sat at +3.3 SD. Against the reference mean, the largest aggregate |z| over all 51 scenarios fell from 3.3 to 2.4.
+- Findings: F39 new (open), F40 new and settled.
+- Docs: PLAN.md M4 row gains an as-built note; DEPENDENCIES.md lists the in-tree variates and narrows GSL's uses (CDFs only in `random.h`, `sampler.cpp`, `Deployments.h`; the G-diff test).
+- Follow-ups:
+  - M6: move the G-diff test's CDFs to Boost.Math and drop its `gsl_ran_*` comparisons (keep the one-sample and moment checks). `max_multi_log_normal`'s `gsl_cdf_ugaussian_Pinv` goes then too.
+  - M8: counter-based per-human streams only need a generator with `gen_double()` for these samplers.
+  - M9: F39 (pinned unit-test values) when porting the suites to Catch2.
+  - The S5/S6/V1 replicate dirs (`/Users/blaarm/git/om-s5` 4.5 GB, `build-rework/stats-s6/` 3.0 GB, `build-rework/stats-v1/` 8.0 GB) were kept until M4 at the user's request; **ask the user** whether to remove them. The references they back are unchanged by M4.
+- Next: D3 (recommended order 12).

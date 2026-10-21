@@ -64,7 +64,7 @@ need a newer CMake before it builds code from this branch.
 
 | Library | Version tested | Licence | Obtained | Used by | Fate |
 |---|---|---|---|---|---|
-| GSL | 2.8 (Homebrew); 2.7.1 on Ubuntu 22.04/24.04 | GPL-3.0-or-later | system, `cmake/FindGSL.cmake` | `model/`: `util/random.h` (`gsl_rng` adapter, `gsl_ran_*`), `WHFalciparum`, `LSTMDrugConversion`, `LSTMDrugThreeComp`, `PopulationAgeStructure`, `AnophelesModel`, `CalcNvO`, `TransmissionModel.h`; `unittest/MolineauxInfectionSuite.h` | samplers → M4; linear algebra → M5; the rest → M6, then dropped (Decision 7) |
+| GSL | 2.8 (Homebrew); 2.7.1 on Ubuntu 22.04/24.04 | GPL-3.0-or-later | system, `cmake/FindGSL.cmake` | `model/`: `util/random.h` (`gsl_cdf_ugaussian_Pinv`), `util/sampler.cpp` and `interventions/Deployments.h` (CDFs), `WHFalciparum`, `LSTMDrugConversion`, `LSTMDrugThreeComp`, `PopulationAgeStructure`, `AnophelesModel`, `CalcNvO`, `TransmissionModel.h`; `unittest/MolineauxInfectionSuite.h`; `unittest/RandomVariatesTests.cpp` (the old `gsl_ran_*` samplers and `gsl_cdf_*` as G-diff yardsticks) | samplers replaced by in-tree `util/random_variates.h` in M4; linear algebra → M5; the rest → M6, then dropped (Decision 7). M6 moves the G-diff test's CDFs to Boost.Math and drops its `gsl_ran_*` comparisons. |
 | Xerces-C | 3.3.0 (Homebrew); 3.2.x on Ubuntu | Apache-2.0 | system, `cmake/FindXercesC.cmake` | the generated `schema` target, through the XSD runtime; no direct use in `model/` | only `io/xml` after E6 |
 | CodeSynthesis XSD (`xsd` / `xsdcxx`) | 4.2.0 (Homebrew); 4.0.0 on Ubuntu | compiler GPL-2.0; header-only runtime GPL-2.0 with the FLOSS exception | system, `cmake/FindXSD.cmake` | generates `schema/` (`cxx-tree --std c++11`); runtime headers reach every file that includes a `scnXml` header | only `io/xml` after E6 |
 | zlib | 1.2.12 (macOS SDK); 1.3 on Ubuntu 24.04 | Zlib | system, `cmake/FindZ.cmake` | `contrib/gzstream` only | stays while gzstream does |
@@ -72,6 +72,7 @@ need a newer CMake before it builds code from this branch.
 | R nmath `qnorm` | from R, in tree (`contrib/R_nmath/`) | GPL-2.0-or-later | vendored | `model/interventions/ITN.cpp`, `IRS.cpp` | Boost.Math → M6, then removed |
 | ChaCha RNG | in tree (`contrib/chacha.h`), modified (see its header) | Zlib | vendored | `model/util/random.h`, `unittest/ChaChaSuite.h` | stays; per-human streams in M8 |
 | xoshiro | in-tree port (`model/util/xoshiro.h`) of the Blackman/Vigna reference generator | reference code public domain (CC0); port GPL-2.0-or-later as part of OpenMalaria | in tree | `model/util/random.h`, `unittest/XoshiroSuite.h` | stays |
+| Random variates | in tree (`model/util/random_variates.h`, M4): polar method (normal), Marsaglia–Tsang (gamma), Jöhnk or gamma ratio (beta), multiplication or Hörmann's PTRS (Poisson), inversion (Weibull) | GPL-2.0-or-later as part of OpenMalaria; written from the published algorithms, no code copied | in tree | `model/util/random.h` | stays; replaces `gsl_ran_*`, not `std::` distributions (their output differs between standard libraries) |
 | CxxTest | 4.4, in tree (`contrib/cxxtest/`), modified | LGPL-3.0 | vendored | `unittest/*Suite.h` only (`cxxtestgen` needs Python) | new tests are Catch2 since M1; removed in M9 |
 
 `contrib/README.txt` still says CxxTest 3.10.1 under LGPL-2.1. The tree has had 4.4,
