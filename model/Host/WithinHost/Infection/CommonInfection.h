@@ -20,8 +20,8 @@
  * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301, USA.
  */
 
-#ifndef Hmod_CommonInfection
-#define Hmod_CommonInfection
+#ifndef HMOD_COMMON_INFECTION
+#define HMOD_COMMON_INFECTION
 
 #include "Host/WithinHost/Infection/Infection.h"
 #include "util/random.h"
@@ -56,15 +56,15 @@ public:
      * @param now The simulation time. Use this instead of sim::ts1().
      * @param body_mass Body mass of host in kg
      * @returns True when the infection goes extinct. */
-    inline bool update(LocalRng& rng, double survivalFactor, SimTime now, double body_mass) {
-        SimTime bsAge = now - m_startDate - latent_period(); // age of post-latent-period blood stage
-        if (bsAge < Sim::zero())
+    inline bool update(LocalRng& rng, double survival_factor, SimTime now, double body_mass) {
+        SimTime bs_age = now - start_date - latent_period(); // age of post-latent-period blood stage
+        if (bs_age < Sim::zero())
             return false; // latent period (liver stage) — don't do anything
         else
-            return updateDensity(rng, survivalFactor, bsAge, body_mass);
+            return update_density(rng, survival_factor, bs_age, body_mass);
     }
 
-    map<size_t, double> Kn; // IC50^slope per drug type, if sampled
+    map<size_t, double> kn; // IC50^slope per drug type, if sampled
 
 protected:
     /** Update: calculate new density.
@@ -76,7 +76,7 @@ protected:
      *  this, but this function is not called during those stages.
      * @param body_mass Body mass of host in kg
      * @returns True when the infection goes extinct. */
-    virtual bool updateDensity(LocalRng& rng, double survivalFactor, SimTime bsAge, double body_mass) = 0;
+    virtual bool update_density(LocalRng& rng, double survival_factor, SimTime bs_age, double body_mass) = 0;
 
     virtual void checkpoint(ostream& stream);
 };

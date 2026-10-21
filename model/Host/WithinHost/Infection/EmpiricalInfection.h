@@ -20,8 +20,8 @@
  * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301, USA.
  */
 
-#ifndef Hmod_EmpiricalInfection
-#define Hmod_EmpiricalInfection
+#ifndef HMOD_EMPIRICAL_INFECTION
+#define HMOD_EMPIRICAL_INFECTION
 
 #include "Host/WithinHost/Infection/CommonInfection.h"
 #include "util/CommandLine.h"
@@ -35,15 +35,15 @@ struct EmpiricalInfectionParams;
 
 class EmpiricalInfection : public CommonInfection {
 public:
-    static const int _maximumDurationInDays = 418;
+    static const int MaximumDurationInDays = 418;
 
     /// @brief Construction and destruction
     //@{
     /// For checkpointing (don't use for anything else)
     EmpiricalInfection(const EmpiricalInfectionParams& params, SimTime latent_p, istream& stream);
     /// Per instance initialisation; create new inf.
-    EmpiricalInfection(const EmpiricalInfectionParams& params, SimTime latent_p, LocalRng& rng, uint32_t protID,
-                       int origin, double growthRateMultiplier);
+    EmpiricalInfection(const EmpiricalInfectionParams& params, SimTime latent_p, LocalRng& rng, uint32_t prot_id,
+                       int origin, double growth_rate_multiplier);
     /** Destructor
    * 
    * Note: this destructor does nothing in order to allow shallow copying to
@@ -53,21 +53,21 @@ public:
 
     /// Set patent growth rate multiplier.
     /// This was used for independant parameterization.
-    void setPatentGrowthRateMultiplier(double multiplier);
+    void set_patent_growth_rate_multiplier(double multiplier);
 
-    virtual bool updateDensity(LocalRng& rng, double survivalFactor, SimTime bsAge, double);
+    virtual bool update_density(LocalRng& rng, double survival_factor, SimTime bs_age, double);
 
 protected:
     virtual void checkpoint(ostream& stream);
 
 private:
-    double getInflatedDensity(LocalRng& rng, double nonInflatedDensity);
-    double sigma_noise(int ageDays);
-    double samplePatentValue(LocalRng& rng, double mu, double sigma, double lowerBound);
-    double sampleSubPatentValue(LocalRng& rng, double mu, double sigma, double upperBound);
+    double get_inflated_density(LocalRng& rng, double non_inflated_density);
+    double sigma_noise(int age_days);
+    double sample_patent_value(LocalRng& rng, double mu, double sigma, double lower_bound);
+    double sample_sub_patent_value(LocalRng& rng, double mu, double sigma, double upper_bound);
 
     double _laggedLogDensities[3];
-    double _patentGrowthRateMultiplier;
+    double patent_growth_rate_multiplier;
 
     const EmpiricalInfectionParams* params;
 };
@@ -84,12 +84,12 @@ struct EmpiricalInfectionParams {
     double mu3 = 0.0;
     double sigma0_res = 0.0;
     double sigmat_res = 0.0;
-    std::array<double, EmpiricalInfection::_maximumDurationInDays> mu_beta1{};
-    std::array<double, EmpiricalInfection::_maximumDurationInDays> sigma_beta1{};
-    std::array<double, EmpiricalInfection::_maximumDurationInDays> mu_beta2{};
-    std::array<double, EmpiricalInfection::_maximumDurationInDays> sigma_beta2{};
-    std::array<double, EmpiricalInfection::_maximumDurationInDays> mu_beta3{};
-    std::array<double, EmpiricalInfection::_maximumDurationInDays> sigma_beta3{};
+    std::array<double, EmpiricalInfection::MaximumDurationInDays> mu_beta1{};
+    std::array<double, EmpiricalInfection::MaximumDurationInDays> sigma_beta1{};
+    std::array<double, EmpiricalInfection::MaximumDurationInDays> mu_beta2{};
+    std::array<double, EmpiricalInfection::MaximumDurationInDays> sigma_beta2{};
+    std::array<double, EmpiricalInfection::MaximumDurationInDays> mu_beta3{};
+    std::array<double, EmpiricalInfection::MaximumDurationInDays> sigma_beta3{};
     double inflation_mean = 0.0;
     double inflation_variance = 0.0;
     double extinction_level = 0.0;

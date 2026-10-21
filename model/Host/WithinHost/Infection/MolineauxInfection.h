@@ -20,8 +20,8 @@
  * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301, USA.
  */
 
-#ifndef Hmod_MOLINEAUXINFECTION_H
-#define Hmod_MOLINEAUXINFECTION_H
+#ifndef HMOD_MOLINEAUXINFECTION_H
+#define HMOD_MOLINEAUXINFECTION_H
 
 #include "Host/WithinHost/Infection/CommonInfection.h"
 #include "util/ModelOptions.h"
@@ -52,39 +52,39 @@ public:
     // v: number of variants per clone (one infection = one new clone); 50 in paper
     //TODO(optimisation): v should have a significant effect on performance, but reducing by,
     // say, half, may not have a big effect on the model. Evaluate.
-    static const size_t v = 50;
+    static const size_t V = 50;
     // taus: used for the variantTranscending and variantSpecific array, 4 Molineaux time steps = 8 days
-    static const size_t taus = 4;
+    static const size_t Taus = 4;
     //@}
 
     // Initialise. Samples several parameters.
-    MolineauxInfection(const MolineauxInfectionParams& params, SimTime latent_p, LocalRng& rng, uint32_t protID,
+    MolineauxInfection(const MolineauxInfectionParams& params, SimTime latent_p, LocalRng& rng, uint32_t prot_id,
                        int origin);
     // Load from a checkpoint:
     MolineauxInfection(const MolineauxInfectionParams& params, SimTime latent_p, istream& stream);
     virtual ~MolineauxInfection() {};
 
-    virtual bool updateDensity(LocalRng& rng, double survivalFactor, SimTime bsAge, double body_mass);
+    virtual bool update_density(LocalRng& rng, double survival_factor, SimTime bs_age, double body_mass);
 
 protected:
     virtual void checkpoint(ostream& stream);
 
 private:
-    double getVariantSpecificSummation(int i, double P_current);
+    double get_variant_specific_summation(int i, double p_current);
 
     // Note: we also have inherited parameters:
     // m_startDate is used to give the age here
     // m_density is equivalent to Pc in paper
     // m_cumulativeExposureJ is cumulative parasite density (used by external immunity function)
 
-    float mi[v];        // base multiplication factor per two-day cycle of variant i
-    float Sm_summation; // sum in eqn 7
+    float mi[V];        // base multiplication factor per two-day cycle of variant i
+    float sm_summation; // sum in eqn 7
     // index: we use ((bsAge/2) mod 4) for τ = t - δ_v respectively τ = t
-    float lagged_Pc[taus]; // Pc(τ) for τ ∈ {t - δ_v, ..., t - 2}
+    float lagged_pc[Taus]; // Pc(τ) for τ ∈ {t - δ_v, ..., t - 2}
     /* Pc_star, Pm_star: two host-specific critical densities.
      * These two values depend on the first local maximum or the difference
      * between the last positive day and the first positive day. */
-    float Pc_star, Pm_star;
+    float pc_star, pm_star;
 
     struct Variant {
         // Initialise all variables to 0
@@ -94,10 +94,10 @@ private:
         void operator&(ostream& stream);
         void operator&(istream& stream);
 
-        float Pi1, Pi2;     // Pi(t+1), Pi(t+2): variant's i density (PRBC/μl blood)
-        float Si_summation; // sum in eqn 6
+        float pi1, pi2;     // Pi(t+1), Pi(t+2): variant's i density (PRBC/μl blood)
+        float si_summation; // sum in eqn 6
         // index: we use ((bsAge/2) mod 4) for τ = t - δ_v respectively τ = t
-        float lagged_Pi[taus]; // Pi(τ) for τ ∈ {t - δ_v, ..., t - 2}
+        float lagged_pi[Taus]; // Pi(τ) for τ ∈ {t - δ_v, ..., t - 2}
     };
     // variant-specific data; variants[i-1] corresponds to variant i in the paper
     vector<Variant> variants;
@@ -130,7 +130,7 @@ struct MolineauxInfectionParams {
     // q^(i+1) array
     // All the values of q^1... q^v are stored in this array.
     // This avoids the recalculation of those values every second time step. */
-    std::array<double, MolineauxInfection::v> q_pow{};
+    std::array<double, MolineauxInfection::V> q_pow{};
 
     MolineauxInfectionParams() = default;
     MolineauxInfectionParams(const OM::Parameters& parameters, const util::ModelOptionFlags& options);

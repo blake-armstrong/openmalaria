@@ -80,8 +80,8 @@ CommonWithinHost::CommonWithinHost(const FalciparumParams& params, const CommonW
 
 void CommonWithinHost::clear_infections(Treatments::Stages stage) {
     for (auto inf = infections.begin(); inf != infections.end();) {
-        if (stage == Treatments::BOTH || (stage == Treatments::LIVER && !(*inf)->bloodStage()) ||
-            (stage == Treatments::BLOOD && (*inf)->bloodStage())) {
+        if (stage == Treatments::BOTH || (stage == Treatments::LIVER && !(*inf)->blood_stage()) ||
+            (stage == Treatments::BLOOD && (*inf)->blood_stage())) {
             inf = infections.erase(inf);
         } else {
             ++inf;
@@ -98,7 +98,7 @@ void CommonWithinHost::treat_pk_pd(size_t schedule, size_t dosage, double age, d
 }
 void CommonWithinHost::clear_immunity() {
     for (auto& infection : infections) {
-        infection->clearImmunity();
+        infection->clear_immunity();
     }
     cumulative_h = 0.0;
     cumulative_y_lag = 0.0;
@@ -191,11 +191,11 @@ void CommonWithinHost::update(Host::Human& human, LocalRng& rng, int& n_new_infs
 
         for (auto inf = infections.begin(); inf != infections.end();) {
             // Note: this is only one treatment model; there is also the PK/PD model
-            bool expires = ((*inf)->bloodStage() ? treatment_blood : treatment_liver);
+            bool expires = ((*inf)->blood_stage() ? treatment_blood : treatment_liver);
 
             if (!expires) { /* no expiry due to simple treatment model; do update */
                 const double drug_factor = pkpd_model.get_drug_factor(rng, inf->get(), body_mass);
-                const double imm_factor = immunity_survival_factor(age_in_years, (*inf)->cumulativeExposureJ());
+                const double imm_factor = immunity_survival_factor(age_in_years, (*inf)->cumulative_exposure_j());
                 const double bsv_factor =
                     human.vaccine.getFactor(interventions::Vaccine::BSV, opt_vaccine_genotype ? (*inf)->genotype() : 0);
                 const double survival_factor = bsv_factor * innate_imm_surv_fact * imm_factor * drug_factor;
@@ -207,9 +207,9 @@ void CommonWithinHost::update(Host::Human& human, LocalRng& rng, int& n_new_infs
                 inf = infections.erase(inf); // inf points to next infection now so don't increment with ++inf
                 --num_infs;
             } else {
-                const double density = (*inf)->getDensity();
+                const double density = (*inf)->get_density();
                 total_density += density;
-                if (!(*inf)->isHrp2Deficient()) {
+                if (!(*inf)->is_hrp2_deficient()) {
                     hrp2_density += density;
                 }
                 time_step_max_density = max(time_step_max_density, density);
@@ -242,9 +242,9 @@ void CommonWithinHost::update(Host::Human& human, LocalRng& rng, int& n_new_infs
 
     for (auto& infection : infections) {
         if (infection->origin() == InfectionOrigin::Imported)
-            y_lag_imported[y_lag_i * Genotypes::N() + infection->genotype()] += infection->getDensity();
+            y_lag_imported[y_lag_i * Genotypes::N() + infection->genotype()] += infection->get_density();
         else
-            y_lag_local[y_lag_i * Genotypes::N() + infection->genotype()] += infection->getDensity();
+            y_lag_local[y_lag_i * Genotypes::N() + infection->genotype()] += infection->get_density();
     }
 
     // This is a bug, we keep it this way to be consistent with old simulations
@@ -288,7 +288,7 @@ bool CommonWithinHost::summarize(Host::Human& human) const {
                 else
                     mon::recordStat(mon::measure("totalInfs_Imported"), human, 1, 0, genotype, 0);
 
-                if (diagnostics::monitoringDiagnostic().isPositive(human.monitoring_rng, infection->getDensity(),
+                if (diagnostics::monitoringDiagnostic().isPositive(human.monitoring_rng, infection->get_density(),
                                                                    std::numeric_limits<double>::quiet_NaN())) {
                     mon::recordStat(mon::measure("totalPatentInf"), human, 1, 0, genotype, 0);
                     if (infection->origin() == InfectionOrigin::Indigenous)
@@ -317,7 +317,7 @@ bool CommonWithinHost::summarize(Host::Human& human) const {
                 const uint32_t genotype = (*inf)->genotype();
                 double dens = 0.0;
                 do { // at start: genotype is that of the current infection, dens is 0
-                    dens += (*inf)->getDensity();
+                    dens += (*inf)->get_density();
                     ++inf;
                 } while (inf != sorted_infs.end() && (*inf)->genotype() == genotype);
                 // we had at least one infection of this genotype

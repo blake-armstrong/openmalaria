@@ -20,8 +20,8 @@
  * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301, USA.
  */
 
-#ifndef Hmod_Infection
-#define Hmod_Infection
+#ifndef HMOD_INFECTION
+#define HMOD_INFECTION
 
 #include "Global.h"
 #include "Parameters.h"
@@ -46,14 +46,14 @@ enum InfectionOrigin {
 class Infection {
 public:
     Infection(SimTime latent_p, uint32_t genotype, int origin)
-        : m_startDate(Sim::now_or_ts0()), m_density(0.0), m_cumulativeExposureJ(0.0), m_genotype(genotype),
-          m_origin(origin), latent_p(latent_p) {}
-    Infection(SimTime latent_p, istream& stream) : m_startDate(Sim::never()), latent_p(latent_p) {
-        m_startDate & stream;
-        m_density & stream;
-        m_cumulativeExposureJ & stream;
-        m_genotype & stream;
-        m_origin & stream;
+        : start_date(Sim::now_or_ts0()), density(0.0), cum_exposure_j(0.0), genotype_code(genotype),
+          origin_code(origin), latent_p(latent_p) {}
+    Infection(SimTime latent_p, istream& stream) : start_date(Sim::never()), latent_p(latent_p) {
+        start_date & stream;
+        density & stream;
+        cum_exposure_j & stream;
+        genotype_code & stream;
+        origin_code & stream;
     }
     virtual ~Infection() {}
 
@@ -74,56 +74,56 @@ public:
      * effect), clearance of blood stage infections can only happen after their
      * first update (though due to the latent period densities will still be
      * low). */
-    inline bool bloodStage() const { return Sim::latest_ts0() - m_startDate > Sim::from_days(5); }
+    inline bool blood_stage() const { return Sim::latest_ts0() - start_date > Sim::from_days(5); }
 
     /// Get the density of the infection as of the last update
-    inline double getDensity() const { return m_density; }
+    inline double get_density() const { return density; }
 
     /// Get the cumulative parasite density
-    inline double cumulativeExposureJ() { return m_cumulativeExposureJ; }
+    inline double cumulative_exposure_j() { return cum_exposure_j; }
 
     /// Get whether the infection is HRP2-deficient
-    bool isHrp2Deficient() const { return Genotypes::getGenotypes()[m_genotype].hrp2_deficient; }
+    bool is_hrp2_deficient() const { return Genotypes::getGenotypes()[genotype_code].hrp2_deficient; }
 
     /** Get the infection's genotype. */
-    uint32_t genotype() const { return m_genotype; }
+    uint32_t genotype() const { return genotype_code; }
 
     /** Get the infection's genotype. */
-    int origin() const { return m_origin; }
+    int origin() const { return origin_code; }
 
     /// Resets immunity properties specific to the infection (should only be
     /// called along with clearImmunity() on within-host model).
-    inline void clearImmunity() { m_cumulativeExposureJ = 0.0; }
+    inline void clear_immunity() { cum_exposure_j = 0.0; }
 
     /// Checkpointing
     template <class S> void operator&(S& stream) { checkpoint(stream); }
 
 protected:
     inline virtual void checkpoint(ostream& stream) {
-        m_startDate & stream;
-        m_density & stream;
-        m_cumulativeExposureJ & stream;
-        m_genotype & stream;
-        m_origin & stream;
+        start_date & stream;
+        density & stream;
+        cum_exposure_j & stream;
+        genotype_code & stream;
+        origin_code & stream;
     }
 
     /// Date of inoculation of infection (start of liver stage)
     /// This is the step of inoculation (ts0()).
-    SimTime m_startDate = Sim::never();
+    SimTime start_date = Sim::never();
 
     /// Current density of the infection
-    double m_density;
+    double density;
 
     /// Cumulative parasite density, since start of this infection
-    double m_cumulativeExposureJ;
+    double cum_exposure_j;
 
     SimTime latent_period() const { return latent_p; }
 
 private:
     /// Genotype of infection (a code; see Genotypes class).
-    uint32_t m_genotype;
+    uint32_t genotype_code;
 
-    int m_origin;
+    int origin_code;
 
     SimTime latent_p;
 
@@ -134,23 +134,23 @@ template <typename T> InfectionOrigin get_infection_origin(const std::list<T>& i
     if (infections.empty())
         return InfectionOrigin::Indigenous;
 
-    int nImported = 0, nIntroduced = 0, nIndigenous = 0;
+    int n_imported = 0, n_introduced = 0, n_indigenous = 0;
     for (auto inf = infections.begin(); inf != infections.end(); ++inf) {
         if ((*inf)->origin() == InfectionOrigin::Indigenous)
-            nIndigenous++;
+            n_indigenous++;
         else if ((*inf)->origin() == InfectionOrigin::Introduced)
-            nIntroduced++;
+            n_introduced++;
         else
-            nImported++;
+            n_imported++;
     }
 
     /* The rules are:
     - Imported only if all infections are imported
     - Introduced if at least one Introduced
     - Indigenous otherwise (Imported + Indigenous or just Indigenous infections) */
-    if (nIntroduced > 0)
+    if (n_introduced > 0)
         return InfectionOrigin::Introduced;
-    else if (nIndigenous > 0)
+    else if (n_indigenous > 0)
         return InfectionOrigin::Indigenous;
     else
         return InfectionOrigin::Imported;

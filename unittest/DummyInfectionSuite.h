@@ -50,19 +50,19 @@ public:
     }
     void tearDown() { delete infection; }
 
-    void testNewInf() { TS_ASSERT_APPROX(infection->getDensity(), 16.00000000288086086); }
+    void testNewInf() { TS_ASSERT_APPROX(infection->get_density(), 16.00000000288086086); }
 
     void testUpdatedInf() {
         UnittestUtil::incrTime(Sim::one_ts());
         infection->update(m_rng, 1.0, Sim::ts1(), numeric_limits<double>::quiet_NaN());
-        TS_ASSERT_APPROX(infection->getDensity(), 128.00000008620828820);
+        TS_ASSERT_APPROX(infection->get_density(), 128.00000008620828820);
     }
     void testUpdated2Inf() {
         UnittestUtil::incrTime(Sim::one_ts());
         infection->update(m_rng, 1.0, Sim::ts1(), numeric_limits<double>::quiet_NaN());
         UnittestUtil::incrTime(Sim::one_ts());
         infection->update(m_rng, 1.0, Sim::ts1(), numeric_limits<double>::quiet_NaN());
-        TS_ASSERT_APPROX(infection->getDensity(), 1024.00000082264208600);
+        TS_ASSERT_APPROX(infection->get_density(), 1024.00000082264208600);
     }
 
     void testUpdatedReducedInf() {
@@ -71,7 +71,7 @@ public:
         UnittestUtil::incrTime(Sim::one_ts());
         infection->update(m_rng, 0.1, Sim::ts1(), numeric_limits<double>::quiet_NaN());
         // This is, as expected, 1/10th of that in testUpdated2Inf
-        TS_ASSERT_APPROX(infection->getDensity(), 102.40000008226420860);
+        TS_ASSERT_APPROX(infection->get_density(), 102.40000008226420860);
     }
     void testUpdatedReducedInf2() {
         UnittestUtil::incrTime(Sim::one_ts());
@@ -79,7 +79,7 @@ public:
         UnittestUtil::incrTime(Sim::one_ts());
         infection->update(m_rng, 1.0, Sim::ts1(), numeric_limits<double>::quiet_NaN());
         // This is nearly the same
-        TS_ASSERT_APPROX(infection->getDensity(), 102.00000008286288040);
+        TS_ASSERT_APPROX(infection->get_density(), 102.00000008286288040);
     }
 
 private:

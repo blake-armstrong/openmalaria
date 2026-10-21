@@ -61,39 +61,39 @@ DescriptiveInfectionParams::DescriptiveInfectionParams(const Parameters& paramet
 
     // Read file empirical parasite densities
     string densities_filename = command_line.lookup_resource("densities.csv");
-    ifstream f_MTherapyDensities(densities_filename.c_str());
-    if (!f_MTherapyDensities.good()) {
+    ifstream f_m_therapy_densities(densities_filename.c_str());
+    if (!f_m_therapy_densities.good()) {
         throw util::base_exception(string("Cannot read ").append(densities_filename), util::Error::FileIO);
     }
 
     //read header of file (unused)
-    string csvLine;
-    getline(f_MTherapyDensities, csvLine);
+    string csv_line;
+    getline(f_m_therapy_densities, csv_line);
 
     // read every line from the stream
-    while (getline(f_MTherapyDensities, csvLine)) {
+    while (getline(f_m_therapy_densities, csv_line)) {
         //Empirical description of single Malaria infections in naive individuals
         //counter variables, i stands for 5 day time interval, j for duration of infection
         int i;
         int j;
         double meanlogdens;
 
-        std::istringstream csvStream(csvLine);
+        std::istringstream csv_stream(csv_line);
 
-        string csvField1, csvField2, csvField3;
+        string csv_field1, csv_field2, csv_field3;
 
         // read every element from the line that is seperated by commas
-        getline(csvStream, csvField1, ',');
-        getline(csvStream, csvField2, ',');
-        getline(csvStream, csvField3, ',');
+        getline(csv_stream, csv_field1, ',');
+        getline(csv_stream, csv_field2, ',');
+        getline(csv_stream, csv_field3, ',');
 
-        istringstream csvNum1(csvField1), csvNum2(csvField2), csvNum3(csvField3);
+        istringstream csv_num1(csv_field1), csv_num2(csv_field2), csv_num3(csv_field3);
 
-        csvNum1 >> i;
-        csvNum2 >> j;
-        csvNum3 >> meanlogdens;
+        csv_num1 >> i;
+        csv_num2 >> j;
+        csv_num3 >> meanlogdens;
 
-        if (i < 1 || i > numDurations || j < 1 || j > numDurations) {
+        if (i < 1 || i > NumDurations || j < 1 || j > NumDurations) {
             throw util::base_exception(string("error in data file: ").append(densities_filename), Error::InputResource);
         }
 
@@ -110,12 +110,12 @@ DescriptiveInfectionParams::DescriptiveInfectionParams(const Parameters& paramet
 
 DescriptiveInfection::DescriptiveInfection(const DescriptiveInfectionParams& params, SimTime latent_p, LocalRng& rng,
                                            uint32_t genotype, int origin)
-    : Infection(latent_p, genotype, origin), m_duration(infectionDuration(rng)), notPrintedMDWarning(true),
+    : Infection(latent_p, genotype, origin), duration(infection_duration(rng)), not_printed_md_warning(true),
       params(&params) {
     assert(Sim::one_ts() == 5);
 }
 
-SimTime DescriptiveInfection::infectionDuration(LocalRng& rng) {
+SimTime DescriptiveInfection::infection_duration(LocalRng& rng) {
     // Forgive the excess precision; it just avoids having to update all expected results
     double dur_mean = 5.1300001144409179688;
     double dur_sigma = 0.80000001192092895508;
@@ -131,25 +131,25 @@ SimTime DescriptiveInfection::infectionDuration(LocalRng& rng) {
 }
 
 // ———  time-step updates  ———
-void DescriptiveInfection::determineDensities(LocalRng& rng, double cumulativeh, double& timeStepMaxDensity,
-                                              double immSurvFact, double innateImmSurvFact, double bsvFactor) {
+void DescriptiveInfection::determine_densities(LocalRng& rng, double cumulativeh, double& time_step_max_density,
+                                               double imm_surv_fact, double innate_imm_surv_fact, double bsv_factor) {
     // Age of patent blood stage infection. Note: liver stage is fixed at one
     // 5-day time step and prepatent blood stage is latentp - 1 time steps.
-    SimTime infage = Sim::ts0() - m_startDate - latent_period();
+    SimTime infage = Sim::ts0() - start_date - latent_period();
     if (infage < Sim::zero()) {
-        m_density = 0.0;
+        density = 0.0;
         if (params->bugfix_max_dens)
-            timeStepMaxDensity = 0.0;
+            time_step_max_density = 0.0;
     } else {
-        timeStepMaxDensity = 0.0;
+        time_step_max_density = 0.0;
 
-        int32_t infAge = min(Sim::in_steps(infage), maxDurationTS);
-        int32_t infDur = min(Sim::in_steps(m_duration), maxDurationTS);
-        m_density = max(params->mean_log_parasite_count[infAge][infDur], 0.0);
+        int32_t inf_age = min(Sim::in_steps(infage), MaxDurationTs);
+        int32_t inf_dur = min(Sim::in_steps(duration), MaxDurationTs);
+        density = max(params->mean_log_parasite_count[inf_age][inf_dur], 0.0);
 
         // The expected parasite density in the non naive host (AJTM p.9 eq. 9)
         // Note that in published and current implementations Dx is zero.
-        m_density = m_density * immSurvFact;
+        density = density * imm_surv_fact;
 
         //Perturb m_density using a lognormal
         double varlog = params->sigma0_sq / (1.0 + (cumulativeh / params->x_nu_star));
@@ -162,47 +162,47 @@ void DescriptiveInfection::determineDensities(LocalRng& rng, double cumulativeh,
         */
         if (stdlog > 0.0000001) {
             // Calculate the expected density on the day of sampling:
-            double meanlog = m_density - stdlog * stdlog / 2.0;
-            m_density = rng.log_normal(meanlog, stdlog);
+            double meanlog = density - stdlog * stdlog / 2.0;
+            density = rng.log_normal(meanlog, stdlog);
             // Calculate additional samples for T-1 days (T=days per step):
             if (true /*sim::oneTS() > 1, always true for this model*/) {
-                timeStepMaxDensity = rng.max_multi_log_normal(m_density, Sim::one_ts() - 1, meanlog, stdlog);
+                time_step_max_density = rng.max_multi_log_normal(density, Sim::one_ts() - 1, meanlog, stdlog);
             } else {
-                timeStepMaxDensity = m_density;
+                time_step_max_density = density;
             }
         }
-        if (timeStepMaxDensity > maxDens && notPrintedMDWarning) {
-            cerr << "TSMD hit limit:\t" << m_density << ",\t" << timeStepMaxDensity << endl;
-            notPrintedMDWarning = false;
+        if (time_step_max_density > MaxDens && not_printed_md_warning) {
+            cerr << "TSMD hit limit:\t" << density << ",\t" << time_step_max_density << endl;
+            not_printed_md_warning = false;
         }
-        m_density = min(m_density, maxDens);
-        timeStepMaxDensity = min(timeStepMaxDensity, maxDens);
+        density = min(density, MaxDens);
+        time_step_max_density = min(time_step_max_density, MaxDens);
 
         //Compute the proportion of parasites remaining after innate blood stage effect
-        m_density *= innateImmSurvFact;
+        density *= innate_imm_surv_fact;
 
         //Include here the effect of blood stage vaccination
-        m_density *= bsvFactor;
+        density *= bsv_factor;
 
-        m_cumulativeExposureJ += Sim::one_ts() * m_density;
+        cum_exposure_j += Sim::one_ts() * density;
     }
 
     if (params->bugfix_innate_max_dens)
-        timeStepMaxDensity *= innateImmSurvFact;
-    timeStepMaxDensity *= bsvFactor;
+        time_step_max_density *= innate_imm_surv_fact;
+    time_step_max_density *= bsv_factor;
 }
 
 // ———  checkpointing  ———
 
 DescriptiveInfection::DescriptiveInfection(const DescriptiveInfectionParams& params, SimTime latent_p, istream& stream)
-    : Infection(latent_p, stream), m_duration(Sim::never()), params(&params) {
-    m_duration & stream;
-    notPrintedMDWarning & stream;
+    : Infection(latent_p, stream), duration(Sim::never()), params(&params) {
+    duration & stream;
+    not_printed_md_warning & stream;
 }
 void DescriptiveInfection::checkpoint(ostream& stream) {
     Infection::checkpoint(stream);
-    m_duration & stream;
-    notPrintedMDWarning & stream;
+    duration & stream;
+    not_printed_md_warning & stream;
 }
 
 }

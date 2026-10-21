@@ -40,42 +40,42 @@ using namespace OM::util;
 // ———  hard-coded model constants  ———
 
 // sigma, rho: decay parameters, per day, of the acquired variant-specific and variant-transcending immune responses
-const double sigma = 0.02;
-const double sigma_decay = exp(-2.0 * sigma);
+const double Sigma = 0.02;
+const double SigmaDecay = exp(-2.0 * Sigma);
 // const double rho = 0.0;      // NOTE: rho is not used; if setting this, also change the code below (search rho)
 // beta: Minimum value of the probability that a parasite escapes control by the acquired and variant-transcending immune response
-const double beta = 0.01;
+const double Beta = 0.01;
 // s: the fraction of parasites switching among variants per two-day cycle
-const double s = 0.02;
+const double S = 0.02;
 // q: Parameter of the geometric distribution of switching probabilities
-const double q = 0.3;
+const double Q = 0.3;
 
 // mu_m, sigma_m: Mean and standard deviation to use for the normal distribution setting the variant specific multiplication factor.
-const double mu_m = 16.0;
-const double sigma_m = 10.4;
+const double MuM = 16.0;
+const double SigmaM = 10.4;
 // constants for sampling multiplication factors from a Gamma distribution instead of normal (above)
-const double shape_m = 2.4;
-const double scale_m = 6.8;
+const double ShapeM = 2.4;
+const double ScaleM = 6.8;
 
 // k_c,k_m: constants allowing calculation of Pc_star and Pm_star from host-specific data
-const double k_c = 0.2;
-const double k_m = 0.04;
+const double KC = 0.2;
+const double KM = 0.04;
 // Pv_star: critical density of a variant, common to all variants
-const double inv_Pv_star = 1.0 / 30.0;
+const double InvPvStar = 1.0 / 30.0;
 // kappa_c, kappa_m, kappa_v: Stiffness parameters for saturation of immune responses
-const int kappa_c = 3;
-const int kappa_m = 1;
-const int kappa_v = 3;
+const int KappaC = 3;
+const int KappaM = 1;
+const int KappaV = 3;
 // C: Maximum daily antigenic stimulus, per mul, of the acquired variant-transcending immune response
 const double C = 1.0;
 
 // Blood volume per kg can be found, for example, here:
 // http://hypertextbook.com/facts/1998/LanNaLee.shtml
 // Futher searches give values between around 65 and 85 ml/kg.
-const double blood_vol_per_kg = 7e4; // μl/kg; (equals 70 ml/kg)
+const double BloodVolPerKg = 7e4; // μl/kg; (equals 70 ml/kg)
 // PRBC = parasited red blood cell
-const double initial_dens = 0.1;  // initial parasite density in PRBC/μl
-const double elim_parasites = 50; // minimum number PRBC to avoid elimination of infection and variant
+const double InitialDens = 0.1;  // initial parasite density in PRBC/μl
+const double ElimParasites = 50; // minimum number PRBC to avoid elimination of infection and variant
 
 /* Case-specific parameters.
  * 
@@ -85,7 +85,7 @@ const double elim_parasites = 50; // minimum number PRBC to avoid elimination of
  * 
  * Indexing is 2*patient + param where 0 <= patient < 35 and 0 <= param < 2.
  */
-const double case_specific_data[] = {
+const double CaseSpecificData[] = {
     216, 18600,  // G131
     198, 13080,  // G140
     206, 45720,  // G141
@@ -156,8 +156,8 @@ MolineauxInfectionParams::MolineauxInfectionParams(const Parameters& parameters,
         }
     }
 
-    for (size_t i = 0; i < MolineauxInfection::v; i++) {
-        q_pow[i] = pow(q, static_cast<double>(i + 1));
+    for (size_t i = 0; i < MolineauxInfection::V; i++) {
+        q_pow[i] = pow(Q, static_cast<double>(i + 1));
     }
 }
 
@@ -166,97 +166,97 @@ MolineauxInfectionParams::MolineauxInfectionParams(const Parameters& parameters,
 MolineauxInfection::MolineauxInfection(const MolineauxInfectionParams& params, SimTime latent_p, LocalRng& rng,
                                        uint32_t genotype, int origin)
     : CommonInfection(latent_p, genotype, origin), params(&params) {
-    for (size_t i = 0; i < v; i++) {
+    for (size_t i = 0; i < V; i++) {
         // Molineaux paper, equation 11
         if (params.multi_factor_gamma) {
             do {
-                mi[i] = static_cast<float>(rng.gamma(shape_m, scale_m));
+                mi[i] = static_cast<float>(rng.gamma(ShapeM, ScaleM));
             } while (mi[i] < 1.0);
         } else {
             do {
-                mi[i] = static_cast<float>(rng.gauss(mu_m, sigma_m));
+                mi[i] = static_cast<float>(rng.gauss(MuM, SigmaM));
             } while (mi[i] < 1.0);
         }
     }
 
-    for (size_t tau = 0; tau < taus; tau++) {
-        lagged_Pc[tau] = 0.0;
+    for (size_t tau = 0; tau < Taus; tau++) {
+        lagged_pc[tau] = 0.0;
     }
 
-    Sm_summation = 0.0;
+    sm_summation = 0.0;
 
     if (params.pairwise_p_star_sample) {
         int patient = rng.uniform(35);
-        Pc_star = static_cast<float>(k_c * case_specific_data[2 * patient + 1]);
-        Pm_star = static_cast<float>(k_m * case_specific_data[2 * patient + 0]);
+        pc_star = static_cast<float>(KC * CaseSpecificData[2 * patient + 1]);
+        pm_star = static_cast<float>(KM * CaseSpecificData[2 * patient + 0]);
     } else {
         // Sampling of the first local maxima:
         if (params.first_local_maximum_gamma) {
-            Pc_star = static_cast<float>(
-                k_c * pow(10.0, rng.gamma(params.mean_shape_first_local_max, params.sd_scale_first_local_max)));
+            pc_star = static_cast<float>(
+                KC * pow(10.0, rng.gamma(params.mean_shape_first_local_max, params.sd_scale_first_local_max)));
         } else {
-            Pc_star = static_cast<float>(
-                k_c * pow(10.0, rng.gauss(params.mean_shape_first_local_max, params.sd_scale_first_local_max)));
+            pc_star = static_cast<float>(
+                KC * pow(10.0, rng.gauss(params.mean_shape_first_local_max, params.sd_scale_first_local_max)));
         }
 
         // Sampling of duration:
         if (params.mean_duration_gamma) {
-            Pm_star = static_cast<float>(
-                k_m * pow(10.0, rng.gamma(params.mean_shape_diff_pos_days, params.sd_scale_diff_pos_days)));
+            pm_star = static_cast<float>(
+                KM * pow(10.0, rng.gamma(params.mean_shape_diff_pos_days, params.sd_scale_diff_pos_days)));
         } else {
-            Pm_star = static_cast<float>(
-                k_m * pow(10.0, rng.gauss(params.mean_shape_diff_pos_days, params.sd_scale_diff_pos_days)));
+            pm_star = static_cast<float>(
+                KM * pow(10.0, rng.gauss(params.mean_shape_diff_pos_days, params.sd_scale_diff_pos_days)));
         }
     }
 }
 
-MolineauxInfection::Variant::Variant() : Pi1(0.0), Pi2(0.0), Si_summation(0.0) {
-    for (size_t tau = 0; tau < taus; tau++) {
-        lagged_Pi[tau] = 0.0;
+MolineauxInfection::Variant::Variant() : pi1(0.0), pi2(0.0), si_summation(0.0) {
+    for (size_t tau = 0; tau < Taus; tau++) {
+        lagged_pi[tau] = 0.0;
     }
 }
 
 // ———  MolineauxInfection: density updates  ———
 
-bool MolineauxInfection::updateDensity(LocalRng&, double survival_factor, SimTime age_BS, double body_mass) {
+bool MolineauxInfection::update_density(LocalRng&, double survival_factor, SimTime age_bs, double body_mass) {
     // bsAge : age of blood stage; 0 implies initial density (0.1; time t=0 in
     // paper, t=1 in MP's Matlab code), age 2 days is after first update step
     // survivalFactor : probabilty of merozoites surviving drugs, inter-infection immunity and vaccines
 
-    double blood_volume = blood_vol_per_kg * body_mass;
-    double elim_dens = elim_parasites / blood_volume; // 50 / 5e6 = 5e-5
+    double blood_volume = BloodVolPerKg * body_mass;
+    double elim_dens = ElimParasites / blood_volume; // 50 / 5e6 = 5e-5
 
     // ———  1. Update m_density (Pc), Pi and related  ———
-    double Pi[v] = {0.0f};
+    double pi[V] = {0.0f};
 
-    if (age_BS == Sim::zero()) {
+    if (age_bs == Sim::zero()) {
         // The first variant starts with a pre-set density (regardless of blood
         // volume; this is an assumption by DH; paper assumes fixed volume)
         variants.resize(1);
-        Pi[0] = initial_dens;
-        m_density = initial_dens;
+        pi[0] = InitialDens;
+        density = InitialDens;
     } else {
         double sum = 0.0;
         for (size_t i = 0; i < variants.size(); i++) {
-            double newP = survival_factor * variants[i].Pi1;
-            Pi[i] = newP;
-            variants[i].Pi1 = static_cast<float>(survival_factor * variants[i].Pi2);
-            sum += newP;
+            double new_p = survival_factor * variants[i].pi1;
+            pi[i] = new_p;
+            variants[i].pi1 = static_cast<float>(survival_factor * variants[i].pi2);
+            sum += new_p;
         }
-        m_density = sum;
+        density = sum;
     }
 
     // Integration with inter-infection immunity model
-    m_cumulativeExposureJ += m_density;
+    cum_exposure_j += density;
 
-    if (m_density <= elim_dens) {
+    if (density <= elim_dens) {
         return true; // infection goes extinct
     }
 
     // Every other step (if bsAge is even) we calculate new densities (the
     // Molineaux model uses a 2-day step; we have simply added interpolation
     // for the interleaving densities). In other cases we are finished now.
-    if (mod_nn(int(age_BS), 2) != 0) {
+    if (mod_nn(int(age_bs), 2) != 0) {
         return false; // end of update, not extinct
     }
 
@@ -266,81 +266,81 @@ bool MolineauxInfection::updateDensity(LocalRng&, double survival_factor, SimTim
     // S[i] (                      "                      acquired and variant-specific immune response)
 
     // ———  2. innate immunity (equation 5)  ———
-    static_assert(kappa_c == 3, "kappa_c == 3"); // allows us to optimise pow(..., kappa_c) to multiplication
-    const double base = m_density / Pc_star;
-    const double Sc = 1.0 / (1.0 + base * base * base);
+    static_assert(KappaC == 3, "kappa_c == 3"); // allows us to optimise pow(..., kappa_c) to multiplication
+    const double base = density / pc_star;
+    const double sc = 1.0 / (1.0 + base * base * base);
 
     // ———  3. variant-transcending immune response (equations 7, 8)  ———
     // 3.a) Update the sum in (7), based on previous result
-    const size_t tau = mod_nn(age_BS / 2, taus); // 8 days ago has same index as today
+    const size_t tau = mod_nn(age_bs / 2, Taus); // 8 days ago has same index as today
     // NOTE: rho == 0 so we can optimise this code:
     //Sm_summation = Sm_summation * exp(-2.0*rho) + laggedPc[index];
-    Sm_summation = Sm_summation + lagged_Pc[tau];
+    sm_summation = sm_summation + lagged_pc[tau];
 
     // 3.b) Update laggedPc (equation 8, but only stored for the last tau steps)
     //We could use min here, but it seems that min has problems with static const double C
-    lagged_Pc[tau] = static_cast<float>(m_density < C ? m_density : C);
+    lagged_pc[tau] = static_cast<float>(density < C ? density : C);
 
     // 3.c) calculate S_m(t) (equation 7)
-    static_assert(kappa_m == 1, "kappa_m == 1"); // allows us to optimise out pow(..., kappa_m):
+    static_assert(KappaM == 1, "kappa_m == 1"); // allows us to optimise out pow(..., kappa_m):
     //double Sm = (1.0 - beta) / (1.0 + pow(Sm_summation / Pm_star, kappa_m)) + beta
-    const double Sm = (1.0 - beta) / (1.0 + Sm_summation / Pm_star) + beta;
+    const double sm = (1.0 - Beta) / (1.0 + sm_summation / pm_star) + Beta;
 
     // ———  4. variant-specific immune response (equation 6)  ———
-    double Si[v];           // calculate value for each variant
-    double sum_qj_Sj = 0.0; // simultaneously calculation summataion in equation 4
+    double si[V];           // calculate value for each variant
+    double sum_qj_sj = 0.0; // simultaneously calculation summataion in equation 4
 
-    for (size_t i = 0; i < v; i++) {
+    for (size_t i = 0; i < V; i++) {
         if (i < variants.size()) {
             // 4.a) Update the sum in (6) based on the last step's value
             //note: sigma_decay = exp(-2*sigma)
-            variants[i].Si_summation =
-                static_cast<float>(variants[i].Si_summation * sigma_decay + variants[i].lagged_Pi[tau]);
+            variants[i].si_summation =
+                static_cast<float>(variants[i].si_summation * SigmaDecay + variants[i].lagged_pi[tau]);
             // 4.b) update history of density (P_i(t))
-            variants[i].lagged_Pi[tau] = static_cast<float>(Pi[i]);
+            variants[i].lagged_pi[tau] = static_cast<float>(pi[i]);
 
             // 4.c) calculate S_i(t) (equation 6)
-            static_assert(kappa_v == 3, "kappa_v == 3"); // again, optimise pow to multiplication
-            const double base = variants[i].Si_summation * inv_Pv_star;
-            Si[i] = 1.0 / (1.0 + base * base * base); // eqn 6, given κ_v = 3
+            static_assert(KappaV == 3, "kappa_v == 3"); // again, optimise pow to multiplication
+            const double base = variants[i].si_summation * InvPvStar;
+            si[i] = 1.0 / (1.0 + base * base * base); // eqn 6, given κ_v = 3
         } else {
-            Si[i] = 1.0; // eqn 6 for the case when P_i(τ) = 0 for τ ≤ t - δ_m
+            si[i] = 1.0; // eqn 6 for the case when P_i(τ) = 0 for τ ≤ t - δ_m
         }
-        sum_qj_Sj += params->q_pow[i] * Si[i]; // sum in eqn 4
+        sum_qj_sj += params->q_pow[i] * si[i]; // sum in eqn 4
     }
 
     // ———  5. Variant densities, equations 1, 2 and 4  ———
-    for (size_t i = 0; i < v; i++) {
+    for (size_t i = 0; i < V; i++) {
         // 4.a) Calculate p_i, variant selection probability (eqn 4)
         double p_i = 0.0;
-        if (Si[i] >= 0.1) {
+        if (si[i] >= 0.1) {
             //note: q_pow[i] = pow(q, i+1)
-            p_i = params->q_pow[i] * Si[i] / sum_qj_Sj;
+            p_i = params->q_pow[i] * si[i] / sum_qj_sj;
         }
 
         // 4.b) calculate P_i'(t+2) [eqn 1] then P_i(t+2) [eqn 2]
         // This is the growth rate after taking immune effect into account:
-        double growth_factor = mi[i] * Si[i] * Sc * Sm; // part of eqn 1
+        double growth_factor = mi[i] * si[i] * sc * sm; // part of eqn 1
         if (i < variants.size()) {
             // Pi_prime: the variant's density at time t+2 (eqn 1)
-            double Pi_prime = ((1.0 - s) * Pi[i] + s * p_i * m_density) * growth_factor;
+            double pi_prime = ((1.0 - S) * pi[i] + S * p_i * density) * growth_factor;
 
-            if (Pi_prime < elim_dens)
-                Pi_prime = 0.0; // eqn 2
+            if (pi_prime < elim_dens)
+                pi_prime = 0.0; // eqn 2
 
-            variants[i].Pi1 = static_cast<float>(sqrt(Pi[i] * Pi_prime));
-            variants[i].Pi2 = static_cast<float>(Pi_prime);
+            variants[i].pi1 = static_cast<float>(sqrt(pi[i] * pi_prime));
+            variants[i].pi2 = static_cast<float>(pi_prime);
         } else {
             // In this case P_i(τ) = 0 for all τ ≤ t, and we haven't allocated storage.
 
             // Pi_prime: the variant's density at time t+2 (eqn 1 in paper)
-            double Pi_prime = (s * p_i * m_density) * growth_factor;
+            double pi_prime = (S * p_i * density) * growth_factor;
 
             // Molineaux paper equation 2
-            if (Pi_prime >= elim_dens) { // [if not, P_i(t+2) = 0]
+            if (pi_prime >= elim_dens) { // [if not, P_i(t+2) = 0]
                 // express a new variant at time t+2:
                 variants.resize(i + 1); // allocate (potentially for multiple variants)
-                variants[i].Pi2 = static_cast<float>(Pi_prime);
+                variants[i].pi2 = static_cast<float>(pi_prime);
             }
         }
     }
@@ -352,57 +352,57 @@ bool MolineauxInfection::updateDensity(LocalRng&, double survival_factor, SimTim
 
 MolineauxInfection::MolineauxInfection(const MolineauxInfectionParams& params, SimTime latent_p, istream& stream)
     : CommonInfection(latent_p, stream), params(&params) {
-    Sm_summation & stream;
-    for (size_t i = 0; i < v; i++) {
+    sm_summation & stream;
+    for (size_t i = 0; i < V; i++) {
         mi[i] & stream;
     }
     variants & stream;
-    for (size_t j = 0; j < taus; j++) {
-        lagged_Pc[j] & stream;
+    for (size_t j = 0; j < Taus; j++) {
+        lagged_pc[j] & stream;
     }
-    Pc_star & stream;
-    Pm_star & stream;
+    pc_star & stream;
+    pm_star & stream;
 }
 
 void MolineauxInfection::checkpoint(ostream& stream) {
     CommonInfection::checkpoint(stream);
 
-    Sm_summation & stream;
-    for (size_t i = 0; i < v; i++) {
+    sm_summation & stream;
+    for (size_t i = 0; i < V; i++) {
         mi[i] & stream;
     }
     variants & stream;
-    for (size_t j = 0; j < taus; j++) {
-        lagged_Pc[j] & stream;
+    for (size_t j = 0; j < Taus; j++) {
+        lagged_pc[j] & stream;
     }
-    Pc_star & stream;
-    Pm_star & stream;
+    pc_star & stream;
+    pm_star & stream;
 }
 
 void MolineauxInfection::Variant::operator&(istream& stream) {
-    bool nonZero;
-    nonZero & stream;
-    if (nonZero) {
-        Pi1 & stream;
-        Pi2 & stream;
-        Si_summation & stream;
-        for (size_t i = 0; i < taus; ++i) {
-            lagged_Pi[i] & stream;
+    bool non_zero;
+    non_zero & stream;
+    if (non_zero) {
+        pi1 & stream;
+        pi2 & stream;
+        si_summation & stream;
+        for (size_t i = 0; i < Taus; ++i) {
+            lagged_pi[i] & stream;
         }
     }
     // else: all members are zero-initialised by the constructor, so don't do anything
 }
 
 void MolineauxInfection::Variant::operator&(ostream& stream) {
-    bool nonZero = Pi1 != 0.0 || Pi2 != 0.0 || Si_summation != 0.0;
+    bool non_zero = pi1 != 0.0 || pi2 != 0.0 || si_summation != 0.0;
 
-    nonZero & stream;
-    if (nonZero) {
-        Pi1 & stream;
-        Pi2 & stream;
-        Si_summation & stream;
-        for (size_t i = 0; i < taus; ++i) {
-            lagged_Pi[i] & stream;
+    non_zero & stream;
+    if (non_zero) {
+        pi1 & stream;
+        pi2 & stream;
+        si_summation & stream;
+        for (size_t i = 0; i < Taus; ++i) {
+            lagged_pi[i] & stream;
         }
     }
 }

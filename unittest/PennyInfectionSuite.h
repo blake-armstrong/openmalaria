@@ -52,9 +52,9 @@ public:
         //         cout << setprecision(8) << infection->threshold_N
         //             << '\t' << infection->threshold_C
         //             << '\t' << infection->threshold_V << endl;
-        TS_ASSERT_APPROX(infection->threshold_N, 30939.0831);
-        TS_ASSERT_APPROX(infection->threshold_C, 350.53964);
-        TS_ASSERT_APPROX(infection->threshold_V, 315.21947);
+        TS_ASSERT_APPROX(infection->threshold_n, 30939.0831);
+        TS_ASSERT_APPROX(infection->threshold_c, 350.53964);
+        TS_ASSERT_APPROX(infection->threshold_v, 315.21947);
     }
 
     static void readVector(std::vector<double>& vec, const char* file) {
@@ -82,12 +82,12 @@ public:
         SimTime now = Sim::ts0();
         do {
             extinct = infection->update(m_rng, 1.0, now, numeric_limits<double>::quiet_NaN());
-            int ageDays = (now - infection->m_startDate - infection->latent_period());
+            int ageDays = (now - infection->start_date - infection->latent_period());
             while (ageDays < 0)
-                ageDays += infection->delta_V; // special case encountered by unit test
+                ageDays += infection->DeltaV; // special case encountered by unit test
             ETS_ASSERT_LESS_THAN(iterations, cirDens.size());
-            TS_ASSERT_APPROX(infection->getDensity(), cirDens[iterations]);
-            TS_ASSERT_APPROX(infection->seqDensity(ageDays), seqDens[iterations]);
+            TS_ASSERT_APPROX(infection->get_density(), cirDens[iterations]);
+            TS_ASSERT_APPROX(infection->seq_density(ageDays), seqDens[iterations]);
             //             outCir << infection->getDensity() << endl;
             //             outSeq << infection->seqDensity(ageDays) << endl;
             now = now + Sim::one_day();

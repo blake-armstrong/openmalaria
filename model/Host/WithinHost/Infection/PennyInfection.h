@@ -23,8 +23,8 @@
 /*This model refers to the paper:
  *PENNY et al  (2011). The potential effects of blood stage vaccines on the within-host dynamics of Plasmodium Falciparum */
 
-#ifndef Hmod_PENNYINFECTION_H
-#define Hmod_PENNYINFECTION_H
+#ifndef HMOD_PENNYINFECTION_H
+#define HMOD_PENNYINFECTION_H
 
 #include "Host/WithinHost/Infection/CommonInfection.h"
 #include "util/ModelOptions.h"
@@ -45,18 +45,18 @@ struct PennyInfectionParams {
 class PennyInfection : public CommonInfection {
 public:
     /// Constructor
-    PennyInfection(const PennyInfectionParams& params, SimTime latent_p, LocalRng& rng, uint32_t protID, int origin);
+    PennyInfection(const PennyInfectionParams& params, SimTime latent_p, LocalRng& rng, uint32_t prot_id, int origin);
     /// Resume from a checkpoint
     PennyInfection(const PennyInfectionParams& params, SimTime latent_p, istream& stream);
     /// Destructor
     virtual ~PennyInfection() {};
 
-    virtual bool updateDensity(LocalRng& rng, double survivalFactor, SimTime bsAge, double);
+    virtual bool update_density(LocalRng& rng, double survival_factor, SimTime bs_age, double);
 
     /** Get the density of sequestered parasites. */
-    inline double seqDensity(int ageDays) {
-        size_t todayV = mod_nn(ageDays, delta_V);
-        return seqDensities[todayV];
+    inline double seq_density(int age_days) {
+        size_t today_v = mod_nn(age_days, DeltaV);
+        return seq_densities[today_v];
     }
 
 protected:
@@ -64,32 +64,32 @@ protected:
 
 private:
     // function to obtain the summation component of variant specific immunity
-    double getVariantSpecificSummation(LocalRng& rng, int ageDays);
+    double get_variant_specific_summation(LocalRng& rng, int age_days);
     // function to obtain the summation component of clonal immunity
-    double getClonalSummation(int ageDays);
+    double get_clonal_summation(int age_days);
 
     // delta_C := delay to clonal antibody response (days) (value 7.2038 round to 7)
-    static const int delta_C = 7;
+    static const int DeltaC = 7;
     // delta_V := delay to variant specific antibody response in R_V^x (days) (value 6.3572 round to 6)
-    static const int delta_V = 6;
+    static const int DeltaV = 6;
 
     // Circulating densities, 1 to delta_C days ago.
     // index (age mod delta_C) corresponds to delta_C days ago.
-    double cirDensities[delta_C];
+    double cir_densities[DeltaC];
     // as above, but length delta_V
-    double seqDensities[delta_V];
+    double seq_densities[DeltaV];
 
     // threshold_N is critical threshold for innate immunity (for sigmoidal immune function)
-    double threshold_N;
+    double threshold_n;
     // threshold_V is critical threshold for variant specific immunity (for sigmoidal immune function)
-    double threshold_V;
+    double threshold_v;
     // threshold_C is critical threshold for clonal immunity (for sigmoidal immune function)
-    double threshold_C;
+    double threshold_c;
 
     // tracked summation of densities with decay for variant specific immunity (sigmoidal function)
-    double variantSpecificSummation;
+    double variant_specific_summation;
     // tracked summation of densities with decay for clonal immunity (sigmoidal function)
-    double clonalSummation;
+    double clonal_summation;
 
     const PennyInfectionParams* params;
 

@@ -55,15 +55,15 @@ public:
     }
     void tearDown() { delete infection; }
 
-    void testNewInf() { TS_ASSERT_APPROX(infection->getDensity(), 0.00000000000000000); }
+    void testNewInf() { TS_ASSERT_APPROX(infection->get_density(), 0.00000000000000000); }
 
     // Parasite growth is stochastic, so there's not a lot we can test, except for reproducability
     void testUpdatedInf() {
         UnittestUtil::incrTime(Sim::one_ts());
         infection->update(m_rng, 1.0, Sim::ts1(), numeric_limits<double>::quiet_NaN());
         if (dump_emprical)
-            cout << setprecision(8) << infection->getDensity() << endl;
-        TS_ASSERT_APPROX(infection->getDensity(), 11.209717);
+            cout << setprecision(8) << infection->get_density() << endl;
+        TS_ASSERT_APPROX(infection->get_density(), 11.209717);
     }
     void testUpdated2Inf() {
         UnittestUtil::incrTime(Sim::one_ts());
@@ -71,8 +71,8 @@ public:
         UnittestUtil::incrTime(Sim::one_ts());
         infection->update(m_rng, 1.0, Sim::ts1(), numeric_limits<double>::quiet_NaN());
         if (dump_emprical)
-            cout << setprecision(8) << infection->getDensity() << endl;
-        TS_ASSERT_APPROX(infection->getDensity(), 0.63470257);
+            cout << setprecision(8) << infection->get_density() << endl;
+        TS_ASSERT_APPROX(infection->get_density(), 0.63470257);
     }
     void testUpdated3Inf() {
         UnittestUtil::incrTime(Sim::one_ts());
@@ -82,8 +82,8 @@ public:
         UnittestUtil::incrTime(Sim::one_ts());
         infection->update(m_rng, 1.0, Sim::ts1(), numeric_limits<double>::quiet_NaN());
         if (dump_emprical)
-            cout << setprecision(8) << infection->getDensity() << endl;
-        TS_ASSERT_APPROX(infection->getDensity(), 3.1082018);
+            cout << setprecision(8) << infection->get_density() << endl;
+        TS_ASSERT_APPROX(infection->get_density(), 3.1082018);
     }
     void testUpdated4Inf() {
         UnittestUtil::incrTime(Sim::one_ts());
@@ -95,15 +95,15 @@ public:
         UnittestUtil::incrTime(Sim::one_ts());
         infection->update(m_rng, 1.0, Sim::ts1(), numeric_limits<double>::quiet_NaN());
         if (dump_emprical)
-            cout << setprecision(8) << infection->getDensity() << endl;
-        TS_ASSERT_APPROX(infection->getDensity(), 0.34730828);
+            cout << setprecision(8) << infection->get_density() << endl;
+        TS_ASSERT_APPROX(infection->get_density(), 0.34730828);
     }
     void testUpdatedInf1() {
         UnittestUtil::incrTime(Sim::one_ts());
         infection->update(m_rng, 1.0, Sim::ts1(), numeric_limits<double>::quiet_NaN());
         if (dump_emprical)
-            cout << setprecision(8) << infection->getDensity() << endl;
-        TS_ASSERT_APPROX(infection->getDensity(), 11.209717);
+            cout << setprecision(8) << infection->get_density() << endl;
+        TS_ASSERT_APPROX(infection->get_density(), 11.209717);
     }
 
     void testUpdatedReducedInf() {
@@ -113,8 +113,8 @@ public:
         infection->update(m_rng, 0.1, Sim::ts1(), numeric_limits<double>::quiet_NaN());
         // This is, as expected, 1/10th of that in testUpdated2Inf
         if (dump_emprical)
-            cout << setprecision(8) << infection->getDensity() << endl;
-        TS_ASSERT_APPROX(infection->getDensity(), 0.063470257);
+            cout << setprecision(8) << infection->get_density() << endl;
+        TS_ASSERT_APPROX(infection->get_density(), 0.063470257);
     }
     void testUpdatedReducedInf2() {
         UnittestUtil::incrTime(Sim::one_ts());
@@ -123,8 +123,8 @@ public:
         infection->update(m_rng, 1.0, Sim::ts1(), numeric_limits<double>::quiet_NaN());
         // This is completely different due to stochasitic effects
         if (dump_emprical)
-            cout << setprecision(8) << infection->getDensity() << endl;
-        TS_ASSERT_APPROX(infection->getDensity(), 0.28751462);
+            cout << setprecision(8) << infection->get_density() << endl;
+        TS_ASSERT_APPROX(infection->get_density(), 0.28751462);
     }
 
 private:

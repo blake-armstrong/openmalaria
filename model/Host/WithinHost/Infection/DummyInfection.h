@@ -20,8 +20,8 @@
  * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301, USA.
  */
 
-#ifndef Hmod_DummyInfection
-#define Hmod_DummyInfection
+#ifndef HMOD_DUMMY_INFECTION
+#define HMOD_DUMMY_INFECTION
 
 #include "Host/WithinHost/Infection/CommonInfection.h"
 
@@ -37,11 +37,11 @@ public:
     /// For checkpointing (don't use for anything else)
     DummyInfection(SimTime latent_p, istream& stream);
     //! Constructor
-    DummyInfection(SimTime latent_p, LocalRng& rng, uint32_t protID, int origin);
+    DummyInfection(SimTime latent_p, LocalRng& rng, uint32_t prot_id, int origin);
 
     virtual ~DummyInfection() {}
 
-    virtual bool updateDensity(LocalRng& rng, double survivalFactor, SimTime bsAge, double);
+    virtual bool update_density(LocalRng& rng, double survival_factor, SimTime bs_age, double);
 };
 
 }

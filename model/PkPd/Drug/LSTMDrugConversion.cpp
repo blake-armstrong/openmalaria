@@ -182,19 +182,19 @@ void LSTMDrugConversion::set_killing_parameters(LocalRng& rng, ParamsConvFactor&
 
     // Use custom code here because we need to handle covariance
     auto p_index = parent_type.get_index();
-    if (inf->Kn.count(p_index) != 0) {
+    if (inf->kn.count(p_index) != 0) {
         // Read cached values: IC50 ^ n
-        p.kn_p = inf->Kn.at(p_index);
-        p.kn_m = inf->Kn.at(metabolite_type.get_index());
+        p.kn_p = inf->kn.at(p_index);
+        p.kn_m = inf->kn.at(metabolite_type.get_index());
     } else {
         // First usage for this infection / treatment: sample, optionally with correlation.
         auto zscore = NormalSample::generate(rng);
         p.kn_p = pd_p.ic50_pow_slope(zscore);
-        inf->Kn[p_index] = p.kn_p;
+        inf->kn[p_index] = p.kn_p;
 
         auto metab_zscore = parent_type.ic50_correlated_sample(zscore, rng);
         p.kn_m = pd_m.ic50_pow_slope(metab_zscore);
-        inf->Kn[metabolite_type.get_index()] = p.kn_m;
+        inf->kn[metabolite_type.get_index()] = p.kn_m;
     }
 }
 

@@ -61,8 +61,8 @@ void DescriptiveWithinHostModel::load_infection(istream& stream) {
 
 void DescriptiveWithinHostModel::clear_infections(Treatments::Stages stage) {
     for (auto inf = infections.begin(); inf != infections.end();) {
-        if (stage == Treatments::BOTH || (stage == Treatments::LIVER && !(*inf)->bloodStage()) ||
-            (stage == Treatments::BLOOD && (*inf)->bloodStage())) {
+        if (stage == Treatments::BOTH || (stage == Treatments::LIVER && !(*inf)->blood_stage()) ||
+            (stage == Treatments::BLOOD && (*inf)->blood_stage())) {
             inf = infections.erase(inf);
         } else {
             ++inf;
@@ -75,7 +75,7 @@ void DescriptiveWithinHostModel::clear_infections(Treatments::Stages stage) {
 
 void DescriptiveWithinHostModel::clear_immunity() {
     for (auto& infection : infections) {
-        infection->clearImmunity();
+        infection->clear_immunity();
     }
     cumulative_h = 0.0;
     cumulative_y_lag = 0.0;
@@ -155,7 +155,7 @@ void DescriptiveWithinHostModel::update(Host::Human& human, LocalRng& rng, int& 
         // SP drug action and the PK/PD model would need to be abstracted
         // behind a common interface.
         if ((*inf)->expired() /* infection has self-terminated */ ||
-            ((*inf)->bloodStage() ? treatment_blood : treatment_liver)) {
+            ((*inf)->blood_stage() ? treatment_blood : treatment_liver)) {
             inf = infections.erase(inf);
             num_infs--;
             continue;
@@ -164,20 +164,20 @@ void DescriptiveWithinHostModel::update(Host::Human& human, LocalRng& rng, int& 
         // Should be: infStepMaxDens = 0.0, but has some history.
         // See MAX_DENS_CORRECTION in DescriptiveInfection.cpp.
         double inf_step_max_dens = time_step_max_density;
-        const double imm_surv_fact = immunity_survival_factor(age_in_years, (*inf)->cumulativeExposureJ());
+        const double imm_surv_fact = immunity_survival_factor(age_in_years, (*inf)->cumulative_exposure_j());
         const double bsv_factor =
             human.vaccine.getFactor(interventions::Vaccine::BSV, opt_vaccine_genotype ? (*inf)->genotype() : 0);
 
-        (*inf)->determineDensities(rng, cumulative_h, inf_step_max_dens, imm_surv_fact, innate_imm_surv_fact,
-                                   bsv_factor);
+        (*inf)->determine_densities(rng, cumulative_h, inf_step_max_dens, imm_surv_fact, innate_imm_surv_fact,
+                                    bsv_factor);
 
         if (descriptive_params->infection.bugfix_max_dens)
             inf_step_max_dens = std::max(inf_step_max_dens, time_step_max_density);
         time_step_max_density = inf_step_max_dens;
 
-        const double density = (*inf)->getDensity();
+        const double density = (*inf)->get_density();
         total_density += density;
-        if (!(*inf)->isHrp2Deficient()) {
+        if (!(*inf)->is_hrp2_deficient()) {
             hrp2_density += density;
         }
 
@@ -203,9 +203,9 @@ void DescriptiveWithinHostModel::update(Host::Human& human, LocalRng& rng, int& 
 
     for (auto& infection : infections) {
         if (infection->origin() == InfectionOrigin::Imported)
-            y_lag_imported[y_lag_i * Genotypes::N() + infection->genotype()] += infection->getDensity();
+            y_lag_imported[y_lag_i * Genotypes::N() + infection->genotype()] += infection->get_density();
         else
-            y_lag_local[y_lag_i * Genotypes::N() + infection->genotype()] += infection->getDensity();
+            y_lag_local[y_lag_i * Genotypes::N() + infection->genotype()] += infection->get_density();
     }
 
     // This is a bug, we keep it this way to be consistent with old simulations
@@ -253,7 +253,7 @@ bool DescriptiveWithinHostModel::summarize(Host::Human& human) const {
 
         if (descriptive_params->report_patent_infected) {
             for (const auto& infection : infections) {
-                if (diagnostics::monitoringDiagnostic().isPositive(human.monitoring_rng, infection->getDensity(),
+                if (diagnostics::monitoringDiagnostic().isPositive(human.monitoring_rng, infection->get_density(),
                                                                    std::numeric_limits<double>::quiet_NaN())) {
                     mon::recordStat(mon::measure("totalPatentInf"), human);
                     if (infection->origin() == InfectionOrigin::Indigenous)
@@ -269,7 +269,7 @@ bool DescriptiveWithinHostModel::summarize(Host::Human& human) const {
             // accumulate total density by genotype
             map<uint32_t, double> dens_by_gtype;
             for (const auto& infection : infections)
-                dens_by_gtype[infection->genotype()] += infection->getDensity();
+                dens_by_gtype[infection->genotype()] += infection->get_density();
 
             for (auto gtype : dens_by_gtype) {
                 // we had at least one infection of this genotype

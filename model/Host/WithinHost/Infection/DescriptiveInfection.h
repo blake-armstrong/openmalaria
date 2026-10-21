@@ -20,8 +20,8 @@
  * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301, USA.
  */
 
-#ifndef Hmod_DescriptiveInfection
-#define Hmod_DescriptiveInfection
+#ifndef HMOD_DESCRIPTIVE_INFECTION
+#define HMOD_DESCRIPTIVE_INFECTION
 
 #include "Host/WithinHost/Infection/Infection.h"
 #include "util/CommandLine.h"
@@ -38,18 +38,18 @@ using util::LocalRng;
 // Max duration of sample data for an infection in intervals. Simulated
 // infections may last longer; in this case the last sample data is repeated
 // until the infection terminates.
-const int32_t maxDurationTS = 83;
-const int32_t numDurations = 84; // Above plus one (include a category for 0)
+const int32_t MaxDurationTs = 83;
+const int32_t NumDurations = 84; // Above plus one (include a category for 0)
 
 //The maximum parasite density we allow per DescriptiveInfection. Higher values are set to maxDens.
 // NOTE: should this be enforced before or after attenuation (BSV, immunity, IPT)? Was enforced in both places.
-const double maxDens = 2000000;
+const double MaxDens = 2000000;
 
 struct DescriptiveInfectionParams {
     /* A triangular matrix: mean_log_parasite_count[i][j] is the
      * Mean Log Parasite Count for age i (in time steps) of an infection which
      * lasts j days. Indices with i>j are unused. */
-    std::array<std::array<double, numDurations>, numDurations> mean_log_parasite_count{};
+    std::array<std::array<double, NumDurations>, NumDurations> mean_log_parasite_count{};
 
     /// Sigma0^2 from AJTM p.9 eq. 13
     double sigma0_sq = 0.0;
@@ -94,7 +94,7 @@ public:
 
     /** Returns true when age reaches the pre-determined duration (i.e. when
     * this infection terminates). */
-    bool expired() { return Sim::ts0() > m_startDate + m_duration; }
+    bool expired() { return Sim::ts0() > start_date + duration; }
 
     /** Determines parasite density of an individual infection (5-day time step
      * update)
@@ -107,8 +107,8 @@ public:
      * @param innateImmSurvFact Density multiplier for innate immunity.
      * @param bsvFactor Density multiplier for Blood-Stage Vaccine effect.
      */
-    void determineDensities(LocalRng& rng, double cumulativeh, double& timeStepMaxDensity, double immSurvFact,
-                            double innateImmSurvFact, double bsvFactor);
+    void determine_densities(LocalRng& rng, double cumulativeh, double& time_step_max_density, double imm_surv_fact,
+                             double innate_imm_surv_fact, double bsv_factor);
 
     /** Decide on an infection duration and return it.
      * 
@@ -118,18 +118,18 @@ public:
      * normal distribution using parameters for 53 patients from Georgia.
      * Mean log duration of an infection values from AJTM p.9 eq.5.
      */
-    static SimTime infectionDuration(LocalRng& rng);
+    static SimTime infection_duration(LocalRng& rng);
 
     /// Includes the effect of attenuated infections by SP concentrations, when using IPT
-    virtual void IPTattenuateAsexualDensity() {}
+    virtual void ipt_attenuate_asexual_density() {}
 
 protected:
     virtual void checkpoint(ostream& stream);
 
     // Arbitrary predetermined maximum duration of the infection
-    SimTime m_duration = Sim::never();
+    SimTime duration = Sim::never();
 
-    bool notPrintedMDWarning;
+    bool not_printed_md_warning;
 
 private:
     const DescriptiveInfectionParams* params;

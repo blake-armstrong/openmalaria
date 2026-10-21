@@ -30,19 +30,19 @@
 namespace OM {
 namespace WithinHost {
 
-DummyInfection::DummyInfection(SimTime latent_p, LocalRng& rng, uint32_t protID, int origin)
-    : CommonInfection(latent_p, protID, origin) {
-    m_density = 16; // increased by DH to avoid zeros in initialKappa
+DummyInfection::DummyInfection(SimTime latent_p, LocalRng& rng, uint32_t prot_id, int origin)
+    : CommonInfection(latent_p, prot_id, origin) {
+    density = 16; // increased by DH to avoid zeros in initialKappa
 }
 
-bool DummyInfection::updateDensity(LocalRng& rng, double survivalFactor, SimTime, double) {
-    const double GROWTH_RATE = 8.0;
-    const double PARASITE_THRESHOLD = 1;
+bool DummyInfection::update_density(LocalRng& rng, double survival_factor, SimTime, double) {
+    const double growth_rate = 8.0;
+    const double parasite_threshold = 1;
 
-    m_density = (mod_nn(int(m_density * GROWTH_RATE), 20000)) * survivalFactor;
-    m_cumulativeExposureJ += m_density;
+    density = (mod_nn(int(density * growth_rate), 20000)) * survival_factor;
+    cum_exposure_j += density;
 
-    if (m_density < PARASITE_THRESHOLD) {
+    if (density < parasite_threshold) {
         return true;
     } else {
         return false;
