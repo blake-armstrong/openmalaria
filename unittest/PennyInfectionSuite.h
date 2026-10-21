@@ -82,12 +82,12 @@ public:
         SimTime now = Sim::ts0();
         do {
             extinct = infection->update(m_rng, 1.0, now, numeric_limits<double>::quiet_NaN());
-            int ageDays = (now - infection->start_date - infection->latent_period());
-            while (ageDays < 0)
-                ageDays += infection->DeltaV; // special case encountered by unit test
+            int age_days = (now - infection->start_date - infection->latent_period());
+            while (age_days < 0)
+                age_days += infection->DeltaV; // special case encountered by unit test
             ETS_ASSERT_LESS_THAN(iterations, cirDens.size());
             TS_ASSERT_APPROX(infection->get_density(), cirDens[iterations]);
-            TS_ASSERT_APPROX(infection->seq_density(ageDays), seqDens[iterations]);
+            TS_ASSERT_APPROX(infection->seq_density(age_days), seqDens[iterations]);
             //             outCir << infection->getDensity() << endl;
             //             outSeq << infection->seqDensity(ageDays) << endl;
             now = now + Sim::one_day();
