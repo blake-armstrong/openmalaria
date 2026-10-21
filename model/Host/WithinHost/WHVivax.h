@@ -20,8 +20,8 @@
  * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301, USA.
  */
 
-#ifndef Hmod_WithinHost_Vivax
-#define Hmod_WithinHost_Vivax
+#ifndef HMOD_WITHIN_HOST_VIVAX
+#define HMOD_WITHIN_HOST_VIVAX
 
 #include "Global.h"
 #include "Host/WithinHost/WHInterface.h"
@@ -123,8 +123,8 @@ public:
     VivaxBrood(istream& stream);
 
     struct UpdResult {
-        UpdResult() : newPrimaryBS(false), newRelapseBS(false), newRelapsebBS(false), newBS(false) {}
-        bool newPrimaryBS, newRelapseBS, newRelapsebBS, newBS, isFinished;
+        UpdResult() : new_primary_bs(false), new_relapse_bs(false), new_relapseb_bs(false), new_bs(false) {}
+        bool new_primary_bs, new_relapse_bs, new_relapseb_bs, new_bs, is_finished;
     };
     /**
      * Do per time step update: remove finished blood stage infections and act
@@ -136,47 +136,47 @@ public:
      */
     UpdResult update(LocalRng& rng, const VivaxParams& params);
 
-    inline void setHadEvent(bool hadEvent) { this->hadEvent = hadEvent; }
-    inline bool hasHadEvent() const { return hadEvent; }
-    inline void setHadRelapse(bool hadRelapse) { this->hadRelapse = hadRelapse; }
-    inline bool hasHadRelapse() const { return hadRelapse; }
+    inline void set_had_event(bool had_event) { this->had_event = had_event; }
+    inline bool has_had_event() const { return had_event; }
+    inline void set_had_relapse(bool had_relapse) { this->had_relapse = had_relapse; }
+    inline bool has_had_relapse() const { return had_relapse; }
 
     /** Equivalent to a blood stage existing. We do not model incidence of
      * gametocytes independently, thus this also tests existance of
      * gametocytes. */
-    inline bool isPatent() const { return bloodStageClearDate > Sim::latest_ts0(); }
+    inline bool is_patent() const { return blood_stage_clear_date > Sim::latest_ts0(); }
 
     /** Fully clear blood stage parasites. */
-    void treatmentBS();
+    void treatment_bs();
 
     /** Fully clear liver stage parasites. */
-    void treatmentLS();
+    void treatment_ls();
 
 private:
     VivaxBrood() {} // not default constructible
 
     // list of times at which the merozoite and hypnozoites release, ordered by
     // time of release, soonest last (i.e. last element is next one to release)
-    vector<SimTime> releaseDates;
+    vector<SimTime> release_dates;
 
     // Either sim::never() (no blood stage) or the start of the time step on
     // which the blood stage will clear.
-    SimTime bloodStageClearDate = Sim::never();
+    SimTime blood_stage_clear_date = Sim::never();
 
     // Whether the primary blood stage infection has started
-    bool primaryHasStarted;
+    bool primary_has_started;
 
     // Whether the relapse blood stage infection has started
-    bool relapseHasStarted;
+    bool relapse_has_started;
 
     //Whether the later category of relapses has started
-    bool relapsebHasStarted;
+    bool relapseb_has_started;
 
     // Whether any clinical event has been triggered by this brood
-    bool hadEvent;
+    bool had_event;
 
     // Whether a relapse event has been triggered by this brood
-    bool hadRelapse;
+    bool had_relapse;
 
     // Infection origin
     int origin;
@@ -191,35 +191,35 @@ public:
      * 
      * If no "LiverStageDrug" parameters are present, this is still called but with null pointer.
      */
-    static void setHSParameters(const scnXml::LiverStageDrug*);
+    static void set_hs_parameters(const scnXml::LiverStageDrug*);
 
     /// @brief Constructors, destructors and checkpointing functions
     //@{
-    WHVivax(const VivaxParams& params, LocalRng& rng, double comorbidityFactor);
+    WHVivax(const VivaxParams& params, LocalRng& rng, double comorbidity_factor);
     virtual ~WHVivax();
     //@}
 
-    virtual double prob_transmission_to_mosquito(vector<double>& probTransGenotype_i,
-                                                 vector<double>& probTransGenotype_l) const;
+    virtual double prob_transmission_to_mosquito(vector<double>& prob_trans_genotype_i,
+                                                 vector<double>& prob_trans_genotype_l) const;
 
     virtual bool summarize(Host::Human& human) const;
 
     virtual void import_infection(LocalRng& rng);
 
-    virtual void update(Host::Human& human, LocalRng& rng, int& nNewInfs_i, int& nNewInfs_l,
-                        vector<double>& genotype_weights_i, vector<double>& genotype_weights_l, double ageInYears);
+    virtual void update(Host::Human& human, LocalRng& rng, int& n_new_infs_i, int& n_new_infs_l,
+                        vector<double>& genotype_weights_i, vector<double>& genotype_weights_l, double age_in_years);
 
     virtual bool diagnostic_result(LocalRng& rng, const Diagnostic& diagnostic) const;
 
-    virtual Pathogenesis::StatePair determine_morbidity(Host::Human& human, double ageYears, bool);
+    virtual Pathogenesis::StatePair determine_morbidity(Host::Human& human, double age_years, bool);
 
     virtual void clear_immunity();
 
     virtual InfectionOrigin infection_origin() const { return InfectionOrigin::Indigenous; }
 
 protected:
-    virtual void treatment(Host::Human& human, TreatmentId treatId);
-    virtual bool treat_simple(Host::Human& human, SimTime timeLiver, SimTime timeBlood);
+    virtual void treatment(Host::Human& human, TreatmentId treat_id);
+    virtual bool treat_simple(Host::Human& human, SimTime time_liver, SimTime time_blood);
     virtual void optional_pq_treatment(Host::Human& human);
 
     virtual void checkpoint(istream& stream);
@@ -244,26 +244,26 @@ private:
      * Set to zero if everyone can get PQ, 0.5 if females can't get PQ and
      * males aren't tested (i.e. all can get it) or (1+p)/2 where p is the
      * chance a male being tested and found to be G6PD deficient. */
-    bool noPQ;
+    bool no_pq;
 
     Pathogenesis::State morbidity;
 
     // The number of primary blood stage infections to have started since this
     // human was born.
-    uint32_t cumPrimInf;
+    uint32_t cum_prim_inf;
 
     // Either never or expiry time of treatment
-    SimTime treatExpiryLiver, treatExpiryBlood;
+    SimTime treat_expiry_liver, treat_expiry_blood;
 
     // The probability of a clinical event from a primary infection
-    double pEvent;
+    double p_event;
     // The probability of a clinical event from an early relapse
-    double pFirstRelapseEvent;
+    double p_first_relapse_event;
     // The probability of a clinical event from a later relapse
-    double pSecondRelapseEvent;
+    double p_second_relapse_event;
 
     // Used for reporting; updated by update()
-    double pSevere;
+    double p_severe;
 
     friend class ::UnittestUtil;
 };

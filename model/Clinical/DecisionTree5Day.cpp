@@ -66,7 +66,7 @@ void DecisionTree5Day::setHealthSystem(const scnXml::HSDT5Day& hsDescription) {
     treatmentSevere = WHInterface::add_treatment(hsDescription.getTreatmentSevere());
 
     if (ModelOptions::option(util::VivaxSimpleModel)) {
-        WithinHost::WHVivax::setHSParameters(
+        WithinHost::WHVivax::set_hs_parameters(
             hsDescription.getLiverStageDrug().present() ? &hsDescription.getLiverStageDrug().get() : 0);
     } else if (hsDescription.getLiverStageDrug().present()) {
         throw util::xml_scenario_error("health-system's liverStageDrug element only supported by vivax");
