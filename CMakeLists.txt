@@ -208,6 +208,7 @@ endif (OM_CXXTEST_ENABLE)
 
 option(OM_BOXTEST_ENABLE "Enable black-box testing of openMalaria (use 'make test' or Visual Studio build target)" ON)
 option(OM_BOXTEST_BINARY "Run black-box tests with binary survey output" OFF)
+option(OM_BOXTEST_STRICT "Black-box tests require output byte-identical to test/expected (the refactor's G-exact gate)" OFF)
 if (OM_BOXTEST_ENABLE)
   enable_testing()
   add_subdirectory (test)

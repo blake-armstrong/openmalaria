@@ -301,6 +301,9 @@ def runScenario(options,omOptions,name):
         
         ret=max(ret,ctsret)
         ident=ident and ctsident
+        if options.strict and ret == 0 and not ident:
+            print("\033[1;31m--strict: output is within tolerance but not byte-identical to the expected file")
+            ret = 1
     
     if haveCtsOut:
         shutil.copy2(ctsoutFile, newCtsout)
@@ -348,6 +351,8 @@ You can pass options to openMalaria by first specifying -- (to end options passe
                       help="Don't compare output after running; instead just copy outputs to test/outputXX.txt and test/ctsoutXX.txt")
     parser.add_option("-b","--binary", action="store_true", default=False,
                       help="Write binary survey output and compare its decoded rows with expected text output")
+    parser.add_option("-s","--strict", action="store_true", default=False,
+                      help="Fail unless output.txt and ctsout.txt are byte-identical to the expected files (by default values within a relative or absolute 1e-6, and ctsout column sums within 1e-6, pass)")
     parser.add_option("-d","--diff", action="store_true", dest="diff", default=False,
             help="Launch a diff program (kdiff3) on the output if validation fails")
     parser.add_option("--valid","--validate",
