@@ -43,10 +43,10 @@ ComponentId VaccineComponent::reportComponent = ComponentId::wholePop();
 VaccineComponent::VaccineComponent(ComponentId component, const scnXml::VaccineDescription& vd, Vaccine::Types type)
     : HumanInterventionComponent(component), type(type), decayFunc(DecayFunction::makeObject(vd.getDecay(), "decay")),
       efficacyB(vd.getEfficacyB().getValue()) {
-    if (type == Vaccine::BSV && ModelOptions::option(util::VIVAX_SIMPLE_MODEL))
+    if (type == Vaccine::BSV && ModelOptions::option(util::VivaxSimpleModel))
         throw util::unimplemented_exception("blood stage vaccines (BSV) cannot be used with vivax model");
 
-    opt_vaccine_genotype = util::ModelOptions::option(util::VACCINE_GENOTYPE);
+    opt_vaccine_genotype = util::ModelOptions::option(util::VaccineGenotype);
 
     if (reportComponent == ComponentId::wholePop() /* the initial value */) {
         // set to the first type described

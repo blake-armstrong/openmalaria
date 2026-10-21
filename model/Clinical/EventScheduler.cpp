@@ -62,15 +62,15 @@ void ClinicalEventScheduler::init(const Parameters& parameters, const scnXml::Cl
     if (Sim::one_ts() != Sim::one_day())
         throw util::xml_scenario_error("ClinicalEventScheduler is only designed for a 1-day time step.");
 
-    opt_non_malaria_fevers = util::ModelOptions::option(util::NON_MALARIA_FEVERS);
+    opt_non_malaria_fevers = util::ModelOptions::option(util::NonMalariaFevers);
 
-    alpha = exp(-parameters[Parameter::CFR_NEG_LOG_ALPHA]);
+    alpha = exp(-parameters[Parameter::CfrNegLogAlpha]);
     if (!(0.0 <= alpha && alpha <= 1.0)) {
         throw util::xml_scenario_error("Clinical outcomes: propDeathsFirstDay should be within range [0,1]");
     }
-    neg_v = -parameters[Parameter::CFR_SCALE_FACTOR];
+    neg_v = -parameters[Parameter::CfrScaleFactor];
 
-    if (util::ModelOptions::option(util::NON_MALARIA_FEVERS)) {
+    if (util::ModelOptions::option(util::NonMalariaFevers)) {
         if (!clinical.getNonMalariaFevers().present()) {
             throw util::xml_scenario_error("NonMalariaFevers element of model->clinical required");
         }
@@ -114,7 +114,7 @@ void ClinicalEventScheduler::setParameters(const scnXml::HSEventScheduler& esDat
 
     caseFatalityRate.scale(alpha);
 
-    if (util::ModelOptions::option(util::NON_MALARIA_FEVERS)) {
+    if (util::ModelOptions::option(util::NonMalariaFevers)) {
         if (!esData.getNonMalariaFevers().present()) {
             throw util::xml_scenario_error("NonMalariaFevers element of healthSystem->EventScheduler required");
         }

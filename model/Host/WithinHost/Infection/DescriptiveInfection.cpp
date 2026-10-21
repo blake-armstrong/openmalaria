@@ -54,18 +54,18 @@ void DescriptiveInfection::init(const Parameters& parameters) {
         throw util::xml_scenario_error("DescriptiveInfection only supports using an interval of 5");
     }
     // Bug fixes: these are enabled by default but may be off in old parameterisations
-    bugfix_innate_max_dens = util::ModelOptions::option(util::INNATE_MAX_DENS);
+    bugfix_innate_max_dens = util::ModelOptions::option(util::InnateMaxDens);
     // Warning: if MAX_DENS_CORRECTION is off, infections not yet at the blood
     // stage could result in BSVEfficacy and potentially innateImmSurvFact
     // being applied to timeStepMaxDensity more than once in some cases.
-    bugfix_max_dens = util::ModelOptions::option(util::MAX_DENS_CORRECTION);
+    bugfix_max_dens = util::ModelOptions::option(util::MaxDensCorrection);
 
     // Read parameters
-    sigma0sq = parameters[Parameter::SIGMA0_SQ];
-    xNuStar = parameters[Parameter::X_NU_STAR];
+    sigma0sq = parameters[Parameter::Sigma0Sq];
+    xNuStar = parameters[Parameter::XNuStar];
 
     // Read file empirical parasite densities
-    string densities_filename = util::CommandLine::lookupResource("densities.csv");
+    string densities_filename = util::CommandLine::lookup_resource("densities.csv");
     ifstream f_MTherapyDensities(densities_filename.c_str());
     if (!f_MTherapyDensities.good()) {
         throw util::base_exception(string("Cannot read ").append(densities_filename), util::Error::FileIO);

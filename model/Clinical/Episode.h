@@ -83,7 +83,7 @@ public:
     };
 
     Episode() : time(Sim::never()), surveyPeriod(mon::NOT_USED), ageGroup(0), cohortSet(0), state(NONE) {
-        healthSystemMemoryFix = util::ModelOptions::option(util::HEALTH_SYSTEM_MEMORY_FIX);
+        healthSystemMemoryFix = util::ModelOptions::option(util::HealthSystemMemoryFix);
     };
 
     ~Episode();

@@ -149,13 +149,13 @@ void PennyInfection::init() {
     CommonWithinHost::createInfection = &createPennyInfection;
     CommonWithinHost::checkpointedInfection = &checkpointedPennyInfection;
 
-    if (util::ModelOptions::option(util::IMMUNE_THRESHOLD_GAMMA)) {
+    if (util::ModelOptions::option(util::ImmuneThresholdGamma)) {
         immune_threshold_gamma = true;
     } else {
         immune_threshold_gamma = false;
     }
 
-    if (util::ModelOptions::option(util::UPDATE_DENSITY_GAMMA)) {
+    if (util::ModelOptions::option(util::UpdateDensityGamma)) {
         update_density_gamma = true;
     } else {
         update_density_gamma = false;

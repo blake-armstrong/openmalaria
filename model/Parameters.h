@@ -20,8 +20,8 @@
  * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301, USA.
  */
 
-#ifndef Hmod_InputParameters
-#define Hmod_InputParameters
+#ifndef HMOD_INPUT_PARAMETERS
+#define HMOD_INPUT_PARAMETERS
 
 #include <map>
 #include <optional>
@@ -49,65 +49,65 @@ namespace OM {
 enum class Parameter {
     /// @b Infection incidence model parameters
     //@{
-    NEG_LOG_ONE_MINUS_SINF,
-    E_STAR,
+    NegLogOneMinusSinf,
+    EStar,
     SIMM,
-    X_STAR_P,
-    GAMMA_P,
+    XStarP,
+    GammaP,
     //@}
     /// @b Immunity parameters, mostly on infections
     //@{
-    SIGMA_I_SQ, ///< Host (not infection) parameter
-    CUMULATIVE_Y_STAR,
-    CUMULATIVE_H_STAR,
-    NEG_LOG_ONE_MINUS_ALPHA_M,
-    DECAY_M,
+    SigmaISq, ///< Host (not infection) parameter
+    CumulativeYStar,
+    CumulativeHStar,
+    NegLogOneMinusAlphaM,
+    DecayM,
     //@}
     /// @b DescriptiveInfection specific
     //@{
-    SIGMA0_SQ,
-    X_NU_STAR,
+    Sigma0Sq,
+    XNuStar,
     //@}
     /// @b Used in PathogenesisModel
     //@{
-    Y_STAR_SQ,
+    YStarSq,
     ALPHA,
     //@}
-    DENSITY_BIAS_NON_GARKI,       ///< Used in Diagnostic
-    BASELINE_AVAILABILITY_SHAPE,  ///< Used in InfectionIncidenceModel
-    LOG_ODDS_RATIO_CF_COMMUNITY,  ///< Used in CaseManagementModel
-    INDIRECT_RISK_COFACTOR,       ///< Used in PathogenesisModel
-    NON_MALARIA_INFANT_MORTALITY, ///< Used in Summary
-    DENSITY_BIAS_GARKI,           ///< Used in Diagnostic
-    SEVERE_MALARIA_THRESHHOLD,    ///< Used in PathogenesisModel
-    IMMUNITY_PENALTY,             ///< Used in WHFalciparum
-    IMMUNE_EFFECTOR_DECAY,        ///< Used in WHFalciparum
+    DensityBiasNonGarki,       ///< Used in Diagnostic
+    BaselineAvailabilityShape, ///< Used in InfectionIncidenceModel
+    LogOddsRatioCfCommunity,   ///< Used in CaseManagementModel
+    IndirectRiskCofactor,      ///< Used in PathogenesisModel
+    NonMalariaInfantMortality, ///< Used in Summary
+    DensityBiasGarki,          ///< Used in Diagnostic
+    SevereMalariaThreshhold,   ///< Used in PathogenesisModel
+    ImmunityPenalty,           ///< Used in WHFalciparum
+    ImmuneEffectorDecay,       ///< Used in WHFalciparum
     /// @b Used in PathogenesisModel
     //@{
-    COMORBIDITY_INTERCEPT,
-    Y_STAR_HALF_LIFE,
-    Y_STAR_1,
+    ComorbidityIntercept,
+    YStarHalfLife,
+    YStar1,
     //@}
-    ASEXUAL_IMMUNITY_DECAY, ///< Used in WHFalciparum
+    AsexualImmunityDecay, ///< Used in WHFalciparum
     /// @b Used in PathogenesisModel
     //@{
-    Y_STAR_0,
+    YStar0,
 
-    CRITICAL_AGE_FOR_COMORBIDITY,
-    MUELLER_RATE_MULTIPLIER,
-    MUELLER_DENSITY_EXPONENT,
+    CriticalAgeForComorbidity,
+    MuellerRateMultiplier,
+    MuellerDensityExponent,
     //@}
     /// EventScheduler: v in "Case Fatality Rate proposal"
-    CFR_SCALE_FACTOR,
+    CfrScaleFactor,
 
     /// @b Molineaux: sampling parameters (not pairwise mode only)
-    MEAN_LOCAL_MAX_DENSITY,
-    SD_LOCAL_MAX_DENSITY,
-    MEAN_DIFF_POS_DAYS,
-    SD_DIFF_POS_DAYS,
+    MeanLocalMaxDensity,
+    SdLocalMaxDensity,
+    MeanDiffPosDays,
+    SdDiffPosDays,
 
     /// EventScheduler: exp(-CFR_NEG_LOG_ALPHA) is the proportion of deaths occuring on the first day
-    CFR_NEG_LOG_ALPHA,
+    CfrNegLogAlpha,
 };
 
 /*
@@ -148,18 +148,18 @@ public:
     */
     Parameters() = default;
 
-    Parameters(const scnXml::Model::ParametersOptional& xmlParameterValues, const util::ModelNameProvider& mnp,
-               const util::CommandLineOptions& commandLine) {
-        for (const std::pair<int, Parameter> pair : idCodeToNameMap()) {
+    Parameters(const scnXml::Model::ParametersOptional& xml_parameter_values, const util::ModelNameProvider& mnp,
+               const util::CommandLineOptions& command_line) {
+        for (const std::pair<int, Parameter> pair : id_code_to_name_map()) {
             const Parameter name = pair.second;
-            nameToValueMap[name] = std::nullopt;
+            name_to_value_map[name] = std::nullopt;
         }
 
-        const util::ModelNames namedModelToUse = mnp.GetModelName();
-        const bool useNamedModel = namedModelToUse != util::ModelNames::none;
-        if (useNamedModel) {
-            if (namedModelToUse == util::ModelNames::base) {
-                initializeParamsBaseModel();
+        const util::ModelNames named_model_to_use = mnp.get_model_name();
+        const bool use_named_model = named_model_to_use != util::ModelNames::None;
+        if (use_named_model) {
+            if (named_model_to_use == util::ModelNames::Base) {
+                initialize_params_base_model();
             } else {
                 throw util::xml_scenario_error(
                     "No pre-set parameter values are available for the specified model name.");
@@ -170,10 +170,10 @@ public:
         // In the event where a named model was used to set parameter values earlier, it is intended
         // that any parameter values written explicitly in XML will override any values set by the
         // named model.
-        const bool useExplicitParamValues = xmlParameterValues.present();
-        if (useExplicitParamValues) {
-            initializeParamsFromXML(xmlParameterValues.get(),
-                                    commandLine.option(util::CommandLine::DEPRECATION_WARNINGS));
+        const bool use_explicit_param_values = xml_parameter_values.present();
+        if (use_explicit_param_values) {
+            initialize_params_from_xml(xml_parameter_values.get(),
+                                       command_line.option(util::CommandLine::DeprecationWarnings));
         }
     }
 
@@ -182,12 +182,12 @@ public:
      */
     double operator[](Parameter name) const {
         // First check the parameter actually exists and has a value.
-        const bool paramHasAValueSet = nameToValueMap.at(name) != std::nullopt;
-        if (!paramHasAValueSet) {
-            for (const std::pair<int, Parameter> pair : idCodeToNameMap()) {
+        const bool param_has_a_value_set = name_to_value_map.at(name) != std::nullopt;
+        if (!param_has_a_value_set) {
+            for (const std::pair<int, Parameter> pair : id_code_to_name_map()) {
                 if (pair.second == name) {
-                    const int paramCode = pair.first;
-                    throw util::xml_scenario_error("Parameter with index " + to_string(paramCode) +
+                    const int param_code = pair.first;
+                    throw util::xml_scenario_error("Parameter with index " + to_string(param_code) +
                                                    " required but not described.");
                 }
             }
@@ -195,7 +195,7 @@ public:
                 "A parameter required by this simulation is missing a definition for its ID in C++ code.");
         }
 
-        return nameToValueMap.at(name).value();
+        return name_to_value_map.at(name).value();
     }
 
 private:
@@ -205,25 +205,25 @@ private:
     * This method will be used if the user does not use the "base" model or any
     * other pre-set collection of parameter values.
     */
-    void initializeParamsFromXML(const scnXml::Parameters& parameters, bool deprecationWarnings) {
-        const scnXml::Parameters::ParameterSequence& paramSeq = parameters.getParameter();
+    void initialize_params_from_xml(const scnXml::Parameters& parameters, bool deprecation_warnings) {
+        const scnXml::Parameters::ParameterSequence& param_seq = parameters.getParameter();
 
         // It's okay if a user overwrites the value of a parameter that was set before this
         // method was called.  E.g. if they used a named model, and then chose to manually
         // override the value of a parameter set by it.  It's not okay if a user sets a value
         // for the same parameter twice.  That represents a mistake in the input XML which
         // we need to handle here.  This has the potential to save users time debugging inputs.
-        std::set<int> paramIdsSetByUser;
+        std::set<int> param_ids_set_by_user;
 
-        for (auto param : paramSeq) {
-            const int paramId = param.getNumber();
-            const double paramValueFromXML = param.getValue();
+        for (auto param : param_seq) {
+            const int param_id = param.getNumber();
+            const double param_value_from_xml = param.getValue();
 
             // C++20 offers "contains" which would be more expressive than "count" here.
-            const bool paramIdIsValid = idCodeToNameMap().count(paramId);
-            if (!paramIdIsValid) {
-                if (deprecationWarnings) {
-                    cerr << "Deprecation warning: <parameter> index" << to_string(paramId) << " is no longer used"
+            const bool param_id_is_valid = id_code_to_name_map().count(param_id);
+            if (!param_id_is_valid) {
+                if (deprecation_warnings) {
+                    cerr << "Deprecation warning: <parameter> index" << to_string(param_id) << " is no longer used"
                          << endl;
                 }
 
@@ -234,15 +234,15 @@ private:
                 // deprecated some parameters.
                 continue;
             }
-            const Parameter nameOfParamToSet = idCodeToNameMap().at(paramId);
+            const Parameter name_of_param_to_set = id_code_to_name_map().at(param_id);
 
-            const bool paramValueAlreadySet = !paramIdsSetByUser.insert(paramId).second;
-            if (paramValueAlreadySet) {
-                throw util::xml_scenario_error("Parameter with index " + to_string(paramId) +
+            const bool param_value_already_set = !param_ids_set_by_user.insert(param_id).second;
+            if (param_value_already_set) {
+                throw util::xml_scenario_error("Parameter with index " + to_string(param_id) +
                                                " described twice in XML.");
             }
 
-            nameToValueMap[nameOfParamToSet] = paramValueFromXML;
+            name_to_value_map[name_of_param_to_set] = param_value_from_xml;
         }
     }
 
@@ -251,14 +251,14 @@ private:
     * The purpose of this method are to simplify code for initializing named models and to, in
     * the event of an error, provide a more helpful error message than would otherwise be provided.
     */
-    void initParam(int paramId, double value) {
+    void init_param(int param_id, double value) {
         // Handles the error condition where idCodeToNameMap.at() is called with a non-existant key argument,
         // e.g. for a deprecated parameter.  This is so that a more informative error message can be given.
         // std::unordered_map is not able to be made constexpr, which means it would be non-trivial to handle
         // this error condition with a compile-time check instead.
-        auto retrieveParamName = [](const int id) -> Parameter {
+        auto retrieve_param_name = [](const int id) -> Parameter {
             try {
-                return idCodeToNameMap().at(id);
+                return id_code_to_name_map().at(id);
             } catch (const exception& e) {
                 cerr << "Error: " << e.what() << endl;
                 throw util::traced_exception("Base model attempted to set a value for a parameter with id: " +
@@ -266,43 +266,43 @@ private:
                                              __FILE__, __LINE__);
             }
         };
-        nameToValueMap[retrieveParamName(paramId)] = value;
+        name_to_value_map[retrieve_param_name(param_id)] = value;
     }
 
     /*
     * Initializes some hardcoded values for some parameters, encapsulating the parameter values
     * that make up the base model.
     */
-    void initializeParamsBaseModel() {
-        initParam(1, 0.050736);                // '-ln(1-Sinf)'
-        initParam(2, 0.03247);                 // Estar
-        initParam(3, 0.138161050830301);       // Simm
-        initParam(4, 1514.385853233699891);    // Xstar_p
-        initParam(5, 2.03692533424484);        // gamma_p
-        initParam(6, 10.173598698525799);      // sigma2i
-        initParam(7, 35158523.31132510304451); // CumulativeYstar
-        initParam(8, 97.334652723897705);      // CumulativeHstar
-        initParam(9, 2.33031045876193);        // '-ln(1-alpha_m)'
-        initParam(10, 2.53106547375805);       // decay_m
-        initParam(11, 0.655747311168152);      // sigma2_0
-        initParam(12, 0.916181104713054);      // Xstar_v
-        initParam(13, 6502.26335600001039);    // Ystar2
-        initParam(14, 142601.912520000012591); // alpha
-        initParam(15, 0.177378570987455);      // Density bias (non Garki)
-        initParam(16, 1.0);                    //  sigma2
-        initParam(17, 0.736202);               // log oddsr CF community
-        initParam(18, 0.018777338);            // Indirect risk cofactor
-        initParam(19, 49.539046599999999);     // Non-malaria infant mortality
-        initParam(20, 4.79610772546704);       // Density bias (Garki)
-        initParam(21, 784455.599999999976717); // Severe Malaria Threshhold
-        initParam(22, 1);                      // Immunity Penalty
-        initParam(23, 0);                      // Immune effector decay
-        initParam(24, 0.0968);                 // comorbidity intercept
-        initParam(25, 0.275437402);            // Ystar half life
-        initParam(26, 0.596539864);            // Ystar1
-        initParam(27, 0);                      // Asexual immunity decay
-        initParam(28, 296.302437899999973);    // Ystar0
-        initParam(30, 0.117383);               // critical age for comorbidity
+    void initialize_params_base_model() {
+        init_param(1, 0.050736);                // '-ln(1-Sinf)'
+        init_param(2, 0.03247);                 // Estar
+        init_param(3, 0.138161050830301);       // Simm
+        init_param(4, 1514.385853233699891);    // Xstar_p
+        init_param(5, 2.03692533424484);        // gamma_p
+        init_param(6, 10.173598698525799);      // sigma2i
+        init_param(7, 35158523.31132510304451); // CumulativeYstar
+        init_param(8, 97.334652723897705);      // CumulativeHstar
+        init_param(9, 2.33031045876193);        // '-ln(1-alpha_m)'
+        init_param(10, 2.53106547375805);       // decay_m
+        init_param(11, 0.655747311168152);      // sigma2_0
+        init_param(12, 0.916181104713054);      // Xstar_v
+        init_param(13, 6502.26335600001039);    // Ystar2
+        init_param(14, 142601.912520000012591); // alpha
+        init_param(15, 0.177378570987455);      // Density bias (non Garki)
+        init_param(16, 1.0);                    //  sigma2
+        init_param(17, 0.736202);               // log oddsr CF community
+        init_param(18, 0.018777338);            // Indirect risk cofactor
+        init_param(19, 49.539046599999999);     // Non-malaria infant mortality
+        init_param(20, 4.79610772546704);       // Density bias (Garki)
+        init_param(21, 784455.599999999976717); // Severe Malaria Threshhold
+        init_param(22, 1);                      // Immunity Penalty
+        init_param(23, 0);                      // Immune effector decay
+        init_param(24, 0.0968);                 // comorbidity intercept
+        init_param(25, 0.275437402);            // Ystar half life
+        init_param(26, 0.596539864);            // Ystar1
+        init_param(27, 0);                      // Asexual immunity decay
+        init_param(28, 296.302437899999973);    // Ystar0
+        init_param(30, 0.117383);               // critical age for comorbidity
     }
 
     /*
@@ -314,49 +314,49 @@ private:
     * The keys of this map need not form a contiguous sequence.
     * E.g. in the case where a parameter is deleted altogether from the simulation code.
     */
-    static const std::unordered_map<int, Parameter>& idCodeToNameMap() {
-        static const std::unordered_map<int, Parameter> map{
-            {1, Parameter::NEG_LOG_ONE_MINUS_SINF},
-            {2, Parameter::E_STAR},
+    static const std::unordered_map<int, Parameter>& id_code_to_name_map() {
+        static const std::unordered_map<int, Parameter> IdCodeToName{
+            {1, Parameter::NegLogOneMinusSinf},
+            {2, Parameter::EStar},
             {3, Parameter::SIMM},
-            {4, Parameter::X_STAR_P},
-            {5, Parameter::GAMMA_P},
-            {6, Parameter::SIGMA_I_SQ},
-            {7, Parameter::CUMULATIVE_Y_STAR},
-            {8, Parameter::CUMULATIVE_H_STAR},
-            {9, Parameter::NEG_LOG_ONE_MINUS_ALPHA_M},
-            {10, Parameter::DECAY_M},
-            {11, Parameter::SIGMA0_SQ},
-            {12, Parameter::X_NU_STAR},
-            {13, Parameter::Y_STAR_SQ},
+            {4, Parameter::XStarP},
+            {5, Parameter::GammaP},
+            {6, Parameter::SigmaISq},
+            {7, Parameter::CumulativeYStar},
+            {8, Parameter::CumulativeHStar},
+            {9, Parameter::NegLogOneMinusAlphaM},
+            {10, Parameter::DecayM},
+            {11, Parameter::Sigma0Sq},
+            {12, Parameter::XNuStar},
+            {13, Parameter::YStarSq},
             {14, Parameter::ALPHA},
-            {15, Parameter::DENSITY_BIAS_NON_GARKI},
-            {16, Parameter::BASELINE_AVAILABILITY_SHAPE},
-            {17, Parameter::LOG_ODDS_RATIO_CF_COMMUNITY},
-            {18, Parameter::INDIRECT_RISK_COFACTOR},
-            {19, Parameter::NON_MALARIA_INFANT_MORTALITY},
-            {20, Parameter::DENSITY_BIAS_GARKI},
-            {21, Parameter::SEVERE_MALARIA_THRESHHOLD},
-            {22, Parameter::IMMUNITY_PENALTY},
-            {23, Parameter::IMMUNE_EFFECTOR_DECAY},
-            {24, Parameter::COMORBIDITY_INTERCEPT},
-            {25, Parameter::Y_STAR_HALF_LIFE},
-            {26, Parameter::Y_STAR_1},
-            {27, Parameter::ASEXUAL_IMMUNITY_DECAY},
-            {28, Parameter::Y_STAR_0},
+            {15, Parameter::DensityBiasNonGarki},
+            {16, Parameter::BaselineAvailabilityShape},
+            {17, Parameter::LogOddsRatioCfCommunity},
+            {18, Parameter::IndirectRiskCofactor},
+            {19, Parameter::NonMalariaInfantMortality},
+            {20, Parameter::DensityBiasGarki},
+            {21, Parameter::SevereMalariaThreshhold},
+            {22, Parameter::ImmunityPenalty},
+            {23, Parameter::ImmuneEffectorDecay},
+            {24, Parameter::ComorbidityIntercept},
+            {25, Parameter::YStarHalfLife},
+            {26, Parameter::YStar1},
+            {27, Parameter::AsexualImmunityDecay},
+            {28, Parameter::YStar0},
             // 29 corresponds to a now-deprecated parameter.  If adding a new parameter,
             // don't use 29.  Since some old scenarios likely define a parameter value
             // with index 29 already.
-            {30, Parameter::CRITICAL_AGE_FOR_COMORBIDITY},
-            {31, Parameter::MUELLER_RATE_MULTIPLIER},
-            {32, Parameter::MUELLER_DENSITY_EXPONENT},
-            {33, Parameter::CFR_SCALE_FACTOR},
-            {34, Parameter::MEAN_LOCAL_MAX_DENSITY},
-            {35, Parameter::SD_LOCAL_MAX_DENSITY},
-            {36, Parameter::MEAN_DIFF_POS_DAYS},
-            {37, Parameter::SD_DIFF_POS_DAYS},
-            {38, Parameter::CFR_NEG_LOG_ALPHA}};
-        return map;
+            {30, Parameter::CriticalAgeForComorbidity},
+            {31, Parameter::MuellerRateMultiplier},
+            {32, Parameter::MuellerDensityExponent},
+            {33, Parameter::CfrScaleFactor},
+            {34, Parameter::MeanLocalMaxDensity},
+            {35, Parameter::SdLocalMaxDensity},
+            {36, Parameter::MeanDiffPosDays},
+            {37, Parameter::SdDiffPosDays},
+            {38, Parameter::CfrNegLogAlpha}};
+        return IdCodeToName;
     }
 
     /*
@@ -370,7 +370,7 @@ private:
     * XML explicitly states to use some model which itself contains the
     * given parameter among its preset values.
     */
-    std::unordered_map<Parameter, std::optional<double>> nameToValueMap;
+    std::unordered_map<Parameter, std::optional<double>> name_to_value_map;
 };
 
 }

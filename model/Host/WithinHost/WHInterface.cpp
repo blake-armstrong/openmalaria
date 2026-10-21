@@ -53,22 +53,22 @@ void WHInterface::init(const OM::Parameters& parameters, const scnXml::Scenario&
                                  mon::isUsed(mon::measure("nPatentByGenotype")) ||
                                  mon::isUsed(mon::measure("logDensByGenotype"));
 
-    if (util::ModelOptions::option(util::VIVAX_SIMPLE_MODEL)) {
+    if (util::ModelOptions::option(util::VivaxSimpleModel)) {
         opt_vivax_simple = true;
         WHVivax::init(parameters, scenario.getModel());
     } else {
         WHFalciparum::init(parameters, scenario.getModel());
 
-        if (util::ModelOptions::option(util::DUMMY_WITHIN_HOST_MODEL)) {
+        if (util::ModelOptions::option(util::DummyWithinHostModel)) {
             opt_dummy_whm = true;
             DummyInfection::init();
-        } else if (util::ModelOptions::option(util::EMPIRICAL_WITHIN_HOST_MODEL)) {
+        } else if (util::ModelOptions::option(util::EmpiricalWithinHostModel)) {
             opt_empirical_whm = true;
             EmpiricalInfection::init(); // 1-day time step check
-        } else if (util::ModelOptions::option(util::MOLINEAUX_WITHIN_HOST_MODEL)) {
+        } else if (util::ModelOptions::option(util::MolineauxWithinHostModel)) {
             opt_molineaux_whm = true;
             MolineauxInfection::init(parameters);
-        } else if (util::ModelOptions::option(util::PENNY_WITHIN_HOST_MODEL)) {
+        } else if (util::ModelOptions::option(util::PennyWithinHostModel)) {
             opt_penny_whm = true;
             PennyInfection::init();
         } else {

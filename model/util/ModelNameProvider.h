@@ -20,8 +20,8 @@
  * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301, USA.
  */
 
-#ifndef Hmod_util_ModelNameProvider
-#define Hmod_util_ModelNameProvider
+#ifndef HMOD_UTIL_MODEL_NAME_PROVIDER
+#define HMOD_UTIL_MODEL_NAME_PROVIDER
 
 #include <schema/scenario.h>
 #include "util/errors.h"
@@ -32,8 +32,8 @@ namespace util {
         * It is intended that this holds the entire collection of named models.
         */
 enum class ModelNames {
-    none, // Represents the case where input XML contains no model name.
-    base
+    None, // Represents the case where input XML contains no model name.
+    Base
 };
 
 /*
@@ -48,23 +48,23 @@ enum class ModelNames {
 class ModelNameProvider {
 public:
     ModelNameProvider(const scnXml::Model& model) {
-        const bool useNamedModel = model.getModelName().present();
-        if (useNamedModel) {
-            const std::string nameFromXML = model.getModelName().get().getName();
-            if (nameFromXML == "base") {
-                modelInUse = ModelNames::base;
+        const bool use_named_model = model.getModelName().present();
+        if (use_named_model) {
+            const std::string name_from_xml = model.getModelName().get().getName();
+            if (name_from_xml == "base") {
+                model_in_use = ModelNames::Base;
             } else {
-                throw util::xml_scenario_error("Unrecognized model name: " + nameFromXML);
+                throw util::xml_scenario_error("Unrecognized model name: " + name_from_xml);
             }
         }
     }
 
     ~ModelNameProvider() {}
 
-    ModelNames GetModelName() const { return modelInUse; }
+    ModelNames get_model_name() const { return model_in_use; }
 
 private:
-    ModelNames modelInUse = ModelNames::none;
+    ModelNames model_in_use = ModelNames::None;
 };
 }
 }

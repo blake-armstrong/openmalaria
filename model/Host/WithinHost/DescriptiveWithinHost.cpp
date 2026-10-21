@@ -51,7 +51,7 @@ void DescriptiveWithinHostModel::initDescriptive() {
 DescriptiveWithinHostModel::DescriptiveWithinHostModel(LocalRng& rng, double comorbidityFactor)
     : WHFalciparum(rng, comorbidityFactor) {
     assert(Sim::one_ts() == Sim::from_days(5));
-    opt_vaccine_genotype = util::ModelOptions::option(util::VACCINE_GENOTYPE);
+    opt_vaccine_genotype = util::ModelOptions::option(util::VaccineGenotype);
 }
 
 DescriptiveWithinHostModel::~DescriptiveWithinHostModel() {

@@ -71,14 +71,14 @@ int InfectionIncidenceModel::ctsNewInfections = 0;
 // -----  static initialisation  -----
 
 void InfectionIncidenceModel::init(const Parameters& parameters) {
-    baseline_avail_shape_param = parameters[Parameter::BASELINE_AVAILABILITY_SHAPE];
+    baseline_avail_shape_param = parameters[Parameter::BaselineAvailabilityShape];
     baseline_avail_offset = 0.5 * pow(baseline_avail_shape_param, 2);
 
-    gamma_p = parameters[Parameter::GAMMA_P];
-    Sinf = 1 - exp(-parameters[Parameter::NEG_LOG_ONE_MINUS_SINF]);
+    gamma_p = parameters[Parameter::GammaP];
+    Sinf = 1 - exp(-parameters[Parameter::NegLogOneMinusSinf]);
     Simm = parameters[Parameter::SIMM];
-    EstarInv = 1.0 / parameters[Parameter::E_STAR];
-    Xstar_pInv = 1.0 / parameters[Parameter::X_STAR_P];
+    EstarInv = 1.0 / parameters[Parameter::EStar];
+    Xstar_pInv = 1.0 / parameters[Parameter::XStarP];
 
     //! constant defining the constraint for the Gamma shape parameters
     /// Used for the case where availability is assumed gamma distributed
@@ -93,14 +93,14 @@ void InfectionIncidenceModel::init(const Parameters& parameters) {
     */
     r_square_Gamma = 0.649; //such that r_square_LogNormal =0.5
 
-    opt_no_pre_erythrocytic = util::ModelOptions::option(util::NO_PRE_ERYTHROCYTIC);
-    opt_neg_bin_mass_action = util::ModelOptions::option(util::NEGATIVE_BINOMIAL_MASS_ACTION);
-    opt_vaccine_genotype = util::ModelOptions::option(util::VACCINE_GENOTYPE);
+    opt_no_pre_erythrocytic = util::ModelOptions::option(util::NoPreErythrocytic);
+    opt_neg_bin_mass_action = util::ModelOptions::option(util::NegativeBinomialMassAction);
+    opt_vaccine_genotype = util::ModelOptions::option(util::VaccineGenotype);
 
     if (opt_neg_bin_mass_action) {
         inf_rate_shape_param = (baseline_avail_shape_param + 1.0) / (r_square_Gamma * baseline_avail_shape_param - 1.0);
         inf_rate_shape_param = std::max(inf_rate_shape_param, 0.0);
-    } else if (util::ModelOptions::option(util::LOGNORMAL_MASS_ACTION)) {
+    } else if (util::ModelOptions::option(util::LognormalMassAction)) {
         opt_lognormal_mass_action = true;
 
         //! constant defining the constraint for the log Normal variance
@@ -114,8 +114,8 @@ void InfectionIncidenceModel::init(const Parameters& parameters) {
             throw util::xml_scenario_error("bad parameter 16 (BASELINE_AVAILABILITY_SHAPE)");
         }
     } else {
-        if (util::ModelOptions::option(util::TRANS_HET) || util::ModelOptions::option(util::COMORB_TRANS_HET) ||
-            util::ModelOptions::option(util::TRANS_TREAT_HET) || util::ModelOptions::option(util::TRIPLE_HET)) {
+        if (util::ModelOptions::option(util::TransHet) || util::ModelOptions::option(util::ComorbTransHet) ||
+            util::ModelOptions::option(util::TransTreatHet) || util::ModelOptions::option(util::TripleHet)) {
             opt_any_het = true;
             cerr << "Warning: will use heterogeneity workaround." << endl;
         }

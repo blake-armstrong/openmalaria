@@ -81,7 +81,7 @@ void init(const scnXml::Monitoring& monitoring, bool isCheckpoint) {
             toReport.push_back(registeredOutput->second);
     }
 
-    const string filename = util::CommandLine::getCtsoutName();
+    const string filename = util::CommandLine::ctsout_name();
 
     if (isCheckpoint) {
         // When loading a check-point, we resume reporting to this file.

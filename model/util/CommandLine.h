@@ -20,8 +20,8 @@
  * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301, USA.
  */
 
-#ifndef Hmod_util_CommandLine
-#define Hmod_util_CommandLine
+#ifndef HMOD_UTIL_COMMAND_LINE
+#define HMOD_UTIL_COMMAND_LINE
 
 #include "Global.h"
 #include <string>
@@ -42,7 +42,7 @@ public:
     /// Boolean command-line options
     enum Options {
         /** Outputs non-default "ModelOptions" values in a human-readable form. */
-        PRINT_MODEL_OPTIONS = 0,
+        PrintModelOptions = 0,
         /// Verbose output
         VERBOSE,
         /// Show progress
@@ -50,29 +50,29 @@ public:
         /// Forces checkpointing just before starting the main phase.
         CHECKPOINT,
         /// Exit after writing checkpoint
-        CHECKPOINT_STOP,
+        CheckpointStop,
         /** Do initialisation and error checks, but don't run simulation. */
-        SKIP_SIMULATION,
+        SkipSimulation,
         /** Compress main survey output. */
-        COMPRESS_OUTPUT,
+        CompressOutput,
         /** Print the annual EIR. */
-        PRINT_ANNUAL_EIR,
+        PrintAnnualEir,
         /** Outputs samples from the active interpolation methods of all
              * age-group data suitible for graphing. */
-        SAMPLE_INTERPOLATIONS,
+        SampleInterpolations,
         /** Show details of vector-parameter fitting.
              * 
              * The fitting methods used aren't guaranteed to work. If they don't, this output should help work out why. */
-        DEBUG_VECTOR_FITTING,
+        DebugVectorFitting,
         /** Print out details about interventions. */
-        PRINT_INTERVENTIONS,
+        PrintInterventions,
         /** Warn on use of deprecated features; that is recommend the use
              * of replacement features. */
-        DEPRECATION_WARNINGS,
+        DeprecationWarnings,
         /** Print times of all surveys. */
-        PRINT_SURVEY_TIMES,
-        PRINT_GENOTYPES,
-        NUM_OPTIONS
+        PrintSurveyTimes,
+        PrintGenotypes,
+        NumOptions
     };
 
     enum class OutputFormat { TXT, BIN };
@@ -89,18 +89,18 @@ public:
     static bool option(size_t code);
 
     /** If path is relative, prepend it with clResourcePath. */
-    static string lookupResource(const string& path);
+    static string lookup_resource(const string& path);
 
     /** Get the name of the output file. */
-    static string getOutputName();
+    static string output_name();
 
-    static OutputFormat getOutputFormat();
+    static OutputFormat output_format();
 
     /** Get the name of the ctsout file. */
-    static string getCtsoutName();
+    static string ctsout_name();
 
     /** Get the name of the checkpoint file. */
-    static string getCheckpointName();
+    static string checkpoint_name();
 };
 
 class CommandLineOptions {
@@ -119,7 +119,7 @@ public:
 private:
     friend class CommandLine;
 
-    std::bitset<CommandLine::NUM_OPTIONS> flags;
+    std::bitset<CommandLine::NumOptions> flags;
     std::string resource_path;
     std::string scenario;
     std::string output;
@@ -158,11 +158,11 @@ private:
 
 namespace util {
 inline bool CommandLine::option(size_t code) { return bridge::command_line().option(code); }
-inline string CommandLine::lookupResource(const string& path) { return bridge::command_line().lookup_resource(path); }
-inline string CommandLine::getOutputName() { return bridge::command_line().output_name(); }
-inline CommandLine::OutputFormat CommandLine::getOutputFormat() { return bridge::command_line().output_format(); }
-inline string CommandLine::getCtsoutName() { return bridge::command_line().ctsout_name(); }
-inline string CommandLine::getCheckpointName() { return bridge::command_line().checkpoint_name(); }
+inline string CommandLine::lookup_resource(const string& path) { return bridge::command_line().lookup_resource(path); }
+inline string CommandLine::output_name() { return bridge::command_line().output_name(); }
+inline CommandLine::OutputFormat CommandLine::output_format() { return bridge::command_line().output_format(); }
+inline string CommandLine::ctsout_name() { return bridge::command_line().ctsout_name(); }
+inline string CommandLine::checkpoint_name() { return bridge::command_line().checkpoint_name(); }
 }
 }
 #endif

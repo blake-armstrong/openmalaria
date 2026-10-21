@@ -406,7 +406,7 @@ void InterventionManager::init(const scnXml::Interventions& intervElt, const Pop
     // have to check nextTimed is within range:
     timed.push_back(unique_ptr<TimedDeployment>(new DummyTimedDeployment()));
 
-    if (util::CommandLine::option(util::CommandLine::PRINT_INTERVENTIONS)) {
+    if (util::CommandLine::option(util::CommandLine::PrintInterventions)) {
         cout << "Continuous deployments:" << endl << "begin\tend\tage\tsub pop\tcompl\tcoverag\tcomponents" << endl;
         for (auto it = continuous.begin(); it != continuous.end(); ++it) {
             it->print_details(std::cout);

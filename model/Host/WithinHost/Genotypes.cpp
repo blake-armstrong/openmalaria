@@ -164,7 +164,7 @@ void Genotypes::init(const scnXml::Scenario& scenario) {
         GT::cum_initial_freqs[1.0] = GT::genotypes.size() - 1;
     }
 
-    if (util::CommandLine::option(util::CommandLine::PRINT_GENOTYPES)) {
+    if (util::CommandLine::option(util::CommandLine::PrintGenotypes)) {
         // reorganise GT::alleleCodes so that we can look up codes, not names
         vector<pair<string, string>> allele_codes(GT::cum_initial_freqs.size());
         for (auto i = GT::alleleCodes.begin(), iend = GT::alleleCodes.end(); i != iend; ++i) {

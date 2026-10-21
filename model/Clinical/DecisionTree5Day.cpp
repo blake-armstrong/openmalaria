@@ -65,7 +65,7 @@ void DecisionTree5Day::setHealthSystem(const scnXml::HSDT5Day& hsDescription) {
     cureRateSevere = hsDescription.getCureRateSevere().getValue();
     treatmentSevere = WHInterface::addTreatment(hsDescription.getTreatmentSevere());
 
-    if (ModelOptions::option(util::VIVAX_SIMPLE_MODEL)) {
+    if (ModelOptions::option(util::VivaxSimpleModel)) {
         WithinHost::WHVivax::setHSParameters(
             hsDescription.getLiverStageDrug().present() ? &hsDescription.getLiverStageDrug().get() : 0);
     } else if (hsDescription.getLiverStageDrug().present()) {

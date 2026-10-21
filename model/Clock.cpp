@@ -59,10 +59,10 @@ void Clock::init_interval(const scnXml::Scenario& scenario, util::ModelNameProvi
     // that named model here.  It may possibly get overwritten later in this method if
     // the scenario also states an explicit interval value - a behaviour that exists so
     // that users have the ability to override the time step duration if they need to.
-    const util::ModelNames named_model_to_use = mnp.GetModelName();
-    const bool use_named_model = named_model_to_use != util::ModelNames::none;
+    const util::ModelNames named_model_to_use = mnp.get_model_name();
+    const bool use_named_model = named_model_to_use != util::ModelNames::None;
     if (use_named_model) {
-        if (named_model_to_use == util::ModelNames::base) {
+        if (named_model_to_use == util::ModelNames::Base) {
             // This is where we define the length of the default time step, in days,
             // for the base model.
             interval = 5;

@@ -619,7 +619,7 @@ void WHVivax::setHSParameters(const scnXml::LiverStageDrug* elt) {
         pHetNoPQ = elt->getPHumanCannotReceive().getValue();
         pReceivePQ = elt->getPUseUncomplicated().present() ? elt->getPUseUncomplicated().get().getValue() : 0.0;
         if (pReceivePQ > 0.0) {
-            if (util::CommandLine::option(util::CommandLine::DEPRECATION_WARNINGS)) {
+            if (util::CommandLine::option(util::CommandLine::DeprecationWarnings)) {
                 cerr << "Deprecation warning: pUseUncomplicated is deprecated; it is "
                         "suggested to use the liver stage simple treatment option instead."
                      << endl;

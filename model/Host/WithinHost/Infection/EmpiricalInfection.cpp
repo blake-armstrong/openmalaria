@@ -85,7 +85,7 @@ void EmpiricalInfection::init() {
     _overallMultiplier = 0.697581;
     _subPatentLimit = 10.0 / _overallMultiplier;
     _maximumPermittedAmplificationPerCycle = 1000.0;
-    string fname = util::CommandLine::lookupResource("autoRegressionParameters.csv");
+    string fname = util::CommandLine::lookup_resource("autoRegressionParameters.csv");
     fstream f_autoRegressionParameters(fname.c_str(), ios::in);
     if (!f_autoRegressionParameters.is_open())
         throw base_exception(string("file not found: ").append(fname), util::Error::FileIO);

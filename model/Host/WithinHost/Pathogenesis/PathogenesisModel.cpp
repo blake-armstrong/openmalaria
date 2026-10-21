@@ -56,7 +56,7 @@ AgeGroupInterpolator pg_NMF_incidence;
 bool opt_predetermined_episodes = false, opt_mueller_pres_model = false;
 
 void PathogenesisModel::init(const Parameters& parameters, const scnXml::Clinical& clinical, bool nmfOnly) {
-    if (util::ModelOptions::option(util::NON_MALARIA_FEVERS)) {
+    if (util::ModelOptions::option(util::NonMalariaFevers)) {
         if (!clinical.getNonMalariaFevers().present()) {
             throw util::xml_scenario_error("NonMalariaFevers element of model->clinical required");
         }
@@ -66,17 +66,17 @@ void PathogenesisModel::init(const Parameters& parameters, const scnXml::Clinica
     if (nmfOnly)
         return;
 
-    pg_indirRiskCoFactor = 1 - exp(-parameters[Parameter::INDIRECT_RISK_COFACTOR]);
-    pg_severeMalThreshold = parameters[Parameter::SEVERE_MALARIA_THRESHHOLD] + 1;
-    pg_comorbIntercept = 1 - exp(-parameters[Parameter::COMORBIDITY_INTERCEPT]);
-    pg_inv_critAgeComorb = 1 / parameters[Parameter::CRITICAL_AGE_FOR_COMORBIDITY];
+    pg_indirRiskCoFactor = 1 - exp(-parameters[Parameter::IndirectRiskCofactor]);
+    pg_severeMalThreshold = parameters[Parameter::SevereMalariaThreshhold] + 1;
+    pg_comorbIntercept = 1 - exp(-parameters[Parameter::ComorbidityIntercept]);
+    pg_inv_critAgeComorb = 1 / parameters[Parameter::CriticalAgeForComorbidity];
 
-    if (util::ModelOptions::option(util::PREDETERMINED_EPISODES)) {
+    if (util::ModelOptions::option(util::PredeterminedEpisodes)) {
         opt_predetermined_episodes = true;
         //no separate init:
         PyrogenPathogenesis::init(parameters);
     } else {
-        if (util::ModelOptions::option(util::MUELLER_PRESENTATION_MODEL)) {
+        if (util::ModelOptions::option(util::MuellerPresentationModel)) {
             opt_mueller_pres_model = true;
             MuellerPathogenesis::init(parameters);
         } else {

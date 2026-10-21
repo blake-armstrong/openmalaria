@@ -68,7 +68,7 @@ void NeonatalMortality::init(const scnXml::Clinical& clinical) {
         neonatalDiagnostic = &WithinHost::diagnostics::get(clinical.getNeonatalMortality().get().getDiagnostic());
     } else {
         //NOTE: this is a compatibility option for older scenarios
-        if (CommandLine::option(CommandLine::DEPRECATION_WARNINGS)) {
+        if (CommandLine::option(CommandLine::DeprecationWarnings)) {
             cerr << "Deprecation warning: specification of the diagnostic "
                     "used by the Neonatal Mortality model is recommended "
                     "(model/clinical/neonatalMortality)"

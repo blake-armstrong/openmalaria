@@ -161,18 +161,18 @@ void MolineauxInfection::init(const Parameters& parameters) {
     CommonWithinHost::createInfection = &createMolineauxInfection;
     CommonWithinHost::checkpointedInfection = &checkpointedMolineauxInfection;
 
-    multi_factor_gamma = util::ModelOptions::option(util::PARASITE_REPLICATION_GAMMA);
+    multi_factor_gamma = util::ModelOptions::option(util::ParasiteReplicationGamma);
 
-    pairwise_P_star_sample = util::ModelOptions::option(util::MOLINEAUX_PAIRWISE_SAMPLE);
+    pairwise_P_star_sample = util::ModelOptions::option(util::MolineauxPairwiseSample);
     if (!pairwise_P_star_sample) {
-        mean_shape_first_local_max = parameters[Parameter::MEAN_LOCAL_MAX_DENSITY];
-        sd_scale_first_local_max = parameters[Parameter::SD_LOCAL_MAX_DENSITY];
+        mean_shape_first_local_max = parameters[Parameter::MeanLocalMaxDensity];
+        sd_scale_first_local_max = parameters[Parameter::SdLocalMaxDensity];
 
-        mean_shape_diff_pos_days = parameters[Parameter::MEAN_DIFF_POS_DAYS];
-        sd_scale_diff_pos_days = parameters[Parameter::SD_DIFF_POS_DAYS];
+        mean_shape_diff_pos_days = parameters[Parameter::MeanDiffPosDays];
+        sd_scale_diff_pos_days = parameters[Parameter::SdDiffPosDays];
 
         // with gamma distribution shape and scale parameters has to be recalculated
-        if (util::ModelOptions::option(util::FIRST_LOCAL_MAXIMUM_GAMMA)) {
+        if (util::ModelOptions::option(util::FirstLocalMaximumGamma)) {
             //NOTE: variant does not appear to work well (according to unit test stats)
             first_local_maximum_gamma = true;
             mean_shape_first_local_max = pow(mean_shape_first_local_max, 2) / pow(sd_scale_first_local_max, 2);
@@ -182,7 +182,7 @@ void MolineauxInfection::init(const Parameters& parameters) {
         }
 
         // with gamma distribution shape and scale parameters has to be recalculated
-        if (util::ModelOptions::option(util::MEAN_DURATION_GAMMA)) {
+        if (util::ModelOptions::option(util::MeanDurationGamma)) {
             //NOTE: variant does not appear to work well (according to unit test stats)
             mean_duration_gamma = true;
             mean_shape_diff_pos_days = pow(mean_shape_diff_pos_days, 2) / pow(sd_scale_diff_pos_days, 2);

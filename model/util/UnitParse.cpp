@@ -58,7 +58,7 @@ SimTime readShortDuration(const std::string& str, DefaultUnit defUnit) {
         } else if (defUnit == NONE) {
             throw util::format_error("unit required but not given (try e.g. 5d or 12t)");
         } else {
-            if (util::CommandLine::option(util::CommandLine::DEPRECATION_WARNINGS)) {
+            if (util::CommandLine::option(util::CommandLine::DeprecationWarnings)) {
                 cerr << "Deprecation warning: duration \"" << str
                      << "\" specified without unit; it is recommended to do so (e.g. 5d or 1t)" << endl;
             }
@@ -107,7 +107,7 @@ double parseDurationAndUnit(const std::string& str, DefaultUnit& unit) {
             unit = DAYS; // special case: 0 does not require a unit; pretend the unit is days
         else if (unit == NONE /*no default set for this value*/) {
             throw util::format_error("unit required but not given (try e.g. 5d or 12t or 2.3y)");
-        } else if (util::CommandLine::option(util::CommandLine::DEPRECATION_WARNINGS)) {
+        } else if (util::CommandLine::option(util::CommandLine::DeprecationWarnings)) {
             cerr << "Deprecation warning: duration \"" << str
                  << "\" specified without unit; it is recommended to do so (e.g. 5d or 1t or 0.5y)" << endl;
         }
@@ -181,7 +181,7 @@ SimTime readDate(const std::string& str, DefaultUnit defUnit) {
         }
         return date;
     } else {
-        if (util::CommandLine::option(util::CommandLine::DEPRECATION_WARNINGS)) {
+        if (util::CommandLine::option(util::CommandLine::DeprecationWarnings)) {
             cerr << "Deprecation warning: time specified via duration \"" << str
                  << "\" where a date could be used; recommended to use a date (e.g. 2011-12-20)" << endl;
         }

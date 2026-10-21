@@ -38,8 +38,8 @@ vector<double> PerHostAnophParams::entoAvailabilityPercentiles;
 
 PerHostAnophParams::PerHostAnophParams(const scnXml::Mosq& mosq) {
     if (mosq.getAvailability().getDistr() != "const" &&
-        (util::ModelOptions::option(NEGATIVE_BINOMIAL_MASS_ACTION) ||
-         util::ModelOptions::option(LOGNORMAL_MASS_ACTION) || util::ModelOptions::option(COMORB_TRANS_HET)))
+        (util::ModelOptions::option(NegativeBinomialMassAction) || util::ModelOptions::option(LognormalMassAction) ||
+         util::ModelOptions::option(ComorbTransHet)))
         throw util::xml_scenario_error(
             "PerHostAnophParams::PerHostAnophParams(): ModelOptions NEGATIVE_BINOMIAL_MASS_ACTION, "
             "LOGNORMAL_MASS_ACTION, COMORB_TRANS_HET are not compatible with ento-availability heterogeneity "

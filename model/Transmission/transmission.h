@@ -69,7 +69,7 @@ inline Anopheles::AnophelesModel* createAnophelesModel(size_t i, const scnXml::A
                                                        int interventionMode) {
     Anopheles::AnophelesModel* anophModel;
 
-    if (util::ModelOptions::option(util::VECTOR_LIFE_CYCLE_MODEL)) {
+    if (util::ModelOptions::option(util::VectorLifeCycleModel)) {
         throw util::xml_scenario_error("VECTOR_LIFE_CYCLE_MODEL not yet "
                                        "implemented. Use VECTOR_SIMPLE_MPD_MODEL instead.");
         // TODO
@@ -81,7 +81,7 @@ inline Anopheles::AnophelesModel* createAnophelesModel(size_t i, const scnXml::A
         //         "model parameters for each anopheles species");
         // emergence = unique_ptr<EmergenceModel>( new LCEmergence() );
         // emergence->initLifeCycle( lcOpt.get() );
-    } else if (util::ModelOptions::option(util::VECTOR_SIMPLE_MPD_MODEL)) {
+    } else if (util::ModelOptions::option(util::VectorSimpleMpdModel)) {
         if (!anoph.getSimpleMPD().present())
             throw util::xml_scenario_error("VECTOR_SIMPLE_MPD_MODEL: requires <simpleMPD> element with "
                                            "model parameters for each anopheles species");
@@ -323,7 +323,7 @@ inline VectorModel* createVectorModel(const scnXml::Entomology& entoData, int po
         Anopheles::AnophelesModel* anophModel =
             createAnophelesModel(i, anoph, initialisationEIR, populationSize, interventionMode);
         std::unique_ptr<Anopheles::EmergenceRateEstimator> estimator;
-        if (util::ModelOptions::option(util::USE_EXACT_NV0_SOLVER))
+        if (util::ModelOptions::option(util::UseExactNv0Solver))
             estimator = std::make_unique<Anopheles::EmergenceRateSolver>(*anophModel, populationSize);
         else
             estimator = std::make_unique<Anopheles::EmergenceRateAdaptiveFitter>(*anophModel);
@@ -356,8 +356,8 @@ inline TransmissionModel* createTransmissionModel(const scnXml::Entomology& ento
     else {
         if (!entoData.getNonVector().present()) // should be a validation error, but anyway...
             throw util::xml_scenario_error("Neither vector nor non-vector data present in the XML!");
-        if (util::ModelOptions::option(util::VECTOR_LIFE_CYCLE_MODEL) ||
-            util::ModelOptions::option(util::VECTOR_SIMPLE_MPD_MODEL))
+        if (util::ModelOptions::option(util::VectorLifeCycleModel) ||
+            util::ModelOptions::option(util::VectorSimpleMpdModel))
             throw util::xml_scenario_error(
                 "VECTOR_*_MODEL is only compatible with the vector model (and non-vector data is present).");
         model = createNonVectorModel(entoData);
@@ -368,7 +368,7 @@ inline TransmissionModel* createTransmissionModel(const scnXml::Entomology& ento
         assert(util::vectors::approxEqual(model->annualEIR, entoData.getScaledAnnualEIR().get()));
     }
 
-    if (util::CommandLine::option(util::CommandLine::PRINT_ANNUAL_EIR)) {
+    if (util::CommandLine::option(util::CommandLine::PrintAnnualEir)) {
         // Note: after internal scaling (which doesn't imply exit)
         // but before external scaling.
         cout << "Total annual EIR: " << model->annualEIR << endl;

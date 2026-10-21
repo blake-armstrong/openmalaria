@@ -53,32 +53,32 @@ struct HumanHet {
 
 HumanHet hetSample(util::LocalRng& rng) {
     HumanHet het;
-    if (util::ModelOptions::option(util::TRANS_HET)) {
+    if (util::ModelOptions::option(util::TransHet)) {
         het.availabilityFactor = 0.2;
         if (rng.bernoulli(0.5)) {
             het.availabilityFactor = 1.8;
         }
     }
-    if (util::ModelOptions::option(util::COMORB_HET)) {
+    if (util::ModelOptions::option(util::ComorbHet)) {
         het.comorbidityFactor = 0.2;
         if (rng.bernoulli(0.5)) {
             het.comorbidityFactor = 1.8;
         }
     }
-    if (util::ModelOptions::option(util::TREAT_HET)) {
+    if (util::ModelOptions::option(util::TreatHet)) {
         het.treatmentSeekingFactor = 0.2;
         if (rng.bernoulli(0.5)) {
             het.treatmentSeekingFactor = 1.8;
         }
     }
-    if (util::ModelOptions::option(util::TRANS_TREAT_HET)) {
+    if (util::ModelOptions::option(util::TransTreatHet)) {
         het.treatmentSeekingFactor = 0.2;
         het.availabilityFactor = 1.8;
         if (rng.bernoulli(0.5)) {
             het.treatmentSeekingFactor = 1.8;
             het.availabilityFactor = 0.2;
         }
-    } else if (util::ModelOptions::option(util::COMORB_TREAT_HET)) {
+    } else if (util::ModelOptions::option(util::ComorbTreatHet)) {
         if (rng.bernoulli(0.5)) {
             het.comorbidityFactor = 1.8;
             het.treatmentSeekingFactor = 0.2;
@@ -86,14 +86,14 @@ HumanHet hetSample(util::LocalRng& rng) {
             het.comorbidityFactor = 0.2;
             het.treatmentSeekingFactor = 1.8;
         }
-    } else if (util::ModelOptions::option(util::COMORB_TRANS_HET)) {
+    } else if (util::ModelOptions::option(util::ComorbTransHet)) {
         het.availabilityFactor = 1.8;
         het.comorbidityFactor = 1.8;
         if (rng.bernoulli(0.5)) {
             het.availabilityFactor = 0.2;
             het.comorbidityFactor = 0.2;
         }
-    } else if (util::ModelOptions::option(util::TRIPLE_HET)) {
+    } else if (util::ModelOptions::option(util::TripleHet)) {
         het.availabilityFactor = 1.8;
         het.comorbidityFactor = 1.8;
         het.treatmentSeekingFactor = 0.2;

@@ -47,7 +47,7 @@ WithinHost::TreatmentId CM5DayCommon::treatmentSevere;
 
 bool cfr_pf_use_hospital = false;
 
-void CM5DayCommon::init() { cfr_pf_use_hospital = util::ModelOptions::option(util::CFR_PF_USE_HOSPITAL); }
+void CM5DayCommon::init() { cfr_pf_use_hospital = util::ModelOptions::option(util::CfrPfUseHospital); }
 
 // ———  per-human, construction and destruction  ———
 

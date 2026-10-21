@@ -184,7 +184,7 @@ SimTime readSurveyDates(const scnXml::Monitoring& monitoring) {
             << std::endl;
     }
 
-    if (util::CommandLine::option(util::CommandLine::PRINT_SURVEY_TIMES)) {
+    if (util::CommandLine::option(util::CommandLine::PrintSurveyTimes)) {
         std::cout << "Survey\tsteps\tdate\n";
         for (const SurveyDate& surveyDate : runtime.surveyDates) {
             if (!surveyDate.isReported())

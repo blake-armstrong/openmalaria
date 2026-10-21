@@ -68,7 +68,7 @@ void CommonWithinHost::init(const scnXml::Scenario& scenario) {
 CommonWithinHost::CommonWithinHost(LocalRng& rng, double comorbidityFactor) : WHFalciparum(rng, comorbidityFactor) {
     assert(Sim::one_ts() == Sim::from_days(1) || Sim::one_ts() == Sim::from_days(5));
 
-    opt_vaccine_genotype = util::ModelOptions::option(util::VACCINE_GENOTYPE);
+    opt_vaccine_genotype = util::ModelOptions::option(util::VaccineGenotype);
 
     // Sample a weight heterogeneity factor
 #ifndef NDEBUG

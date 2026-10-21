@@ -38,7 +38,7 @@ Diagnostic::Diagnostic(const Parameters& parameters, const scnXml::Diagnostic& e
     dens_lim = numeric_limits<double>::quiet_NaN();
     specificity = numeric_limits<double>::quiet_NaN();
 
-    if (util::ModelOptions::option(util::VIVAX_SIMPLE_MODEL)) {
+    if (util::ModelOptions::option(util::VivaxSimpleModel)) {
         return; // both parameters NaN (set above)
     }
 
@@ -73,7 +73,7 @@ Diagnostic::Diagnostic(const Parameters& parameters, const scnXml::Diagnostic& e
     // non-Garki sources are not equivalent to those from the Malariatherapy
     // data (which is used internally).
     if (!elt.getUnits().present()) {
-        if (util::ModelOptions::option(util::GARKI_DENSITY_BIAS)) {
+        if (util::ModelOptions::option(util::GarkiDensityBias)) {
             // User must be explicit in this case, because presumably the Garki
             // bias is to be used for some diagnostics but likely not all
             // (e.g. neonatal mortality).
@@ -81,11 +81,11 @@ Diagnostic::Diagnostic(const Parameters& parameters, const scnXml::Diagnostic& e
                 "diagnostics/diagnostic(*)/units: must specify this attribute when GARKI_DENSITY_BIAS is set");
         }
         // otherwise we assume "Other"
-        dens_lim *= parameters[Parameter::DENSITY_BIAS_NON_GARKI];
+        dens_lim *= parameters[Parameter::DensityBiasNonGarki];
     } else if (elt.getUnits().get() == "Other") {
-        dens_lim *= parameters[Parameter::DENSITY_BIAS_NON_GARKI];
+        dens_lim *= parameters[Parameter::DensityBiasNonGarki];
     } else if (elt.getUnits().get() == "Garki") {
-        dens_lim *= parameters[Parameter::DENSITY_BIAS_GARKI];
+        dens_lim *= parameters[Parameter::DensityBiasGarki];
     } else {
         assert(elt.getUnits().get() == "Malariatherapy");
         // in this case we don't need to use a bias factor
@@ -145,7 +145,7 @@ void diagnostics::init(const Parameters& parameters, const scnXml::Scenario& sce
     }
 
     const scnXml::Surveys& surveys = scenario.getMonitoring().getSurveys();
-    if (util::ModelOptions::option(util::VIVAX_SIMPLE_MODEL)) {
+    if (util::ModelOptions::option(util::VivaxSimpleModel)) {
         // So far the implemented Vivax code does not produce parasite
         // densities, thus this diagnostic model cannot be used.
         diagnostics::monitoring_diagnostic = &diagnostics::make_deterministic(numeric_limits<double>::quiet_NaN());
@@ -154,7 +154,7 @@ void diagnostics::init(const Parameters& parameters, const scnXml::Scenario& sce
             throw util::xml_scenario_error("monitoring/surveys: do not "
                                            "specify both detectionLimit and diagnostic");
         }
-        if (util::CommandLine::option(util::CommandLine::DEPRECATION_WARNINGS)) {
+        if (util::CommandLine::option(util::CommandLine::DeprecationWarnings)) {
             std::cerr << "Deprecation warning: monitoring/surveys: "
                          "specification of \"diagnostic\" is suggested over \"detectionLimit\""
                       << std::endl;
@@ -163,8 +163,8 @@ void diagnostics::init(const Parameters& parameters, const scnXml::Scenario& sce
         // This controls whether the detection limit is specified relative to
         // the Garki or other methods.
         double densitybias = numeric_limits<double>::quiet_NaN();
-        if (util::ModelOptions::option(util::GARKI_DENSITY_BIAS)) {
-            densitybias = parameters[Parameter::DENSITY_BIAS_GARKI];
+        if (util::ModelOptions::option(util::GarkiDensityBias)) {
+            densitybias = parameters[Parameter::DensityBiasGarki];
         } else {
             if (scenario.getAnalysisNo().present()) {
                 int analysisNo = scenario.getAnalysisNo().get();
@@ -175,7 +175,7 @@ void diagnostics::init(const Parameters& parameters, const scnXml::Scenario& sce
                          << endl;
                 }
             }
-            densitybias = parameters[Parameter::DENSITY_BIAS_NON_GARKI];
+            densitybias = parameters[Parameter::DensityBiasNonGarki];
         }
         double detectionLimit = surveys.getDetectionLimit().get() * densitybias;
         diagnostics::monitoring_diagnostic = &diagnostics::make_deterministic(detectionLimit);
@@ -184,7 +184,7 @@ void diagnostics::init(const Parameters& parameters, const scnXml::Scenario& sce
             throw util::xml_scenario_error("monitoring/surveys: require "
                                            "either detectionLimit or diagnostic");
         }
-        if (util::ModelOptions::option(util::GARKI_DENSITY_BIAS)) {
+        if (util::ModelOptions::option(util::GarkiDensityBias)) {
             throw util::xml_scenario_error("Use of GARKI_DENSITY_BIAS is not "
                                            "appropriate when monitoring/surveys/diagnostic is used.");
         }

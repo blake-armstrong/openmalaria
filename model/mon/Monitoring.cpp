@@ -387,12 +387,12 @@ void concludeSurvey() {
 }
 
 void writeSurveyData() {
-    string filename = util::CommandLine::getOutputName();
-    const bool binary = util::CommandLine::getOutputFormat() == util::CommandLine::OutputFormat::BIN;
+    string filename = util::CommandLine::output_name();
+    const bool binary = util::CommandLine::output_format() == util::CommandLine::OutputFormat::BIN;
     const auto writer = binary ? writeBinary : writeText;
     const ios::openmode mode = ios::out | ios::binary;
 
-    if (util::CommandLine::option(util::CommandLine::COMPRESS_OUTPUT)) {
+    if (util::CommandLine::option(util::CommandLine::CompressOutput)) {
         writeOutput<ogzstream>(filename, mode, writer);
     } else {
         writeOutput<ofstream>(filename, mode, writer);

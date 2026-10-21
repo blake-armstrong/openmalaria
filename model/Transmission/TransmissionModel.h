@@ -125,7 +125,7 @@ protected:
           tsAdultEIR(0.0), surveyInputEIR(0.0), surveySimulatedEIR(0.0), adultAge(PerHost::adultAge()),
           numTransmittingHumans(0) {
         // Set VACCINE_GENOTYPE option
-        opt_vaccine_genotype = util::ModelOptions::option(util::VACCINE_GENOTYPE);
+        opt_vaccine_genotype = util::ModelOptions::option(util::VaccineGenotype);
 
         mon::Continuous::registerCallback("input EIR", "\tinput EIR",
                                           std::bind(&TransmissionModel::ctsCbInputEIR, this, _1));

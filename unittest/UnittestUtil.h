@@ -393,29 +393,29 @@ public:
 
     static void EmpiricalWHM_setup() {
         unittest_options::model_options.reset();
-        unittest_options::model_options.set(util::EMPIRICAL_WITHIN_HOST_MODEL);
+        unittest_options::model_options.set(util::EmpiricalWithinHostModel);
         OM::WithinHost::opt_common_whm = true;
     }
 
     static void MolineauxWHM_setup(const std::string& mode, bool repl_gamma) {
         unittest_options::model_options.reset();
-        unittest_options::model_options.set(util::MOLINEAUX_WITHIN_HOST_MODEL);
+        unittest_options::model_options.set(util::MolineauxWithinHostModel);
         OM::WithinHost::opt_common_whm = true;
         if (mode == "original") {
         } else if (mode == "1st_max_gamma") {
-            unittest_options::model_options.set(util::FIRST_LOCAL_MAXIMUM_GAMMA);
+            unittest_options::model_options.set(util::FirstLocalMaximumGamma);
         } else if (mode == "mean_dur_gamma") {
-            unittest_options::model_options.set(util::MEAN_DURATION_GAMMA);
+            unittest_options::model_options.set(util::MeanDurationGamma);
         } else if (mode == "1st_max_and_mean_dur_gamma") {
-            unittest_options::model_options.set(util::FIRST_LOCAL_MAXIMUM_GAMMA);
-            unittest_options::model_options.set(util::MEAN_DURATION_GAMMA);
+            unittest_options::model_options.set(util::FirstLocalMaximumGamma);
+            unittest_options::model_options.set(util::MeanDurationGamma);
         } else if (mode == "pairwise") {
-            unittest_options::model_options.set(util::MOLINEAUX_PAIRWISE_SAMPLE);
+            unittest_options::model_options.set(util::MolineauxPairwiseSample);
         } else {
             ETS_ASSERT(false); // stop this test
         }
         if (repl_gamma) {
-            unittest_options::model_options.set(util::PARASITE_REPLICATION_GAMMA);
+            unittest_options::model_options.set(util::ParasiteReplicationGamma);
         }
 
         // Set parameters; all of these were estimated externally from OpenMalaria
@@ -429,7 +429,7 @@ public:
 
     static void MosqLifeCycle_init() {
         unittest_options::model_options.reset();
-        unittest_options::model_options.set(util::VECTOR_LIFE_CYCLE_MODEL);
+        unittest_options::model_options.set(util::VectorLifeCycleModel);
     }
 
     static double getPrescribedMg(const pk_pd::LSTMModel& pkpd) {

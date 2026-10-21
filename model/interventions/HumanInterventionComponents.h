@@ -239,7 +239,7 @@ public:
             if (durL < neg1 || durB < neg1) {
                 throw util::xml_scenario_error("treatSimple: cannot have durationBlood or durationLiver less than -1");
             }
-            if (util::ModelOptions::option(util::VIVAX_SIMPLE_MODEL)) {
+            if (util::ModelOptions::option(util::VivaxSimpleModel)) {
                 if (durL != Sim::zero() || durB != neg1)
                     throw util::unimplemented_exception(
                         "vivax model only supports timestepsLiver=0, timestepsBlood=-1");

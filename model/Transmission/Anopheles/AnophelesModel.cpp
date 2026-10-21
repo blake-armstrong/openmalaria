@@ -295,7 +295,7 @@ void AnophelesModel::initEIR(const vector<double>& initEIR365, vector<double> FS
         partialInitEIR[mod_nn(Sim::in_steps(i), Sim::steps_per_year())] += initEIR365[i];
     }
 
-    if (util::CommandLine::option(util::CommandLine::PRINT_ANNUAL_EIR))
+    if (util::CommandLine::option(util::CommandLine::PrintAnnualEir))
         cout << "Annual EIR for " << mosq.name << ": " << vectors::sum(speciesEIR) << endl;
 
     // Set other data used for mosqEmergeRate calculation:

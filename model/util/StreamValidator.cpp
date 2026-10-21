@@ -82,7 +82,7 @@ void StreamValidatorType::saveStream() {
 }
 
 void StreamValidatorType::loadStream(const string& path) {
-    string file = CommandLine::lookupResource(path);
+    string file = CommandLine::lookup_resource(path);
     storeMode = false;
     ifstream f_str(file.c_str(), ios::in | ios::binary);
     if (!f_str.is_open())

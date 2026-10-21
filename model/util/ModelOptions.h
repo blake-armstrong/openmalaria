@@ -20,8 +20,8 @@
  * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301, USA.
  */
 
-#ifndef Hmod_util_ModelOptions
-#define Hmod_util_ModelOptions
+#ifndef HMOD_UTIL_MODEL_OPTIONS
+#define HMOD_UTIL_MODEL_OPTIONS
 
 #include "Global.h"
 #include "util/ModelNameProvider.h"
@@ -59,7 +59,7 @@ enum OptionCodes {
 	* 
 	* Default: New infections are introduced via a Poisson process as described
 	* in AJTMH 75 (suppl 2) pp11-18. */
-    NEGATIVE_BINOMIAL_MASS_ACTION,
+    NegativeBinomialMassAction,
 
     /* @brief An IPT model, no longer used
 	* 
@@ -73,10 +73,10 @@ enum OptionCodes {
 	* 
 	* Default: New infections are introduced via a Poisson process as described
 	* in AJTMH 75 (suppl 2) pp11-18. */
-    LOGNORMAL_MASS_ACTION,
+    LognormalMassAction,
 
     /** Infections are introduced without using preerythrocytic immunity. */
-    NO_PRE_ERYTHROCYTIC,
+    NoPreErythrocytic,
 
     /** @brief Bug fixes in Descriptive & DescriptiveIPT within-host models.
 	*
@@ -87,8 +87,8 @@ enum OptionCodes {
 	* MAX_DENS_RESET is not used since it is unneeded when MAX_DENS_CORRECTION
 	* is present and wouldn't make sense when not. */
     // @{
-    MAX_DENS_CORRECTION,
-    INNATE_MAX_DENS,
+    MaxDensCorrection,
+    InnateMaxDens,
     // 	MAX_DENS_RESET,
     //@}
 
@@ -96,18 +96,18 @@ enum OptionCodes {
 	*
 	* Default: Parasite densities are determined from the descriptive model
 	* given in AJTMH 75 (suppl 2) pp19-31 .*/
-    DUMMY_WITHIN_HOST_MODEL,
+    DummyWithinHostModel,
 
     /** Clinical episodes occur if parasitaemia exceeds the pyrogenic threshold.
 	* 
 	* Default: Clinical episodes are a stochastic function as described in AJTMH
 	* 75 (suppl 2) pp56-62. */
-    PREDETERMINED_EPISODES,
+    PredeterminedEpisodes,
 
     /** @brief The presentation model includes simulation of non-malaria fevers
 	* 
 	* Default: Non-malaria fevers are not simulated. */
-    NON_MALARIA_FEVERS,
+    NonMalariaFevers,
 
     //Deprecated: PK/PD code is enabled in all compatible within-host models
     /** @brief Use a PK & PD model for drug effects
@@ -127,13 +127,13 @@ enum OptionCodes {
 	* 
 	* Default: use the Tediosi et al case management model (Case management as
 	* described in AJTMH 75 (suppl 2) pp90-103), ClinicalImmediateOutcomes. */
-    CLINICAL_EVENT_SCHEDULER,
+    ClinicalEventScheduler,
 
     /** @brief Clinical episodes occur in response to a simple parasite density trigger
 	* 
 	* Default: Use the Ross et al presentation model (Clinical episodes are a
 	* stochastic function as described in AJTMH 75 (suppl 2) pp56-62). */
-    MUELLER_PRESENTATION_MODEL,
+    MuellerPresentationModel,
 
     /** @brief Simple heterogeneity
 	* 
@@ -145,49 +145,49 @@ enum OptionCodes {
 	* compatible. */
     // @{
     /// @brief Allow simple heterogeneity in transmission
-    TRANS_HET,
+    TransHet,
     /// @brief Allow simple heterogeneity in comorbidity
-    COMORB_HET,
+    ComorbHet,
     /// @brief Allow simple heterogeneity in treatment seeking
-    TREAT_HET,
+    TreatHet,
     /// @brief Allow correlated heterogeneities in transmission and comorbidity
-    COMORB_TRANS_HET,
+    ComorbTransHet,
     /// @brief Allow correlated heterogeneities in transmission and treatment seeking
-    TRANS_TREAT_HET,
+    TransTreatHet,
     /// @brief Allow correlated heterogeneities comorbidity and treatment seeking
-    COMORB_TREAT_HET,
+    ComorbTreatHet,
     /// @brief Allow correlated heterogeneities in transmission, comorbidity and treatment seeking
-    TRIPLE_HET,
+    TripleHet,
     // @}
 
     /** @brief Selection of within host models
 	*/
     //@{
     /// Parasite densities are predicted from an empirical model
-    EMPIRICAL_WITHIN_HOST_MODEL,
+    EmpiricalWithinHostModel,
 
     /// Use Molineaux within host model
-    MOLINEAUX_WITHIN_HOST_MODEL,
+    MolineauxWithinHostModel,
 
     /** Use Penny infection model. */
-    PENNY_WITHIN_HOST_MODEL,
+    PennyWithinHostModel,
     // @}
 
     /** @brief Selection of gamma distribution for Molineaux or Penny within host models
 	 */
     //@{
     /** Use Gamma distribution for mean duration (Molineaux model) */
-    MEAN_DURATION_GAMMA,
+    MeanDurationGamma,
     /** Use Gamma distribution for first local maximum (Molineaux model) */
-    FIRST_LOCAL_MAXIMUM_GAMMA,
+    FirstLocalMaximumGamma,
     /** Use Gamma distribution for first local maximum (Molineaux model) */
-    PARASITE_REPLICATION_GAMMA,
+    ParasiteReplicationGamma,
 
     /** Use Gamma distribution for immune threshold (Penny model) */
-    IMMUNE_THRESHOLD_GAMMA,
+    ImmuneThresholdGamma,
 
     /** Use Gamma distribution for update density (Penny model) */
-    UPDATE_DENSITY_GAMMA,
+    UpdateDensityGamma,
     //@}
 
     /** Use the Garki density bias instead of the default one in the detection limit.
@@ -195,7 +195,7 @@ enum OptionCodes {
 	 * The default bias corresponds to counting parasites and white blood cells
 	 * (assuming a white blood cell density of 8000 per µl), the Garki bias to
 	 * estimations from a probability function. */
-    GARKI_DENSITY_BIAS,
+    GarkiDensityBias,
 
     /** This has been removed; mass drug interventions can be used as a
          * replacement. */
@@ -208,23 +208,23 @@ enum OptionCodes {
          * vector population dynamics modelling.
          * 
          * Requires vector model. */
-    VECTOR_LIFE_CYCLE_MODEL,
+    VectorLifeCycleModel,
 
     /** Turn on the simple mosquito population dynamics model (simpler
          * version of life-cycle model).
          * 
          * Requires vector model. */
-    VECTOR_SIMPLE_MPD_MODEL,
+    VectorSimpleMpdModel,
 
     /** Sample case-specific densities P*c and P*m as a pair from one of
          * the 35 patient records. */
-    MOLINEAUX_PAIRWISE_SAMPLE,
+    MolineauxPairwiseSample,
 
     /** Use a simple Vivax model instead of Falciparum.
          * 
          * See "Individual-Based Model for Plasmodium vvivax", Ross, Briet,
          * Hardy, Chitnis (unpublished?). */
-    VIVAX_SIMPLE_MODEL,
+    VivaxSimpleModel,
 
     /** No longer used. */
     //         PROPHYLACTIC_DRUG_ACTION_MODEL,
@@ -238,7 +238,7 @@ enum OptionCodes {
          * 
          * This option fixes both bugs (though only one would have any effect,
          * depending on which case management model is used). */
-    INDIRECT_MORTALITY_FIX,
+    IndirectMortalityFix,
 
     /** Potentially a bug-fix: for in-hospital severe malaria patients
          * where treatment fails to clear parasites, enabling this option
@@ -249,7 +249,7 @@ enum OptionCodes {
          * This is disabled by default since model parameters have been fitted
          * with this disabled. New models could be fit with the option enabled.
          */
-    CFR_PF_USE_HOSPITAL,
+    CfrPfUseHospital,
 
     /** By default 'nExpected' and 'nNewInfections' outputs are affected
      	 * by the PEV vaccine factor (the vaccine reduces the 
@@ -263,7 +263,7 @@ enum OptionCodes {
      	 * This option is required when genotypes are used in combination 
      	 * with the vaccine.
      	 */
-    VACCINE_GENOTYPE,
+    VaccineGenotype,
 
     /** This makes the health system memory behaves as expected. With this
          * option, specifying a health system memory of 30 days means that a 
@@ -272,17 +272,17 @@ enum OptionCodes {
          * currently. Setting the health system memory to 5 days allows the 
          * model to report a new clinical case every time step.
          */
-    HEALTH_SYSTEM_MEMORY_FIX,
+    HealthSystemMemoryFix,
 
     /** Use the exact emergence-rate solver to initialize Nv0.
          *
          * Enable this option to use the exact fitting method.
          * By default, the legacy adaptive fitter is used.
          */
-    USE_EXACT_NV0_SOLVER,
+    UseExactNv0Solver,
 
     // Used by tests; should be 1 more than largest option
-    NUM_OPTIONS,
+    NumOptions,
 
     IGNORE // special value for use in string to enum lookup
 };
@@ -295,8 +295,8 @@ public:
     /*
     * Initialize the set of model options to use, based on input XML contents.
     */
-    ModelOptionFlags(const scnXml::Model::ModelOptionsOptional& optionsElt, const util::ModelNameProvider& mnp,
-                     const CommandLineOptions& commandLine, SimTime oneTs);
+    ModelOptionFlags(const scnXml::Model::ModelOptionsOptional& options_elt, const util::ModelNameProvider& mnp,
+                     const CommandLineOptions& command_line, SimTime one_ts);
 
     /** Return true if given option (from OptionCodes) is active. */
     bool option(OptionCodes code) const { return options.test(code); }
@@ -311,24 +311,24 @@ private:
     * but are turned on in the absence of anything in the input suggesting they should
     * be turned off for legacy (i.e. backwards compatibility) reasons.
     */
-    static std::bitset<NUM_OPTIONS> getBaseModelOptions();
+    static std::bitset<NumOptions> get_base_model_options();
 
     /*
     * Returns a bitset representing the default model options used when no named
     * model is selected.
     */
-    static std::bitset<NUM_OPTIONS> getLegacyDefaultModelOptions();
+    static std::bitset<NumOptions> get_legacy_default_model_options();
 
     // Reset opts to default. Used by unit tests.
     void reset() {
         options.reset();
-        options.set(MAX_DENS_CORRECTION);
-        options.set(INNATE_MAX_DENS);
+        options.set(MaxDensCorrection);
+        options.set(InnateMaxDens);
     }
     void set(OptionCodes code) { options.set(code); }
 
     // The model options
-    std::bitset<NUM_OPTIONS> options;
+    std::bitset<NumOptions> options;
 
     friend class ::UnittestUtil; // Note: class is in base namespace
 };

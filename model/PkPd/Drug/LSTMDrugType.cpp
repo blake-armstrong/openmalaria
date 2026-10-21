@@ -343,7 +343,7 @@ LSTMDrugType::LSTMDrugType(size_t index, const scnXml::PKPDDrug& drug_data)
             genotype_mapping[j] = phenotype;
         }
 
-        if (util::CommandLine::option(util::CommandLine::PRINT_GENOTYPES)) {
+        if (util::CommandLine::option(util::CommandLine::PrintGenotypes)) {
             // Debug output to see which genotypes correspond to phenotypes
             cout << endl;
             cout << "Phenotype mapping: " << endl << "----------" << endl;

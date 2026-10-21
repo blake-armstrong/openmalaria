@@ -38,7 +38,7 @@ namespace util {
 // ———  AgeGroupInterpolation derivatives  ———
 
 void AgeGroupInterpolation::outputSamples(const string name) {
-    if (!util::CommandLine::option(util::CommandLine::SAMPLE_INTERPOLATIONS)) {
+    if (!util::CommandLine::option(util::CommandLine::SampleInterpolations)) {
         return;
     }
     ofstream fstream((name + ".csv").c_str());

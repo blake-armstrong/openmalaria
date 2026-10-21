@@ -53,23 +53,23 @@ util::AgeGroupInterpolator ClinicalModel::pSequelaeInpatient;
 void ClinicalModel::init(const Parameters& parameters, const scnXml::Scenario& scenario) {
     const scnXml::Clinical& clinical = scenario.getModel().getClinical();
     try {
-        indirectMortBugfix = util::ModelOptions::option(util::INDIRECT_MORTALITY_FIX);
+        indirectMortBugfix = util::ModelOptions::option(util::IndirectMortalityFix);
         //NOTE: if changing XSD, this should not have a default unit:
         healthSystemMemory = UnitParse::readShortDuration(clinical.getHealthSystemMemory(), UnitParse::STEPS);
-        oddsRatioThreshold = exp(parameters[Parameter::LOG_ODDS_RATIO_CF_COMMUNITY]);
+        oddsRatioThreshold = exp(parameters[Parameter::LogOddsRatioCfCommunity]);
         InfantMortality::init(parameters);
     } catch (const util::format_error& e) {
         throw util::xml_scenario_error(string("model/clinical/healthSystemMemory: ").append(e.message()));
     }
 
-    if (util::ModelOptions::option(util::CLINICAL_EVENT_SCHEDULER)) {
+    if (util::ModelOptions::option(util::ClinicalEventScheduler)) {
         opt_event_scheduler = true;
         ClinicalEventScheduler::init(parameters, clinical);
     } else {
         if (scenario.getHealthSystem().getImmediateOutcomes().present()) {
             opt_imm_outcomes = true;
 
-            if (util::CommandLine::option(util::CommandLine::DEPRECATION_WARNINGS)) {
+            if (util::CommandLine::option(util::CommandLine::DeprecationWarnings)) {
                 cerr << "Deprecation warning: healthSystem: use of ImmediateOutcomes can be replaced by the more "
                         "flexible DecisionTree5Day (optional)"
                      << endl;
@@ -195,7 +195,7 @@ double nonMalariaMortality;
 void InfantMortality::init(const OM::Parameters& parameters) {
     infantDeaths.resize(Sim::steps_per_year());
     infantIntervalsAtRisk.resize(Sim::steps_per_year());
-    nonMalariaMortality = parameters[Parameter::NON_MALARIA_INFANT_MORTALITY];
+    nonMalariaMortality = parameters[Parameter::NonMalariaInfantMortality];
 }
 
 void InfantMortality::preMainSimInit() {

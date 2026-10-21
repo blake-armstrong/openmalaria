@@ -170,7 +170,7 @@ VectorModel::VectorModel(vector<double> initEIR, int interventionMode,
       species(std::move(speciesList)), emergenceRateEstimators(std::move(emergenceRateEstimatorsList)),
       speciesIndex(std::move(speciesIndexList)) {
     // set VACCINE_GENOTYPE option
-    opt_vaccine_genotype = util::ModelOptions::option(util::VACCINE_GENOTYPE);
+    opt_vaccine_genotype = util::ModelOptions::option(util::VaccineGenotype);
 
     // Calculate total annual EIR
     annualEIR = vectors::sum(initialisationEIR);

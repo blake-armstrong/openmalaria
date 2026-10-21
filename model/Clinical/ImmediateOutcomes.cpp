@@ -166,7 +166,7 @@ void ImmediateOutcomes::setHealthSystem(const scnXml::HSImmediateOutcomes& hsDes
 
     useDiagnosticUC = hsDescription.getUseDiagnosticUC();
 
-    if (ModelOptions::option(util::VIVAX_SIMPLE_MODEL)) {
+    if (ModelOptions::option(util::VivaxSimpleModel)) {
         WithinHost::WHVivax::setHSParameters(
             hsDescription.getLiverStageDrug().present() ? &hsDescription.getLiverStageDrug().get() : 0);
     } else if (hsDescription.getLiverStageDrug().present()) {
