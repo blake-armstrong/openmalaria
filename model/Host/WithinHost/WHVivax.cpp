@@ -52,7 +52,7 @@ SimTime HypnozoiteReleaseDistribution::sample_release_delay(LocalRng& rng) const
     int count = 0;
     const int maxcount = 1000;
 
-    do {
+    do { // NOLINT(cppcoreguidelines-avoid-do-while)
         delay = sampler->sample(rng);
         count += 1;
 
@@ -143,7 +143,7 @@ void VivaxParams::set_health_system(const scnXml::LiverStageDrug* elt, const uti
             if (command_line.option(util::CommandLine::DeprecationWarnings)) {
                 cerr << "Deprecation warning: pUseUncomplicated is deprecated; it is "
                         "suggested to use the liver stage simple treatment option instead."
-                     << endl;
+                     << endl; // NOLINT(performance-avoid-endl)
             }
         }
         hs.effectiveness_pq = elt->getEffectivenessOnUse().getValue();
