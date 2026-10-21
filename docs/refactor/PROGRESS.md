@@ -29,7 +29,7 @@ See `PLAN.md` for the session protocol, chunks and gates. Append one log entry p
 | D2b | done | 33185613, 9447ccf7, 1647ef78, (this log entry) |
 | D3 | done | cfe2250e, b074dcd3, 79d7e9ae, 6e96d1cf, a653b976, efb5ad9d, cf709072, 39f23abd, b8df955e, fbb7c714, (this log entry) |
 | D4 | split | D4a–D4d |
-| D4a | todo | |
+| D4a | done | fa7f275c, 49271693, 02029c1e, a07021c4, 06ddff71, 4b223446, 89a7167b, f28d6070, acb0e0c0, f28ffcbe, (this log entry) |
 | D4b | todo | |
 | D4c | todo | |
 | D4d | todo | |
@@ -858,3 +858,36 @@ See `PLAN.md` for the session protocol, chunks and gates. Append one log entry p
 
 ### Plan amendment: D4 split (2026-10-21, at the start of D4)
 - D4 covers about 35 files of non-mechanical change (the four within-host classes, the eight infection models, `WHVivax`, the three registries, `Simulation` and the unit tests), past the protocol's ~20. Split in advance by layer, so each part has one owner object to move statics into: D4a (the falciparum within-host classes into a new `WithinHost::WithinHostModel`), D4b (the infection models' parameters into that object), D4c (`WHVivax`), D4d (`Genotypes`, `diagnostics`, `Treatments`). Rows in PLAN.md § Stage D.
+
+### D4a: falciparum within-host statics → `WithinHostModel` owned by `Simulation` (done, 2026-10-21)
+- Base: fa7f275c (the D4 split; same C++ as 5b9b0897). The G-perf base worktree `../om-bench-base` was moved to fa7f275c and rebuilt.
+- Commits:
+  - fa7f275c: the D4 split (see the plan amendment above).
+  - 49271693: `util::AgeGroupInterpolator` move-only (F43), so a parameter object holding one can be assigned once in the init chain.
+  - 02029c1e: **logic.**
+    - New `WithinHost::WithinHostModel` (`Host/WithinHost/WithinHostModel.{h,cpp}`): the model kind (the old `opt_*_whm` flags) plus `FalciparumParams` (the eight `WHFalciparum.cpp` statics, `y_lag_len`, `reportInfectionsByGenotype`, the vaccine-genotype option), `CommonWithinHostParams` (mass by age, mass heterogeneity, the infected/patent report flag) and `DescriptiveWithinHostParams` (the patent report flag). Each struct lives in its class's header.
+    - Its constructor is the old `WHInterface::init` → `WHFalciparum::init` → infection init → `CommonWithinHost::init`/`initDescriptive` chain, called at the same point of `Simulation`'s init, taking the `ModelOptionFlags` instead of the bridge. Every `Parameters` read happens in the old order, including the dead `ImmunityPenalty` (kept as `imm_penalty_22`, since `operator[]` throws for a missing parameter). The nested static inits it still calls (`PathogenesisModel::init`, `Infection::init`, the infection models' inits, `LSTMModel::init`, `WHVivax::init`) belong to D4b, D4c, D5 and D6.
+    - `WithinHostModel::create` replaces the if-chain of `createWithinHostModel`. Each per-human model holds a pointer to its parameter struct(s) (a pointer, not a reference, per `cppcoreguidelines-avoid-const-or-ref-data-members`); `WHFalciparum` exposes it through a protected `params()`.
+    - **Bridge:** `bridge::current_within_host_model` / `within_host_model()` with `WithinHostModelBinding`, declared in `Simulation` right after `Parameters` (so the humans, destroyed earlier, never outlive it). `WHInterface::create_within_host_model` (called by `Human`) delegates through it.
+    - `CommonWithinHost`'s by-genotype report sorts a local vector instead of the file-static `sortedInfs`, a mutable global used from a `const` method.
+    - Unit tests: `UnittestUtil.h` binds a default `WithinHostModel` (Descriptive, zero parameters, as the zero-initialised statics were), and the Empirical/Molineaux setups set its kind to Common where they set `opt_common_whm` (never reset, as before), so the unit-test draws are unchanged (F30). `InfectionImmunitySuite` builds its own `FalciparumParams` instead of `WHFalciparum::setParams`, and includes what it uses.
+  - a07021c4: rename-tool fix (F44), found by this chunk's rename.
+  - 06ddff71 + 4b223446: **rename**, 121 renames over 34 files. Maps: `getInfectionOrigin=infection_origin` (the tool's `get_infection_origin` would hide the free template of that name the method bodies call), `m_y_lag_i=y_lag_imported`, `m_y_lag_l=y_lag_local` (`y_lag_i` is the local index that subscripts them). No skips. The uncompiled `ESCaseManagementSuite.h` got text renames of `createWithinHostModel` with the rest (F9).
+  - 89a7167b + f28d6070: **modernise, tool:** 32 `use-override`, 11 `loop-convert`, 9 `use-default-member-init`, 7 `concat-nested-namespaces`, 2 `use-equals-default`.
+  - acb0e0c0: **modernise, hand:** infection lists as `std::list<std::unique_ptr<…>>` (no `new`/`delete`, no destructors); `get_infection_origin` (`Infection.h`) takes a list of any pointer type; a ranges sort with a `genotype()` projection replaces the global comparator object; `WHInterface` copies deleted; redundant `int(...)` casts on `SimTime`; explicit `size()` narrowing; Descriptive's infection list private; 35 consts. Left: `WHFalciparum`'s protected data members, do-while loops, D4b's statics.
+  - f28ffcbe: FINDINGS F43, F44; STYLE.md and the rename-module skill describe the tool fix.
+- Gates:
+  - G-exact / G-unit: 53/53 on `build-rework/` (Release) and `build-debug/` (Debug, bridge asserts live) after every C++ commit.
+  - G-stat: plain `ctest -j4` at acb0e0c0: 106/106 (53 old, 51 `stat_*`, 2 tool tests).
+  - G-style: `util/style.sh check fa7f275c` clean at acb0e0c0. The rename and modernise tool commits passed their skill checks (format half clean, second dry run with nothing to do, token check), and `check <tool commit>^` is clean after each ignore-revs commit.
+  - G-perf: `util/bench.sh --compare ../om-bench-base/build-rework`, candidate acb0e0c0, load ~4.8 at the start: median per-pair ratio 0.9968 (−0.32%), spreads 4.4% / 2.5%. The parameter loads through a per-human pointer cost nothing measurable.
+  - Init error paths, A/B against the base build (since `WithinHostModel`'s constructor now raises them): a Molineaux scenario without `<weight>`, a bad `latentp`, and scenario5 without parameter 22 (the dead `ImmunityPenalty`), 6, 23, 27, and 23+27 (read order). Identical stdout, stderr and exit codes.
+- Findings: F43, F44 (both found and fixed here).
+- Surprises:
+  - The first style check passed although the new files had format and tidy issues: `util/style.sh check` diffs against the base, so it cannot see untracked files. The pre-commit hook caught the format slip; re-checking after the commit caught the rest. Check after `git add`, or after the commit.
+  - The rename tool's override gap (F44) only showed now because this is the first module whose virtual methods are overridden outside it.
+- Follow-ups:
+  - D4b: move `Infection::s_latentP`, the infection models' statics and the `create_infection`/`checkpointed_infection` pointers into `WithinHostModel`; the factories can then return `unique_ptr`. `bugfix_max_dens` (`extern` in `DescriptiveWithinHost.cpp`) goes with them.
+  - D4c: `WHVivax`'s statics; `WithinHostModel::create` already makes `WHVivax` instances, so its parameters can go into the same object.
+  - The pre-F0 sweep or D6 should rename `Pathogenesis/` with the rest of the directory.
+- Next: D4b.
