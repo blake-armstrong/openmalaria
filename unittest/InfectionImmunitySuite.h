@@ -24,6 +24,8 @@
 #define Hmod_InfectionImmunitySuite
 
 #include <cxxtest/TestSuite.h>
+#include "UnittestUtil.h"
+#include "ExtraAsserts.h"
 #include "Host/WithinHost/DescriptiveWithinHost.h"
 #include <limits>
 
@@ -35,15 +37,14 @@ public:
         UnittestUtil::initTime(5);
 
         // Note: these values were pulled from one source and shouldn't be taken as authoritative
-        double invCumulativeYstar = 1.0 / 68564384.7102;
-        double invCumulativeHstar = 1.0 / 71.676733;
-        double alpha_m = 1.0 - exp(-2.411434);
-        double decayM = 2.717773;
-        WHFalciparum::setParams(invCumulativeYstar, invCumulativeHstar, alpha_m, decayM);
+        params.inv_cumulative_y_star = 1.0 / 68564384.7102;
+        params.inv_cumulative_h_star = 1.0 / 71.676733;
+        params.alpha_m = 1.0 - exp(-2.411434);
+        params.decay_m = 2.717773; // NOLINT(modernize-use-std-numbers)
 
         // We need a concrete class deriving from WHFalciparum; this will do
         LocalRng rng(0, 721347520444481703);
-        wh = new DescriptiveWithinHostModel{rng, numeric_limits<double>::quiet_NaN()};
+        wh = new DescriptiveWithinHostModel{params, descriptive_params, rng, numeric_limits<double>::quiet_NaN()};
     }
     void tearDown() { delete wh; }
 
@@ -67,6 +68,8 @@ public:
     }
 
 private:
+    FalciparumParams params;
+    DescriptiveWithinHostParams descriptive_params;
     WHFalciparum* wh;
 };
 

@@ -48,92 +48,35 @@ namespace WithinHost {
 
 using namespace OM::util;
 
-// -----  private model parameters  -----
-
-//Standard dev innate immunity for densities
-static double sigma_i;
-
-// contribution of parasite densities to acquired immunity in the presence of fever
-static double immPenalty_22;
-
-// Remaining immunity against asexual parasites(after time step, each of 2 components y and h)
-// This variable decays the effectors m_cumulative_h and m_cumulative_Y in a way that their
-// effects on densities (1-Dh and 1-Dy) decay exponentially.
-static double asexImmRemain;
-
-// Remaining immunity against asexual parasites(after each time step, each of 2 components y and h)
-// This variable decays the effectors m_cumulative_h and m_cumulative_Y exponentially.
-static double immEffectorRemain;
-
-/// Critical value for immunity trigger (cumulative densities)
-static double invCumulativeYstar;
-/// Critical value for immunity trigger (cumulative inoculations)
-static double invCumulativeHstar;
-
-/// Maternal protection at birth
-static double alpha_m;
-
-/// More or less (up to 0.693) inverse quantity of alphaMStar (AJTM p. 9 eq. 12),
-/// decay rate of maternal protection in years^(-1).
-static double decayM;
-
 SimTime Infection::s_latentP = Sim::never();
-int WHFalciparum::y_lag_len = 0;
 
-// -----  static functions  -----
-
-void WHFalciparum::init(const OM::Parameters& parameters, const scnXml::Model& model) {
-    sigma_i = sqrt(parameters[Parameter::SigmaISq]);
-    immPenalty_22 = 1 - exp(parameters[Parameter::ImmunityPenalty]);
-    immEffectorRemain = exp(-parameters[Parameter::ImmuneEffectorDecay]);
-    asexImmRemain = exp(-parameters[Parameter::AsexualImmunityDecay]);
-
-    // calculate inverses here, so we can use multiplication later (faster):
-    invCumulativeYstar = 1.0 / parameters[Parameter::CumulativeYStar];
-    invCumulativeHstar = 1.0 / parameters[Parameter::CumulativeHStar];
-    alpha_m = 1.0 - exp(-parameters[Parameter::NegLogOneMinusAlphaM]);
-    decayM = parameters[Parameter::DecayM];
-
-    y_lag_len = Sim::in_steps(Sim::from_days(20)) + 1;
-
-    //NOTE: should also call cleanup() on the PathogenesisModel, but it only frees memory which the OS does anyway
-    Pathogenesis::PathogenesisModel::init(parameters, model.getClinical(), false);
-
-    // Default value to use if no <parameters> element is present in XML.
-    SimTime latentP = UnitParse::readShortDuration("15d", UnitParse::DAYS);
-    try {
-        if (model.getParameters().present()) {
-            latentP = UnitParse::readShortDuration(model.getParameters().get().getLatentp(), UnitParse::NONE);
-        }
-    } catch (const util::format_error& e) {
-        throw util::xml_scenario_error(string("model/parameters/latentP: ").append(e.message()));
-    }
-
-    Infection::init(latentP);
-}
-
-void WHFalciparum::setParams(double cumYStar, double cumHStar, double aM, double dM) {
-    invCumulativeYstar = cumYStar;
-    invCumulativeHstar = cumHStar;
-    alpha_m = aM;
-    decayM = dM;
-}
+FalciparumParams::FalciparumParams(const OM::Parameters& parameters, const util::ModelOptionFlags& options)
+    : sigma_i(sqrt(parameters[Parameter::SigmaISq])), imm_penalty_22(1 - exp(parameters[Parameter::ImmunityPenalty])),
+      imm_effector_remain(exp(-parameters[Parameter::ImmuneEffectorDecay])),
+      asex_imm_remain(exp(-parameters[Parameter::AsexualImmunityDecay])),
+      inv_cumulative_y_star(1.0 / parameters[Parameter::CumulativeYStar]),
+      inv_cumulative_h_star(1.0 / parameters[Parameter::CumulativeHStar]),
+      alpha_m(1.0 - exp(-parameters[Parameter::NegLogOneMinusAlphaM])), decay_m(parameters[Parameter::DecayM]),
+      y_lag_len(Sim::in_steps(Sim::from_days(20)) + 1),
+      report_infections_by_genotype(mon::isUsed(mon::measure("nInfectByGenotype")) ||
+                                    mon::isUsed(mon::measure("nPatentByGenotype")) ||
+                                    mon::isUsed(mon::measure("logDensByGenotype"))),
+      vaccine_genotype(options.option(util::VaccineGenotype)) {}
 
 // -----  Non-static  -----
 
-WHFalciparum::WHFalciparum(LocalRng& rng, double comorbidityFactor)
-    : WHInterface(), m_cumulative_h(0.0), m_cumulative_Y(0.0), m_cumulative_Y_lag(0.0), totalDensity(0.0),
-      hrp2Density(0.0), timeStepMaxDensity(0.0),
-      pathogenesisModel(Pathogenesis::PathogenesisModel::createPathogenesisModel(comorbidityFactor)),
-      treatExpiryLiver(0), treatExpiryBlood(0) {
-    // NOTE: negating a Gaussian sample with mean 0 is pointless — except that
-    // the individual samples change. In any case the overhead is negligible.
-    //FIXME: Should this be allowed to be greater than 1?
-    // Oldest code on GoogleCode: _innateImmunity=(double)(W_GAUSS((0), (sigma_i)));
-    _innateImmSurvFact = exp(-rng.gauss(0.0, sigma_i));
-
-    m_y_lag_i.resize(y_lag_len * Genotypes::N());
-    m_y_lag_l.resize(y_lag_len * Genotypes::N());
+WHFalciparum::WHFalciparum(const FalciparumParams& params, LocalRng& rng, double comorbidity_factor)
+    : WHInterface(),
+      // NOTE: negating a Gaussian sample with mean 0 is pointless — except that
+      // the individual samples change. In any case the overhead is negligible.
+      //FIXME: Should this be allowed to be greater than 1?
+      // Oldest code on GoogleCode: _innateImmunity=(double)(W_GAUSS((0), (sigma_i)));
+      _innateImmSurvFact(exp(-rng.gauss(0.0, params.sigma_i))), m_cumulative_h(0.0), m_cumulative_Y(0.0),
+      m_cumulative_Y_lag(0.0), totalDensity(0.0), hrp2Density(0.0), timeStepMaxDensity(0.0),
+      pathogenesisModel(Pathogenesis::PathogenesisModel::createPathogenesisModel(comorbidity_factor)),
+      treatExpiryLiver(0), treatExpiryBlood(0), falciparum_params(&params) {
+    m_y_lag_i.resize(params.y_lag_len * Genotypes::N());
+    m_y_lag_l.resize(params.y_lag_len * Genotypes::N());
 }
 
 WHFalciparum::~WHFalciparum() {}
@@ -147,18 +90,18 @@ double WHFalciparum::immunitySurvivalFactor(double ageInYears, double cumulative
     // Documentation: AJTMH pp22-23
 
     // Effect of cumulative Parasite density (named Dy in AJTM)
-    double dY = 1.0;
+    double d_y = 1.0;
     // Effect of number of infections experienced since birth (named Dh in AJTM)
-    double dH = 1.0;
+    double d_h = 1.0;
     if (m_cumulative_h > 1.0) {
-        dH = 1.0 / (1.0 + (m_cumulative_h - 1.0) * invCumulativeHstar);
-        dY = 1.0 / (1.0 + (m_cumulative_Y - cumulativeExposureJ) * invCumulativeYstar);
+        d_h = 1.0 / (1.0 + (m_cumulative_h - 1.0) * params().inv_cumulative_h_star);
+        d_y = 1.0 / (1.0 + (m_cumulative_Y - cumulativeExposureJ) * params().inv_cumulative_y_star);
     }
 
     // Effect of age-dependent maternal immunity (named Dm in AJTM)
-    double dA = 1.0 - alpha_m * exp(-decayM * ageInYears);
+    const double d_a = 1.0 - params().alpha_m * exp(-params().decay_m * ageInYears);
 
-    return util::streamValidate(std::min(dY * dH * dA, 1.0));
+    return util::streamValidate(std::min(d_y * d_h * d_a, 1.0));
 }
 
 // Infectiousness parameters: see AJTMH p.33; tau=1/sigmag**2
@@ -205,8 +148,8 @@ double WHFalciparum::probTransmissionToMosquito(vector<double>& probTransGenotyp
 
     // Sum lagged densities across genotypes:
     vector<double> y_lag_g_i(n), y_lag_g_l(n);
-    const double y_lag_sum_i = compute_y_lag(m_y_lag_i, y_lag_len, y_lag_g_i);
-    const double y_lag_sum_l = compute_y_lag(m_y_lag_l, y_lag_len, y_lag_g_l);
+    const double y_lag_sum_i = compute_y_lag(m_y_lag_i, params().y_lag_len, y_lag_g_i);
+    const double y_lag_sum_l = compute_y_lag(m_y_lag_l, params().y_lag_len, y_lag_g_l);
     const double y_lag_sum = y_lag_sum_i + y_lag_sum_l;
 
     if (y_lag_sum < 0.001)
@@ -282,13 +225,16 @@ Pathogenesis::StatePair WHFalciparum::determineMorbidity(Host::Human& human, dou
 // -----  immunity  -----
 
 void WHFalciparum::updateImmuneStatus() {
-    if (immEffectorRemain < 1) {
-        m_cumulative_h *= immEffectorRemain;
-        m_cumulative_Y *= immEffectorRemain;
+    const FalciparumParams& p = params();
+    if (p.imm_effector_remain < 1) {
+        m_cumulative_h *= p.imm_effector_remain;
+        m_cumulative_Y *= p.imm_effector_remain;
     }
-    if (asexImmRemain < 1) {
-        m_cumulative_h *= asexImmRemain / (1 + (m_cumulative_h * (1 - asexImmRemain) * invCumulativeHstar));
-        m_cumulative_Y *= asexImmRemain / (1 + (m_cumulative_Y * (1 - asexImmRemain) * invCumulativeYstar));
+    if (p.asex_imm_remain < 1) {
+        m_cumulative_h *=
+            p.asex_imm_remain / (1 + (m_cumulative_h * (1 - p.asex_imm_remain) * p.inv_cumulative_h_star));
+        m_cumulative_Y *=
+            p.asex_imm_remain / (1 + (m_cumulative_Y * (1 - p.asex_imm_remain) * p.inv_cumulative_y_star));
     }
     m_cumulative_Y_lag = m_cumulative_Y;
 }

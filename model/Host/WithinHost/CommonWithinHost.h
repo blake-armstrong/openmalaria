@@ -27,11 +27,24 @@
 #include "Host/WithinHost/WHFalciparum.h"
 #include "Host/WithinHost/Infection/CommonInfection.h"
 #include "PkPd/LSTMModel.h"
+#include "util/AgeGroupInterpolation.h"
+
+#include <limits>
 
 using namespace std;
 
 namespace OM {
 namespace WithinHost {
+
+struct CommonWithinHostParams {
+    util::AgeGroupInterpolator mass_by_age;
+    double het_mass_mult_std_dev = std::numeric_limits<double>::signaling_NaN();
+    double min_het_mass_mult = std::numeric_limits<double>::signaling_NaN();
+    bool report_infected_or_patent_infected = false;
+
+    CommonWithinHostParams() = default;
+    explicit CommonWithinHostParams(const scnXml::Scenario& scenario);
+};
 
 /** Common within-host model functionality.
  *
@@ -41,9 +54,8 @@ namespace WithinHost {
  */
 class CommonWithinHost : public WHFalciparum {
 public:
-    static void init(const scnXml::Scenario& scenario);
-
-    CommonWithinHost(LocalRng& rng, double comorbidityFactor);
+    CommonWithinHost(const FalciparumParams& params, const CommonWithinHostParams& common_params, LocalRng& rng,
+                     double comorbidity_factor);
     virtual ~CommonWithinHost();
 
     virtual void importInfection(LocalRng& rng);
@@ -92,6 +104,8 @@ private:
     std::list<CommonInfection*> infections;
 
     bool opt_vaccine_genotype = false;
+
+    const CommonWithinHostParams* common_params;
 };
 
 }

@@ -26,6 +26,7 @@
 #include "Global.h"
 #include "Host/WithinHost/WHInterface.h"
 #include "Host/WithinHost/Treatments.h"
+#include "util/ModelOptions.h"
 #include "util/vectors.h"
 
 #include <list>
@@ -41,20 +42,54 @@ namespace Pathogenesis {
 class PathogenesisModel;
 }
 
+struct FalciparumParams {
+    //Standard dev innate immunity for densities
+    double sigma_i = 0.0;
+
+    // contribution of parasite densities to acquired immunity in the presence of fever
+    double imm_penalty_22 = 0.0;
+
+    // Remaining immunity against asexual parasites(after each time step, each of 2 components y and h)
+    // This variable decays the effectors m_cumulative_h and m_cumulative_Y exponentially.
+    double imm_effector_remain = 0.0;
+
+    // Remaining immunity against asexual parasites(after time step, each of 2 components y and h)
+    // This variable decays the effectors m_cumulative_h and m_cumulative_Y in a way that their
+    // effects on densities (1-Dh and 1-Dy) decay exponentially.
+    double asex_imm_remain = 0.0;
+
+    /// Critical value for immunity trigger (cumulative densities)
+    double inv_cumulative_y_star = 0.0;
+    /// Critical value for immunity trigger (cumulative inoculations)
+    double inv_cumulative_h_star = 0.0;
+
+    /// Maternal protection at birth
+    double alpha_m = 0.0;
+
+    /// More or less (up to 0.693) inverse quantity of alphaMStar (AJTM p. 9 eq. 12),
+    /// decay rate of maternal protection in years^(-1).
+    double decay_m = 0.0;
+
+    /// Length of m_y_lag array. Wouldn't have to be dynamic if Global::interval was known at compile-time.
+    int y_lag_len = 0;
+
+    /// True if any by-genotype reporting is enabled
+    bool report_infections_by_genotype = false;
+
+    bool vaccine_genotype = false;
+
+    FalciparumParams() = default;
+    FalciparumParams(const OM::Parameters& parameters, const util::ModelOptionFlags& options);
+};
+
 /**
  * Immunity code and base class for all current P. falciparum models.
  */
 class WHFalciparum : public WHInterface {
 public:
-    /// @brief Static methods
-    //@{
-    /// Initialise static parameters
-    static void init(const OM::Parameters& parameters, const scnXml::Model& model);
-    //@}
-
     /// @brief Constructors, destructors and checkpointing functions
     //@{
-    WHFalciparum(LocalRng& rng, double comorbidityFactor);
+    WHFalciparum(const FalciparumParams& params, LocalRng& rng, double comorbidity_factor);
     virtual ~WHFalciparum();
     //@}
 
@@ -138,11 +173,11 @@ protected:
     virtual void checkpoint(istream& stream);
     virtual void checkpoint(ostream& stream);
 
-    /// Length of m_y_lag array. Wouldn't have to be dynamic if Global::interval was known at compile-time.
-    /// set by initHumanParameters
-    static int y_lag_len;
+    const FalciparumParams& params() const { return *falciparum_params; }
 
-    static void setParams(double cumYStar, double cumHStar, double aM, double dM); // for unit test only
+private:
+    const FalciparumParams* falciparum_params;
+
     friend class ::InfectionImmunitySuite;
 };
 

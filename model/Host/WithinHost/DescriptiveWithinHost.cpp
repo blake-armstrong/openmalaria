@@ -38,20 +38,14 @@ namespace OM {
 namespace WithinHost {
 
 extern bool bugfix_max_dens; // DescriptiveInfection.cpp
-bool reportPatentInfected = false;
 // -----  Initialization  -----
 
-void DescriptiveWithinHostModel::initDescriptive() {
-    reportPatentInfected =
-        (mon::isUsed(mon::measure("totalPatentInf")) || mon::isUsed(mon::measure("totalPatentInf_Imported")) ||
-         mon::isUsed(mon::measure("totalPatentInf_Introduced")) ||
-         mon::isUsed(mon::measure("totalPatentInf_Indigenous")));
-}
-
-DescriptiveWithinHostModel::DescriptiveWithinHostModel(LocalRng& rng, double comorbidityFactor)
-    : WHFalciparum(rng, comorbidityFactor) {
+DescriptiveWithinHostModel::DescriptiveWithinHostModel(const FalciparumParams& params,
+                                                       const DescriptiveWithinHostParams& descriptive_params,
+                                                       LocalRng& rng, double comorbidity_factor)
+    : WHFalciparum(params, rng, comorbidity_factor), descriptive_params(&descriptive_params) {
     assert(Sim::one_ts() == Sim::from_days(5));
-    opt_vaccine_genotype = util::ModelOptions::option(util::VaccineGenotype);
+    opt_vaccine_genotype = params.vaccine_genotype;
 }
 
 DescriptiveWithinHostModel::~DescriptiveWithinHostModel() {
@@ -203,7 +197,7 @@ void DescriptiveWithinHostModel::update(Host::Human& human, LocalRng& rng, int& 
     assert((std::isfinite)(totalDensity)); // inf probably wouldn't be a problem but NaN would be
 
     // Cache total density for infectiousness calculations
-    int y_lag_i = Sim::modulo_steps(Sim::ts1(), y_lag_len);
+    int y_lag_i = Sim::modulo_steps(Sim::ts1(), params().y_lag_len);
 
     for (size_t g = 0; g < Genotypes::N(); ++g) {
         m_y_lag_i[y_lag_i * Genotypes::N() + g] = 0.0;
@@ -260,7 +254,7 @@ bool DescriptiveWithinHostModel::summarize(Host::Human& human) const {
         mon::recordStat(mon::measure("totalInfs_Introduced"), human, nIntroduced);
         mon::recordStat(mon::measure("totalInfs_Indigenous"), human, nIndigenous);
 
-        if (reportPatentInfected) {
+        if (descriptive_params->report_patent_infected) {
             for (auto inf = infections.begin(); inf != infections.end(); ++inf) {
                 if (diagnostics::monitoringDiagnostic().isPositive(human.monitoring_rng, (*inf)->getDensity(),
                                                                    std::numeric_limits<double>::quiet_NaN())) {
@@ -274,7 +268,7 @@ bool DescriptiveWithinHostModel::summarize(Host::Human& human) const {
                 }
             }
         }
-        if (reportInfectionsByGenotype) {
+        if (params().report_infections_by_genotype) {
             // accumulate total density by genotype
             map<uint32_t, double> dens_by_gtype;
             for (auto inf = infections.begin(); inf != infections.end(); ++inf)

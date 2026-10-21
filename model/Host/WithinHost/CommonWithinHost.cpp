@@ -32,6 +32,8 @@
 #include "util/StreamValidator.h"
 #include "schema/scenario.h"
 
+#include <algorithm>
+
 using namespace std;
 
 namespace OM {
@@ -40,47 +42,41 @@ namespace WithinHost {
 CommonInfection* (*CommonWithinHost::createInfection)(LocalRng& rng, uint32_t protID, int origin);
 CommonInfection* (*CommonWithinHost::checkpointedInfection)(istream& stream);
 
-double hetMassMultStdDev = std::numeric_limits<double>::signaling_NaN();
-double minHetMassMult = std::numeric_limits<double>::signaling_NaN();
-util::AgeGroupInterpolator massByAge;
-
-bool reportInfectedOrPatentInfected = false;
-
 // -----  Initialization  -----
 
-void CommonWithinHost::init(const scnXml::Scenario& scenario) {
+CommonWithinHostParams::CommonWithinHostParams(const scnXml::Scenario& scenario) {
     const scnXml::Human human = scenario.getModel().getHuman();
     if (!human.getWeight().present()) {
         // Technically this is needed by the PK/PD and Molineaux models
         throw util::xml_scenario_error("model->human->weight element required by certain models");
     }
-    massByAge.set(human.getWeight().get(), "weight");
-    hetMassMultStdDev = human.getWeight().get().getMultStdDev();
+    mass_by_age.set(human.getWeight().get(), "weight");
+    het_mass_mult_std_dev = human.getWeight().get().getMultStdDev();
     // hetWeightMult must be large enough that birth weight is at least 0.5 kg:
-    minHetMassMult = 0.5 / massByAge.eval(0.0);
+    min_het_mass_mult = 0.5 / mass_by_age.eval(0.0);
 
-    reportInfectedOrPatentInfected =
+    report_infected_or_patent_infected =
         mon::isUsed(mon::measure("totalInfs")) || mon::isUsed(mon::measure("totalPatentInf"));
-
-    pk_pd::LSTMModel::init(scenario);
 }
 
-CommonWithinHost::CommonWithinHost(LocalRng& rng, double comorbidityFactor) : WHFalciparum(rng, comorbidityFactor) {
+CommonWithinHost::CommonWithinHost(const FalciparumParams& params, const CommonWithinHostParams& common_params,
+                                   LocalRng& rng, double comorbidity_factor)
+    : WHFalciparum(params, rng, comorbidity_factor), common_params(&common_params) {
     assert(Sim::one_ts() == Sim::from_days(1) || Sim::one_ts() == Sim::from_days(5));
 
-    opt_vaccine_genotype = util::ModelOptions::option(util::VaccineGenotype);
+    opt_vaccine_genotype = params.vaccine_genotype;
 
     // Sample a weight heterogeneity factor
 #ifndef NDEBUG
     int counter = 0;
 #endif
     do {
-        hetMassMultiplier = rng.gauss(1.0, hetMassMultStdDev);
+        hetMassMultiplier = rng.gauss(1.0, common_params.het_mass_mult_std_dev);
 #ifndef NDEBUG
         assert(counter < 100); // too many resamples: resamples should rarely be needed...
         ++counter;
 #endif
-    } while (hetMassMultiplier < minHetMassMult);
+    } while (hetMassMultiplier < common_params.min_het_mass_mult);
 }
 
 CommonWithinHost::~CommonWithinHost() {
@@ -108,7 +104,7 @@ void CommonWithinHost::clearInfections(Treatments::Stages stage) {
 // -----  interventions -----
 
 void CommonWithinHost::treatPkPd(size_t schedule, size_t dosage, double age, double delay_d) {
-    double mass = massByAge.eval(age) * hetMassMultiplier;
+    double mass = common_params->mass_by_age.eval(age) * hetMassMultiplier;
     pkpdModel.prescribe(schedule, dosage, age, mass, delay_d);
 }
 void CommonWithinHost::clearImmunity() {
@@ -192,7 +188,7 @@ void CommonWithinHost::update(Host::Human& human, LocalRng& rng, int& nNewInfs_i
     bool treatmentLiver = treatExpiryLiver > Sim::ts0();
     bool treatmentBlood = treatExpiryBlood > Sim::ts0();
 
-    double body_mass = massByAge.eval(ageInYears) * hetMassMultiplier;
+    double body_mass = common_params->mass_by_age.eval(ageInYears) * hetMassMultiplier;
 
     for (SimTime now = Sim::ts0(), end = Sim::ts0() + Sim::one_ts(); now < end; now = now + Sim::one_day()) {
         // every day, medicate drugs, update each infection, then decay drugs
@@ -246,7 +242,7 @@ void CommonWithinHost::update(Host::Human& human, LocalRng& rng, int& nNewInfs_i
     assert((std::isfinite)(totalDensity)); // inf probably wouldn't be a problem but NaN would be
 
     // Cache total density for infectiousness calculations
-    int y_lag_i = Sim::modulo_steps(Sim::ts1(), y_lag_len);
+    int y_lag_i = Sim::modulo_steps(Sim::ts1(), params().y_lag_len);
     for (size_t g = 0; g < Genotypes::N(); ++g) {
         m_y_lag_i[y_lag_i * Genotypes::N() + g] = 0.0;
         m_y_lag_l[y_lag_i * Genotypes::N() + g] = 0.0;
@@ -273,8 +269,6 @@ InfectionOrigin CommonWithinHost::getInfectionOrigin() const { return get_infect
 
 // -----  Summarize  -----
 
-// Used in summarizeInfs.
-vector<CommonInfection*> sortedInfs;
 struct InfGenotypeSorter {
     bool operator()(CommonInfection* i, CommonInfection* j) { return i->genotype() < j->genotype(); }
 } infGenotypeSorter;
@@ -295,7 +289,7 @@ bool CommonWithinHost::summarize(Host::Human& human) const {
         else
             mon::recordStat(mon::measure("nInfect_Imported"), human);
 
-        if (reportInfectedOrPatentInfected) {
+        if (common_params->report_infected_or_patent_infected) {
             for (auto inf = infections.begin(); inf != infections.end(); ++inf) {
                 uint32_t genotype = (*inf)->genotype();
                 mon::recordStat(mon::measure("totalInfs"), human, 1, 0, genotype, 0);
@@ -319,22 +313,22 @@ bool CommonWithinHost::summarize(Host::Human& human) const {
             }
         }
 
-        if (reportInfectionsByGenotype) {
+        if (params().report_infections_by_genotype) {
             // Instead of storing nInfs and total density by genotype we sort
             // infections by genotype and report each in sequence.
             // We don't sort in place since that would affect random number sampling
             // order when updating, and the monitoring system should not in my
             // opinion affect outputs (since it would make testing harder).
-            sortedInfs.assign(infections.begin(), infections.end());
-            sort(sortedInfs.begin(), sortedInfs.end(), infGenotypeSorter);
-            auto inf = sortedInfs.begin();
-            while (inf != sortedInfs.end()) {
+            vector<CommonInfection*> sorted_infs(infections.begin(), infections.end());
+            std::ranges::sort(sorted_infs, infGenotypeSorter);
+            auto inf = sorted_infs.begin();
+            while (inf != sorted_infs.end()) {
                 uint32_t genotype = (*inf)->genotype();
                 double dens = 0.0;
                 do { // at start: genotype is that of the current infection, dens is 0
                     dens += (*inf)->getDensity();
                     ++inf;
-                } while (inf != sortedInfs.end() && (*inf)->genotype() == genotype);
+                } while (inf != sorted_infs.end() && (*inf)->genotype() == genotype);
                 // we had at least one infection of this genotype
                 mon::recordStat(mon::measure("nInfectByGenotype"), human, 1, 0, genotype, 0);
                 if (diagnostics::monitoringDiagnostic().isPositive(human.monitoring_rng, dens,

@@ -79,9 +79,6 @@ class WHInterface {
 public:
     /// @brief Static methods
     //@{
-    /// Initialise static parameters
-    static void init(const OM::Parameters& parameters, const scnXml::Scenario& scenario);
-
     /** Configure a new treatment option, and return the code used to select
      * that option later. */
     static TreatmentId addTreatment(const scnXml::TreatmentOption& desc);
@@ -212,9 +209,6 @@ protected:
 
     friend class ::UnittestUtil;
 };
-
-/// True if any by-genotype reporting is enabled (read-only)
-extern bool reportInfectionsByGenotype;
 
 }
 }

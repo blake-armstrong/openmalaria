@@ -31,6 +31,10 @@ using namespace std;
 namespace OM {
 namespace WithinHost {
 
+struct DescriptiveWithinHostParams {
+    bool report_patent_infected = false;
+};
+
 /** Within-host model class for the original (descriptive) infection model.
  *
  * Note: this implementation has a few bugs with (hopefully) small effect
@@ -39,11 +43,9 @@ namespace WithinHost {
  * integrated with the CommonWithinHost class. */
 class DescriptiveWithinHostModel : public WHFalciparum {
 public:
-    /// Must run after monitoring is set up.
-    static void initDescriptive();
-
     /// Create a new WHM
-    DescriptiveWithinHostModel(LocalRng& rng, double comorbidityFactor);
+    DescriptiveWithinHostModel(const FalciparumParams& params, const DescriptiveWithinHostParams& descriptive_params,
+                               LocalRng& rng, double comorbidity_factor);
     virtual ~DescriptiveWithinHostModel();
 
     virtual void importInfection(LocalRng& rng);
@@ -75,6 +77,9 @@ protected:
     std::list<DescriptiveInfection*> infections;
 
     bool opt_vaccine_genotype = false;
+
+private:
+    const DescriptiveWithinHostParams* descriptive_params;
 };
 
 }

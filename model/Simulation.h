@@ -24,6 +24,7 @@
 #define HMOD_SIMULATION
 
 #include "Global.h"
+#include "Host/WithinHost/WithinHostModel.h"
 #include "Parameters.h"
 #include "Population.h"
 #include "Transmission/transmission.h"
@@ -78,6 +79,8 @@ private:
     util::ModelOptionFlags model_options;
     ModelOptionsBinding model_options_binding{model_options};
     Parameters parameters;
+    WithinHost::WithinHostModel within_host_model;
+    WithinHostModelBinding within_host_model_binding{within_host_model};
     std::unique_ptr<scnXml::Scenario> scenario_xml;
     std::unique_ptr<Population> population_model;
     std::unique_ptr<Transmission::TransmissionModel> transmission_model;

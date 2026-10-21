@@ -39,6 +39,7 @@
 #include "Host/WithinHost/WHInterface.h"
 #include "Host/WithinHost/Infection/Infection.h"
 #include "Host/WithinHost/WHFalciparum.h"
+#include "Host/WithinHost/WithinHostModel.h"
 #include "Host/WithinHost/Infection/MolineauxInfection.h"
 #include "Host/WithinHost/Genotypes.h"
 
@@ -48,12 +49,6 @@ using namespace OM;
 using namespace WithinHost;
 
 using ::OM::util::ModelOptions;
-
-namespace OM {
-namespace WithinHost {
-extern bool opt_common_whm;
-}
-}
 
 namespace xml_helpers {
 /// Construct a helper for setting PK parameters (1-compartment model)
@@ -230,6 +225,8 @@ util::CommandLineOptions command_line;
 CommandLineBinding command_line_binding{command_line};
 util::ModelOptionFlags model_options;
 ModelOptionsBinding model_options_binding{model_options};
+WithinHost::WithinHostModel within_host_model;
+WithinHostModelBinding within_host_model_binding{within_host_model};
 // NOLINTEND(cppcoreguidelines-avoid-non-const-global-variables,bugprone-throwing-static-initialization)
 }
 
@@ -394,13 +391,13 @@ public:
     static void EmpiricalWHM_setup() {
         unittest_options::model_options.reset();
         unittest_options::model_options.set(util::EmpiricalWithinHostModel);
-        OM::WithinHost::opt_common_whm = true;
+        unittest_options::within_host_model.kind = WithinHost::WithinHostModel::Kind::Common;
     }
 
     static void MolineauxWHM_setup(const std::string& mode, bool repl_gamma) {
         unittest_options::model_options.reset();
         unittest_options::model_options.set(util::MolineauxWithinHostModel);
-        OM::WithinHost::opt_common_whm = true;
+        unittest_options::within_host_model.kind = WithinHost::WithinHostModel::Kind::Common;
         if (mode == "original") {
         } else if (mode == "1st_max_gamma") {
             unittest_options::model_options.set(util::FirstLocalMaximumGamma);

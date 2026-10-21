@@ -21,79 +21,21 @@
  */
 
 #include "Host/WithinHost/WHInterface.h"
-#include "Host/WithinHost/WHVivax.h"
-#include "Host/WithinHost/DescriptiveWithinHost.h"
-#include "Host/WithinHost/CommonWithinHost.h"
-#include "Host/WithinHost/Infection/DummyInfection.h"
-#include "Host/WithinHost/Infection/EmpiricalInfection.h"
-#include "Host/WithinHost/Infection/MolineauxInfection.h"
-#include "Host/WithinHost/Infection/PennyInfection.h"
 #include "Host/WithinHost/Treatments.h"
-#include "util/ModelOptions.h"
+#include "Host/WithinHost/WithinHostModel.h"
 #include "util/errors.h"
-#include "schema/scenario.h"
-//using namespace std;
-
-#include <cmath>
 
 namespace OM {
 namespace WithinHost {
 
 using namespace OM::util;
 
-bool reportInfectionsByGenotype = false;
-
-bool opt_vivax_simple = false, opt_dummy_whm = false, opt_empirical_whm = false, opt_molineaux_whm = false,
-     opt_penny_whm = false, opt_common_whm = false;
-
 // -----  static functions  -----
-
-void WHInterface::init(const OM::Parameters& parameters, const scnXml::Scenario& scenario) {
-    reportInfectionsByGenotype = mon::isUsed(mon::measure("nInfectByGenotype")) ||
-                                 mon::isUsed(mon::measure("nPatentByGenotype")) ||
-                                 mon::isUsed(mon::measure("logDensByGenotype"));
-
-    if (util::ModelOptions::option(util::VivaxSimpleModel)) {
-        opt_vivax_simple = true;
-        WHVivax::init(parameters, scenario.getModel());
-    } else {
-        WHFalciparum::init(parameters, scenario.getModel());
-
-        if (util::ModelOptions::option(util::DummyWithinHostModel)) {
-            opt_dummy_whm = true;
-            DummyInfection::init();
-        } else if (util::ModelOptions::option(util::EmpiricalWithinHostModel)) {
-            opt_empirical_whm = true;
-            EmpiricalInfection::init(); // 1-day time step check
-        } else if (util::ModelOptions::option(util::MolineauxWithinHostModel)) {
-            opt_molineaux_whm = true;
-            MolineauxInfection::init(parameters);
-        } else if (util::ModelOptions::option(util::PennyWithinHostModel)) {
-            opt_penny_whm = true;
-            PennyInfection::init();
-        } else {
-            DescriptiveInfection::init(parameters); // 5-day time step check
-        }
-        opt_common_whm = opt_dummy_whm || opt_empirical_whm || opt_molineaux_whm || opt_penny_whm;
-
-        if (opt_common_whm) {
-            CommonWithinHost::init(scenario);
-        } else {
-            DescriptiveWithinHostModel::initDescriptive();
-        }
-    }
-}
 
 TreatmentId WHInterface::addTreatment(const scnXml::TreatmentOption& desc) { return Treatments::addTreatment(desc); }
 
 unique_ptr<WHInterface> WHInterface::createWithinHostModel(LocalRng& rng, double comorbidityFactor) {
-    if (opt_vivax_simple) {
-        return unique_ptr<WHInterface>(new WHVivax(rng, comorbidityFactor));
-    } else if (opt_common_whm) {
-        return unique_ptr<WHInterface>(new CommonWithinHost(rng, comorbidityFactor));
-    } else {
-        return unique_ptr<WHInterface>(new DescriptiveWithinHostModel(rng, comorbidityFactor));
-    }
+    return bridge::within_host_model().create(rng, comorbidityFactor);
 }
 
 // -----  Non-static  -----
