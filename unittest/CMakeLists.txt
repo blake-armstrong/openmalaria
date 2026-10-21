@@ -114,6 +114,7 @@ om_dependency (Catch2 VERSION 3.16.0
 )
 
 add_executable (unittest-catch2
+  RandomVariatesTests.cpp
   UtilVectorsTests.cpp
 )
 target_link_libraries (unittest-catch2
