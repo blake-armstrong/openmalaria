@@ -48,6 +48,9 @@ set (OM_BOXTEST_NAMES
   VecMonthly
   VecTest
   Vivax
+  VivaxLiverStage
+  VivaxPQ
+  VivaxChangeHS
   NonHumanHosts
   PEV
   BSV
