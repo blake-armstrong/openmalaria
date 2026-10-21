@@ -61,7 +61,7 @@ public:
 
     ~ModelNameProvider() {}
 
-    ModelNames GetModelName() { return modelInUse; }
+    ModelNames GetModelName() const { return modelInUse; }
 
 private:
     ModelNames modelInUse = ModelNames::none;

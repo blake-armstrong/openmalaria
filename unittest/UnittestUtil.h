@@ -26,6 +26,7 @@
 #define Hmod_UnittestUtil
 
 #include "Global.h"
+#include "util/CommandLine.h"
 #include "util/ModelOptions.h"
 
 #include <cxxtest/TestSuite.h>
@@ -223,6 +224,15 @@ scnXml::Scenario scenario(demography, monitoring, interventions, healthSystem, e
                           0 /* schema version */, "dummy" /* name */);
 }
 
+namespace unittest_options {
+// NOLINTBEGIN(cppcoreguidelines-avoid-non-const-global-variables,bugprone-throwing-static-initialization)
+util::CommandLineOptions command_line;
+CommandLineBinding command_line_binding{command_line};
+util::ModelOptionFlags model_options;
+ModelOptionsBinding model_options_binding{model_options};
+// NOLINTEND(cppcoreguidelines-avoid-non-const-global-variables,bugprone-throwing-static-initialization)
+}
+
 class UnittestUtil {
 public:
     static void initTime(int daysPerStep) {
@@ -281,7 +291,8 @@ public:
         diagsElt.getDiagnostic().push_back(microscopy);
         diagsElt.getDiagnostic().push_back(rdt);
         dummyXML::model.setParameters(prepareParameters());
-        Parameters parameters(dummyXML::model.getParameters(), util::ModelNameProvider(dummyXML::model));
+        Parameters parameters(dummyXML::model.getParameters(), util::ModelNameProvider(dummyXML::model),
+                              unittest_options::command_line);
         dummyXML::scenario.setDiagnostics(diagsElt);
         dummyXML::surveys.setDetectionLimit(numeric_limits<double>::quiet_NaN());
         dummyXML::monitoring.setSurveys(dummyXML::surveys);
@@ -290,7 +301,7 @@ public:
     }
 
     static void PkPdSuiteSetup() {
-        ModelOptions::reset();
+        unittest_options::model_options.reset();
         WithinHost::Genotypes::initSingle();
 
         //Note: we fudge this call since it's not so easy to falsely initialize scenario element.
@@ -378,46 +389,47 @@ public:
     // But do set latentP.
     static void Infection_init_latentP_and_NaN() { Infection::s_latentP = Sim::from_days(15); }
 
-    static void descriptive_infection_init() { ModelOptions::reset(); }
+    static void descriptive_infection_init() { unittest_options::model_options.reset(); }
 
     static void EmpiricalWHM_setup() {
-        ModelOptions::reset();
-        ModelOptions::set(util::EMPIRICAL_WITHIN_HOST_MODEL);
+        unittest_options::model_options.reset();
+        unittest_options::model_options.set(util::EMPIRICAL_WITHIN_HOST_MODEL);
         OM::WithinHost::opt_common_whm = true;
     }
 
     static void MolineauxWHM_setup(const std::string& mode, bool repl_gamma) {
-        ModelOptions::reset();
-        ModelOptions::set(util::MOLINEAUX_WITHIN_HOST_MODEL);
+        unittest_options::model_options.reset();
+        unittest_options::model_options.set(util::MOLINEAUX_WITHIN_HOST_MODEL);
         OM::WithinHost::opt_common_whm = true;
         if (mode == "original") {
         } else if (mode == "1st_max_gamma") {
-            ModelOptions::set(util::FIRST_LOCAL_MAXIMUM_GAMMA);
+            unittest_options::model_options.set(util::FIRST_LOCAL_MAXIMUM_GAMMA);
         } else if (mode == "mean_dur_gamma") {
-            ModelOptions::set(util::MEAN_DURATION_GAMMA);
+            unittest_options::model_options.set(util::MEAN_DURATION_GAMMA);
         } else if (mode == "1st_max_and_mean_dur_gamma") {
-            ModelOptions::set(util::FIRST_LOCAL_MAXIMUM_GAMMA);
-            ModelOptions::set(util::MEAN_DURATION_GAMMA);
+            unittest_options::model_options.set(util::FIRST_LOCAL_MAXIMUM_GAMMA);
+            unittest_options::model_options.set(util::MEAN_DURATION_GAMMA);
         } else if (mode == "pairwise") {
-            ModelOptions::set(util::MOLINEAUX_PAIRWISE_SAMPLE);
+            unittest_options::model_options.set(util::MOLINEAUX_PAIRWISE_SAMPLE);
         } else {
             ETS_ASSERT(false); // stop this test
         }
         if (repl_gamma) {
-            ModelOptions::set(util::PARASITE_REPLICATION_GAMMA);
+            unittest_options::model_options.set(util::PARASITE_REPLICATION_GAMMA);
         }
 
         // Set parameters; all of these were estimated externally from OpenMalaria
         dummyXML::model.setParameters(prepareParameters());
-        Parameters parameters(dummyXML::model.getParameters(), util::ModelNameProvider(dummyXML::model));
+        Parameters parameters(dummyXML::model.getParameters(), util::ModelNameProvider(dummyXML::model),
+                              unittest_options::command_line);
 
         // This sets up the model based on parameters and options
         WithinHost::MolineauxInfection::init(parameters);
     }
 
     static void MosqLifeCycle_init() {
-        ModelOptions::reset();
-        ModelOptions::set(util::VECTOR_LIFE_CYCLE_MODEL);
+        unittest_options::model_options.reset();
+        unittest_options::model_options.set(util::VECTOR_LIFE_CYCLE_MODEL);
     }
 
     static double getPrescribedMg(const pk_pd::LSTMModel& pkpd) {

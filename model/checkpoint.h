@@ -26,6 +26,7 @@
 #include "Global.h"
 #include "Population.h"
 #include "Transmission/transmission.h"
+#include "util/CommandLine.h"
 #include "util/random.h"
 
 namespace OM {
@@ -33,12 +34,14 @@ namespace OM {
     *
     * readCheckpoint/writeCheckpoint prepare to read/write the file,
     * and read/write read and write the actual data. */
-void write_checkpoint(const bool started_from_checkpoint, const string& checkpoint_file_name, Clock& clock,
-                      util::MasterRngs& master_rngs, SimTime& end_time, SimTime& est_end_time, Population& population,
+void write_checkpoint(const bool started_from_checkpoint, const string& checkpoint_file_name,
+                      const util::CommandLineOptions& command_line, Clock& clock, util::MasterRngs& master_rngs,
+                      SimTime& end_time, SimTime& est_end_time, Population& population,
                       Transmission::TransmissionModel& transmission);
 
-void read_checkpoint(const string& checkpoint_file_name, Clock& clock, util::MasterRngs& master_rngs, SimTime& end_time,
-                     SimTime& est_end_time, Population& population, Transmission::TransmissionModel& transmission);
+void read_checkpoint(const string& checkpoint_file_name, const util::CommandLineOptions& command_line, Clock& clock,
+                     util::MasterRngs& master_rngs, SimTime& end_time, SimTime& est_end_time, Population& population,
+                     Transmission::TransmissionModel& transmission);
 }
 
 #endif

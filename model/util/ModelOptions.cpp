@@ -30,16 +30,15 @@
 
 namespace OM {
 namespace util {
-std::bitset<NUM_OPTIONS> ModelOptions::options;
-
 // Utility: converts option strings to codes and back
 class OptionCodeMap {
     // Lookup table to translate the strings used in the XML file to the internal enumerated values:
     map<string, OptionCodes> codeMap;
     set<string> ignoreOptions;
+    bool deprecationWarnings;
 
 public:
-    OptionCodeMap() {
+    explicit OptionCodeMap(bool deprecationWarnings) : deprecationWarnings(deprecationWarnings) {
         // 	    codeMap["PENALISATION_EPISODES"] = PENALISATION_EPISODES;
         codeMap["NEGATIVE_BINOMIAL_MASS_ACTION"] = NEGATIVE_BINOMIAL_MASS_ACTION;
         // codeMap["ATTENUATION_ASEXUAL_DENSITY"] = ATTENUATION_ASEXUAL_DENSITY;
@@ -89,7 +88,7 @@ public:
         if (codeIt != codeMap.end())
             return codeIt->second;
         if (ignoreOptions.count(s)) {
-            if (CommandLine::option(CommandLine::DEPRECATION_WARNINGS)) {
+            if (deprecationWarnings) {
                 cerr << "Deprecation warning: model option " << s << " is no longer used" << endl;
             }
             return IGNORE;
@@ -118,14 +117,14 @@ public:
     }
 };
 
-std::bitset<NUM_OPTIONS> ModelOptions::getBaseModelOptions() {
+std::bitset<NUM_OPTIONS> ModelOptionFlags::getBaseModelOptions() {
     // The "base" model is very simple
     bitset<NUM_OPTIONS> allOptionsOff;
 
     return allOptionsOff;
 }
 
-std::bitset<NUM_OPTIONS> ModelOptions::getLegacyDefaultModelOptions() {
+std::bitset<NUM_OPTIONS> ModelOptionFlags::getLegacyDefaultModelOptions() {
     bitset<NUM_OPTIONS> defaultOptSet;
 
     // Kept for legacy reasons.  That is, when an input XML does not specify a model name
@@ -139,8 +138,10 @@ std::bitset<NUM_OPTIONS> ModelOptions::getLegacyDefaultModelOptions() {
     return defaultOptSet;
 }
 
-void ModelOptions::init(scnXml::Model::ModelOptionsOptional& optionsElt, util::ModelNameProvider mnp) {
-    OptionCodeMap codeMap;
+ModelOptionFlags::ModelOptionFlags(const scnXml::Model::ModelOptionsOptional& optionsElt,
+                                   const util::ModelNameProvider& mnp, const CommandLineOptions& commandLine,
+                                   SimTime oneTs) {
+    OptionCodeMap codeMap(commandLine.option(CommandLine::DEPRECATION_WARNINGS));
 
     // Set options to legacy defaults, then override any given in the XML file:
     options = getLegacyDefaultModelOptions();
@@ -167,7 +168,7 @@ void ModelOptions::init(scnXml::Model::ModelOptionsOptional& optionsElt, util::M
     }
 
     // Print non-default model options:
-    if (CommandLine::option(CommandLine::PRINT_MODEL_OPTIONS)) {
+    if (commandLine.option(CommandLine::PRINT_MODEL_OPTIONS)) {
         const std::bitset<NUM_OPTIONS> defaultOptSet = getLegacyDefaultModelOptions();
         cout << "Non-default model options:";
         for (int i = 0; i < NUM_OPTIONS; ++i) {
@@ -264,7 +265,7 @@ void ModelOptions::init(scnXml::Model::ModelOptionsOptional& optionsElt, util::M
     if (!options[PENNY_WITHIN_HOST_MODEL] && (options[IMMUNE_THRESHOLD_GAMMA] || options[UPDATE_DENSITY_GAMMA]))
         throw xml_scenario_error("Penny model option used without PENNY_WITHIN_HOST_MODEL option");
 
-    if (Sim::one_ts() == Sim::from_days(5)) {
+    if (oneTs == Sim::from_days(5)) {
         // 5 day TS is okay; some tests specific to this TS:
         bitset<NUM_OPTIONS> require1DayTS;
         require1DayTS.set(CLINICAL_EVENT_SCHEDULER);
@@ -277,11 +278,11 @@ void ModelOptions::init(scnXml::Model::ModelOptionsOptional& optionsElt, util::M
                 throw xml_scenario_error(msg.str());
             }
         }
-    } else if (Sim::one_ts() == Sim::from_days(1)) {
+    } else if (oneTs == Sim::from_days(1)) {
         // 1 day TS is also okay
     } else {
         ostringstream msg;
-        msg << "Time step set to " << Sim::one_ts() << " days but only 1 and 5 days are supported.";
+        msg << "Time step set to " << oneTs << " days but only 1 and 5 days are supported.";
         throw xml_scenario_error(msg.str());
     }
 }

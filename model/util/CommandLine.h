@@ -27,11 +27,15 @@
 #include <string>
 #include <set>
 #include <bitset>
+#include <cassert>
+#include <iosfwd>
 #include <limits>
 using namespace std;
 
 namespace OM {
 namespace util {
+class CommandLineOptions;
+
 /// Command line options and processing
 class CommandLine {
 public:
@@ -73,51 +77,92 @@ public:
 
     enum class OutputFormat { TXT, BIN };
 
+    /** Looks through all command line options.
+	*
+	* @returns The options, including the name of the scenario XML file to use.
+	*
+	* Throws cmd_exit in the case a help message is printed. Help
+	* is printed to cout. */
+    static CommandLineOptions parse(int argc, char* argv[]);
+
     /** Return true if given option (from CommandLine::Options) is active. */
-    static inline bool option(size_t code) { return options.test(code); }
+    static bool option(size_t code);
 
     /** If path is relative, prepend it with clResourcePath. */
     static string lookupResource(const string& path);
 
     /** Get the name of the output file. */
-    static inline string getOutputName() { return outputName; }
+    static string getOutputName();
 
-    static inline OutputFormat getOutputFormat() { return outputFormat; }
+    static OutputFormat getOutputFormat();
 
     /** Get the name of the ctsout file. */
-    static inline string getCtsoutName() { return ctsoutName; }
+    static string getCtsoutName();
 
     /** Get the name of the checkpoint file. */
-    static inline string getCheckpointName() { return checkpointFileName; }
+    static string getCheckpointName();
+};
 
-    /** Looks through all command line options.
-	*
-	* @returns The name of the scenario XML file to use.
-	*
-	* Throws cmd_exit in the case a help message is printed. Help
-	* is printed to cout.
-	* 
-	* In other cases command-line parameters cause variables to be set in Global
-	* to achieve the desired result. */
-    static string parse(int argc, char* argv[]);
+class CommandLineOptions {
+public:
+    bool option(size_t code) const { return flags.test(code); }
+    std::string lookup_resource(const std::string& path) const;
+    const std::string& scenario_path() const { return scenario; }
+    const std::string& output_name() const { return output; }
+    CommandLine::OutputFormat output_format() const { return format; }
+    const std::string& ctsout_name() const { return ctsout; }
+    const std::string& checkpoint_name() const { return checkpoint_file; }
 
-    /** @brief Checkpointing.
-	*
-	* Not really required; more to confirm things are expected. */
-    static void staticCheckpoint(istream& stream);
-    static void staticCheckpoint(ostream& stream); ///< ditto
+    void checkpoint(std::istream& stream) const;
+    void checkpoint(std::ostream& stream) const;
 
 private:
-    // Static parameters: don't require checkpointing (set by parse())
-    static bitset<NUM_OPTIONS> options; // boolean options
-    static string resourcePath;
+    friend class CommandLine;
 
-    //Output filename (for main output file "output.txt")
-    static string outputName;
-    static OutputFormat outputFormat;
-    static string ctsoutName;
-    static string checkpointFileName;
+    std::bitset<CommandLine::NUM_OPTIONS> flags;
+    std::string resource_path;
+    std::string scenario;
+    std::string output;
+    CommandLine::OutputFormat format = CommandLine::OutputFormat::TXT;
+    std::string ctsout;
+    std::string checkpoint_file;
 };
+}
+
+namespace bridge {
+
+// NOLINTNEXTLINE(cppcoreguidelines-avoid-non-const-global-variables)
+inline const util::CommandLineOptions* current_command_line = nullptr;
+
+inline const util::CommandLineOptions& command_line() {
+    assert(current_command_line != nullptr);
+    return *current_command_line;
+}
+
+}
+
+class CommandLineBinding {
+public:
+    explicit CommandLineBinding(const util::CommandLineOptions& options) : previous(bridge::current_command_line) {
+        bridge::current_command_line = &options;
+    }
+    CommandLineBinding(const CommandLineBinding&) = delete;
+    CommandLineBinding& operator=(const CommandLineBinding&) = delete;
+    CommandLineBinding(CommandLineBinding&&) = delete;
+    CommandLineBinding& operator=(CommandLineBinding&&) = delete;
+    ~CommandLineBinding() { bridge::current_command_line = previous; }
+
+private:
+    const util::CommandLineOptions* previous;
+};
+
+namespace util {
+inline bool CommandLine::option(size_t code) { return bridge::command_line().option(code); }
+inline string CommandLine::lookupResource(const string& path) { return bridge::command_line().lookup_resource(path); }
+inline string CommandLine::getOutputName() { return bridge::command_line().output_name(); }
+inline CommandLine::OutputFormat CommandLine::getOutputFormat() { return bridge::command_line().output_format(); }
+inline string CommandLine::getCtsoutName() { return bridge::command_line().ctsout_name(); }
+inline string CommandLine::getCheckpointName() { return bridge::command_line().checkpoint_name(); }
 }
 }
 #endif

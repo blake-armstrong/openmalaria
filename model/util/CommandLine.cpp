@@ -35,13 +35,6 @@
 
 namespace OM {
 namespace util {
-bitset<CommandLine::NUM_OPTIONS> CommandLine::options;
-string CommandLine::resourcePath;
-string CommandLine::outputName;
-CommandLine::OutputFormat CommandLine::outputFormat = CommandLine::OutputFormat::TXT;
-string CommandLine::ctsoutName;
-string CommandLine::checkpointFileName;
-
 string parseNextArg(int argc, char* argv[], int& i) {
     ++i;
     if (i >= argc)
@@ -62,31 +55,29 @@ void resolveOutputName(string& name, CommandLine::OutputFormat format, bool comp
     }
 }
 
-string CommandLine::lookupResource(const string& path) {
+string CommandLineOptions::lookup_resource(const string& path) const {
     string ret;
     if (path.size() >= 1 && path[0] == '/') {
         // UNIX absolute path
     } else if (path.size() >= 3 && path[1] == ':' && (path[2] == '\\' || path[2] == '/')) {
         // Windows absolute path.. at least probably
     } else { // relative
-        ret = resourcePath;
+        ret = resource_path;
     }
     ret.append(path);
     return ret;
 }
 
-string CommandLine::parse(int argc, char* argv[]) {
+CommandLineOptions CommandLine::parse(int argc, char* argv[]) {
+    CommandLineOptions result;
     bool cloHelp = false, cloVersion = false, cloError = false;
     string scenarioFile = "";
-    outputName = "";
-    outputFormat = OutputFormat::TXT;
-    ctsoutName = "";
 #ifdef OM_STREAM_VALIDATOR
     string sVFile;
 #endif
 
     // Set DEPRECATION_WARNINGS to ON by default
-    options.set(DEPRECATION_WARNINGS);
+    result.flags.set(DEPRECATION_WARNINGS);
 
     /* Simple command line parser. Seems to work fine.
 	* If an extension is wanted, http://tclap.sourceforge.net/ looks good. */
@@ -97,82 +88,82 @@ string CommandLine::parse(int argc, char* argv[]) {
         if (clo.size() >= 2 && *clo.data() == '-' && clo.data()[1] == '-') {
             clo.assign(clo, 2, clo.size() - 2);
             if (clo == "verbose") {
-                options.set(VERBOSE);
+                result.flags.set(VERBOSE);
             } else if (clo == "progress") {
-                options.set(PROGRESS);
+                result.flags.set(PROGRESS);
             } else if (clo == "resource-path") {
-                if (resourcePath.size())
+                if (result.resource_path.size())
                     throw cmd_exception("--resource-path (or -p) may only be given once");
-                resourcePath = parseNextArg(argc, argv, i).append("/");
+                result.resource_path = parseNextArg(argc, argv, i).append("/");
             } else if (clo == "scenario") {
                 if (scenarioFile != "") {
                     throw cmd_exception("--scenario argument may only be given once");
                 }
                 scenarioFile = parseNextArg(argc, argv, i);
             } else if (clo == "output") {
-                if (outputName != "") {
+                if (result.output != "") {
                     throw cmd_exception("--output argument may only be given once");
                 }
-                outputName = parseNextArg(argc, argv, i);
+                result.output = parseNextArg(argc, argv, i);
             } else if (clo == "output-format") {
                 string format = parseNextArg(argc, argv, i);
                 if (format == "txt") {
-                    outputFormat = OutputFormat::TXT;
+                    result.format = OutputFormat::TXT;
                 } else if (format == "bin") {
-                    outputFormat = OutputFormat::BIN;
+                    result.format = OutputFormat::BIN;
                 } else {
                     throw cmd_exception("--output-format must be txt or bin");
                 }
             } else if (clo == "compress-output") {
-                options.set(COMPRESS_OUTPUT);
+                result.flags.set(COMPRESS_OUTPUT);
             } else if (clo == "ctsout") {
-                if (ctsoutName != "") {
+                if (result.ctsout != "") {
                     throw cmd_exception("--ctsout argument may only be given once");
                 }
-                ctsoutName = parseNextArg(argc, argv, i);
+                result.ctsout = parseNextArg(argc, argv, i);
             } else if (clo == "name") {
-                if (ctsoutName != "" || outputName != "" || scenarioFile != "") {
+                if (result.ctsout != "" || result.output != "" || scenarioFile != "") {
                     throw cmd_exception("--name may not be used along with --scenario, --output or --ctsout");
                 }
                 string name = parseNextArg(argc, argv, i);
                 (scenarioFile = "scenario").append(name).append(".xml");
-                (outputName = "output").append(name);
-                (ctsoutName = "ctsout").append(name).append(".txt");
+                (result.output = "output").append(name);
+                (result.ctsout = "ctsout").append(name).append(".txt");
             } else if (clo == "validate-only") {
-                options.set(SKIP_SIMULATION);
+                result.flags.set(SKIP_SIMULATION);
             } else if (clo == "no-deprecation-warnings") {
-                options.reset(DEPRECATION_WARNINGS);
+                result.flags.reset(DEPRECATION_WARNINGS);
             } else if (clo == "print-model") {
-                options.set(PRINT_MODEL_OPTIONS);
-                options.set(SKIP_SIMULATION);
+                result.flags.set(PRINT_MODEL_OPTIONS);
+                result.flags.set(SKIP_SIMULATION);
             } else if (clo == "print-EIR") {
-                options.set(PRINT_ANNUAL_EIR);
-                options.set(SKIP_SIMULATION);
+                result.flags.set(PRINT_ANNUAL_EIR);
+                result.flags.set(SKIP_SIMULATION);
             } else if (clo == "print-interventions") {
-                options.set(PRINT_INTERVENTIONS);
-                options.set(SKIP_SIMULATION);
+                result.flags.set(PRINT_INTERVENTIONS);
+                result.flags.set(SKIP_SIMULATION);
             } else if (clo == "print-survey-times") {
-                options.set(PRINT_SURVEY_TIMES);
-                options.set(SKIP_SIMULATION);
+                result.flags.set(PRINT_SURVEY_TIMES);
+                result.flags.set(SKIP_SIMULATION);
             } else if (clo == "print-genotypes") {
-                options.set(PRINT_GENOTYPES);
-                options.set(SKIP_SIMULATION);
+                result.flags.set(PRINT_GENOTYPES);
+                result.flags.set(SKIP_SIMULATION);
             } else if (clo == "sample-interpolations") {
-                options.set(SAMPLE_INTERPOLATIONS);
-                options.set(SKIP_SIMULATION);
+                result.flags.set(SAMPLE_INTERPOLATIONS);
+                result.flags.set(SKIP_SIMULATION);
             } else if (clo == "checkpoint") {
-                options.set(CHECKPOINT);
+                result.flags.set(CHECKPOINT);
             } else if (clo == "checkpoint-file") {
-                if (checkpointFileName != "") {
+                if (result.checkpoint_file != "") {
                     throw cmd_exception("--checkpoint-file argument may only be given once");
                 }
-                options.set(CHECKPOINT);
-                checkpointFileName = parseNextArg(argc, argv, i);
+                result.flags.set(CHECKPOINT);
+                result.checkpoint_file = parseNextArg(argc, argv, i);
             } else if (clo == "checkpoint-stop") {
-                options.set(CHECKPOINT);
-                options.set(CHECKPOINT_STOP);
+                result.flags.set(CHECKPOINT);
+                result.flags.set(CHECKPOINT_STOP);
             } else if (clo == "debug-vector-fitting") {
-                options.set(DEBUG_VECTOR_FITTING);
+                result.flags.set(DEBUG_VECTOR_FITTING);
 #ifdef OM_STREAM_VALIDATOR
             } else if (clo == "stream-validator") {
                 if (sVFile.size())
@@ -190,40 +181,40 @@ string CommandLine::parse(int argc, char* argv[]) {
         } else if (clo.size() >= 1 && *clo.data() == '-') { // single - (not --)
             for (size_t j = 1; j < clo.size(); ++j) {
                 if (clo[j] == 'V') {
-                    options.set(VERBOSE);
+                    result.flags.set(VERBOSE);
                 } else if (clo[j] == 'p') {
                     if (j + 1 != clo.size())
                         throw cmd_exception("a path must be given as next argument after -p");
-                    if (resourcePath.size())
+                    if (result.resource_path.size())
                         throw cmd_exception("--resource-path (or -p) may only be given once");
-                    resourcePath = parseNextArg(argc, argv, i).append("/");
+                    result.resource_path = parseNextArg(argc, argv, i).append("/");
                 } else if (clo[j] == 'm') {
-                    options.set(PRINT_MODEL_OPTIONS);
-                    options.set(SKIP_SIMULATION);
+                    result.flags.set(PRINT_MODEL_OPTIONS);
+                    result.flags.set(SKIP_SIMULATION);
                 } else if (clo[j] == 's') {
                     if (scenarioFile != "") {
                         throw cmd_exception("-s argument may only be given once");
                     }
                     scenarioFile = parseNextArg(argc, argv, i);
                 } else if (clo[j] == 'o') {
-                    if (outputName != "") {
+                    if (result.output != "") {
                         throw cmd_exception("-o argument may only be given once");
                     }
-                    outputName = parseNextArg(argc, argv, i);
+                    result.output = parseNextArg(argc, argv, i);
                 } else if (clo[j] == 'n') {
-                    if (ctsoutName != "" || outputName != "" || scenarioFile != "") {
+                    if (result.ctsout != "" || result.output != "" || scenarioFile != "") {
                         throw cmd_exception("--name may not be used along with --scenario, --output or --ctsout");
                     }
                     string name = parseNextArg(argc, argv, i);
                     (scenarioFile = "scenario").append(name).append(".xml");
-                    (outputName = "output").append(name);
-                    (ctsoutName = "ctsout").append(name).append(".txt");
+                    (result.output = "output").append(name);
+                    (result.ctsout = "ctsout").append(name).append(".txt");
                 } else if (clo[j] == 'c') {
-                    options.set(CHECKPOINT);
+                    result.flags.set(CHECKPOINT);
                 } else if (clo[j] == 'v') {
                     cloVersion = true;
                 } else if (clo[j] == 'z') {
-                    options.set(COMPRESS_OUTPUT);
+                    result.flags.set(COMPRESS_OUTPUT);
                 } else if (clo[j] == 'h') {
                     cloHelp = true;
                 } else {
@@ -332,27 +323,28 @@ string CommandLine::parse(int argc, char* argv[]) {
     if (scenarioFile == "") {
         scenarioFile = "scenario.xml";
     }
-    resolveOutputName(outputName, outputFormat, options.test(COMPRESS_OUTPUT));
-    if (ctsoutName == "") {
-        ctsoutName = "ctsout.txt";
+    resolveOutputName(result.output, result.format, result.flags.test(COMPRESS_OUTPUT));
+    if (result.ctsout == "") {
+        result.ctsout = "ctsout.txt";
     }
 
-    return lookupResource(scenarioFile);
+    result.scenario = result.lookup_resource(scenarioFile);
+    return result;
 }
 
 /* These check parameters are as expected. They only really serve to make
      * sure important command-line parameters didn't change (and only in DEBUG mode)! */
-void CommandLine::staticCheckpoint(istream& stream) {
+void CommandLineOptions::checkpoint(istream& stream) const {
     string tOpt;
     string tResPath;
     tOpt & stream;
     tResPath & stream;
-    assert(tOpt == options.to_string());
-    assert(tResPath == resourcePath);
+    assert(tOpt == flags.to_string());
+    assert(tResPath == resource_path);
 }
-void CommandLine::staticCheckpoint(ostream& stream) {
-    options.to_string() & stream;
-    resourcePath & stream;
+void CommandLineOptions::checkpoint(ostream& stream) const {
+    flags.to_string() & stream;
+    resource_path & stream;
 }
 
 }

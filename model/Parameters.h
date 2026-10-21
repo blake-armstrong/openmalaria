@@ -146,8 +146,11 @@ public:
     * Expects that the scenario XML either explicitly describes a collection of parameters and values
     * or describes the name of a model to use.
     */
-    Parameters(const scnXml::Model::ParametersOptional& xmlParameterValues, util::ModelNameProvider mnp) {
-        for (const std::pair<int, Parameter> pair : idCodeToNameMap) {
+    Parameters() = default;
+
+    Parameters(const scnXml::Model::ParametersOptional& xmlParameterValues, const util::ModelNameProvider& mnp,
+               const util::CommandLineOptions& commandLine) {
+        for (const std::pair<int, Parameter> pair : idCodeToNameMap()) {
             const Parameter name = pair.second;
             nameToValueMap[name] = std::nullopt;
         }
@@ -169,7 +172,8 @@ public:
         // named model.
         const bool useExplicitParamValues = xmlParameterValues.present();
         if (useExplicitParamValues) {
-            initializeParamsFromXML(xmlParameterValues.get());
+            initializeParamsFromXML(xmlParameterValues.get(),
+                                    commandLine.option(util::CommandLine::DEPRECATION_WARNINGS));
         }
     }
 
@@ -180,7 +184,7 @@ public:
         // First check the parameter actually exists and has a value.
         const bool paramHasAValueSet = nameToValueMap.at(name) != std::nullopt;
         if (!paramHasAValueSet) {
-            for (const std::pair<int, Parameter> pair : idCodeToNameMap) {
+            for (const std::pair<int, Parameter> pair : idCodeToNameMap()) {
                 if (pair.second == name) {
                     const int paramCode = pair.first;
                     throw util::xml_scenario_error("Parameter with index " + to_string(paramCode) +
@@ -201,7 +205,7 @@ private:
     * This method will be used if the user does not use the "base" model or any
     * other pre-set collection of parameter values.
     */
-    void initializeParamsFromXML(const scnXml::Parameters& parameters) {
+    void initializeParamsFromXML(const scnXml::Parameters& parameters, bool deprecationWarnings) {
         const scnXml::Parameters::ParameterSequence& paramSeq = parameters.getParameter();
 
         // It's okay if a user overwrites the value of a parameter that was set before this
@@ -216,9 +220,9 @@ private:
             const double paramValueFromXML = param.getValue();
 
             // C++20 offers "contains" which would be more expressive than "count" here.
-            const bool paramIdIsValid = idCodeToNameMap.count(paramId);
+            const bool paramIdIsValid = idCodeToNameMap().count(paramId);
             if (!paramIdIsValid) {
-                if (util::CommandLine::option(util::CommandLine::DEPRECATION_WARNINGS)) {
+                if (deprecationWarnings) {
                     cerr << "Deprecation warning: <parameter> index" << to_string(paramId) << " is no longer used"
                          << endl;
                 }
@@ -230,7 +234,7 @@ private:
                 // deprecated some parameters.
                 continue;
             }
-            const Parameter nameOfParamToSet = idCodeToNameMap.at(paramId);
+            const Parameter nameOfParamToSet = idCodeToNameMap().at(paramId);
 
             const bool paramValueAlreadySet = !paramIdsSetByUser.insert(paramId).second;
             if (paramValueAlreadySet) {
@@ -252,9 +256,9 @@ private:
         // e.g. for a deprecated parameter.  This is so that a more informative error message can be given.
         // std::unordered_map is not able to be made constexpr, which means it would be non-trivial to handle
         // this error condition with a compile-time check instead.
-        auto retrieveParamName = [&idCodeToNameMap = std::as_const(idCodeToNameMap)](const int id) -> Parameter {
+        auto retrieveParamName = [](const int id) -> Parameter {
             try {
-                return idCodeToNameMap.at(id);
+                return idCodeToNameMap().at(id);
             } catch (const exception& e) {
                 cerr << "Error: " << e.what() << endl;
                 throw util::traced_exception("Base model attempted to set a value for a parameter with id: " +
@@ -310,47 +314,50 @@ private:
     * The keys of this map need not form a contiguous sequence.
     * E.g. in the case where a parameter is deleted altogether from the simulation code.
     */
-    const std::unordered_map<int, Parameter> idCodeToNameMap{
-        {1, Parameter::NEG_LOG_ONE_MINUS_SINF},
-        {2, Parameter::E_STAR},
-        {3, Parameter::SIMM},
-        {4, Parameter::X_STAR_P},
-        {5, Parameter::GAMMA_P},
-        {6, Parameter::SIGMA_I_SQ},
-        {7, Parameter::CUMULATIVE_Y_STAR},
-        {8, Parameter::CUMULATIVE_H_STAR},
-        {9, Parameter::NEG_LOG_ONE_MINUS_ALPHA_M},
-        {10, Parameter::DECAY_M},
-        {11, Parameter::SIGMA0_SQ},
-        {12, Parameter::X_NU_STAR},
-        {13, Parameter::Y_STAR_SQ},
-        {14, Parameter::ALPHA},
-        {15, Parameter::DENSITY_BIAS_NON_GARKI},
-        {16, Parameter::BASELINE_AVAILABILITY_SHAPE},
-        {17, Parameter::LOG_ODDS_RATIO_CF_COMMUNITY},
-        {18, Parameter::INDIRECT_RISK_COFACTOR},
-        {19, Parameter::NON_MALARIA_INFANT_MORTALITY},
-        {20, Parameter::DENSITY_BIAS_GARKI},
-        {21, Parameter::SEVERE_MALARIA_THRESHHOLD},
-        {22, Parameter::IMMUNITY_PENALTY},
-        {23, Parameter::IMMUNE_EFFECTOR_DECAY},
-        {24, Parameter::COMORBIDITY_INTERCEPT},
-        {25, Parameter::Y_STAR_HALF_LIFE},
-        {26, Parameter::Y_STAR_1},
-        {27, Parameter::ASEXUAL_IMMUNITY_DECAY},
-        {28, Parameter::Y_STAR_0},
-        // 29 corresponds to a now-deprecated parameter.  If adding a new parameter,
-        // don't use 29.  Since some old scenarios likely define a parameter value
-        // with index 29 already.
-        {30, Parameter::CRITICAL_AGE_FOR_COMORBIDITY},
-        {31, Parameter::MUELLER_RATE_MULTIPLIER},
-        {32, Parameter::MUELLER_DENSITY_EXPONENT},
-        {33, Parameter::CFR_SCALE_FACTOR},
-        {34, Parameter::MEAN_LOCAL_MAX_DENSITY},
-        {35, Parameter::SD_LOCAL_MAX_DENSITY},
-        {36, Parameter::MEAN_DIFF_POS_DAYS},
-        {37, Parameter::SD_DIFF_POS_DAYS},
-        {38, Parameter::CFR_NEG_LOG_ALPHA}};
+    static const std::unordered_map<int, Parameter>& idCodeToNameMap() {
+        static const std::unordered_map<int, Parameter> map{
+            {1, Parameter::NEG_LOG_ONE_MINUS_SINF},
+            {2, Parameter::E_STAR},
+            {3, Parameter::SIMM},
+            {4, Parameter::X_STAR_P},
+            {5, Parameter::GAMMA_P},
+            {6, Parameter::SIGMA_I_SQ},
+            {7, Parameter::CUMULATIVE_Y_STAR},
+            {8, Parameter::CUMULATIVE_H_STAR},
+            {9, Parameter::NEG_LOG_ONE_MINUS_ALPHA_M},
+            {10, Parameter::DECAY_M},
+            {11, Parameter::SIGMA0_SQ},
+            {12, Parameter::X_NU_STAR},
+            {13, Parameter::Y_STAR_SQ},
+            {14, Parameter::ALPHA},
+            {15, Parameter::DENSITY_BIAS_NON_GARKI},
+            {16, Parameter::BASELINE_AVAILABILITY_SHAPE},
+            {17, Parameter::LOG_ODDS_RATIO_CF_COMMUNITY},
+            {18, Parameter::INDIRECT_RISK_COFACTOR},
+            {19, Parameter::NON_MALARIA_INFANT_MORTALITY},
+            {20, Parameter::DENSITY_BIAS_GARKI},
+            {21, Parameter::SEVERE_MALARIA_THRESHHOLD},
+            {22, Parameter::IMMUNITY_PENALTY},
+            {23, Parameter::IMMUNE_EFFECTOR_DECAY},
+            {24, Parameter::COMORBIDITY_INTERCEPT},
+            {25, Parameter::Y_STAR_HALF_LIFE},
+            {26, Parameter::Y_STAR_1},
+            {27, Parameter::ASEXUAL_IMMUNITY_DECAY},
+            {28, Parameter::Y_STAR_0},
+            // 29 corresponds to a now-deprecated parameter.  If adding a new parameter,
+            // don't use 29.  Since some old scenarios likely define a parameter value
+            // with index 29 already.
+            {30, Parameter::CRITICAL_AGE_FOR_COMORBIDITY},
+            {31, Parameter::MUELLER_RATE_MULTIPLIER},
+            {32, Parameter::MUELLER_DENSITY_EXPONENT},
+            {33, Parameter::CFR_SCALE_FACTOR},
+            {34, Parameter::MEAN_LOCAL_MAX_DENSITY},
+            {35, Parameter::SD_LOCAL_MAX_DENSITY},
+            {36, Parameter::MEAN_DIFF_POS_DAYS},
+            {37, Parameter::SD_DIFF_POS_DAYS},
+            {38, Parameter::CFR_NEG_LOG_ALPHA}};
+        return map;
+    }
 
     /*
     * Defines the map from parameter names to parameter (optional) values.

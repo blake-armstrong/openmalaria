@@ -71,8 +71,9 @@ void print_errno(SimTime now) {
 
 }
 
-Simulation::Simulation(std::unique_ptr<scnXml::Scenario> scenario)
-    : master_rngs(scenario->getModel().getComputationParameters().getIseed()), scenario_xml(std::move(scenario)),
+Simulation::Simulation(std::unique_ptr<scnXml::Scenario> scenario, util::CommandLineOptions options)
+    : command_line(std::move(options)), master_rngs(scenario->getModel().getComputationParameters().getIseed()),
+      scenario_xml(std::move(scenario)),
       only_new_episode(scenario_xml->getMonitoring().getSurveyOptions().getOnlyNewEpisode()) {
     // 1) elements with no dependencies on other elements initialised here:
     WithinHost::Genotypes::init(*scenario_xml);
@@ -82,10 +83,10 @@ Simulation::Simulation(std::unique_ptr<scnXml::Scenario> scenario)
     clock.init(*scenario_xml, model_name_provider); // Also reads survey dates.
 
     // 3) elements depending on only elements initialised in (2).
-    const Parameters parameters(scenario_xml->getModel().getParameters(),
-                                model_name_provider); // Depends on ModelNameProvider.
-    util::ModelOptions::init(scenario_xml->getModel().getModelOptions(),
-                             model_name_provider); // Depends on ModelNameProvider.
+    parameters = Parameters(scenario_xml->getModel().getParameters(), model_name_provider,
+                            command_line); // Depends on ModelNameProvider.
+    model_options = util::ModelOptionFlags(scenario_xml->getModel().getModelOptions(), model_name_provider,
+                                           command_line, clock.one_ts()); // Depends on ModelNameProvider.
 
     // 4) elements depending on only elements initialised in (3).
     WithinHost::diagnostics::init(parameters, *scenario_xml); // Depends on Parameters.
@@ -158,7 +159,7 @@ void Simulation::run(const CheckpointOptions& checkpointing) {
 
 void Simulation::resume(const std::string& checkpoint_file) {
     mon::Continuous::init(scenario_xml->getMonitoring(), true);
-    read_checkpoint(checkpoint_file, clock, master_rngs, end_time, est_end_time, *population_model,
+    read_checkpoint(checkpoint_file, command_line, clock, master_rngs, end_time, est_end_time, *population_model,
                     *transmission_model);
 
     /** Calculate ento availability percentiles **/
@@ -209,8 +210,8 @@ void Simulation::start_new(const CheckpointOptions& checkpointing) {
     mon::initMainSim();
 
     if (checkpointing.enabled) {
-        write_checkpoint(false, checkpointing.file_name, clock, master_rngs, end_time, est_end_time, *population_model,
-                         *transmission_model);
+        write_checkpoint(false, checkpointing.file_name, command_line, clock, master_rngs, end_time, est_end_time,
+                         *population_model, *transmission_model);
         if (checkpointing.stop_after_write)
             throw util::cmd_exception("Checkpoint test: checkpoint written", util::Error::None);
     }
@@ -230,12 +231,12 @@ void Simulation::finish() {
 }
 
 void Simulation::run_phase(const std::string& phase, SimTime end) {
-    if (util::CommandLine::option(util::CommandLine::VERBOSE))
+    if (command_line.option(util::CommandLine::VERBOSE))
         cout << "Starting " << phase << "..." << endl; // NOLINT(performance-avoid-endl)
 
     run_until(end);
 
-    if (util::CommandLine::option(util::CommandLine::VERBOSE))
+    if (command_line.option(util::CommandLine::VERBOSE))
         cout << "Finishing " << phase << "..." << endl; // NOLINT(performance-avoid-endl)
 }
 
@@ -248,7 +249,7 @@ void Simulation::step() {
     Population& population = *population_model;
     Transmission::TransmissionModel& transmission = *transmission_model;
 
-    if (util::CommandLine::option(util::CommandLine::VERBOSE) && clock.interv_date() > 0)
+    if (command_line.option(util::CommandLine::VERBOSE) && clock.interv_date() > 0)
         cout << "Time step: " << clock.now() / clock.one_ts() << ", internal days: " << clock.now() << " | "
              << est_end_time << ", Intervention Date: " << clock.interv_date()
              << endl; // NOLINT(performance-avoid-endl)
@@ -292,7 +293,7 @@ void Simulation::step() {
 
     clock.end_update();
 
-    if (util::CommandLine::option(util::CommandLine::PROGRESS))
+    if (command_line.option(util::CommandLine::PROGRESS))
         print_progress(last_percent, clock.now(), est_end_time);
     print_errno(clock.now());
 }

@@ -24,8 +24,11 @@
 #define HMOD_SIMULATION
 
 #include "Global.h"
+#include "Parameters.h"
 #include "Population.h"
 #include "Transmission/transmission.h"
+#include "util/CommandLine.h"
+#include "util/ModelOptions.h"
 #include "util/random.h"
 
 #include "schema/scenario.h"
@@ -43,7 +46,7 @@ struct CheckpointOptions {
 
 class Simulation {
 public:
-    explicit Simulation(std::unique_ptr<scnXml::Scenario> scenario);
+    Simulation(std::unique_ptr<scnXml::Scenario> scenario, util::CommandLineOptions options);
     Simulation(const Simulation&) = delete;
     Simulation& operator=(const Simulation&) = delete;
     Simulation(Simulation&&) = delete;
@@ -66,10 +69,15 @@ private:
     void resume(const std::string& checkpoint_file);
     void finish();
 
+    util::CommandLineOptions command_line;
+    CommandLineBinding command_line_binding{command_line};
     Clock clock;
     ClockBinding clock_binding{clock};
     util::MasterRngs master_rngs;
     MasterRngsBinding master_rngs_binding{master_rngs};
+    util::ModelOptionFlags model_options;
+    ModelOptionsBinding model_options_binding{model_options};
+    Parameters parameters;
     std::unique_ptr<scnXml::Scenario> scenario_xml;
     std::unique_ptr<Population> population_model;
     std::unique_ptr<Transmission::TransmissionModel> transmission_model;

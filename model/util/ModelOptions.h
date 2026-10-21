@@ -27,6 +27,7 @@
 #include "util/ModelNameProvider.h"
 #include <schema/scenario.h>
 #include <bitset>
+#include <cassert>
 #include <optional>
 
 class UnittestUtil;
@@ -36,6 +37,7 @@ class OptionSet;
 }
 namespace OM {
 namespace util {
+class CommandLineOptions;
 
 /** Flags signalling which versions of some models to use. */
 enum OptionCodes {
@@ -286,19 +288,18 @@ enum OptionCodes {
 };
 
 /// Encapsulation for "modelVersion" xml attribute
-class ModelOptions {
+class ModelOptionFlags {
 public:
-    /** Return true if given option (from OptionCodes) is active.
-         * 
-         * Performance note: calling this a few times (e.g. during init) is
-         * fine, but code needing a value repeatedly should cache it locally.
-         */
-    static inline bool option(OptionCodes code) { return options.test(code); }
+    ModelOptionFlags() = default;
 
     /*
     * Initialize the set of model options to use, based on input XML contents.
     */
-    static void init(scnXml::Model::ModelOptionsOptional& optionsElt, util::ModelNameProvider mnp);
+    ModelOptionFlags(const scnXml::Model::ModelOptionsOptional& optionsElt, const util::ModelNameProvider& mnp,
+                     const CommandLineOptions& commandLine, SimTime oneTs);
+
+    /** Return true if given option (from OptionCodes) is active. */
+    bool option(OptionCodes code) const { return options.test(code); }
 
 private:
     /*
@@ -319,17 +320,56 @@ private:
     static std::bitset<NUM_OPTIONS> getLegacyDefaultModelOptions();
 
     // Reset opts to default. Used by unit tests.
-    static inline void reset() {
+    void reset() {
         options.reset();
         options.set(MAX_DENS_CORRECTION);
         options.set(INNATE_MAX_DENS);
     }
-    static inline void set(OptionCodes code) { options.set(code); }
+    void set(OptionCodes code) { options.set(code); }
 
     // The model options
-    static std::bitset<NUM_OPTIONS> options;
+    std::bitset<NUM_OPTIONS> options;
 
     friend class ::UnittestUtil; // Note: class is in base namespace
+};
+}
+
+namespace bridge {
+
+// NOLINTNEXTLINE(cppcoreguidelines-avoid-non-const-global-variables)
+inline const util::ModelOptionFlags* current_model_options = nullptr;
+
+inline const util::ModelOptionFlags& model_options() {
+    assert(current_model_options != nullptr);
+    return *current_model_options;
+}
+
+}
+
+class ModelOptionsBinding {
+public:
+    explicit ModelOptionsBinding(const util::ModelOptionFlags& options) : previous(bridge::current_model_options) {
+        bridge::current_model_options = &options;
+    }
+    ModelOptionsBinding(const ModelOptionsBinding&) = delete;
+    ModelOptionsBinding& operator=(const ModelOptionsBinding&) = delete;
+    ModelOptionsBinding(ModelOptionsBinding&&) = delete;
+    ModelOptionsBinding& operator=(ModelOptionsBinding&&) = delete;
+    ~ModelOptionsBinding() { bridge::current_model_options = previous; }
+
+private:
+    const util::ModelOptionFlags* previous;
+};
+
+namespace util {
+class ModelOptions {
+public:
+    /** Return true if given option (from OptionCodes) is active.
+         * 
+         * Performance note: calling this a few times (e.g. during init) is
+         * fine, but code needing a value repeatedly should cache it locally.
+         */
+    static bool option(OptionCodes code) { return bridge::model_options().option(code); }
 };
 }
 }

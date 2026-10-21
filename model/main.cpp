@@ -37,13 +37,13 @@ using namespace OM;
 
 namespace {
 
-CheckpointOptions checkpoint_options() {
+CheckpointOptions checkpoint_options(const util::CommandLineOptions& command_line) {
     CheckpointOptions options;
-    const string name = util::CommandLine::getCheckpointName();
+    const string& name = command_line.checkpoint_name();
     if (!name.empty())
         options.file_name = name;
-    options.enabled = util::CommandLine::option(util::CommandLine::CHECKPOINT);
-    options.stop_after_write = util::CommandLine::option(util::CommandLine::CHECKPOINT_STOP);
+    options.enabled = command_line.option(util::CommandLine::CHECKPOINT);
+    options.stop_after_write = command_line.option(util::CommandLine::CHECKPOINT_STOP);
     return options;
 }
 
@@ -57,13 +57,15 @@ int main(int argc, char* argv[]) {
     try {
         util::set_gsl_handler();
 
-        scenario_file = util::CommandLine::parse(argc, argv);
+        util::CommandLineOptions command_line = util::CommandLine::parse(argc, argv);
+        scenario_file = command_line.scenario_path();
         unique_ptr<scnXml::Scenario> scenario = util::loadScenario(scenario_file);
 
         util::XMLChecker().PerformPostValidationChecks(*scenario);
 
-        Simulation simulation(std::move(scenario));
-        simulation.run(checkpoint_options());
+        const CheckpointOptions checkpointing = checkpoint_options(command_line);
+        Simulation simulation(std::move(scenario), std::move(command_line));
+        simulation.run(checkpointing);
     } catch (const OM::util::cmd_exception& e) {
         if (e.getCode() == 0) {
             // this is not an error, but exiting due to command line
