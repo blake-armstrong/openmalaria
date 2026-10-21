@@ -28,7 +28,11 @@ See `PLAN.md` for the session protocol, chunks and gates. Append one log entry p
 | D2 | done | 61fe9993, c98ffe6f, db1c50b1, 0808f323, fdd69348, 82e3c602, (this log entry) |
 | D2b | done | 33185613, 9447ccf7, 1647ef78, (this log entry) |
 | D3 | done | cfe2250e, b074dcd3, 79d7e9ae, 6e96d1cf, a653b976, efb5ad9d, cf709072, 39f23abd, b8df955e, fbb7c714, (this log entry) |
-| D4 | todo | |
+| D4 | split | D4a–D4d |
+| D4a | todo | |
+| D4b | todo | |
+| D4c | todo | |
+| D4d | todo | |
 | D5 | todo | |
 | D6 | todo | |
 | D7 | todo | |
@@ -851,3 +855,6 @@ See `PLAN.md` for the session protocol, chunks and gates. Append one log entry p
   - **Replicate data: the user decided (2026-10-21) to keep `/Users/blaarm/git/om-s5`, `build-rework/stats-s6/` and `build-rework/stats-v1/` until the refactor is finished or the data becomes stale** (e.g. the references they back are regenerated). Don't ask again at each chunk.
   - F41 is a CLI behaviour change; it fits I2, or earlier if the user wants.
 - Next: D4 (recommended order 12).
+
+### Plan amendment: D4 split (2026-10-21, at the start of D4)
+- D4 covers about 35 files of non-mechanical change (the four within-host classes, the eight infection models, `WHVivax`, the three registries, `Simulation` and the unit tests), past the protocol's ~20. Split in advance by layer, so each part has one owner object to move statics into: D4a (the falciparum within-host classes into a new `WithinHost::WithinHostModel`), D4b (the infection models' parameters into that object), D4c (`WHVivax`), D4d (`Genotypes`, `diagnostics`, `Treatments`). Rows in PLAN.md § Stage D.
