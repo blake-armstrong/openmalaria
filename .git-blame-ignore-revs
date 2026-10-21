@@ -36,3 +36,7 @@ b8df955e63941d358c0befb727337fbbba08cd2d
 4db8261740365bedcbe14e3c8ceeb34c671fedc3
 # D4b: model/Host/WithinHost/Infection safe modernize fix-its (util/style.sh modernize)
 808c0e48a0d682f8a2487a26ce96ff2c3a4db3e1
+# D4c: rename model/Host/WithinHost/WHVivax identifiers (util/style.sh rename)
+f511b38927e557bfacad559dabe66818a16dd2e8
+# D4c: rename release_dates in the WHVivaxSamples blocks (by hand)
+24fec740543ab38ce81b6a4bf24087f9e07363bd
