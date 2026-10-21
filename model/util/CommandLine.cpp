@@ -33,8 +33,7 @@
 #include <iostream>
 #include <cassert>
 
-namespace OM {
-namespace util {
+namespace OM::util {
 string parseNextArg(int argc, char* argv[], int& i) {
     ++i;
     if (i >= argc)
@@ -347,5 +346,4 @@ void CommandLineOptions::checkpoint(ostream& stream) const {
     resource_path & stream;
 }
 
-}
 }

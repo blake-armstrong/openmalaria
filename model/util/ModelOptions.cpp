@@ -28,8 +28,7 @@
 #include <sstream>
 #include <iostream>
 
-namespace OM {
-namespace util {
+namespace OM::util {
 // Utility: converts option strings to codes and back
 class OptionCodeMap {
     // Lookup table to translate the strings used in the XML file to the internal enumerated values:
@@ -83,7 +82,7 @@ public:
         code_map["USE_EXACT_NV0_SOLVER"] = UseExactNv0Solver;
     }
 
-    OptionCodes operator[](const string s) {
+    OptionCodes operator[](const string& s) {
         auto code_it = code_map.find(s);
         if (code_it != code_map.end())
             return code_it->second;
@@ -109,9 +108,9 @@ public:
     // reverse-lookup in map; only used for error/debug printing so efficiency is unimportant
     // doesn't ensure code is unique in the map either
     string to_string(const OptionCodes code) {
-        for (auto code_it = code_map.begin(); code_it != code_map.end(); ++code_it) {
-            if (code_it->second == code)
-                return code_it->first;
+        for (auto& code_it : code_map) {
+            if (code_it.second == code)
+                return code_it.first;
         }
         throw TRACED_EXCEPTION_DEFAULT("toString called with unknown code"); // this is a code error
     }
@@ -160,10 +159,10 @@ ModelOptionFlags::ModelOptionFlags(const scnXml::Model::ModelOptionsOptional& op
     // Apply any user-specified overrides.
     if (options_elt.present()) {
         const scnXml::OptionSet::OptionSequence& opt_seq = options_elt.get().getOption();
-        for (auto it = opt_seq.begin(); it != opt_seq.end(); ++it) {
-            OptionCodes opt = code_map[it->getName()];
+        for (const auto& it : opt_seq) {
+            OptionCodes opt = code_map[it.getName()];
             if (opt != IGNORE)
-                options[opt] = it->getValue();
+                options[opt] = it.getValue();
         }
     }
 
@@ -287,5 +286,4 @@ ModelOptionFlags::ModelOptionFlags(const scnXml::Model::ModelOptionsOptional& op
     }
 }
 
-}
 }

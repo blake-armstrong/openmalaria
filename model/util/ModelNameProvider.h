@@ -26,8 +26,7 @@
 #include <schema/scenario.h>
 #include "util/errors.h"
 
-namespace OM {
-namespace util {
+namespace OM::util {
 /*
         * It is intended that this holds the entire collection of named models.
         */
@@ -59,14 +58,13 @@ public:
         }
     }
 
-    ~ModelNameProvider() {}
+    ~ModelNameProvider() = default;
 
     ModelNames get_model_name() const { return model_in_use; }
 
 private:
     ModelNames model_in_use = ModelNames::None;
 };
-}
 }
 
 #endif
