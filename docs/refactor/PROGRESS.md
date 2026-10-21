@@ -26,7 +26,7 @@ See `PLAN.md` for the session protocol, chunks and gates. Append one log entry p
 | C2 | done | 20e8bf39, (this log entry) |
 | D1 | done | 2e2cac5a, 72e14d9c, bda40963, 4252cba1, 1a0c0b58, 48d3476c, 186d32f5, 21e09c0d, (this log entry) |
 | D2 | done | 61fe9993, c98ffe6f, db1c50b1, 0808f323, fdd69348, 82e3c602, (this log entry) |
-| D2b | todo | |
+| D2b | in progress | |
 | D3 | todo | |
 | D4 | todo | |
 | D5 | todo | |
@@ -748,3 +748,9 @@ See `PLAN.md` for the session protocol, chunks and gates. Append one log entry p
 - Surprises: the scenarios' own seeds always converged, so ctest never saw any of the four abort paths; the stop test ignored rotation in every upstream version; fixing the species gating exposed it (NonHumanHosts EIR 13% low) and was only caught by comparing references, not by G-exact or G-stat.
 - Follow-ups: D2b needs Decision 1 and regenerates all references again; F34 for whoever touches `run.py`; D7's rename should resolve `calculateEIR`'s `EIR_i`/`EIR_l` against its locals `eir_i`/`eir_l`.
 - Next: D2b (recommended order 11). **Ask the user Decision 1 first.**
+
+### D2b: Split into per-purpose RNG streams (in progress, 2026-10-21)
+- Base: ed1222d1.
+- **Decision 1 (asked at the start of this chunk): only chunks whose purpose is to change draws (D2b, M4, M8)** may rely on G-stat instead of G-exact.
+- **Stream design, agreed with the user:** separate population and transmission master streams; four per-human streams (host, clinical, intervention, monitoring). See the D2b row in PLAN.md.
+- **Regeneration, agreed with the user:** keep the 51 statistical references (D2b is checked against them); regenerate `test/expected/` at the end of D2b, and again after M4.

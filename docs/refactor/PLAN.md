@@ -366,7 +366,7 @@ For each D chunk, **Needs:** the previous D chunk plus B4 and M2. **Gates:** G-e
 |---|---|
 | **D1** | `sim::` time statics in `model/sim.h` → `Clock`, a member of `Simulation` |
 | **D2** | `util::master_RNG` → an RNG owned by `Simulation`, with the same single stream and draw order |
-| **D2b** | Split into per-purpose RNG streams. **Changes draw order on purpose.** Needs S6, S7, V1 and the user's answer to Decision 1. Gate: G-stat (including `statistical-full`) instead of G-exact. Regenerate `test/expected/` only with the user's approval. |
+| **D2b** | Split into per-purpose RNG streams. **Changes draw order on purpose.** Needs S6, S7, V1 and the user's answer to Decision 1. Gate: G-stat (including `statistical-full`) instead of G-exact. Regenerate `test/expected/` only with the user's approval. Agreed design (2026-10-21): separate ChaCha master streams for the population and for transmission; each `Human` gets four Xoshiro streams, seeded from the population master in a fixed order: host (heterogeneity, infection incidence, within-host, infections, pathogenesis, imported infections), clinical (case management, decision trees run by the clinical model, neonatal mortality), intervention (coverage, component sampling, decision trees run by interventions) and monitoring (survey and ctsout diagnostics). The statistical references are kept, as the yardstick for this chunk; `test/expected/` is regenerated at the end of D2b and again after M4. |
 | **D3** | `ModelOptions`, `CommandLine` bitsets, `Parameters` → a `ModelOptions` object built once and owned by `Simulation` |
 | **D4** | Within-host and infection file statics (`WHFalciparum.cpp:55-79`, `CommonWithinHost`, the `Infection` subclasses) → component instance members. Split by subdirectory if it grows past ~20 files. |
 | **D5** | PK/PD `schedules`/`dosages` and `PerHost::params` → instance state |
@@ -599,7 +599,7 @@ Licence notes: OpenMalaria is GPL-2.0-or-later. MIT, BSD, BSL and MPL-2.0 code m
 - **Rename churn.** Renames happen per module, in separate commits made by tools.
 
 ## Open decisions (ask the user before the chunk that needs them)
-1. **Before D2b:** which changes may give up byte-for-byte equality and rely on G-stat instead? (Recommended: only chunks whose purpose is to change draw order.)
+1. **Before D2b:** which changes may give up byte-for-byte equality and rely on G-stat instead? (Recommended: only chunks whose purpose is to change draw order.) **Answered (2026-10-21): only chunks whose purpose is to change draws: D2b, M4, M8.** Every other chunk, M5/M6 included, stays G-exact.
 2. **Before H1:** are Python bindings a primary goal? If so, move stage J to directly after H2.
 3. **Before E1:** does XML stay the primary user format, or is YAML/JSON or Python-built config added?
 4. **Before I2:** must the existing CLI flags stay backward compatible, and for how long?
