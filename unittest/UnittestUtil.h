@@ -392,7 +392,7 @@ public:
         unittest_options::within_host_model.kind = WithinHost::WithinHostModel::Kind::Common;
     }
 
-    static WithinHost::MolineauxInfectionParams MolineauxWHM_setup(const std::string& mode, bool repl_gamma) {
+    static WithinHost::MolineauxInfectionParams molineaux_whm_setup(const std::string& mode, bool repl_gamma) {
         unittest_options::model_options.reset();
         unittest_options::model_options.set(util::MolineauxWithinHostModel);
         unittest_options::within_host_model.kind = WithinHost::WithinHostModel::Kind::Common;
