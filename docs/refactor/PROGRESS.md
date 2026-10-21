@@ -27,7 +27,7 @@ See `PLAN.md` for the session protocol, chunks and gates. Append one log entry p
 | D1 | done | 2e2cac5a, 72e14d9c, bda40963, 4252cba1, 1a0c0b58, 48d3476c, 186d32f5, 21e09c0d, (this log entry) |
 | D2 | done | 61fe9993, c98ffe6f, db1c50b1, 0808f323, fdd69348, 82e3c602, (this log entry) |
 | D2b | done | 33185613, 9447ccf7, 1647ef78, (this log entry) |
-| D3 | todo | |
+| D3 | done | d9738c24, b074dcd3, 79d7e9ae, 6e96d1cf, a653b976, efb5ad9d, cf709072, 39f23abd, (this log entry) |
 | D4 | todo | |
 | D5 | todo | |
 | D6 | todo | |
@@ -437,6 +437,7 @@ See `PLAN.md` for the session protocol, chunks and gates. Append one log entry p
   | `model/PkPd` | cae5d3b5 (B4) | a0f1112c + 7b330170 (M2) |
   | `model/` root: `sim.h`, `Clock.{h,cpp}`, `Simulation.{h,cpp}`, `checkpoint.{h,cpp}` | 4252cba1 (D1) | 48d3476c + 21e09c0d (D1) |
   | `model/util/random.h`, `model/util/xoshiro.h` | c98ffe6f (D2) | 0808f323 + 82e3c602 (D2) |
+  | `model/util/CommandLine.{h,cpp}`, `model/util/ModelOptions.{h,cpp}`, `model/Parameters.h`, `model/util/ModelNameProvider.h` | 6e96d1cf (D3) | efb5ad9d + 39f23abd (D3) |
 
 - Follow-ups:
   - D chunks: run `/rename-module` then `/modernize-module` on each module the chunk owns, and add a row to the table above.
@@ -807,3 +808,45 @@ See `PLAN.md` for the session protocol, chunks and gates. Append one log entry p
   - M9: F39 (pinned unit-test values) when porting the suites to Catch2.
   - The S5/S6/V1 replicate dirs (`/Users/blaarm/git/om-s5` 4.5 GB, `build-rework/stats-s6/` 3.0 GB, `build-rework/stats-v1/` 8.0 GB) were kept until M4 at the user's request. The references they back are unchanged by M4. **The user decided (2026-10-21): keep them until D3 is done**; ask again then.
 - Next: D3 (recommended order 12).
+
+### D3: `ModelOptions`, `CommandLine`, `Parameters` → objects owned by `Simulation` (done, 2026-10-21)
+- Base: 389ee2e9. The G-perf base worktree `../om-bench-base` was moved to 389ee2e9 and rebuilt.
+- **Shape, a deviation from the plan's "a `ModelOptions` object":** three members, not one object, because they are built at three points of the init chain and the order is kept (an error or warning from one would otherwise be reported before another's). `Simulation` declares, in order: `util::CommandLineOptions command_line` (parsed in `main` and moved in, so it is bound before `Genotypes::init`, which reads `--print-genotypes`), the clock and RNGs, then `util::ModelOptionFlags model_options` and `Parameters parameters`, default-constructed and assigned once at their old place after `clock.init`. As in D1, the instance classes have new names and the old classes keep their static accessors as the bridge.
+- Commits:
+  - d9738c24: `UnittestUtil::DescriptiveInfection_init` → `descriptive_infection_init`, so the logic commit doesn't touch a legacy name. Its only caller, the uncompiled `DescriptiveInfectionSuite`, has rotted (F9) and was left alone.
+  - b074dcd3: **logic.**
+    - `CommandLine::parse` returns a `CommandLineOptions`, which holds the flags, resource path, output, ctsout and checkpoint names, the output format and the resolved scenario path.
+    - `ModelOptionFlags`' constructor is the old `ModelOptions::init`. It takes the command-line options and the step length instead of reading the globals.
+    - `Parameters` takes the command-line options for its deprecation warning. Its id map became a function-local static, so the class is assignable.
+    - **Bridge:** `bridge::current_command_line`/`command_line()` and `bridge::current_model_options`/`model_options()`, with `CommandLineBinding` and `ModelOptionsBinding` (`NOLINT`ed globals, removed in D9). `CommandLine::option`, `lookup_resource`, `output_name`, `output_format`, `ctsout_name` and `ModelOptions::option` delegate through them.
+    - **Migrated:** `Simulation` (verbose, progress), `main` (checkpoint options from the parsed object), `checkpoint.{h,cpp}` (the four functions take `const CommandLineOptions&`; `CommandLineOptions::checkpoint` replaces `staticCheckpoint` and writes the same two strings), and `ModelOptions`/`Parameters` themselves. The other ~30 files with `ModelOptions::option` reads (58 calls) and ~20 with `CommandLine::` reads still go through the bridge, for their D chunks.
+    - `UnittestUtil.h` binds a default-constructed pair for the whole test run (namespace-scope globals in the single CxxTest TU, `NOLINTBEGIN`/`END`), matching the zero-initialised statics the tests saw before. `reset()`/`set()` act on that object.
+  - 79d7e9ae: FINDINGS F41, F42, F9 note.
+  - 6e96d1cf + a653b976: **rename**, 151 renames over 46 files. Maps: `Sigma0Sq`, `UseExactNv0Solver`, `require_one_day_ts` (the tool's `SigmA0Sq`, `UseExactNV0Solver`, `require1_day_ts`); `IdCodeToName`; the bridge getters → `output_name`, `output_format`, `ctsout_name`, `checkpoint_name`, the names of the `CommandLineOptions` methods they delegate to, so D9 is a plain swap. Skip: `parseNextArg`, whose use inside `#ifdef OM_STREAM_VALIDATOR` clang-tidy can't see (F23's pattern); renamed by hand in 39f23abd.
+  - efb5ad9d + cf709072: **modernise, tool:** 3 `concat-nested-namespaces`, 2 `loop-convert`, 1 `use-equals-default`, 1 `unnecessary-value-param`.
+  - 39f23abd: **modernise, hand:**
+    - `parse(std::span<char* const>)` with `starts_with`;
+    - `lookup_resource` without empty branches;
+    - the unused `CommandLine::checkpoint_name` bridge dropped;
+    - `std::array` incompatibility table;
+    - the four `ostringstream` messages → `std::format` (bools as `{:d}`);
+    - a checked optional in `Parameters::operator[]`;
+    - four consts.
+    - Left: `endl` (71); `CommandLine::Options` and `OptionCodes` stay plain enums (checkpointed as a bitset string; mapped from XML names and used as bitset indices); `performance-enum-size`.
+- Gates:
+  - G-exact / G-unit: 53/53 on `build-rework/` (Release) and `build-debug/` (Debug, so the new bridge asserts are live) after every C++ commit. Plain `ctest -j4` at 39f23abd: 106/106 (incl. the 51 `stat_*`, so G-stat too).
+  - G-style: `util/style.sh check 389ee2e9` clean at 39f23abd. The rename and modernise tool commits passed their skill checks (format half clean, a second dry run with nothing to do, the token check for the rename).
+  - G-perf: `util/bench.sh --compare ../om-bench-base/build-rework`, candidate 39f23abd. First run: median per-pair ratio 1.0236 (+2.36%), with load ~6 and a candidate spread of 8.2%. Rerun at load ~3.5: 1.0054 (+0.54%), spreads 1.9% / 1.8%. Both ok; the second is the clean measurement.
+  - Console A/B (G-cli is M3's; done by hand, base build at 389ee2e9):
+    - 25 invocations, each run twice so the checkpoint ones resume: default, `--print-model`, `-m`, `--validate-only`, the `--print-*` options, `--checkpoint`, `--checkpoint-stop`, `--checkpoint-file`, `-V`, `--progress`, `--no-deprecation-warnings`, a bad long and short flag, `--help`, `--version`, `--output-format bin`, `-z`, `--output`, `--name`, a missing argument. Identical stdout, stderr, outputs, checkpoints and exit codes after b074dcd3 and after 39f23abd, apart from `argv[0]` in the usage text.
+    - After 39f23abd: 14 crafted scenarios, one per rewritten or touched error or warning message, plus a `-p` resource-path run. All identical.
+- Findings: F41 (the skip-simulation flags have been ignored since upstream #296: `--validate-only` and the `--print-*` options run the whole simulation), F42 (the `OM_STREAM_VALIDATOR` build doesn't compile), and a note on F9 (DescriptiveInfectionSuite has rotted; AnophelesModelSuite still calls `CommandLine::lookupResource`).
+- Surprises:
+  - `CommandLine::SKIP_SIMULATION` is set by eight options and read nowhere (F41).
+  - The rename tool can't see single-word all-caps enumerators (`VERBOSE`, `PROGRESS`, `CHECKPOINT`, `IGNORE`, `SIMM`, `ALPHA`, `TXT`, `BIN`): clang-tidy's `CamelCase` accepts them as acronyms. So `CommandLine::VERBOSE` now sits next to `CommandLine::CheckpointStop`.
+  - Both checkpoint functions and `parse` used to rely on statics that persisted across calls (e.g. `resourcePath` was never reset). With one parse per process this made no difference.
+- Follow-ups:
+  - D4–D8: pass `const util::ModelOptionFlags&`, `const util::CommandLineOptions&` and `const Parameters&` to the components their chunk converts, instead of `ModelOptions::option`/`CommandLine::` and `init(parameters)`; D9 drops the two bridge pointers.
+  - The 8 all-caps enumerators: rename by hand in a small mechanical commit, or teach `rename_module.py` a forced rename. Ask the user which.
+  - F41 is a CLI behaviour change; it fits I2, or earlier if the user wants.
+- Next: D4 (recommended order 12).
