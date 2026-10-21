@@ -88,6 +88,7 @@ class Modernizer:
             str(self.args.j),
             "-quiet",
             f"-checks={checks}",
+            "-extra-arg=-UNDEBUG",
             "-header-filter=^("
             + "|".join(re.escape(os.path.join(self.root, p)) + ("" if p.endswith("/") else "$") for p in self.paths)
             + ")",

@@ -286,6 +286,9 @@ How it works, and why:
   fixes that overlap (e.g. two `prefer-member-initializer` fixes in one constructor) cannot
   go in one `clang-apply-replacements` run, so the second waits for the next pass. Passes
   repeat until none is left, at most 5. PkPd needed 3.
+- clang-tidy runs with `-UNDEBUG`, as the rename tool does (F23), so `assert(...)` bodies
+  are part of the parse. Without it, `loop-convert` rewrote loops whose iterator an
+  `assert` still used, and the Debug build stopped compiling (F50, found in D4d).
 - Include insertions for a header the file already includes are dropped:
   `modernize-use-ranges` inserted a second `#include <algorithm>` into `LSTMDrug.cpp`.
 - `modernize-use-std-numbers` inserts no `#include <numbers>` when the constant it replaces
