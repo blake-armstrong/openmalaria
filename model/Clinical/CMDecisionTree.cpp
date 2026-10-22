@@ -115,7 +115,7 @@ protected:
         // Uses of this in complicated cases should trigger an exception during initialisation.
         assert((hostData.pgState & Episode::SICK) && !(hostData.pgState & Episode::COMPLICATED));
 
-        if (hostData.pgState & Episode::SECOND_CASE)
+        if (hostData.pgState & Episode::SecondCase)
             return secondLine.exec(hostData);
         else
             return firstLine.exec(hostData);
@@ -234,7 +234,7 @@ protected:
     }
 
     virtual CMDTOut exec(CMHostData hostData) const {
-        const Clinical::Episode& latest = hostData.human.clinicalModel->getLatestReport();
+        const Clinical::Episode& latest = hostData.human.clinicalModel->get_latest_report();
 
         if (((hostData.pgState & Episode::SICK) && !(hostData.pgState & Episode::COMPLICATED)) ||
             (hostData.pgState & Episode::MALARIA)) {
@@ -249,7 +249,7 @@ protected:
 private:
     CMDTUncomplicated(const SimTime memory, const CMDecisionTree& positive, const CMDecisionTree& negative)
         : memory(memory), positive(positive), negative(negative) {
-        if (memory > ClinicalModel::hsMemory())
+        if (memory > ClinicalModel::hs_memory())
             throw util::xml_scenario_error("<uncomplicated> memory parameter must be less than or equal to the "
                                            "healthsystem memory (hsmemory parameter)");
     }

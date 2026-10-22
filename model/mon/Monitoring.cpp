@@ -203,7 +203,7 @@ template <class Writer> void writeRows(ostream& stream, Writer writeRow, ValueTy
         }
     }
     if (runtime.reportIMR >= 0 && type != ValueType::Integer) {
-        writeRow(stream, 1, 1, runtime.reportIMR, bridge::infant_mortality().allCause(), true);
+        writeRow(stream, 1, 1, runtime.reportIMR, bridge::infant_mortality().all_cause(), true);
     }
 }
 

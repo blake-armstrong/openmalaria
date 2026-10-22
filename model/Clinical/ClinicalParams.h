@@ -90,18 +90,18 @@ struct EventSchedulerParams {
 
     /// Maximum number of time steps (including first of case) an individual
     /// will remember they are sick before resetting.
-    SimTime maxUCSeekingMemory = Sim::never();
+    SimTime max_uc_seeking_memory = Sim::never();
     /// Length of an uncomplicated case
-    SimTime uncomplicatedCaseDuration = Sim::never();
+    SimTime uncomplicated_case_duration = Sim::never();
     /// Length of a complicated case
-    SimTime complicatedCaseDuration = Sim::never();
+    SimTime complicated_case_duration = Sim::never();
     /// Time-span for which individual is at risk of death in complicated case
     /// minus length of complicated case (must be <= 0)
-    SimTime extraDaysAtRisk = Sim::never();
+    SimTime extra_days_at_risk = Sim::never();
     /// First value is probability immediate treatment, second is first +
     /// probability 1-day delay to treatment seeking, etc. Last value must be 1.
     /// Index units are days.
-    std::vector<double> cumDailyPrImmUCTS;
+    std::vector<double> cum_daily_pr_imm_ucts;
 
     /// Parameter of S(t) for t > 0
     double neg_v = 0.0;
@@ -112,34 +112,34 @@ struct EventSchedulerParams {
      * malaria diagnostic and irrespective of whether treatment is needed.
      *
      * In our model, this is logit(P₀), not β₀. */
-    double logOddsAbBase = std::numeric_limits<double>::signaling_NaN();
+    double log_odds_ab_base = std::numeric_limits<double>::signaling_NaN();
     /** Added to log odds treatment when a malaria diagnostic indicates no
      * parasites. Symbol in model: β₁. */
-    double logOddsAbNegTest = std::numeric_limits<double>::signaling_NaN();
+    double log_odds_ab_neg_test = std::numeric_limits<double>::signaling_NaN();
     /** Added to log odds treatment when a malaria diagnostic indicates
      * parasites. Symbol in model: β₂. */
-    double logOddsAbPosTest = std::numeric_limits<double>::signaling_NaN();
+    double log_odds_ab_pos_test = std::numeric_limits<double>::signaling_NaN();
     /** Added to log odds treatment when NMF is categorized as an illness
      * potentially leading to death (Pathogenesis::NEED_ANTIBIOTIC).
      * Symbol in model: β₃. */
-    double logOddsAbNeed = std::numeric_limits<double>::signaling_NaN();
+    double log_odds_ab_need = std::numeric_limits<double>::signaling_NaN();
     /** Added to log odds treatment when given by an informal provider.
      * Symbol in model: β₄. */
-    double logOddsAbInformal = std::numeric_limits<double>::signaling_NaN();
+    double log_odds_ab_informal = std::numeric_limits<double>::signaling_NaN();
     /** One minus the efficacy of antibiotic/NMF treatment (i.e. a multiplier
      * for fatality-rate given that the case is treated). */
-    double oneMinusEfficacyAb = std::numeric_limits<double>::signaling_NaN();
+    double one_minus_efficacy_ab = std::numeric_limits<double>::signaling_NaN();
     /** Case fatality rate of non-malaria fevers requiring treatment given that
      * the case is not treated. */
-    util::AgeGroupInterpolator severeNmfMortality;
+    util::AgeGroupInterpolator severe_nmf_mortality;
 
     /// Probability that an NMF needs antibiotic treatment and could lead to death.
-    util::AgeGroupInterpolator NMF_need_antibiotic;
+    util::AgeGroupInterpolator nmf_need_antibiotic;
     /** Probability that a malarial fever classified as uncomplicated requires
      * antibiotic treatment (and death could occur from non-malarial causes).
      * Unclear whether using this at the same time as comorbidity parameters
      * makes any sense. */
-    util::AgeGroupInterpolator MF_need_antibiotic;
+    util::AgeGroupInterpolator mf_need_antibiotic;
 };
 
 struct ClinicalParams {

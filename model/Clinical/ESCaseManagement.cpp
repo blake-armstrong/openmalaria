@@ -35,23 +35,23 @@ using namespace OM::util;
 
 // -----  ESCaseManagement  -----
 
-void EventSchedulerParams::set_health_system(const scnXml::HSEventScheduler& esData,
+void EventSchedulerParams::set_health_system(const scnXml::HSEventScheduler& es_data,
                                              util::AgeGroupInterpolator& case_fatality_rate) {
-    uncomplicated_tree = &CMDecisionTree::create(esData.getUncomplicated(), true);
-    complicated_tree = &CMDecisionTree::create(esData.getComplicated(), false);
+    uncomplicated_tree = &CMDecisionTree::create(es_data.getUncomplicated(), true);
+    complicated_tree = &CMDecisionTree::create(es_data.getComplicated(), false);
 
-    set_parameters(esData, case_fatality_rate);
+    set_parameters(es_data, case_fatality_rate);
 }
 
-CMDTOut ESCaseManagement::execute(const EventSchedulerParams& params, const CMHostData& hostData) {
-    assert(hostData.pgState & Episode::SICK);
+CMDTOut ESCaseManagement::execute(const EventSchedulerParams& params, const CMHostData& host_data) {
+    assert(host_data.pgState & Episode::SICK);
     //TODO: should we remove any existing prescriptions?
     //TODO: Note that these trees do both "access" and "case management" decisions.
     //TODO: medicateQueue.clear();
 
     const CMDecisionTree& tree =
-        (hostData.pgState & Episode::COMPLICATED) ? *params.complicated_tree : *params.uncomplicated_tree;
-    return tree.exec(hostData);
+        (host_data.pgState & Episode::COMPLICATED) ? *params.complicated_tree : *params.uncomplicated_tree;
+    return tree.exec(host_data);
 }
 
 }

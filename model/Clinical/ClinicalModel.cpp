@@ -107,15 +107,15 @@ unique_ptr<ClinicalModel> ClinicalParams::create(double treatment_seeking_factor
     }
 }
 
-double ClinicalModel::getCommunityCFR(double caseFatalityRatio) const {
-    double x = caseFatalityRatio * params().odds_ratio_threshold;
-    return x / (1 - caseFatalityRatio + x);
+double ClinicalModel::get_community_cfr(double case_fatality_ratio) const {
+    double x = case_fatality_ratio * params().odds_ratio_threshold;
+    return x / (1 - case_fatality_ratio + x);
 }
 
 // -----  non-static construction, destruction and checkpointing  -----
 
 ClinicalModel::ClinicalModel(const ClinicalParams& params)
-    : latestReport(params.health_system_memory, params.health_system_memory_fix), doomed(NOT_DOOMED),
+    : latest_report(params.health_system_memory, params.health_system_memory_fix), doomed(NotDoomed),
       clinical_params(&params) {}
 ClinicalModel::~ClinicalModel() {
     // latestReport is reported, if any, by destructor
@@ -123,94 +123,95 @@ ClinicalModel::~ClinicalModel() {
 
 // -----  other non-static methods  -----
 
-bool ClinicalModel::isDead(SimTime age) {
+bool ClinicalModel::is_dead(SimTime age) {
     if (age >= Sim::max_human_age()) // too old (reached age limit)
-        doomed = DOOMED_TOO_OLD;
-    return doomed > NOT_DOOMED; // killed by some means
+        doomed = DoomedTooOld;
+    return doomed > NotDoomed; // killed by some means
 }
 
-void ClinicalModel::update(Human& human, double ageYears, bool newBorn,
+void ClinicalModel::update(Human& human, double age_years, bool new_born,
                            const Host::NeonatalMortality& neonatal_mortality) {
-    if (doomed < NOT_DOOMED) // Countdown to indirect mortality
+    if (doomed < NotDoomed) // Countdown to indirect mortality
         doomed -= Sim::one_ts();
 
     //indirect death: if this human's about to die, don't worry about further episodes:
-    if (doomed <= DOOMED_EXPIRED) { //clinical bout 6 intervals before
+    if (doomed <= DoomedExpired) { //clinical bout 6 intervals before
         mon::recordEvent(mon::measure("nIndDeaths"), human);
-        doomed = DOOMED_INDIRECT;
+        doomed = DoomedIndirect;
         return;
     }
-    if (newBorn /* i.e. first update since birth */) {
+    if (new_born /* i.e. first update since birth */) {
         // Chance of neonatal mortality:
-        if (neonatal_mortality.eventNeonatalMortality(human.clinical_rng)) {
+        if (neonatal_mortality.event_neonatal_mortality(human.clinical_rng)) {
             mon::recordEvent(mon::measure("nIndDeaths"), human);
-            doomed = DOOMED_NEONATAL;
+            doomed = DoomedNeonatal;
             return;
         }
     }
 
-    const bool isDoomed = doomed != NOT_DOOMED;
-    WithinHost::Pathogenesis::StatePair pg = human.withinHostModel->determine_morbidity(human, ageYears, isDoomed);
-    latestState = static_cast<Episode::State>(pg.state);
+    const bool is_doomed = doomed != NotDoomed;
+    WithinHost::Pathogenesis::StatePair pg = human.withinHostModel->determine_morbidity(human, age_years, is_doomed);
+    latest_state = static_cast<Episode::State>(pg.state);
 
-    doClinicalUpdate(human, ageYears, pg);
+    do_clinical_update(human, age_years, pg);
 }
 
-void ClinicalModel::updateInfantDeaths(SimTime age, InfantMortality& infant_mortality) {
+void ClinicalModel::update_infant_deaths(SimTime age, InfantMortality& infant_mortality) {
     // update array for the infant death rates
     if (age < Sim::one_year()) {
         size_t index = age / Sim::one_ts();
 
         // Testing doomed == DOOMED_NEXT_TS gives very slightly different results than
         // testing doomed == DOOMED_INDIRECT (due to above if(..))
-        bool isDoomed = doomed == DOOMED_COMPLICATED || doomed == DOOMED_NEXT_TS || doomed == DOOMED_NEONATAL;
-        infant_mortality.reportRisk(index, isDoomed);
+        bool is_doomed = doomed == DoomedComplicated || doomed == DoomedNextTs || doomed == DoomedNeonatal;
+        infant_mortality.report_risk(index, is_doomed);
     }
 }
 
 void ClinicalModel::checkpoint(istream& stream) {
-    latestReport & stream;
+    latest_report & stream;
     doomed & stream;
 }
 void ClinicalModel::checkpoint(ostream& stream) {
-    latestReport & stream;
+    latest_report & stream;
     doomed & stream;
 }
 
 // ——— infant mortality ———
 
 InfantMortality::InfantMortality(double non_malaria_mortality)
-    : infantDeaths(Sim::steps_per_year()), infantIntervalsAtRisk(Sim::steps_per_year()),
-      nonMalariaMortality(non_malaria_mortality) {}
+    : infant_deaths(Sim::steps_per_year()), infant_intervals_at_risk(Sim::steps_per_year()),
+      non_malaria_mortality(non_malaria_mortality) {}
 
-void InfantMortality::preMainSimInit() {
-    std::fill(infantDeaths.begin(), infantDeaths.end(), 0);
-    std::fill(infantIntervalsAtRisk.begin(), infantIntervalsAtRisk.end(), 0);
+void InfantMortality::pre_main_sim_init() {
+    std::fill(infant_deaths.begin(), infant_deaths.end(), 0);
+    std::fill(infant_intervals_at_risk.begin(), infant_intervals_at_risk.end(), 0);
 }
 
 void InfantMortality::checkpoint(istream& stream) {
-    infantDeaths & stream;
-    infantIntervalsAtRisk & stream;
+    infant_deaths & stream;
+    infant_intervals_at_risk & stream;
 }
 void InfantMortality::checkpoint(ostream& stream) {
-    infantDeaths & stream;
-    infantIntervalsAtRisk & stream;
+    infant_deaths & stream;
+    infant_intervals_at_risk & stream;
 }
 
-void InfantMortality::reportRisk(size_t index, bool isDoomed) {
-    infantIntervalsAtRisk[index] += 1; // baseline
-    if (isDoomed)
-        infantDeaths[index] += 1; // deaths
+void InfantMortality::report_risk(size_t index, bool is_doomed) {
+    infant_intervals_at_risk[index] += 1; // baseline
+    if (is_doomed)
+        infant_deaths[index] += 1; // deaths
 }
 
-double InfantMortality::allCause() const {
-    double infantPropSurviving = 1.0; // use to calculate proportion surviving
+double InfantMortality::all_cause() const {
+    double infant_prop_surviving = 1.0; // use to calculate proportion surviving
     for (size_t i = 0; i < Sim::steps_per_year(); i += 1) {
         // multiply by proportion of infants surviving at each interval
-        infantPropSurviving *= double(infantIntervalsAtRisk[i] - infantDeaths[i]) / double(infantIntervalsAtRisk[i]);
+        infant_prop_surviving *=
+            double(infant_intervals_at_risk[i] - infant_deaths[i]) / double(infant_intervals_at_risk[i]);
     }
     // Child deaths due to malaria (per 1000), plus non-malaria child deaths. Deaths per 1000 births is the return unit.
-    return (1.0 - infantPropSurviving) * 1000.0 + nonMalariaMortality;
+    return (1.0 - infant_prop_surviving) * 1000.0 + non_malaria_mortality;
 }
 
 }

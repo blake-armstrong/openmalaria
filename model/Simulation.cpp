@@ -202,7 +202,7 @@ void Simulation::start_new(const CheckpointOptions& checkpointing) {
     est_end_time = end_time = end_time + (clock.end_date() - clock.start_date()) + clock.one_ts();
     clock.start_intervention_period();
     Host::InfectionIncidenceModel::preMainSimInit();
-    infant_mortality.preMainSimInit();
+    infant_mortality.pre_main_sim_init();
     genotypes.pre_main_sim_init();
     population_model->resetRecentBirths();
     transmission_model->summarize(); // Only to reset TransmissionModel::inoculationsPerAgeGroup
@@ -221,7 +221,7 @@ void Simulation::finish() {
     cerr << '\r' << flush; // clean last line of progress-output
 
     for (Host::Human& human : population_model->humans)
-        human.clinicalModel->flushReports();
+        human.clinicalModel->flush_reports();
 
     mon::writeSurveyData();
 

@@ -137,7 +137,7 @@ public:
         TS_ASSERT_EQUALS(propTreatmentsNReps(1, dt), 1);
 
         hd->pgState =
-            static_cast<Episode::State>(static_cast<Underlying>(Pathogenesis::StateMalaria) | Episode::SECOND_CASE);
+            static_cast<Episode::State>(static_cast<Underlying>(Pathogenesis::StateMalaria) | Episode::SecondCase);
 
         TS_ASSERT_EQUALS(propTreatmentsNReps(1, dt), 0);
     }

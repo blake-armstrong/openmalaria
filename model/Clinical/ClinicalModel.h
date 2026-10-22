@@ -20,8 +20,8 @@
  * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301, USA.
  */
 
-#ifndef Hmod_ClinicalModel
-#define Hmod_ClinicalModel
+#ifndef HMOD_CLINICAL_MODEL
+#define HMOD_CLINICAL_MODEL
 
 #include "Clinical/ClinicalParams.h"
 #include "Host/Human.h"
@@ -59,41 +59,41 @@ public:
      * 
      * Also kills the human if he/she reaches the simulation age limit.
      */
-    bool isDead(SimTime age);
+    bool is_dead(SimTime age);
 
     /// Returns true if the human has died.
-    inline bool isDead() const { return doomed > NOT_DOOMED; }
+    inline bool is_dead() const { return doomed > NotDoomed; }
 
     /** Run main part of the model: determine the sickness status and any
      * treatment for the human.
      * 
      * @param ageYears Age of human.
      * @param newBorn True if human age is one time step old */
-    void update(Human& human, double ageYears, bool newBorn, const Host::NeonatalMortality& neonatal_mortality);
+    void update(Human& human, double age_years, bool new_born, const Host::NeonatalMortality& neonatal_mortality);
 
     /** For infants, updates the infantIntervalsAtRisk and potentially
      * infantDeaths arrays. */
-    void updateInfantDeaths(SimTime age, InfantMortality& infant_mortality);
+    void update_infant_deaths(SimTime age, InfantMortality& infant_mortality);
 
     /** Special option to allow reports not to be delivered for existing cases
      * (within health-system-memory and not new cases). */
-    virtual bool isExistingCase() = 0;
+    virtual bool is_existing_case() = 0;
 
-    inline static SimTime hsMemory() { return bridge::clinical_params().health_system_memory; }
+    inline static SimTime hs_memory() { return bridge::clinical_params().health_system_memory; }
 
     /// Force all pending summaries to be reported. Should only be called when
     /// class is about to be destroyed anyway to avoid affecting output.
-    inline void flushReports() { latestReport.flush(); }
+    inline void flush_reports() { latest_report.flush(); }
 
-    inline const Episode& getLatestReport() const { return latestReport; }
+    inline const Episode& get_latest_report() const { return latest_report; }
 
-    inline const Episode::State& getLatestState() const { return latestState; }
+    inline const Episode::State& get_latest_state() const { return latest_state; }
 
     /// Checkpointing
     template <class S> void operator&(S& stream) { checkpoint(stream); }
 
     /** Time of the last treatment (sim::never() if never treated). */
-    SimTime m_tLastTreatment = Sim::never();
+    SimTime t_last_treatment = Sim::never();
 
 protected:
     /// Constructor.
@@ -107,26 +107,26 @@ protected:
      * @param hostTransmission per-host transmission data of human.
      * @param ageYears Age of human.
      * @param ageGroup Survey age group of human. */
-    virtual void doClinicalUpdate(Human& human, double ageYears, WithinHost::Pathogenesis::StatePair& pg) = 0;
+    virtual void do_clinical_update(Human& human, double age_years, WithinHost::Pathogenesis::StatePair& pg) = 0;
 
     virtual void checkpoint(istream& stream);
     virtual void checkpoint(ostream& stream);
 
     /** Last episode; report to survey pending a new episode or human's death. */
-    Episode latestReport;
-    Episode::State latestState;
+    Episode latest_report;
+    Episode::State latest_state;
 
     /** @brief Positive values of _doomed variable (codes). */
     enum {
-        DOOMED_EXPIRED = -35,    // codes less than or equal to this mean "dead now"
-        DOOMED_NEXT_TS = -30,    // will expire on next time step
-        DOOMED_START_TIMER = -1, // set on start of doomed timer
-        NOT_DOOMED =
+        DoomedExpired = -35,   // codes less than or equal to this mean "dead now"
+        DoomedNextTs = -30,    // will expire on next time step
+        DoomedStartTimer = -1, // set on start of doomed timer
+        NotDoomed =
             0, // all codes greater than this mean "already dead"; codes less than this mean a count-down to death has started
-        DOOMED_TOO_OLD = 1,     ///< died because reached age limit
-        DOOMED_COMPLICATED = 4, ///< died from severe malaria or malaria with a coinfection
-        DOOMED_NEONATAL = 6,    ///< died due to mother's malaria infection
-        DOOMED_INDIRECT = 7,    ///< died indirectly from malaria (after a delay)
+        DoomedTooOld = 1,      ///< died because reached age limit
+        DoomedComplicated = 4, ///< died from severe malaria or malaria with a coinfection
+        DoomedNeonatal = 6,    ///< died due to mother's malaria infection
+        DoomedIndirect = 7,    ///< died indirectly from malaria (after a delay)
     };
 
     /** Can indicate that the individual is dead or about to die.
@@ -140,7 +140,7 @@ protected:
 
     /// Calculate the case fatality "rate" in the community as a function of
     /// that in hospitals.
-    double getCommunityCFR(double caseFatalityRatio) const;
+    double get_community_cfr(double case_fatality_ratio) const;
 
 private:
     const ClinicalParams* clinical_params;
@@ -152,12 +152,12 @@ public:
     InfantMortality() = default;
     explicit InfantMortality(double non_malaria_mortality);
 
-    void preMainSimInit();
+    void pre_main_sim_init();
 
     void checkpoint(istream& stream);
     void checkpoint(ostream& stream);
 
-    void reportRisk(size_t index, bool isDoomed);
+    void report_risk(size_t index, bool is_doomed);
 
     /// Calculate infant mortality as deaths/1000 livebirths for the whole main-
     /// simulation period (not as deaths/1000 years-at-risk per survey).
@@ -167,15 +167,15 @@ public:
     /// a stable age-distribution but unfortunately does not accurately describe
     /// death rates. The kaplan-meier estimate is the product of the proportion of
     /// infants survivng at each interval.
-    double allCause() const;
+    double all_cause() const;
 
 private:
     // Infant death summaries (checkpointed).
-    std::vector<int> infantDeaths;
-    std::vector<int> infantIntervalsAtRisk;
+    std::vector<int> infant_deaths;
+    std::vector<int> infant_intervals_at_risk;
 
     /// Non-malaria mortality in under 1year olds.
-    double nonMalariaMortality = 0.0;
+    double non_malaria_mortality = 0.0;
 };
 
 }

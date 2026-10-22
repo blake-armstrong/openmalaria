@@ -20,8 +20,8 @@
  * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301, USA.
  */
 
-#ifndef Hmod_ESCaseManagement
-#define Hmod_ESCaseManagement
+#ifndef HMOD_ES_CASE_MANAGEMENT
+#define HMOD_ES_CASE_MANAGEMENT
 
 #include "Global.h"
 #include "Clinical/CMDecisionTree.h" // needed for ESDecisionMap
@@ -38,7 +38,7 @@ using WithinHost::WHInterface;
  *****************************************************************************/
 class ESCaseManagement {
 public:
-    static CMDTOut execute(const EventSchedulerParams& params, const CMHostData& hostData);
+    static CMDTOut execute(const EventSchedulerParams& params, const CMHostData& host_data);
 };
 
 }

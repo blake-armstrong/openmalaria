@@ -20,8 +20,8 @@
  * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301, USA.
  */
 
-#ifndef Hmod_NeonatalMortality
-#define Hmod_NeonatalMortality
+#ifndef HMOD_NEONATAL_MORTALITY
+#define HMOD_NEONATAL_MORTALITY
 
 #include "Global.h"
 #include "util/random.h"
@@ -56,7 +56,7 @@ public:
 
     /** Called for each birth; returns true if infant dies due to mother's
    * infection. */
-    bool eventNeonatalMortality(LocalRng& rng) const;
+    bool event_neonatal_mortality(LocalRng& rng) const;
 
     /** Calculate risk of a neonatal mortality based on humans 20-25 years old. */
     void update(vector<Human>& population);
@@ -64,13 +64,13 @@ public:
 private:
     /// Probability for a newborn to die (indirect death) because the mother is infected.
     /// Depends on the prevalence of parasitaemia in mother at some previous t.
-    double riskFromMaternalInfection = 0.0;
+    double risk_from_maternal_infection = 0.0;
     /// Array of stored prevalences of mothers over last 5 months
-    std::vector<double> prevByGestationalAge;
+    std::vector<double> prev_by_gestational_age;
 
     // The model is parameterised based on patency levels; the diagnostic
     // used for this may be important.
-    const WithinHost::Diagnostic* neonatalDiagnostic = nullptr;
+    const WithinHost::Diagnostic* neonatal_diagnostic = nullptr;
 };
 
 }

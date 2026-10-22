@@ -41,52 +41,52 @@ mon::Measure CM5DayCommon::measures[NumCaseTypes] = {
 
 // ———  per-human, construction and destruction  ———
 
-CM5DayCommon::CM5DayCommon(const ClinicalParams& params, double tSF)
-    : ClinicalModel(params), m_treatmentSeekingFactor(tSF) {}
+CM5DayCommon::CM5DayCommon(const ClinicalParams& params, double tsf)
+    : ClinicalModel(params), treatment_seeking_factor(tsf) {}
 
 // ———  per-human, update  ———
 
-void CM5DayCommon::doClinicalUpdate(Human& human, double ageYears, WithinHost::Pathogenesis::StatePair& pg) {
-    Episode::State pgState = static_cast<Episode::State>(pg.state);
+void CM5DayCommon::do_clinical_update(Human& human, double age_years, WithinHost::Pathogenesis::StatePair& pg) {
+    Episode::State pg_state = static_cast<Episode::State>(pg.state);
 
-    if (pgState & Episode::MALARIA) {
-        if (pgState & Episode::COMPLICATED) {
-            severeMalaria(human, pgState, ageYears, doomed);
+    if (pg_state & Episode::MALARIA) {
+        if (pg_state & Episode::COMPLICATED) {
+            severe_malaria(human, pg_state, age_years, doomed);
         } else if (params().indirect_mort_bugfix || !pg.indirect_mortality) {
             // NOTE: the "not indirect mortality" bit is a historical accident.
             // Validity is debatable, but there's no point changing now.
             // (This does affect tests.)
-            uncomplicatedEvent(human, pgState);
+            uncomplicated_event(human, pg_state);
         }
-    } else if (pgState & Episode::SICK) { // sick but not from malaria
-        uncomplicatedEvent(human, pgState);
+    } else if (pg_state & Episode::SICK) { // sick but not from malaria
+        uncomplicated_event(human, pg_state);
     }
 
-    if (pg.indirect_mortality && doomed == NOT_DOOMED)
+    if (pg.indirect_mortality && doomed == NotDoomed)
         doomed = -Sim::one_ts();
 
-    if (m_tLastTreatment == Sim::ts0())
+    if (t_last_treatment == Sim::ts0())
         human.removeFirstEvent(interventions::SubPopRemove::ON_FIRST_TREATMENT);
 
-    if (pgState & Episode::SICK)
+    if (pg_state & Episode::SICK)
         human.removeFirstEvent(interventions::SubPopRemove::ON_FIRST_BOUT);
 }
 
-void CM5DayCommon::severeMalaria(Human& human, Episode::State pgState, double ageYears, int& doomed) {
+void CM5DayCommon::severe_malaria(Human& human, Episode::State pg_state, double age_years, int& doomed) {
     const CM5DayParams& five_day = params().five_day;
     // Probability of getting treatment (only part which is case managment):
-    double p2 = five_day.access_severe * m_treatmentSeekingFactor;
+    double p2 = five_day.access_severe * treatment_seeking_factor;
     // Probability of getting cured after getting treatment:
     double p3 = five_day.cure_rate_severe;
     // p4 is the hospital case-fatality rate from Tanzania
-    double p4 = params().case_fatality_rate.eval(ageYears);
+    double p4 = params().case_fatality_rate.eval(age_years);
     // p5a here is the community threshold case-fatality rate
-    double p5a = getCommunityCFR(p4);
+    double p5a = get_community_cfr(p4);
     // p5b here is the in-hospital treatment-failure case-fatality rate
     // In our code it was originally the community CFR, but in the published model description it should be the hospital CFR
     double p5b = (five_day.cfr_pf_use_hospital) ? p4 : p5a;
     // p6 is P(seq) for treated patients
-    double p6 = params().p_sequelae_inpatient.eval(ageYears);
+    double p6 = params().p_sequelae_inpatient.eval(age_years);
     // p7 is P(seq) when parasites aren't cleared
     // note: if p7 were not equal p6, we might have to do something similar to p5b
     double p7 = p6;
@@ -114,59 +114,59 @@ void CM5DayCommon::severeMalaria(Human& human, Episode::State pgState, double ag
     // Expectation of death is:
     // double exDeath = (q[6] - q[5]) + (q[3] - q[2]) + q[0];
     // expanded, separating in-hospital and without (q[0]):
-    const double exHospitalDeath = p2 * (p3 * p4 + (1 - p3) * p5b);
-    const double exDeath = exHospitalDeath + (1 - p2) * p5a;
-    mon::recordStat(mon::measure("expectedHospitalDeaths"), human, exHospitalDeath);
-    mon::recordStat(mon::measure("expectedDirectDeaths"), human, exDeath);
+    const double ex_hospital_death = p2 * (p3 * p4 + (1 - p3) * p5b);
+    const double ex_death = ex_hospital_death + (1 - p2) * p5a;
+    mon::recordStat(mon::measure("expectedHospitalDeaths"), human, ex_hospital_death);
+    mon::recordStat(mon::measure("expectedDirectDeaths"), human, ex_death);
 
     // Expectation of sequelae is:
     // double exSeq = (q[7] - q[6]) + (q[4] - q[3]) + (q[1] - q[0]);
     // expanded and simplified, noting that p7 == p6 :
-    const double exSeq = (p2 * (p3 * (1 - p4) + (1 - p3) * (1 - p5b)) + (1 - p2) * (1 - p5a)) * p6;
-    mon::recordStat(mon::measure("expectedSequelae"), human, exSeq);
+    const double ex_seq = (p2 * (p3 * (1 - p4) + (1 - p3) * (1 - p5b)) + (1 - p2) * (1 - p5a)) * p6;
+    mon::recordStat(mon::measure("expectedSequelae"), human, ex_seq);
 
     double prandom = human.clinical_rng.uniform_01();
 
     //NOTE: we do not model diagnostics in this case
     if (prandom >= q[2]) { // treated in hospital
-        m_tLastTreatment = Sim::ts0();
+        t_last_treatment = Sim::ts0();
         mon::recordEvent(mon::measure("nTreatments3"), human);
-        Episode::State stateTreated = Episode::State(pgState | Episode::EVENT_IN_HOSPITAL);
+        Episode::State state_treated = Episode::State(pg_state | Episode::EventInHospital);
 
         if (prandom >= q[5]) { // treatment successful at clearing parasites
             // this actually means successful treatment in this case:
             human.withinHostModel->treatment(human, five_day.treatment_severe);
 
             if (prandom < q[6]) { // death (despite success in clearing parasites)
-                latestReport.update(human, Episode::State(stateTreated | Episode::DIRECT_DEATH));
-                doomed = DOOMED_COMPLICATED;
+                latest_report.update(human, Episode::State(state_treated | Episode::DirectDeath));
+                doomed = DoomedComplicated;
             } else if (prandom < q[7]) { // Patient recovers, but with sequelae (don't report full recovery)
-                latestReport.update(human, Episode::State(stateTreated | Episode::SEQUELAE));
+                latest_report.update(human, Episode::State(state_treated | Episode::SEQUELAE));
             } else /*prandom < q[8]*/ { // patient recovers fully
-                latestReport.update(human, Episode::State(stateTreated | Episode::RECOVERY));
+                latest_report.update(human, Episode::State(state_treated | Episode::RECOVERY));
             }
         } else /*prandom < q[5]*/ { // Treated but parasites not cleared (in hospital)
             // No change in parasitological status among in-hospital patients
 
             if (prandom < q[3]) { // death
-                latestReport.update(human, Episode::State(stateTreated | Episode::DIRECT_DEATH));
-                doomed = DOOMED_COMPLICATED;
+                latest_report.update(human, Episode::State(state_treated | Episode::DirectDeath));
+                doomed = DoomedComplicated;
             } else if (prandom < q[4]) { // sequelae without parasite clearance
-                latestReport.update(human, Episode::State(stateTreated | Episode::SEQUELAE));
+                latest_report.update(human, Episode::State(state_treated | Episode::SEQUELAE));
             } else /*prandom < q[5]*/ { // full recovery from episode
-                latestReport.update(human, pgState);
+                latest_report.update(human, pg_state);
             }
         }
     } else /*prandom < q[2]*/ {
         // Not treated, thus no change in parasitological status
 
         if (prandom < q[0]) { // outcome 0: death in community
-            latestReport.update(human, Episode::State(pgState | Episode::DIRECT_DEATH));
-            doomed = DOOMED_COMPLICATED;
+            latest_report.update(human, Episode::State(pg_state | Episode::DirectDeath));
+            doomed = DoomedComplicated;
         } else if (prandom < q[1]) { // outcome 1: sequelae in community
-            latestReport.update(human, Episode::State(pgState | Episode::SEQUELAE));
+            latest_report.update(human, Episode::State(pg_state | Episode::SEQUELAE));
         } else /*prandom < q[2]*/ { // outcome 2: full recovery from episode in community
-            latestReport.update(human, pgState);
+            latest_report.update(human, pg_state);
         }
     }
 }
@@ -175,13 +175,13 @@ void CM5DayCommon::severeMalaria(Human& human, Episode::State pgState, double ag
 
 void CM5DayCommon::checkpoint(istream& stream) {
     ClinicalModel::checkpoint(stream);
-    m_tLastTreatment & stream;
-    m_treatmentSeekingFactor & stream;
+    t_last_treatment & stream;
+    treatment_seeking_factor & stream;
 }
 void CM5DayCommon::checkpoint(ostream& stream) {
     ClinicalModel::checkpoint(stream);
-    m_tLastTreatment & stream;
-    m_treatmentSeekingFactor & stream;
+    t_last_treatment & stream;
+    treatment_seeking_factor & stream;
 }
 
 }

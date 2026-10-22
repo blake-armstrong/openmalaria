@@ -20,8 +20,8 @@
  * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301, USA.
  */
 
-#ifndef Hmod_CM5DayCommon
-#define Hmod_CM5DayCommon
+#ifndef HMOD_CM5_DAY_COMMON
+#define HMOD_CM5_DAY_COMMON
 
 #include "Host/WithinHost/Pathogenesis/State.h"
 #include "Clinical/ClinicalModel.h"
@@ -42,32 +42,32 @@ public:
      * 
      * @param tSF Treatment-seeking factor. Normally 1 but allows simple heterogeneity.
      */
-    CM5DayCommon(const ClinicalParams& params, double tSF);
+    CM5DayCommon(const ClinicalParams& params, double tsf);
 
-    virtual bool isExistingCase() {
+    virtual bool is_existing_case() {
         // If treated in the recent past:
-        return Sim::now() > m_tLastTreatment && Sim::now() <= m_tLastTreatment + params().health_system_memory;
+        return Sim::now() > t_last_treatment && Sim::now() <= t_last_treatment + params().health_system_memory;
     }
 
 protected:
     static mon::Measure measures[NumCaseTypes];
 
-    virtual void doClinicalUpdate(Human& human, double ageYears, WithinHost::Pathogenesis::StatePair& pg);
+    virtual void do_clinical_update(Human& human, double age_years, WithinHost::Pathogenesis::StatePair& pg);
 
     virtual void checkpoint(istream& stream);
     virtual void checkpoint(ostream& stream);
 
     /** Called when a non-severe/complicated malaria sickness occurs. */
-    virtual void uncomplicatedEvent(Human& human, Episode::State pgState) = 0;
+    virtual void uncomplicated_event(Human& human, Episode::State pg_state) = 0;
 
     //! treatment seeking for heterogeneity
-    double m_treatmentSeekingFactor;
+    double treatment_seeking_factor;
 
 private:
     /** Called when a severe/complicated (with co-infection) malaria sickness occurs.
      *
      * Note: sets doomed = 4 if patient dies. */
-    void severeMalaria(Human& human, Episode::State pgState, double ageYears, int& doomed);
+    void severe_malaria(Human& human, Episode::State pg_state, double age_years, int& doomed);
 };
 
 }

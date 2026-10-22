@@ -20,8 +20,8 @@
  * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301, USA.
  */
 
-#ifndef Hmod_Episode
-#define Hmod_Episode
+#ifndef HMOD_EPISODE
+#define HMOD_EPISODE
 
 #include "Global.h"
 #include "Host/WithinHost/Pathogenesis/State.h"
@@ -61,29 +61,29 @@ public:
         SICK = WithinHost::Pathogenesis::Sick,       ///< Sick (may or may not be from malaria)
         MALARIA = WithinHost::Pathogenesis::Malaria, ///< Malaria sickness
         /// Used by ClinicalEventScheduler to indicate a second bout of malarial sickness within the same episode (roughly)
-        SECOND_CASE = 0x10,
+        SecondCase = 0x10,
         SEVERE = 0x8,                                        ///< Severe malaria case
         COINFECTION = 0x4,                                   ///< Malaria with a coinfection
         COMPLICATED = WithinHost::Pathogenesis::Complicated, ///< Flag used to indicate SEVERE and/or COINFECTION
 
         //NEED_ANTIBIOTIC     = 0x40,         ///< Flag indicates a non-malaria fever requires (antibiotic) treatment
 
-        MORBIDITY_MASK = 0x7F, ///< Mask coving all above states
+        MorbidityMask = 0x7F, ///< Mask coving all above states
 
         // Flags for outcome reporting:
-        EVENT_IN_HOSPITAL =
+        EventInHospital =
             0x400, ///< Indicates recovery/sequelae/death event occurred in hospital − only set on one of these events (ImmediateOutcomes only)
-        DIRECT_DEATH = 0x1000, ///< Used for reporting death (from COMPLICATED sickness)
-        SEQUELAE = 0x2000,     ///< Reporting recovered with sequelae (from COMPLICATED sickness)
-        RECOVERY = 0x4000,     ///< Report that individual fully recovered
-        EVENT_FIRST_DAY =
+        DirectDeath = 0x1000, ///< Used for reporting death (from COMPLICATED sickness)
+        SEQUELAE = 0x2000,    ///< Reporting recovered with sequelae (from COMPLICATED sickness)
+        RECOVERY = 0x4000,    ///< Report that individual fully recovered
+        EventFirstDay =
             0x8000, ///< Used in combination with DIRECT_DEATH to report death happens on first day (before treatment has effect)
-        RUN_CM_TREE = 0x10000, ///< Flag to indicate that CM tree should be run now or after a delay
+        RunCmTree = 0x10000, ///< Flag to indicate that CM tree should be run now or after a delay
     };
 
     Episode(SimTime health_system_memory, bool health_system_memory_fix)
-        : time(Sim::never()), surveyPeriod(mon::NOT_USED), ageGroup(0), cohortSet(0), state(NONE),
-          healthSystemMemoryFix(health_system_memory_fix), health_system_memory(health_system_memory) {}
+        : time(Sim::never()), survey_period(mon::NOT_USED), age_group(0), cohort_set(0), state(NONE),
+          health_system_memory_fix(health_system_memory_fix), health_system_memory(health_system_memory) {}
 
     ~Episode();
 
@@ -95,7 +95,7 @@ public:
      * @param human The human whose info is being reported
      * @param newState The severity (diagnosis) and outcome.
      */
-    void update(const Host::Human& human, Episode::State newState);
+    void update(const Host::Human& human, Episode::State new_state);
 
     /// Checkpointing
     void operator&(istream& stream);
@@ -104,16 +104,16 @@ public:
     /// Time of event, potentially never
     SimTime time = Sim::never();
     /// Survey during which the event occured
-    size_t surveyPeriod;
+    size_t survey_period;
     /// Age group of the individual when the episode's first bout occurred
-    size_t ageGroup;
+    size_t age_group;
     /// Cohort membership
-    uint32_t cohortSet;
+    uint32_t cohort_set;
     /// Descriptor of state, containing reporting info. Not all information will
     /// be reported (e.g. indirect deaths are reported independantly).
     Episode::State state;
 
-    WithinHost::InfectionOrigin infectionType = WithinHost::InfectionOrigin::Indigenous;
+    WithinHost::InfectionOrigin infection_type = WithinHost::InfectionOrigin::Indigenous;
 
 private:
     /** Report a clinical episode.
@@ -124,7 +124,7 @@ private:
      * (both in and out of hospital). */
     void report();
 
-    bool healthSystemMemoryFix = false;
+    bool health_system_memory_fix = false;
     SimTime health_system_memory = Sim::never();
 };
 

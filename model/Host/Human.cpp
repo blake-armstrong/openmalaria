@@ -139,7 +139,7 @@ void Human::removeFirstEvent(interventions::SubPopRemove::RemoveAtCode code) {
                 // and onFirstInfection cohort options. Health system memory must
                 // be reset for this to work properly; in theory the memory should
                 // be independent for each cohort, but this is a usable approximation.
-                clinicalModel->flushReports(); // reset HS memory
+                clinicalModel->flush_reports(); // reset HS memory
 
                 // report removal due to first infection/bout/treatment
                 mon::recordEvent(mon::measure("nSubPopRemovalFirstEvent"), *this);
@@ -203,7 +203,7 @@ void Human::checkpoint(ostream& stream) {
 
 // -----  Non-static functions: per-time-step update  -----
 void summarize(Human& human, bool surveyOnlyNewEp) {
-    if (surveyOnlyNewEp && human.clinicalModel->isExistingCase()) {
+    if (surveyOnlyNewEp && human.clinicalModel->is_existing_case()) {
         // This modifies the denominator to treat the health-system-memory
         // period immediately after a bout as 'not at risk'.
         return;
@@ -224,7 +224,7 @@ void update(Human& human, Transmission::TransmissionModel& transmission, const N
             Clinical::InfantMortality& infant_mortality) {
     // For integer age checks we use age0 to e.g. get 73 steps comparing less than 1 year old
     SimTime age0 = human.age(Sim::ts0());
-    if (human.clinicalModel->isDead(age0)) {
+    if (human.clinicalModel->is_dead(age0)) {
         human.kill();
         return;
     }
@@ -270,7 +270,7 @@ void update(Human& human, Transmission::TransmissionModel& transmission, const N
 
     // age1 used to get case fatality and sequelae probabilities, determine pathogenesis
     human.clinicalModel->update(human, age1, age0 == Sim::zero(), neonatal_mortality);
-    human.clinicalModel->updateInfantDeaths(age0, infant_mortality);
+    human.clinicalModel->update_infant_deaths(age0, infant_mortality);
 }
 
 }

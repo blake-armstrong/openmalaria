@@ -33,7 +33,7 @@ using namespace ::OM::util;
 
 // ———  static, utility functions  ———
 
-double getHealthSystemACRByName(const scnXml::TreatmentDetails& td, const string& drug) {
+double get_health_system_acr_by_name(const scnXml::TreatmentDetails& td, const string& drug) {
     double val;
     if (drug == "CQ")
         val = td.getCQ().present() ? td.getCQ().get().getValue() : 0;
@@ -62,24 +62,25 @@ double getHealthSystemACRByName(const scnXml::TreatmentDetails& td, const string
 }
 
 // note: "CQOptional" is the same type as for other drugs
-const scnXml::TreatmentActions::CQOptional& getHealthSystemTreatmentOptional(const scnXml::TreatmentActions& treatActs,
-                                                                             const string& drug) {
+const scnXml::TreatmentActions::CQOptional&
+get_health_system_treatment_optional(const scnXml::TreatmentActions& treat_acts, const string& drug) {
     if (drug == "CQ")
-        return treatActs.getCQ();
+        return treat_acts.getCQ();
     if (drug == "SP")
-        return treatActs.getSP();
+        return treat_acts.getSP();
     if (drug == "AQ")
-        return treatActs.getAQ();
+        return treat_acts.getAQ();
     if (drug == "SPAQ")
-        return treatActs.getSPAQ();
+        return treat_acts.getSPAQ();
     if (drug == "ACT")
-        return treatActs.getACT();
+        return treat_acts.getACT();
     if (drug == "QN")
-        return treatActs.getQN();
+        return treat_acts.getQN();
     throw util::xml_scenario_error("healthSystem.drugRegimen: firstLine / secondLine / inpatient has bad value");
 }
-WithinHost::TreatmentId getHealthSystemTreatmentByName(const scnXml::TreatmentActions& treatActs, const string& drug) {
-    const scnXml::TreatmentActions::CQOptional& elt = getHealthSystemTreatmentOptional(treatActs, drug);
+WithinHost::TreatmentId get_health_system_treatment_by_name(const scnXml::TreatmentActions& treat_acts,
+                                                            const string& drug) {
+    const scnXml::TreatmentActions::CQOptional& elt = get_health_system_treatment_optional(treat_acts, drug);
     if (!elt.present())
         throw util::xml_scenario_error(string("healthSystem.treatmentActions: description required for ").append(drug));
     return WithinHost::WHInterface::add_treatment(elt.get());
@@ -87,24 +88,24 @@ WithinHost::TreatmentId getHealthSystemTreatmentByName(const scnXml::TreatmentAc
 
 // ———  static, init  ———
 
-void ClinicalParams::set_immediate_outcomes(const scnXml::HSImmediateOutcomes& hsDescription) {
-    const string &firstLine = hsDescription.getDrugRegimen().getFirstLine(),
-                 &secondLine = hsDescription.getDrugRegimen().getSecondLine(),
-                 &inpatient = hsDescription.getDrugRegimen().getInpatient();
+void ClinicalParams::set_immediate_outcomes(const scnXml::HSImmediateOutcomes& hs_description) {
+    const string &first_line = hs_description.getDrugRegimen().getFirstLine(),
+                 &second_line = hs_description.getDrugRegimen().getSecondLine(),
+                 &inpatient = hs_description.getDrugRegimen().getInpatient();
 
     // ———  calculate probability of getting treatment  ———
 
-    double accessUCOfficial1 = hsDescription.getPSeekOfficialCareUncomplicated1().getValue();
-    double accessUCOfficial2 = hsDescription.getPSeekOfficialCareUncomplicated2().getValue();
+    double access_uc_official1 = hs_description.getPSeekOfficialCareUncomplicated1().getValue();
+    double access_uc_official2 = hs_description.getPSeekOfficialCareUncomplicated2().getValue();
     // Note: this asymmetry is historical, and probably matters little:
-    five_day.access_uc_self_treat[FirstLine] = hsDescription.getPSelfTreatUncomplicated().getValue();
+    five_day.access_uc_self_treat[FirstLine] = hs_description.getPSelfTreatUncomplicated().getValue();
     five_day.access_uc_self_treat[SecondLine] = 0.0;
-    five_day.access_uc_any[FirstLine] = accessUCOfficial1 + five_day.access_uc_self_treat[FirstLine];
-    five_day.access_uc_any[SecondLine] = accessUCOfficial1 + five_day.access_uc_self_treat[SecondLine];
-    five_day.access_severe = hsDescription.getPSeekOfficialCareSevere().getValue();
+    five_day.access_uc_any[FirstLine] = access_uc_official1 + five_day.access_uc_self_treat[FirstLine];
+    five_day.access_uc_any[SecondLine] = access_uc_official1 + five_day.access_uc_self_treat[SecondLine];
+    five_day.access_severe = hs_description.getPSeekOfficialCareSevere().getValue();
 
-    if (accessUCOfficial1 < 0.0 || five_day.access_uc_self_treat[FirstLine] < 0.0 ||
-        five_day.access_uc_any[FirstLine] > 1.0 || accessUCOfficial2 < 0.0 ||
+    if (access_uc_official1 < 0.0 || five_day.access_uc_self_treat[FirstLine] < 0.0 ||
+        five_day.access_uc_any[FirstLine] > 1.0 || access_uc_official2 < 0.0 ||
         five_day.access_uc_self_treat[SecondLine] < 0.0 || five_day.access_uc_any[SecondLine] > 1.0 ||
         five_day.access_severe < 0.0 || five_day.access_severe > 1.0) {
         throw util::xml_scenario_error("healthSystem: "
@@ -116,77 +117,79 @@ void ClinicalParams::set_immediate_outcomes(const scnXml::HSImmediateOutcomes& h
 
     // ———  calculate probability of clearing parasites  ———
 
-    const double complianceFirstLine = getHealthSystemACRByName(hsDescription.getCompliance(), firstLine);
-    const double complianceSecondLine = getHealthSystemACRByName(hsDescription.getCompliance(), secondLine);
+    const double compliance_first_line = get_health_system_acr_by_name(hs_description.getCompliance(), first_line);
+    const double compliance_second_line = get_health_system_acr_by_name(hs_description.getCompliance(), second_line);
 
-    const double cureRateFirstLine = getHealthSystemACRByName(hsDescription.getInitialACR(), firstLine);
-    const double cureRateSecondLine = getHealthSystemACRByName(hsDescription.getInitialACR(), secondLine);
+    const double cure_rate_first_line = get_health_system_acr_by_name(hs_description.getInitialACR(), first_line);
+    const double cure_rate_second_line = get_health_system_acr_by_name(hs_description.getInitialACR(), second_line);
 
-    const double nonCompliersEffectiveFirstLine =
-        getHealthSystemACRByName(hsDescription.getNonCompliersEffective(), firstLine);
-    const double nonCompliersEffectiveSecondLine =
-        getHealthSystemACRByName(hsDescription.getNonCompliersEffective(), secondLine);
+    const double non_compliers_effective_first_line =
+        get_health_system_acr_by_name(hs_description.getNonCompliersEffective(), first_line);
+    const double non_compliers_effective_second_line =
+        get_health_system_acr_by_name(hs_description.getNonCompliersEffective(), second_line);
 
-    const double complianceSelfTreatment = hsDescription.getCompliance().getSelfTreatment().getValue();
-    const double cureRateSelfTreatment = hsDescription.getInitialACR().getSelfTreatment().getValue();
-    if (!(complianceSelfTreatment >= 0.0 && complianceSelfTreatment <= 1.0 && cureRateSelfTreatment >= 0.0 &&
-          cureRateSelfTreatment <= 1.0)) {
+    const double compliance_self_treatment = hs_description.getCompliance().getSelfTreatment().getValue();
+    const double cure_rate_self_treatment = hs_description.getInitialACR().getSelfTreatment().getValue();
+    if (!(compliance_self_treatment >= 0.0 && compliance_self_treatment <= 1.0 && cure_rate_self_treatment >= 0.0 &&
+          cure_rate_self_treatment <= 1.0)) {
         throw util::xml_scenario_error(
             "healthSystem initialACR/compliance/nonCompliersEffective: pSelfTreatment must be in range [0,1]");
     }
 
     immediate_outcomes.cure_rate_uc_official[FirstLine] =
-        complianceFirstLine * cureRateFirstLine + (1 - complianceFirstLine) * nonCompliersEffectiveFirstLine;
+        compliance_first_line * cure_rate_first_line + (1 - compliance_first_line) * non_compliers_effective_first_line;
     immediate_outcomes.cure_rate_uc_official[SecondLine] =
-        complianceSecondLine * cureRateSecondLine + (1 - complianceSecondLine) * nonCompliersEffectiveSecondLine;
+        compliance_second_line * cure_rate_second_line +
+        (1 - compliance_second_line) * non_compliers_effective_second_line;
     immediate_outcomes.cure_rate_uc_self_treat[FirstLine] =
-        complianceSelfTreatment * cureRateSelfTreatment +
-        (1 - complianceSelfTreatment) * nonCompliersEffectiveFirstLine;
+        compliance_self_treatment * cure_rate_self_treatment +
+        (1 - compliance_self_treatment) * non_compliers_effective_first_line;
     immediate_outcomes.cure_rate_uc_self_treat[SecondLine] = 0.0; // as with access, this is a historical asymmetry
 
-    five_day.cure_rate_severe = getHealthSystemACRByName(hsDescription.getInitialACR(), inpatient);
+    five_day.cure_rate_severe = get_health_system_acr_by_name(hs_description.getInitialACR(), inpatient);
 
     immediate_outcomes.treatment_uc[FirstLine] =
-        getHealthSystemTreatmentByName(hsDescription.getTreatmentActions(), firstLine);
+        get_health_system_treatment_by_name(hs_description.getTreatmentActions(), first_line);
 
-    if (secondLine == firstLine)
+    if (second_line == first_line)
         immediate_outcomes.treatment_uc[SecondLine] = immediate_outcomes.treatment_uc[FirstLine];
     else
         immediate_outcomes.treatment_uc[SecondLine] =
-            getHealthSystemTreatmentByName(hsDescription.getTreatmentActions(), secondLine);
+            get_health_system_treatment_by_name(hs_description.getTreatmentActions(), second_line);
 
-    if (inpatient == firstLine)
+    if (inpatient == first_line)
         five_day.treatment_severe = immediate_outcomes.treatment_uc[FirstLine];
-    else if (inpatient == secondLine)
+    else if (inpatient == second_line)
         five_day.treatment_severe = immediate_outcomes.treatment_uc[SecondLine];
     else
-        five_day.treatment_severe = getHealthSystemTreatmentByName(hsDescription.getTreatmentActions(), inpatient);
+        five_day.treatment_severe =
+            get_health_system_treatment_by_name(hs_description.getTreatmentActions(), inpatient);
 
-    immediate_outcomes.use_diagnostic_uc = hsDescription.getUseDiagnosticUC();
+    immediate_outcomes.use_diagnostic_uc = hs_description.getUseDiagnosticUC();
 
     if (vivax_simple_model) {
         WithinHost::WHVivax::set_hs_parameters(
-            hsDescription.getLiverStageDrug().present() ? &hsDescription.getLiverStageDrug().get() : 0);
-    } else if (hsDescription.getLiverStageDrug().present()) {
+            hs_description.getLiverStageDrug().present() ? &hs_description.getLiverStageDrug().get() : 0);
+    } else if (hs_description.getLiverStageDrug().present()) {
         throw util::xml_scenario_error("health-system's liverStageDrug element only supported by vivax");
     }
 }
 
 // ———  per-human, update  ———
 
-void ImmediateOutcomes::uncomplicatedEvent(Human& human, Episode::State pgState) {
+void ImmediateOutcomes::uncomplicated_event(Human& human, Episode::State pg_state) {
     const ImmediateOutcomesParams& io = params().immediate_outcomes;
     // If last treatment prescribed was in recent memory, consider second line.
     CaseType regimen = FirstLine;
-    if (m_tLastTreatment + params().health_system_memory > Sim::ts0()) {
-        pgState = Episode::State(pgState | Episode::SECOND_CASE);
+    if (t_last_treatment + params().health_system_memory > Sim::ts0()) {
+        pg_state = Episode::State(pg_state | Episode::SecondCase);
         regimen = SecondLine;
     }
 
-    latestReport.update(human, Episode::State(pgState));
+    latest_report.update(human, Episode::State(pg_state));
 
     double x = human.clinical_rng.uniform_01();
-    if (x < params().five_day.access_uc_any[regimen] * m_treatmentSeekingFactor) {
+    if (x < params().five_day.access_uc_any[regimen] * treatment_seeking_factor) {
         // UC1: official care OR self treatment
         // UC2: official care only
 
@@ -197,10 +200,10 @@ void ImmediateOutcomes::uncomplicatedEvent(Human& human, Episode::State pgState)
                 return; // negative outcome: no treatment
         }
 
-        m_tLastTreatment = Sim::ts0();
+        t_last_treatment = Sim::ts0();
         mon::recordEvent(measures[regimen], human);
 
-        double p = (x < params().five_day.access_uc_self_treat[regimen] * m_treatmentSeekingFactor)
+        double p = (x < params().five_day.access_uc_self_treat[regimen] * treatment_seeking_factor)
                        ? io.cure_rate_uc_self_treat[regimen]
                        : io.cure_rate_uc_official[regimen];
         if (human.clinical_rng.bernoulli(p)) {

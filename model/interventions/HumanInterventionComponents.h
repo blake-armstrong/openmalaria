@@ -297,7 +297,7 @@ public:
     void deploy(Human& human, mon::Deploy::Method method, VaccineLimits) const {
         Clinical::CMDTOut out =
             tree.exec(Clinical::CMHostData(human, human.intervention_rng, Sim::in_years(human.age(Sim::now_or_ts1())),
-                                           human.clinicalModel->getLatestState()));
+                                           human.clinicalModel->get_latest_state()));
         if (out.treated) {
             mon::recordDeploy(mon::measure("nMDAs"), mon::measure("nCtsMDA"), human, method);
         }

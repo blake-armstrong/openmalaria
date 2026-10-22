@@ -20,8 +20,8 @@
  * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301, USA.
  */
 
-#ifndef Hmod_ClinicalEventSchduler
-#define Hmod_ClinicalEventSchduler
+#ifndef HMOD_CLINICAL_EVENT_SCHEDULER
+#define HMOD_CLINICAL_EVENT_SCHEDULER
 
 #include "Global.h"
 #include "Clinical/ClinicalModel.h"
@@ -41,12 +41,12 @@ namespace Clinical {
  */
 class ClinicalEventScheduler : public ClinicalModel {
 public:
-    ClinicalEventScheduler(const ClinicalParams& params, double tSF);
+    ClinicalEventScheduler(const ClinicalParams& params, double tsf);
 
-    virtual bool isExistingCase();
+    virtual bool is_existing_case();
 
 protected:
-    virtual void doClinicalUpdate(Human& human, double ageYears, WithinHost::Pathogenesis::StatePair& pg);
+    virtual void do_clinical_update(Human& human, double age_years, WithinHost::Pathogenesis::StatePair& pg);
 
     virtual void checkpoint(istream& stream);
     virtual void checkpoint(ostream& stream);
@@ -56,23 +56,23 @@ private:
     // have a vtable followed by 3 ints, a double and a list. Alignment probably
     // wastes some space.
     /// Current state of sickness
-    Episode::State pgState;
+    Episode::State pg_state;
 
     /** Set to when a bout should start. If sim::ts0() equals this, a bout
      * is started (UC & severe behaviour different).
      *
      * Note: medications are not delayed by this. */
-    SimTime caseStartTime = Sim::never();
+    SimTime case_start_time = Sim::never();
 
     /** The individual recovers when sim::ts0() >= timeOfRecovery,
      * assuming they didn't die. */
-    SimTime timeOfRecovery = Sim::never();
+    SimTime time_of_recovery = Sim::never();
 
     /// Time at which last treatment was recieved (for second-case considerations).
-    SimTime timeLastTreatment = Sim::never();
+    SimTime time_last_treatment = Sim::never();
 
     /// Total parasite density at last time step (used during a bout).
-    double previousDensity;
+    double previous_density;
 };
 
 }

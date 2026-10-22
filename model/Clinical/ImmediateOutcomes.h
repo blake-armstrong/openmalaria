@@ -20,8 +20,8 @@
  * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301, USA.
  */
 
-#ifndef Hmod_ImmediateOutcomes
-#define Hmod_ImmediateOutcomes
+#ifndef HMOD_IMMEDIATE_OUTCOMES
+#define HMOD_IMMEDIATE_OUTCOMES
 
 #include "Clinical/CM5DayCommon.h"
 
@@ -45,11 +45,11 @@ namespace Clinical {
  */
 class ImmediateOutcomes : public CM5DayCommon {
 public:
-    ImmediateOutcomes(const ClinicalParams& params, double tSF) : CM5DayCommon(params, tSF) {}
+    ImmediateOutcomes(const ClinicalParams& params, double tsf) : CM5DayCommon(params, tsf) {}
 
 protected:
     /** Called when a non-severe/complicated malaria sickness occurs. */
-    virtual void uncomplicatedEvent(Human& human, Episode::State pgState);
+    virtual void uncomplicated_event(Human& human, Episode::State pg_state);
 };
 
 }
