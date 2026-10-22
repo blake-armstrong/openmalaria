@@ -57,7 +57,7 @@ public:
         ETS_ASSERT(whm != 0);
 
         hd = std::make_unique<CMHostData>(*human, human->clinical_rng, 21 /* any real age will do for most tests */,
-                                          Episode::NONE);
+                                          Episode::None);
 
         // could seed random-number-generator, but shouldn't affect outcomes
         UnittestUtil::PkPdSuiteSetup();

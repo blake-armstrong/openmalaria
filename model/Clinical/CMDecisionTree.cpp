@@ -113,7 +113,7 @@ protected:
 
     virtual CMDTOut exec(CMHostData hostData) const {
         // Uses of this in complicated cases should trigger an exception during initialisation.
-        assert((hostData.pgState & Episode::SICK) && !(hostData.pgState & Episode::COMPLICATED));
+        assert((hostData.pgState & Episode::Sick) && !(hostData.pgState & Episode::Complicated));
 
         if (hostData.pgState & Episode::SecondCase)
             return secondLine.exec(hostData);
@@ -236,8 +236,8 @@ protected:
     virtual CMDTOut exec(CMHostData hostData) const {
         const Clinical::Episode& latest = hostData.human.clinicalModel->get_latest_report();
 
-        if (((hostData.pgState & Episode::SICK) && !(hostData.pgState & Episode::COMPLICATED)) ||
-            (hostData.pgState & Episode::MALARIA)) {
+        if (((hostData.pgState & Episode::Sick) && !(hostData.pgState & Episode::Complicated)) ||
+            (hostData.pgState & Episode::Malaria)) {
             if (latest.time + memory >= Sim::now_or_ts0())
                 return positive.exec(hostData);
             else
@@ -281,7 +281,7 @@ protected:
     virtual CMDTOut exec(CMHostData hostData) const {
         CMDTOut result;
 
-        if (hostData.pgState & Episode::COMPLICATED)
+        if (hostData.pgState & Episode::Complicated)
             result = positive.exec(hostData);
         else
             result = negative.exec(hostData);

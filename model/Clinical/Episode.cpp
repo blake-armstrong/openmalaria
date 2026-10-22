@@ -62,11 +62,11 @@ void Episode::report() {
         return;
 
     // Reports malarial/non-malarial UC fever dependent on cause, not diagnosis.
-    if (state & Episode::MALARIA) {
+    if (state & Episode::Malaria) {
         // Malarial fevers: report bout
-        if (state & Episode::COMPLICATED) {
+        if (state & Episode::Complicated) {
             mon::recordEvent(mon::measure("nSevere"), survey_period, age_group, cohort_set);
-            if (state & Episode::SEVERE) {
+            if (state & Episode::Severe) {
                 mon::recordEvent(mon::measure("nSevereWithoutComorbidities"), survey_period, age_group, cohort_set);
             }
         } else { // UC or UC2
@@ -89,10 +89,10 @@ void Episode::report() {
                     mon::recordEvent(mon::measure("Clinical_HospitalFirstDayDeaths"), survey_period, age_group,
                                      cohort_set);
                 }
-            } else if (state & Episode::SEQUELAE) {
+            } else if (state & Episode::Sequelae) {
                 mon::recordEvent(mon::measure("nSeq"), survey_period, age_group, cohort_set);
                 mon::recordEvent(mon::measure("nHospitalSeqs"), survey_period, age_group, cohort_set);
-            } else if (state & Episode::RECOVERY) {
+            } else if (state & Episode::Recovery) {
                 mon::recordEvent(mon::measure("nHospitalRecovs"), survey_period, age_group, cohort_set);
             }
         } else {
@@ -101,12 +101,12 @@ void Episode::report() {
                 if (state & Episode::EventFirstDay) {
                     mon::recordEvent(mon::measure("Clinical_FirstDayDeaths"), survey_period, age_group, cohort_set);
                 }
-            } else if (state & Episode::SEQUELAE) {
+            } else if (state & Episode::Sequelae) {
                 mon::recordEvent(mon::measure("nSeq"), survey_period, age_group, cohort_set);
             }
             // Don't care about out-of-hospital recoveries
         }
-    } else if (state & Episode::SICK) {
+    } else if (state & Episode::Sick) {
         // Report non-malarial fever and outcomes
         mon::recordEvent(mon::measure("nNMFever"), survey_period, age_group, cohort_set);
 

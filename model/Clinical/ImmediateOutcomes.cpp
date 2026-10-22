@@ -207,7 +207,7 @@ void ImmediateOutcomes::uncomplicated_event(Human& human, Episode::State pg_stat
                        ? io.cure_rate_uc_self_treat[regimen]
                        : io.cure_rate_uc_official[regimen];
         if (human.clinical_rng.bernoulli(p)) {
-            // Could report Episode::RECOVERY to latestReport,
+            // Could report Episode::Recovery to latestReport,
             // but we don't report out-of-hospital recoveries anyway.
             human.withinHostModel->treatment(human, io.treatment_uc[regimen]);
         } else {

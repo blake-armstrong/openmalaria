@@ -55,16 +55,16 @@ public:
         * http://en.wikipedia.org/wiki/Flag_byte
         * Max: 0x80000000
         * (note & | ^ are C++'s binary AND, OR and XOR operators). */
-        NONE = WithinHost::Pathogenesis::None, ///< Not sick
+        None = WithinHost::Pathogenesis::None, ///< Not sick
 
         // Flags for current state/worst state to report:
-        SICK = WithinHost::Pathogenesis::Sick,       ///< Sick (may or may not be from malaria)
-        MALARIA = WithinHost::Pathogenesis::Malaria, ///< Malaria sickness
+        Sick = WithinHost::Pathogenesis::Sick,       ///< Sick (may or may not be from malaria)
+        Malaria = WithinHost::Pathogenesis::Malaria, ///< Malaria sickness
         /// Used by ClinicalEventScheduler to indicate a second bout of malarial sickness within the same episode (roughly)
         SecondCase = 0x10,
-        SEVERE = 0x8,                                        ///< Severe malaria case
-        COINFECTION = 0x4,                                   ///< Malaria with a coinfection
-        COMPLICATED = WithinHost::Pathogenesis::Complicated, ///< Flag used to indicate SEVERE and/or COINFECTION
+        Severe = 0x8,                                        ///< Severe malaria case
+        Coinfection = 0x4,                                   ///< Malaria with a coinfection
+        Complicated = WithinHost::Pathogenesis::Complicated, ///< Flag used to indicate Severe and/or Coinfection
 
         //NEED_ANTIBIOTIC     = 0x40,         ///< Flag indicates a non-malaria fever requires (antibiotic) treatment
 
@@ -73,16 +73,16 @@ public:
         // Flags for outcome reporting:
         EventInHospital =
             0x400, ///< Indicates recovery/sequelae/death event occurred in hospital − only set on one of these events (ImmediateOutcomes only)
-        DirectDeath = 0x1000, ///< Used for reporting death (from COMPLICATED sickness)
-        SEQUELAE = 0x2000,    ///< Reporting recovered with sequelae (from COMPLICATED sickness)
-        RECOVERY = 0x4000,    ///< Report that individual fully recovered
+        DirectDeath = 0x1000, ///< Used for reporting death (from Complicated sickness)
+        Sequelae = 0x2000,    ///< Reporting recovered with sequelae (from Complicated sickness)
+        Recovery = 0x4000,    ///< Report that individual fully recovered
         EventFirstDay =
-            0x8000, ///< Used in combination with DIRECT_DEATH to report death happens on first day (before treatment has effect)
+            0x8000, ///< Used in combination with DirectDeath to report death happens on first day (before treatment has effect)
         RunCmTree = 0x10000, ///< Flag to indicate that CM tree should be run now or after a delay
     };
 
     Episode(SimTime health_system_memory, bool health_system_memory_fix)
-        : time(Sim::never()), survey_period(mon::NOT_USED), age_group(0), cohort_set(0), state(NONE),
+        : time(Sim::never()), survey_period(mon::NOT_USED), age_group(0), cohort_set(0), state(None),
           health_system_memory_fix(health_system_memory_fix), health_system_memory(health_system_memory) {}
 
     ~Episode();
@@ -118,9 +118,9 @@ public:
 private:
     /** Report a clinical episode.
      *
-     * From _state, an episode is reported based on severity (SICK,
-     * MALARIA or COMPLICATED), and any outcomes are reported: RECOVERY (in
-     * hospital, i.e. with EVENT_IN_HOSPITAL, only), SEQUELAE and DIRECT_DEATH
+     * From _state, an episode is reported based on severity (Sick,
+     * Malaria or Complicated), and any outcomes are reported: Recovery (in
+     * hospital, i.e. with EventInHospital, only), Sequelae and DirectDeath
      * (both in and out of hospital). */
     void report();
 

@@ -115,7 +115,7 @@ void EventSchedulerParams::set_parameters(const scnXml::HSEventScheduler& es_dat
 // -----  construction, destruction and checkpointing  -----
 
 ClinicalEventScheduler::ClinicalEventScheduler(const ClinicalParams& params, double tsf)
-    : ClinicalModel(params), pg_state(Episode::NONE), case_start_time(Sim::never()), time_of_recovery(Sim::never()),
+    : ClinicalModel(params), pg_state(Episode::None), case_start_time(Sim::never()), time_of_recovery(Sim::never()),
       time_last_treatment(Sim::never()), previous_density(numeric_limits<double>::quiet_NaN()) {
     if (tsf != 1.0) {
         // p(treatment seeking) is part of tree & handled generically, so we
@@ -145,22 +145,22 @@ void ClinicalEventScheduler::do_clinical_update(Human& human, double age_years,
 
             latest_report.update(human, pg_state);
         } else {
-            if (pg_state & Episode::COMPLICATED) {
+            if (pg_state & Episode::Complicated) {
                 const double p_sequelae = params().p_sequelae_inpatient.eval(age_years);
                 mon::recordStat(mon::measure("expectedSequelae"), human, p_sequelae);
                 if (human.clinical_rng.uniform_01() < p_sequelae) {
-                    pg_state = Episode::State(pg_state | Episode::SEQUELAE);
+                    pg_state = Episode::State(pg_state | Episode::Sequelae);
                 } else {
-                    pg_state = Episode::State(pg_state | Episode::RECOVERY);
+                    pg_state = Episode::State(pg_state | Episode::Recovery);
                 }
             } else {
-                pg_state = Episode::State(pg_state | Episode::RECOVERY);
+                pg_state = Episode::State(pg_state | Episode::Recovery);
             }
             // report bout, at conclusion of episode:
             latest_report.update(human, pg_state);
 
             // Individual recovers (and is immediately susceptible to new cases)
-            pg_state = Episode::NONE; // recovery (reset to healthy state)
+            pg_state = Episode::None; // recovery (reset to healthy state)
 
             // And returns to transmission (if was removed)
             human.perHostTransmission.outsideTransmission = false;
@@ -172,10 +172,10 @@ void ClinicalEventScheduler::do_clinical_update(Human& human, double age_years,
     if (params().indirect_mort_bugfix)
         indirect_mortality = pg.indirect_mortality;
 
-    if (new_state & Episode::SICK) {
+    if (new_state & Episode::Sick) {
         // we have some new case: is it severe/complicated?
-        if (new_state & Episode::COMPLICATED) {
-            if (pg_state & Episode::COMPLICATED) {
+        if (new_state & Episode::Complicated) {
+            if (pg_state & Episode::Complicated) {
                 // previously severe: no events happen for course of medication
             } else {
                 // previously healthy or UC: progress to severe
@@ -185,7 +185,7 @@ void ClinicalEventScheduler::do_clinical_update(Human& human, double age_years,
             }
         } else {
             // uncomplicated case (UC/UC2/NMF): is it new?
-            if (pg_state & Episode::SICK) {
+            if (pg_state & Episode::Sick) {
                 // previously UC; nothing to do
             } else {
                 if (case_start_time < Sim::ts0()) {
@@ -225,7 +225,7 @@ void ClinicalEventScheduler::do_clinical_update(Human& human, double age_years,
 
         if (aux_out.treated) { // I.E. some treatment was given
             time_last_treatment = Sim::ts0();
-            if (pg_state & Episode::COMPLICATED) {
+            if (pg_state & Episode::Complicated) {
                 mon::recordEvent(mon::measure("nTreatments3"), human);
             } else {
                 if (pg_state & Episode::SecondCase) {
@@ -248,7 +248,7 @@ void ClinicalEventScheduler::do_clinical_update(Human& human, double age_years,
 
         // Case fatality rate (first day of illness)
         // P(death) is some fixed input scaled by age-specific CFR.
-        if ((pg_state & Episode::COMPLICATED) && !(pg_state & Episode::DirectDeath)) {
+        if ((pg_state & Episode::Complicated) && !(pg_state & Episode::DirectDeath)) {
             const bool in_hospital = true /*FIXME auxOut.hospitalisation == CMAuxOutput::IMMEDIATE */;
             double p_death = params().case_fatality_rate.eval(age_years);
             // community fatality rate when not in hospital or delayed hospital entry
@@ -266,12 +266,12 @@ void ClinicalEventScheduler::do_clinical_update(Human& human, double age_years,
         }
 
         if (es.non_malaria_fevers) {
-            if ((pg_state & Episode::SICK) && !(pg_state & Episode::COMPLICATED)) {
+            if ((pg_state & Episode::Sick) && !(pg_state & Episode::Complicated)) {
                 // Have a NMF or UC malaria case
 
                 /** Given a non-malaria fever, return the probability of it requiring
                  * treatment. */
-                bool is_malarial = pg_state & Episode::MALARIA;
+                bool is_malarial = pg_state & Episode::Malaria;
                 double p_need_treat =
                     is_malarial ? es.mf_need_antibiotic.eval(age_years) : es.nmf_need_antibiotic.eval(age_years);
                 bool need_treat = human.clinical_rng.bernoulli(p_need_treat);
@@ -325,7 +325,7 @@ void ClinicalEventScheduler::do_clinical_update(Human& human, double age_years,
 
         // Case fatality rate (subsequent days)
         // Complicated case & at risk of death (note: extraDaysAtRisk <= 0)
-        if ((pg_state & Episode::COMPLICATED) && !(pg_state & Episode::DirectDeath) &&
+        if ((pg_state & Episode::Complicated) && !(pg_state & Episode::DirectDeath) &&
             (Sim::ts0() < time_of_recovery + es.extra_days_at_risk)) {
             // In complicated episodes, S(t), the probability of survival on
             // subsequent days t, is described by log(S(t)) = -v(Y(t)/Y(t-1)),
@@ -360,7 +360,7 @@ void ClinicalEventScheduler::do_clinical_update(Human& human, double age_years,
         if (pg_state & Episode::EventInHospital)
             human.perHostTransmission.outsideTransmission = true;
 
-        if (pg_state & Episode::COMPLICATED) {
+        if (pg_state & Episode::Complicated) {
             // complicatedCaseDuration should to some respects be associated
             // with medication duration, however ongoing medications after
             // exiting hospital are OK and medications terminating before the
@@ -379,7 +379,7 @@ void ClinicalEventScheduler::do_clinical_update(Human& human, double age_years,
     if (time_last_treatment == Sim::ts0())
         human.removeFirstEvent(interventions::SubPopRemove::ON_FIRST_TREATMENT);
 
-    if (pg_state & Episode::SICK)
+    if (pg_state & Episode::Sick)
         human.removeFirstEvent(interventions::SubPopRemove::ON_FIRST_BOUT);
 }
 

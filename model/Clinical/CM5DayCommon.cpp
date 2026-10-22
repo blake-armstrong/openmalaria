@@ -49,8 +49,8 @@ CM5DayCommon::CM5DayCommon(const ClinicalParams& params, double tsf)
 void CM5DayCommon::do_clinical_update(Human& human, double age_years, WithinHost::Pathogenesis::StatePair& pg) {
     Episode::State pg_state = static_cast<Episode::State>(pg.state);
 
-    if (pg_state & Episode::MALARIA) {
-        if (pg_state & Episode::COMPLICATED) {
+    if (pg_state & Episode::Malaria) {
+        if (pg_state & Episode::Complicated) {
             severe_malaria(human, pg_state, age_years, doomed);
         } else if (params().indirect_mort_bugfix || !pg.indirect_mortality) {
             // NOTE: the "not indirect mortality" bit is a historical accident.
@@ -58,7 +58,7 @@ void CM5DayCommon::do_clinical_update(Human& human, double age_years, WithinHost
             // (This does affect tests.)
             uncomplicated_event(human, pg_state);
         }
-    } else if (pg_state & Episode::SICK) { // sick but not from malaria
+    } else if (pg_state & Episode::Sick) { // sick but not from malaria
         uncomplicated_event(human, pg_state);
     }
 
@@ -68,7 +68,7 @@ void CM5DayCommon::do_clinical_update(Human& human, double age_years, WithinHost
     if (t_last_treatment == Sim::ts0())
         human.removeFirstEvent(interventions::SubPopRemove::ON_FIRST_TREATMENT);
 
-    if (pg_state & Episode::SICK)
+    if (pg_state & Episode::Sick)
         human.removeFirstEvent(interventions::SubPopRemove::ON_FIRST_BOUT);
 }
 
@@ -141,9 +141,9 @@ void CM5DayCommon::severe_malaria(Human& human, Episode::State pg_state, double 
                 latest_report.update(human, Episode::State(state_treated | Episode::DirectDeath));
                 doomed = DoomedComplicated;
             } else if (prandom < q[7]) { // Patient recovers, but with sequelae (don't report full recovery)
-                latest_report.update(human, Episode::State(state_treated | Episode::SEQUELAE));
+                latest_report.update(human, Episode::State(state_treated | Episode::Sequelae));
             } else /*prandom < q[8]*/ { // patient recovers fully
-                latest_report.update(human, Episode::State(state_treated | Episode::RECOVERY));
+                latest_report.update(human, Episode::State(state_treated | Episode::Recovery));
             }
         } else /*prandom < q[5]*/ { // Treated but parasites not cleared (in hospital)
             // No change in parasitological status among in-hospital patients
@@ -152,7 +152,7 @@ void CM5DayCommon::severe_malaria(Human& human, Episode::State pg_state, double 
                 latest_report.update(human, Episode::State(state_treated | Episode::DirectDeath));
                 doomed = DoomedComplicated;
             } else if (prandom < q[4]) { // sequelae without parasite clearance
-                latest_report.update(human, Episode::State(state_treated | Episode::SEQUELAE));
+                latest_report.update(human, Episode::State(state_treated | Episode::Sequelae));
             } else /*prandom < q[5]*/ { // full recovery from episode
                 latest_report.update(human, pg_state);
             }
@@ -164,7 +164,7 @@ void CM5DayCommon::severe_malaria(Human& human, Episode::State pg_state, double 
             latest_report.update(human, Episode::State(pg_state | Episode::DirectDeath));
             doomed = DoomedComplicated;
         } else if (prandom < q[1]) { // outcome 1: sequelae in community
-            latest_report.update(human, Episode::State(pg_state | Episode::SEQUELAE));
+            latest_report.update(human, Episode::State(pg_state | Episode::Sequelae));
         } else /*prandom < q[2]*/ { // outcome 2: full recovery from episode in community
             latest_report.update(human, pg_state);
         }
