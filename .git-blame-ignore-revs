@@ -46,3 +46,5 @@ e53617abd5e7652c744891a68c701e202e31f5d2
 85edc7ef21c151364a4ef39b51c3a4f858c519d9
 # D4d: Genotypes, Diagnostic and Treatments safe modernize fix-its (util/style.sh modernize)
 e67dbef97fb988c33e2f30416cd5afe3d2284415
+# D5: model/PkPd safe modernize fix-its (util/style.sh modernize)
+c92d9d367cc128f17832909988b5d64310e841a1
