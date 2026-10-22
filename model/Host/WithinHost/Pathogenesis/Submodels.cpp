@@ -48,22 +48,26 @@ double MuellerPathogenesis::get_p_episode(double, double total_density) {
 //Number of categories in the numerical approximation used in updatePyrogenThres()
 const size_t NumCategories = 11;
 
-PyrogenParams::PyrogenParams(const OM::Parameters& parameters) {
-    init_pyro_thres = parameters[Parameter::YStar0];
+namespace {
 
-    double delt = 1.0 / NumCategories;
-    double smu_y = -log(0.5) / (Sim::steps_per_year() * parameters[Parameter::YStarHalfLife]);
-    b = -smu_y * delt;
-
-    ystar2_13 = parameters[Parameter::YStarSq];
-
-    //alpha: factor determining increase in pyrogenic threshold
-    double alpha14 = parameters[Parameter::Alpha];
-    a = alpha14 * Sim::one_ts() * delt;
-
-    //Ystar1: critical value of parasite density in determing increase in pyrog t
-    ystar1_26 = parameters[Parameter::YStar1];
+double pyrogen_b(const OM::Parameters& parameters) {
+    const double delt = 1.0 / NumCategories;
+    const double smu_y = -log(0.5) / (Sim::steps_per_year() * parameters[Parameter::YStarHalfLife]);
+    return -smu_y * delt;
 }
+
+double pyrogen_a(const OM::Parameters& parameters) {
+    const double delt = 1.0 / NumCategories;
+    //alpha: factor determining increase in pyrogenic threshold
+    const double alpha14 = parameters[Parameter::Alpha];
+    return alpha14 * Sim::one_ts() * delt;
+}
+
+}
+
+PyrogenParams::PyrogenParams(const OM::Parameters& parameters)
+    : init_pyro_thres(parameters[Parameter::YStar0]), b(pyrogen_b(parameters)),
+      ystar2_13(parameters[Parameter::YStarSq]), a(pyrogen_a(parameters)), ystar1_26(parameters[Parameter::YStar1]) {}
 
 PyrogenPathogenesis::PyrogenPathogenesis(const PathogenesisParams& params, double comorbidity_factor)
     : PathogenesisModel(params, comorbidity_factor), pyrogen_thres(params.pyrogen.init_pyro_thres) {}

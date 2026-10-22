@@ -61,12 +61,13 @@ struct MuellerParams {
 struct PyrogenParams {
     //Pyrogenic threshold at birth (Y*0)
     double init_pyro_thres = 0.0;
+    // Derived parameters without good names:
+    double b = std::numeric_limits<double>::signaling_NaN();
     // Ystar2: critical value in determining increase in pyrogenic threshold
     double ystar2_13 = 0.0;
-    double ystar1_26 = 0.0;
-    // Derived parameters without good names:
     double a = std::numeric_limits<double>::signaling_NaN();
-    double b = std::numeric_limits<double>::signaling_NaN();
+    //Ystar1: critical value of parasite density in determing increase in pyrog t
+    double ystar1_26 = 0.0;
 
     PyrogenParams() = default;
     explicit PyrogenParams(const OM::Parameters& parameters);
