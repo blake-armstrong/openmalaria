@@ -150,6 +150,23 @@ SENSITIVE = '<restriction onLocus="mdr" toAllele="sensitive"/>'
 RESISTANT = '<restriction onLocus="mdr" toAllele="resistant"/>'
 
 
+NMF = """<NonMalariaFevers>
+        <incidence>
+          <group lowerbound="0" value="0.32"/>
+          <group lowerbound="5" value="0.25"/>
+          <group lowerbound="20" value="0.18"/>
+        </incidence>
+      </NonMalariaFevers>"""
+
+
+def nmf_on(s):
+    return rep(s, '<option name="NON_MALARIA_FEVERS" value="false"/>', '<option name="NON_MALARIA_FEVERS" value="true"/>')
+
+
+def vivax_nmf(s):
+    return rep(nmf_on(s), '<clinical healthSystemMemory="6t">', '<clinical healthSystemMemory="6t">\n      ' + NMF)
+
+
 V = "scenarioVivax.xml"
 G = "scenarioGenotypes.xml"
 M = "scenarioMSAT_HRP2.xml"
@@ -259,6 +276,17 @@ GROUPS = {
                               '<component id="MDA">\n        <treatPKPD schedule="nope"')),
         Variant("intervention_checkpoint", "scenarioCohort.xml", args=["--checkpoint"], runs=2),
         Variant("models_checkpoint", "scenarioPkPdModels.xml", args=["--checkpoint"], runs=2),
+    ],
+    "pathogenesis": [
+        Variant("vivax_nmf", V, vivax_nmf),
+        Variant("vivax_nmf_checkpoint", V, vivax_nmf, ["--checkpoint"], runs=2),
+        Variant("vivax_nmf_no_element", V, nmf_on),
+        Variant("falciparum_nmf_no_element", "scenario5.xml", model_option("NON_MALARIA_FEVERS")),
+        Variant("falciparum_nmf_no_element_latentp_bad", "scenario5.xml",
+                lambda s: rep(model_option("NON_MALARIA_FEVERS")(s), 'latentp="3t"', 'latentp="abc"')),
+        Variant("mueller_checkpoint", "scenario10.xml", args=["--checkpoint"], runs=2),
+        Variant("predetermined_checkpoint", "scenario9.xml", args=["--checkpoint"], runs=2),
+        Variant("pyrogen_nmf_checkpoint", "scenarioNonHumanHosts.xml", args=["--checkpoint"], runs=2),
     ],
     "falciparum-init": [
         Variant("molineaux_no_weight", "scenarioMolineaux.xml", lambda s: drop_element(s, "<weight ", "</weight>")),
