@@ -36,7 +36,7 @@ See `PLAN.md` for the session protocol, chunks and gates. Append one log entry p
 | D5 | done | 8dcdf512, 5c0449e9, c92d9d36, b543d8fd, de48455e, 0c859fb0, a210a53d, eb07d51e, a3789f2f; follow-up 89c90989, 5355535c, 74843c0a, (its log entry) |
 | D6 | split | D6a–D6c |
 | D6a | done | 1b084b2e, 910bf9a9, 3be68cb7, c38704fb, 225947ca, 4ed41e45, aa825247, f7849271, c2e8281b, f4b0cfd2, c5dc1e95, 25082ee3, 44666fc1, 0d84e89f, (this log entry) |
-| D6b | todo | |
+| D6b | done | 66fdf1e1, 38a88580, a0e9a737, 18a6f0c2, f1831c6f, 227daa2f, d4e7b71c, 51663e3e, 9011466e, (this log entry) |
 | D6c | todo | |
 | D7 | todo | |
 | D8 | todo | |
@@ -450,6 +450,7 @@ See `PLAN.md` for the session protocol, chunks and gates. Append one log entry p
   | `model/Host/WithinHost/WHVivax.{h,cpp}` | f511b389 + 24fec740 (D4c) | e53617ab + d527bbbf (D4c) |
   | `model/Host/WithinHost/`: `Genotypes`, `Diagnostic`, `Treatments` | 85edc7ef (D4d) | e67dbef9 + 760980b6 (D4d) |
   | `model/Host/WithinHost/Pathogenesis` | c38704fb + 225947ca's hand rename (D6a) | c2e8281b + c5dc1e95 (D6a) |
+  | `model/Clinical/` (not `CMDecisionTree`, D6c) and `model/Host/NeonatalMortality` | a0e9a737 + 18a6f0c2's hand rename (D6b) | 227daa2f + 51663e3e (D6b) |
 
   Rows from D4a on were added in D4d; the D4 entries had recorded the commits only in their logs.
 
@@ -1109,3 +1110,38 @@ The user approved adding the scenario test proposed in D5's follow-ups.
   - Tool: F58's candidate fix (report, not apply, a `prefer-member-initializer` move of a call that is not the body's first statement).
   - `util/AgeGroupInterpolation`'s rename removes the `isSet` NOLINT.
 - Next: D6b.
+
+### D6b: clinical model statics and neonatal mortality → `Simulation` (done, 2026-10-22)
+- Base: f79fcb79 (same C++ as 25082ee3). The G-perf and A/B base worktree `../om-bench-base` was moved to f79fcb79 and rebuilt.
+- Commits:
+  - 66fdf1e1: **logic.**
+    - `Clinical::ClinicalParams` (new `Clinical/ClinicalParams.h`), a `Simulation` member built where `ClinicalModel::init` ran, every read and error in the old order: `IndirectMortalityFix`, `healthSystemMemory` (format errors still rewrapped), parameters 17 and 19 (19 was `InfantMortality::init`'s read at that point, so it is read here and handed to `InfantMortality`), then `EventSchedulerParams`' constructor (the old `ClinicalEventScheduler::init`) or the `ImmediateOutcomes` choice and its deprecation warning. `Kind` replaces the two choice flags. It takes the `ModelOptionFlags` and `CommandLineOptions`; the `HealthSystemMemoryFix` and `VivaxSimpleModel` flags, which `Episode` and the two `setHealthSystem` functions read through the bridge, are read once there (non-throwing reads, so their position does not matter).
+    - `set_health_system` replaces `setHS` (same checks and order); the health-system values are `CM5DayParams` (shared by the 5-day models, with `cfr_pf_use_hospital`), `ImmediateOutcomesParams`, `DecisionTree5DayParams` and `EventSchedulerParams` (the event scheduler's statics and `ESCaseManagement`'s trees). Each old `setHealthSystem` body is unchanged apart from names. `changeHS` reaches it through `bridge::mutable_clinical_params()` (as D4c's values).
+    - `create` replaces `createClinicalModel`; each per-human model holds a pointer behind a protected `params()`. `Episode` is given the health-system memory and its fix flag at construction. `ClinicalModel::hsMemory` (now `hs_memory`) stays as a facade through the bridge for `CMDTUncomplicated` (D6c). The duplicate `CaseType` enum in `DecisionTree5Day.cpp` (shadowed by `CM5DayCommon`'s) went.
+    - `InfantMortality` and `NeonatalMortality` became instance classes and `Simulation` members, passed to `Host::update` (then to the clinical model) and to the checkpoint functions (same stream position). Monitoring reads the infant mortality through `bridge::infant_mortality()` until D9. `NeonatalMortality` looks its diagnostic up in the `DiagnosticRegistry` it is given (F53's neonatal part).
+    - The unit tests bind a default `ClinicalParams` (the old pre-init state).
+  - 38a88580: `util/ab_scenarios.py` group `clinical` (below).
+  - a0e9a737 + 18a6f0c2: **rename**, 167 by the tool (38 parameter, 34 member, 34 variable, 16 method, 14 enum constant, 14 local constant, 8 macro, 6 global constant, 3 function) over `model/Clinical/` except `CMDecisionTree` and `model/Host/NeonatalMortality`. Maps: `tSF=tsf`, three header guards (`HMOD_CM5_DAY_COMMON`, `HMOD_DECISION_TREE_5_DAY`, and `HMOD_CLINICAL_EVENT_SCHEDULER`, fixing the old guard's typo). Collisions reviewed: two `member(param)` initialisers of the same new name, `pg.indirect_mortality` (another struct), the genotype registry's `pre_main_sim_init`. Then a hand commit for `Episode::State`'s eight single-word enumerators (`NONE` → `None`, …, 44 code sites; D6a's follow-up). Both in `.git-blame-ignore-revs` (f1831c6f).
+  - 227daa2f + d4e7b71c: **modernise, tool:** 13 `concat-nested-namespaces`, 10 `use-override`, 6 `use-default-member-init`, 3 `init-variables`, 2 `use-ranges`, 2 `use-nullptr`, 2 `loop-convert`. The dry run had no `prefer-member-initializer` (no F58 hazard); the two loop conversions iterate containers their bodies do not change.
+  - 51663e3e: **modernise, hand:** `make_unique`; the treatment measures a `static constexpr std::array` (`mon::measure` is `consteval`); `q` a `std::array`; `Episode` and `ClinicalModel` with deleted copy and move (an `Episode` copy would report twice); one expression for `Episode::update`'s duplicated branch; the delay loop's `goto` → `break`; `static_cast`s for the casts and two narrowings; neonatal age bounds local constants; `misc-const-correctness`. Left: `CaseType` plain (array index, NOLINT), `Episode::State` and the doomed codes (checkpointed ints, H3), `latest_state` uninitialised (F60), protected/public data, the `Clinical` namespace name.
+  - 9011466e: FINDINGS F59, F60 and F53's neonatal part; PLAN.md D6b row as built; README's A/B row and bridge list.
+- Gates:
+  - G-exact / G-unit: 57/57 (strict) on `build-rework/` (Release) and `build-debug/` (Debug) after each C++ commit. ctest reaches all three clinical models, `changeHS` under each (scenario4, scenario1, EffectiveDrug, Molineaux), the infant mortality rate output (e.g. scenario4, 5, 6) and neonatal mortality with (Genotypes) and without a diagnostic element, all with checkpoint stop and resume.
+  - G-stat: plain `ctest -j4` at 51663e3e: 110 passed, 4 disabled (as D6a).
+  - G-style: `util/style.sh check f79fcb79` clean at 51663e3e. Rename: format half clean, second dry run `nothing to rename`, token check passed, `check a0e9a737^` clean. Modernise tool commit: format half clean, second dry run applies nothing, `check 227daa2f^` clean.
+  - G-perf: `util/bench.sh --compare ../om-bench-base/build-rework`, candidate 51663e3e, load ~3.4–5 at the start: median per-pair ratio 1.0126 (+1.26%), spreads 10.2% / 16.0%. The benchmark scenario uses the event scheduler. scenarioPenny (event scheduler), `-n 11`: 1.0100 (+1.00%), spreads 3.7% / 6.9% (a first `-n 7` run under higher load gave 1.0262 with a 19.7% spread).
+  - A/B (`util/ab_scenarios.py <base> <candidate>`, base f79fcb79): `clinical` 34 of 34 identical at the logic commit (before two variants were reworked, below), all 148 variants (`clinical`, `falciparum-init`, `pathogenesis`, `pkpd`, `registries`, `vivax`) identical at 66fdf1e1 and again at 51663e3e. The `clinical` group (36 variants) covers what ctest can't: the event scheduler with non-malaria fevers (no ctest scenario combines them; the variant's outputs differ from plain ESTS), plain and with `--checkpoint`, and its two missing-element errors; checkpoint bytes for each clinical model; `CFR_PF_USE_HOSPITAL` (no scenario sets it; moves scenario5's outputs); stderr with and without deprecation warnings; event-scheduler `changeHS` keeping the health system, changing `uncomplicatedCaseDuration` (moves outputs) and changing `dailyPrImmUCTS` (does not: F59); a health system of the wrong kind for each model, initially and in a `changeHS`; the event scheduler's init errors; a bad drug name; an `<uncomplicated>` memory above the health-system memory; a bad `healthSystemMemory` alone and with parameter 17 missing; each clinical parameter dropped alone and each consecutive pair in the read order (17, 19; event scheduler 17, 19, 38, 33).
+  - Planted bugs (A/B `clinical` and non-statistical ctest, then reverted): parameters 17 and 19 read in swapped order → `io_no_params_17_19` and `es_no_params_17_19` differ, ctest passes; the event scheduler's MF and NMF need-treatment tables swapped → `es_nmf` and `es_nmf_checkpoint` differ, ctest passes.
+- Findings: F59 (`changeHS` cannot change `dailyPrImmUCTS`), F60 (`latest_state` read uninitialised by the decision-tree intervention for a newborn). F53's neonatal part settled.
+- Surprises:
+  - Three "missing section" variants first stopped at XSD validation (the schema requires one of the three health-system elements); they were rebuilt to give a health system of the wrong kind, which reaches the C++ checks.
+  - With a 5-day step, `CLINICAL_EVENT_SCHEDULER` is rejected by the model-option check before the event scheduler's own time-step check, which no scenario can then reach.
+  - A first positive control for `changeHS` (a higher CFR in ESTS) moved nothing: ESTS has too few severe cases in its short intervention period. The case-duration control does move outputs.
+- Follow-ups:
+  - D6c: `CMDTUncomplicated` reads the health-system memory through `ClinicalModel::hs_memory()` (the bridge); pass it, with the `DiagnosticRegistry` and `PkPdParams`, to the decision-tree factory. The clinical params hold pointers into the decision-tree library, which D6c moves.
+  - D8: `TimedChangeHSDeployment` reaches the params through `bridge::mutable_clinical_params()`; `ClinicalParams::set_health_system` still calls `WHInterface::add_treatment` and `WHVivax::set_hs_parameters` through D4's bridges, which D8 can pass in with the `WithinHostModel`.
+  - D9: monitoring's `bridge::infant_mortality()`.
+  - H3: `Episode::State` and the doomed codes to `enum class` (both checkpointed as ints).
+  - The uncompiled `ESCaseManagementSuite.h` (F9) still uses the old names (`Episode::NONE`, the old `CMHostData` constructor).
+  - F59 and F60 wait for the user.
+- Next: D6c.
