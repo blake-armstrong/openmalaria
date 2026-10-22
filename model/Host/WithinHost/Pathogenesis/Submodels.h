@@ -28,18 +28,16 @@
 
 using namespace std;
 
-namespace OM {
-namespace WithinHost {
-namespace Pathogenesis {
+namespace OM::WithinHost::Pathogenesis {
 
 /// Müller presentation model.
 class MuellerPathogenesis : public PathogenesisModel {
 public:
     MuellerPathogenesis(const PathogenesisParams& params, double comorbidity_factor)
         : PathogenesisModel(params, comorbidity_factor) {}
-    ~MuellerPathogenesis() {}
+    ~MuellerPathogenesis() override = default;
 
-    virtual double get_p_episode(double time_step_max_density, double total_density);
+    double get_p_episode(double time_step_max_density, double total_density) override;
 };
 
 /// Pyrogenic threshold presentation model.
@@ -52,13 +50,13 @@ protected:
 
 public:
     PyrogenPathogenesis(const PathogenesisParams& params, double comorbidity_factor);
-    virtual ~PyrogenPathogenesis() {}
-    virtual void summarize(const Host::Human& human);
-    virtual double get_p_episode(double time_step_max_density, double total_density);
+    ~PyrogenPathogenesis() override = default;
+    void summarize(const Host::Human& human) override;
+    double get_p_episode(double time_step_max_density, double total_density) override;
 
 protected:
-    virtual void checkpoint(istream& stream);
-    virtual void checkpoint(ostream& stream);
+    void checkpoint(istream& stream) override;
+    void checkpoint(ostream& stream) override;
 };
 
 /// Predetermined episodes presentation model.
@@ -66,12 +64,11 @@ class PredetPathogenesis : public PyrogenPathogenesis {
 public:
     PredetPathogenesis(const PathogenesisParams& params, double comorbidity_factor)
         : PyrogenPathogenesis(params, comorbidity_factor) {}
-    ~PredetPathogenesis() {}
+    ~PredetPathogenesis() override = default;
 
-    virtual double get_p_episode(double time_step_max_density, double total_density);
+    double get_p_episode(double time_step_max_density, double total_density) override;
 };
 
 }
-}
-}
+
 #endif

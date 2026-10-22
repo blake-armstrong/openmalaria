@@ -23,9 +23,7 @@
 #ifndef MO_PATHOGENISIS_STATE
 #define MO_PATHOGENISIS_STATE
 
-namespace OM {
-namespace WithinHost {
-namespace Pathogenesis {
+namespace OM::WithinHost::Pathogenesis {
 /** Types of sickness; used by case management.
    *
    * Most values are flags which can be combined in any form. A few
@@ -54,12 +52,11 @@ enum State {
         StateMalaria | Complicated | Coinfection, ///< Combination: Sick, Malaria, Complicated, Coinfection
 };
 struct StatePair {
-    StatePair() : state(None), indirect_mortality(false) {}
-    State state;
-    bool indirect_mortality; // implies death a little later on which may not be seen as a malaria death
+    StatePair() = default;
+    State state{None};
+    bool indirect_mortality{false}; // implies death a little later on which may not be seen as a malaria death
 };
 
 }
-}
-}
+
 #endif

@@ -33,9 +33,7 @@
 #include <cmath>
 using namespace std;
 
-namespace OM {
-namespace WithinHost {
-namespace Pathogenesis {
+namespace OM::WithinHost::Pathogenesis {
 
 using namespace OM::util;
 
@@ -142,6 +140,4 @@ Pathogenesis::StatePair PathogenesisModel::determine_state(Host::Human& human, d
 void PathogenesisModel::checkpoint(istream& stream) { comorbidity_factor & stream; }
 void PathogenesisModel::checkpoint(ostream& stream) { comorbidity_factor & stream; }
 
-}
-}
 }

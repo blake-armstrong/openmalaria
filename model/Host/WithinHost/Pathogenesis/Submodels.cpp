@@ -27,9 +27,7 @@
 #include <cmath>
 using namespace std;
 
-namespace OM {
-namespace WithinHost {
-namespace Pathogenesis {
+namespace OM::WithinHost::Pathogenesis {
 
 // ———  Müller presentation model  ———
 
@@ -112,6 +110,4 @@ double PredetPathogenesis::get_p_episode(double time_step_max_density, double to
     return (time_step_max_density > pyrogen_thres) ? 1 : 0;
 }
 
-}
-}
 }

@@ -43,8 +43,8 @@ namespace OM {
 namespace Host {
 class Human;
 }
-namespace WithinHost {
-namespace Pathogenesis {
+
+namespace WithinHost::Pathogenesis {
 
 using util::LocalRng;
 
@@ -106,7 +106,7 @@ struct PathogenesisParams {
  * Previously named MorbidityModel and PresentationModel. */
 class PathogenesisModel {
 public:
-    virtual ~PathogenesisModel() {}
+    virtual ~PathogenesisModel() = default;
 
     /** Determines the health of the individual based on his/her parasitemia.
      *
@@ -141,6 +141,6 @@ protected:
 };
 
 }
-}
+
 }
 #endif
