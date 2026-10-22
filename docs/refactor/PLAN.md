@@ -431,7 +431,7 @@ Each F chunk needs the previous one; F0 needs E6. **Gates:** G-exact (registry d
 |---|---|
 | **H1** | Headers under `include/openmalaria/`: `Model`, `Simulation`, `State`, `Reporter`, `Registry`, with pimpl and no internal types exposed |
 | **H2** | A shared library, CMake `install`/`export` and a package config, plus a tiny out-of-tree consumer project used as a test |
-| **H3** | A versioned `State`/checkpoint format, with a round-trip test |
+| **H3** | A versioned `State`/checkpoint format, with a round-trip test. Fix F56 here (the user's decision, 2026-10-22): checkpoint `LSTMDrug::vol_dist`, `LSTMDrugConversion::vol_dist_metabolite` and `last_bm`, and `CommonInfection::kn`; then move scenarioPkPdModels to `OM_BOXTEST_NAMES` so it runs with `--checkpoint-stop` |
 
 **Gates:** all available gates.
 

@@ -1068,4 +1068,4 @@ The user approved adding the scenario test proposed in D5's follow-ups.
   Two earlier plants were dropped as not real bugs for this input: not marking the metabolite as in use (the parent's constructor already marks it through `find_drug`), and not checkpointing `qty_m` (DHA's elimination at 25.4/day leaves nothing visible).
 - Gates: 57/57 non-statistical tests on Release and Debug (strict); A/B `pkpd` 27/27 identical.
 - Process note: the user stopped a diagnostic command that cleared scratch directories with `rm -rf` on a variable-built path. Later runs used fresh `mktemp -d` directories and delete nothing.
-- Follow-ups: F56 (ask the user; when fixed, move PkPdModels to `OM_BOXTEST_NAMES`).
+- Follow-ups: F56, **to be fixed in H3 (the user's decision, 2026-10-22)**; then move PkPdModels to `OM_BOXTEST_NAMES`.
