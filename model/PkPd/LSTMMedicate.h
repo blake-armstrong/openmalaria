@@ -43,8 +43,10 @@ class UnittestUtil;
 
 namespace OM::pk_pd {
 
+class DrugRegistry;
+
 struct Schedule {
-    void load(const scnXml::PKPDSchedule::MedicateSequence& seq);
+    void load(const scnXml::PKPDSchedule::MedicateSequence& seq, DrugRegistry& drugs);
 
     vector<MedicateData> medications;
 };
@@ -56,7 +58,7 @@ struct DosageTable {
      * 
      * Dosings may be given as a table using age or body mass as the key (first
      * column), or dose may be specified as mg drug / kg body mass. */
-    double get_multiplier(double key) {
+    double get_multiplier(double key) const {
         if (mult_mass_kg)
             return key;
         else {
@@ -72,8 +74,32 @@ struct DosageTable {
     map<double, double> table;
 };
 
-extern vector<Schedule> schedules;
-extern vector<DosageTable> dosages;
+/** Treatment courses: schedules and dosage tables.
+ * 
+ * A schedule is a list of times to administrer a drug, along with base drug
+ * doses. A dosage table is used to select a multiplier for this base dose
+ * according to age or body mass. */
+class CourseRegistry {
+public:
+    CourseRegistry() = default;
+    /** Load treatment data from XML, finding drugs in an already loaded registry. */
+    CourseRegistry(const scnXml::Treatments& data, DrugRegistry& drugs);
+
+    /** Get the index of a named schedule. */
+    size_t find_schedule(const string& name) const;
+
+    /** Get the index of a named dosage table. */
+    size_t find_dosages(const string& name) const;
+
+    const Schedule& schedule(size_t index) const { return schedules[index]; }
+    const DosageTable& dosage_table(size_t index) const { return dosages[index]; }
+
+private:
+    vector<Schedule> schedules;
+    map<string, size_t> schedule_names;
+    vector<DosageTable> dosages;
+    map<string, size_t> dosages_names;
+};
 
 }
 

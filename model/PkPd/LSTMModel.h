@@ -37,6 +37,9 @@ class CommonInfection;
 }
 namespace pk_pd {
 
+class DrugRegistry;
+struct PkPdParams;
+
 struct MedicateData {
     MedicateData() : qty(numeric_limits<double>::signaling_NaN()), time(numeric_limits<double>::signaling_NaN()) {}
 
@@ -48,9 +51,9 @@ struct MedicateData {
     }
 
 private:
-    void load(const scnXml::PKPDMedication& med);
+    void load(const scnXml::PKPDMedication& med, DrugRegistry& drugs);
 
-    inline MedicateData multiplied(double dose_mult) {
+    inline MedicateData multiplied(double dose_mult) const {
         MedicateData r(*this);
         r.qty *= dose_mult;
         return r;
@@ -79,8 +82,7 @@ private:
  */
 class LSTMModel {
 public:
-    /// Static initialisation
-    static void init(const scnXml::Scenario& scenario);
+    explicit LSTMModel(const PkPdParams& params) : params(&params) {}
 
     /// Checkpointing
     template <class S> void operator&(S& stream) { checkpoint(stream); }
@@ -152,6 +154,8 @@ private:
 
     /// All pending medications
     list<MedicateData> medicate_queue;
+
+    const PkPdParams* params;
 
     friend class ::UnittestUtil;
 };

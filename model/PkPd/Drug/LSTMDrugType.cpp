@@ -39,15 +39,6 @@ using namespace std;
 
 namespace OM::pk_pd {
 using namespace OM::util;
-using WithinHost::Genotypes;
-
-// -----  Static variables and functions  -----
-
-// The list of drugTypes drugs. Not checkpointed.
-vector<LSTMDrugType> drug_types;
-map<string, size_t> drug_type_names;
-// List of all indices of drugs being used
-vector<size_t> drugs_in_use;
 
 LSTMDrugPD::LSTMDrugPD(const scnXml::Phenotype& phenotype)
     : n(phenotype.getSlope()), ic50(util::createSampler(phenotype.getIC50())), v(phenotype.getMax_killing_rate()) {}
@@ -78,7 +69,10 @@ double LSTMDrugPD::ic50_pow_slope(LocalRng& rng, size_t index, WithinHost::Commo
     return kn;
 }
 
-void LSTMDrugType::init(const scnXml::Pharmacology::DrugsType& drug_data) {
+DrugRegistry::DrugRegistry(const scnXml::Pharmacology::DrugsType& drug_data,
+                           const WithinHost::GenotypeRegistry& genotypes,
+                           const util::CommandLineOptions& command_line) {
+    const bool print_genotypes = command_line.option(util::CommandLine::PrintGenotypes);
     drug_types.reserve(drug_data.getDrug().size());
     for (const scnXml::PKPDDrug& drug : drug_data.getDrug()) {
         const string& abbrev = drug.getAbbrev();
@@ -87,26 +81,20 @@ void LSTMDrugType::init(const scnXml::Pharmacology::DrugsType& drug_data) {
             throw TRACED_EXCEPTION_DEFAULT(string("Drug added twice: ").append(abbrev));
 
         const size_t i = drug_types.size();
-        drug_types.emplace_back(i, drug);
+        drug_types.emplace_back(i, drug, *this, genotypes, print_genotypes);
         drug_type_names[abbrev] = i;
     }
 }
-void LSTMDrugType::clear() {
-    drug_types.clear();
-    drug_type_names.clear();
-}
-
-size_t LSTMDrugType::num_drug_types() { return drug_types.size(); }
 
 // Add index to drugsInUse if not already present. Not fast but doesn't need to be.
-void drug_is_used(size_t index) {
-    for (const size_t i : drugs_in_use) {
+void DrugRegistry::drug_is_used(size_t index) {
+    for (const size_t i : in_use) {
         if (i == index)
             return; // already in list
     }
-    drugs_in_use.push_back(index);
+    in_use.push_back(index);
 }
-size_t LSTMDrugType::find_drug(const string& abbreviation) {
+size_t DrugRegistry::find_drug(const string& abbreviation) {
     auto iter = drug_type_names.find(abbreviation);
     if (iter == drug_type_names.end())
         throw util::xml_scenario_error(string("attempt to use drug without description: ").append(abbreviation));
@@ -122,13 +110,7 @@ size_t LSTMDrugType::find_drug(const string& abbreviation) {
     return index;
 }
 
-LSTMDrugType& LSTMDrugType::get(size_t index) { //static
-    return drug_types.at(index);
-}
-
-const vector<size_t>& LSTMDrugType::get_drugs_in_use() { return drugs_in_use; }
-
-unique_ptr<LSTMDrug> LSTMDrugType::create_instance(LocalRng& rng, size_t index) {
+unique_ptr<LSTMDrug> DrugRegistry::create_instance(LocalRng& rng, size_t index) const {
     const LSTMDrugType& type_data = drug_types[index];
     if (type_data.conversion_rate) {
         const LSTMDrugType& metabolite_data = drug_types[type_data.metabolite];
@@ -144,7 +126,8 @@ unique_ptr<LSTMDrug> LSTMDrugType::create_instance(LocalRng& rng, size_t index) 
 
 // -----  Non-static LSTMDrugType functions  -----
 
-LSTMDrugType::LSTMDrugType(size_t index, const scnXml::PKPDDrug& drug_data)
+LSTMDrugType::LSTMDrugType(size_t index, const scnXml::PKPDDrug& drug_data, DrugRegistry& registry,
+                           const WithinHost::GenotypeRegistry& genotypes, bool print_genotypes)
     : index(index), negligible_concentration(numeric_limits<double>::quiet_NaN()),
       neg_m_exp(numeric_limits<double>::quiet_NaN()), mwr(numeric_limits<double>::quiet_NaN()),
       ic50_log_corr(numeric_limits<double>::quiet_NaN()), ic50_corr_factor(numeric_limits<double>::quiet_NaN()) {
@@ -188,7 +171,7 @@ LSTMDrugType::LSTMDrugType(size_t index, const scnXml::PKPDDrug& drug_data)
         }
         const scnXml::Conversion& conv = pk.getConversion().get();
         try {
-            metabolite = find_drug(conv.getMetabolite());
+            metabolite = registry.find_drug(conv.getMetabolite());
         } catch (util::xml_scenario_error& e) {
             throw util::xml_scenario_error(
                 "PK: metabolite drug not found; metabolite must be defined *before* parent drug!");
@@ -270,7 +253,7 @@ LSTMDrugType::LSTMDrugType(size_t index, const scnXml::PKPDDrug& drug_data)
         map<string, size_t> loci;
         vector<vector<uint32_t>> loc_alleles;
         for (const scnXml::Restriction& restriction : phenotype.getRestriction()) {
-            const uint32_t allele = Genotypes::find_allele_code(restriction.getOnLocus(), restriction.getToAllele());
+            const uint32_t allele = genotypes.find_allele_code(restriction.getOnLocus(), restriction.getToAllele());
             if (allele == numeric_limits<uint32_t>::max()) {
                 throw util::xml_scenario_error("phenotype has "
                                                "restriction on locus " +
@@ -297,12 +280,12 @@ LSTMDrugType::LSTMDrugType(size_t index, const scnXml::PKPDDrug& drug_data)
                                            " restrictions required when num. phenotypes > 1");
         } else {
             // All genotypes map to phenotype 0
-            genotype_mapping.assign(Genotypes::get_genotypes().size(), 0);
+            genotype_mapping.assign(genotypes.genotypes().size(), 0);
         }
     } else {
-        const vector<Genotypes::Genotype>& genotypes = Genotypes::get_genotypes();
-        genotype_mapping.assign(genotypes.size(), 0);
-        for (size_t j = 0; j < genotypes.size(); ++j) {
+        const vector<WithinHost::Genotype>& genotype_list = genotypes.genotypes();
+        genotype_mapping.assign(genotype_list.size(), 0);
+        for (size_t j = 0; j < genotype_list.size(); ++j) {
             uint32_t phenotype = numeric_limits<uint32_t>::max();
             for (size_t i = 0; i < n_phenotypes; ++i) {
                 // genotype matches this phenotype when, for every locus among
@@ -312,7 +295,7 @@ LSTMDrugType::LSTMDrugType(size_t index, const scnXml::PKPDDrug& drug_data)
                 for (const vector<uint32_t>& loc_alleles : phenotype_restrictions[i]) {
                     bool match_for_locus = false;
                     for (const uint32_t restrict_allele : loc_alleles) {
-                        if (genotypes[j].alleles.count(restrict_allele) > 0) {
+                        if (genotype_list[j].alleles.count(restrict_allele) > 0) {
                             assert(!match_for_locus); // shouldn't be two matches
                             match_for_locus = true;
                         }
@@ -343,7 +326,7 @@ LSTMDrugType::LSTMDrugType(size_t index, const scnXml::PKPDDrug& drug_data)
             genotype_mapping[j] = phenotype;
         }
 
-        if (util::CommandLine::option(util::CommandLine::PrintGenotypes)) {
+        if (print_genotypes) {
             // Debug output to see which genotypes correspond to phenotypes
             cout << endl;
             cout << "Phenotype mapping: " << endl << "----------" << endl;

@@ -25,7 +25,7 @@
 #include "Host/WithinHost/Infection/CommonInfectionModel.h"
 #include "Host/WithinHost/Infection/DescriptiveInfection.h"
 #include "Host/WithinHost/Pathogenesis/PathogenesisModel.h"
-#include "PkPd/LSTMModel.h"
+#include "PkPd/PkPdParams.h"
 #include "mon/Monitoring.h"
 #include "util/UnitParse.h"
 #include "util/errors.h"
@@ -60,7 +60,8 @@ bool any_patent_infected_measure_used() {
 }
 
 WithinHostModel::WithinHostModel(const OM::Parameters& parameters, const util::ModelOptionFlags& options,
-                                 const util::CommandLineOptions& command_line, const scnXml::Scenario& scenario) {
+                                 const util::CommandLineOptions& command_line, const GenotypeRegistry& genotypes,
+                                 const scnXml::Scenario& scenario) {
     if (options.option(util::VivaxSimpleModel)) {
         kind = Kind::Vivax;
         vivax = VivaxParams(scenario.getModel(), read_latent_p(scenario.getModel()));
@@ -94,7 +95,7 @@ WithinHostModel::WithinHostModel(const OM::Parameters& parameters, const util::M
 
     if (kind == Kind::Common) {
         common = CommonWithinHostParams(scenario, infection);
-        pk_pd::LSTMModel::init(scenario);
+        common.pk_pd = pk_pd::PkPdParams(scenario, genotypes, command_line);
     } else {
         descriptive.report_patent_infected = any_patent_infected_measure_used();
     }

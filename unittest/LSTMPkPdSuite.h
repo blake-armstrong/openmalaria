@@ -48,14 +48,14 @@ public:
         m_rng.seed(0, 721347520444481703);
         UnittestUtil::initTime(1);
         UnittestUtil::PkPdSuiteSetup();
-        proxy = new LSTMModel();
+        proxy = new LSTMModel(UnittestUtil::pk_pd_params());
         inf = new DummyInfection(UnittestUtil::infection_latent_p(), m_rng, 0, InfectionOrigin::Indigenous);
-        MQ_index = LSTMDrugType::find_drug("MQ");
+        MQ_index = UnittestUtil::pk_pd_params().drugs.find_drug("MQ");
     }
     void tearDown() {
         delete inf;
         delete proxy;
-        LSTMDrugType::clear();
+        UnittestUtil::pk_pd_params().drugs = DrugRegistry();
     }
 
     void testNone() { TS_ASSERT_EQUALS(proxy->get_drug_factor(m_rng, inf, massAt21), 1.0); }

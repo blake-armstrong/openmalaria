@@ -65,8 +65,7 @@ public:
     void tearDown() {
         human.reset();
         whm = nullptr;
-        pk_pd::LSTMDrugType::clear();
-        pk_pd::LSTMTreatments::clear();
+        UnittestUtil::pk_pd_params() = pk_pd::PkPdParams();
     }
 
     /* Runs the decision tree N times

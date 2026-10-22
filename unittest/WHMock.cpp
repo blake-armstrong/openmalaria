@@ -22,6 +22,7 @@
 
 #include "WHMock.h"
 #include "Host/WithinHost/Diagnostic.h"
+#include "Host/WithinHost/WithinHostModel.h"
 #include "util/errors.h"
 
 using namespace std;
@@ -31,7 +32,7 @@ namespace UnitTest {
 
 WHMock::WHMock()
     : totalDensity(numeric_limits<double>::quiet_NaN()), nTreatments(0), lastTimeLiver(Sim::never()),
-      lastTimeBlood(Sim::never()) {}
+      lastTimeBlood(Sim::never()), pkpd(bridge::within_host_model().common.pk_pd) {}
 WHMock::~WHMock() {}
 
 double WHMock::prob_transmission_to_mosquito(vector<double>&, vector<double>&) const {

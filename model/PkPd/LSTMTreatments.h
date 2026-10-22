@@ -27,27 +27,12 @@
 
 using namespace std;
 
-namespace scnXml {
-class Treatments;
-}
-
 namespace OM::pk_pd {
 
-/** Information about treatment courses: schedules and dosage tables.
- * 
- * A schedule is a list of times to administrer a drug, along with base drug
- * doses. A dosage table is used to select a multiplier for this base dose
- * according to age (it is assumed for now that age is the only basis on which
- * dosages are selected). */
+/** Treatment courses (schedules and dosage tables) of the current simulation,
+ * for the clinical and intervention models. See CourseRegistry. */
 class LSTMTreatments {
 public:
-    /** Load treatment data from XML.
-     * 
-     * Load drug data (LSTMDrugType::init()) first. */
-    static void init(const scnXml::Treatments& data);
-    /** Clear previous data. Only needed for testing. */
-    static void clear();
-
     /** Get the index of a named schedule. */
     static size_t find_schedule(const string& name);
 

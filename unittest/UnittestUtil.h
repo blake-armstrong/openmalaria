@@ -34,8 +34,7 @@
 #include "Clinical/ClinicalModel.h"
 #include "Host/Human.h"
 #include "PkPd/LSTMModel.h"
-#include "PkPd/Drug/LSTMDrugType.h"
-#include "PkPd/LSTMTreatments.h"
+#include "PkPd/PkPdParams.h"
 #include "Host/WithinHost/WHInterface.h"
 #include "Host/WithinHost/Infection/Infection.h"
 #include "Host/WithinHost/WHFalciparum.h"
@@ -363,7 +362,8 @@ public:
                       0.07948639559767655 /*k31*/),
                  PD(3.45 /* vmax */, 0.020831339 /* IC50 */, 6.0 /* slope */)));
 
-        pk_pd::LSTMDrugType::init(drugs);
+        pk_pd::PkPdParams& params = pk_pd_params();
+        params.drugs = pk_pd::DrugRegistry(drugs, unittest_options::genotypes, unittest_options::command_line);
 
         // Treatments
         scnXml::PKPDSchedule sched1("sched1");
@@ -382,8 +382,10 @@ public:
         treatments.getSchedule().push_back(sched1);
         treatments.getSchedule().push_back(sched2);
         treatments.getDosages().push_back(dosage1);
-        pk_pd::LSTMTreatments::init(treatments);
+        params.courses = pk_pd::CourseRegistry(treatments, params.drugs);
     }
+
+    static pk_pd::PkPdParams& pk_pd_params() { return unittest_options::within_host_model.common.pk_pd; }
 
     static SimTime infection_latent_p() { return Sim::from_days(15); }
 

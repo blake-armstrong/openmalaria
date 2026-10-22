@@ -28,6 +28,7 @@
 #include "Host/WithinHost/Infection/CommonInfection.h"
 #include "Host/WithinHost/Infection/CommonInfectionModel.h"
 #include "PkPd/LSTMModel.h"
+#include "PkPd/PkPdParams.h"
 #include "util/AgeGroupInterpolation.h"
 
 #include <limits>
@@ -44,6 +45,7 @@ struct CommonWithinHostParams {
     double het_mass_mult_std_dev = std::numeric_limits<double>::signaling_NaN();
     double min_het_mass_mult = std::numeric_limits<double>::signaling_NaN();
     bool report_infected_or_patent_infected = false;
+    pk_pd::PkPdParams pk_pd;
 
     CommonWithinHostParams() = default;
     CommonWithinHostParams(const scnXml::Scenario& scenario, const CommonInfectionModel& infection);

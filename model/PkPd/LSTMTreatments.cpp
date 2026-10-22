@@ -24,26 +24,24 @@
 #include "PkPd/LSTMMedicate.h"
 #include "PkPd/Drug/LSTMDrugType.h"
 #include "PkPd/LSTMModel.h"
+#include "Host/WithinHost/WithinHostModel.h"
 
 namespace OM::pk_pd {
 
-void MedicateData::load(const scnXml::PKPDMedication& med) {
-    drug = LSTMDrugType::find_drug(med.getDrug());
+void MedicateData::load(const scnXml::PKPDMedication& med, DrugRegistry& drugs) {
+    drug = drugs.find_drug(med.getDrug());
     qty = med.getMg();
     time = med.getHour() / 24.0; // convert from hours to days
 }
 
-void Schedule::load(const scnXml::PKPDSchedule::MedicateSequence& seq) {
+void Schedule::load(const scnXml::PKPDSchedule::MedicateSequence& seq, DrugRegistry& drugs) {
     medications.resize(seq.size());
     size_t i = 0;
     for (const scnXml::PKPDMedication& med : seq) {
-        medications[i].load(med);
+        medications[i].load(med, drugs);
         i += 1;
     }
 }
-
-vector<Schedule> schedules;
-map<string, size_t> schedule_names;
 
 void DosageTable::load(const xsd::cxx::tree::sequence<scnXml::PKPDDosageRange>& seq, bool is_body_mass) {
     use_mass = is_body_mass;
@@ -65,14 +63,11 @@ void DosageTable::load(const xsd::cxx::tree::sequence<scnXml::PKPDDosageRange>& 
     table[numeric_limits<double>::infinity()] = last_mult;
 }
 
-vector<DosageTable> dosages;
-map<string, size_t> dosages_names;
-
-void LSTMTreatments::init(const scnXml::Treatments& data) {
+CourseRegistry::CourseRegistry(const scnXml::Treatments& data, DrugRegistry& drugs) {
     schedules.resize(data.getSchedule().size());
     size_t i = 0;
     for (const scnXml::PKPDSchedule& schedule : data.getSchedule()) {
-        schedules[i].load(schedule.getMedicate());
+        schedules[i].load(schedule.getMedicate(), drugs);
         schedule_names[schedule.getName()] = i;
         i += 1;
     }
@@ -101,18 +96,11 @@ void LSTMTreatments::init(const scnXml::Treatments& data) {
     }
 }
 
-void LSTMTreatments::clear() {
-    schedules.clear();
-    schedule_names.clear();
-    dosages.clear();
-    dosages_names.clear();
-}
-
 inline void invalid_model() {
     throw util::xml_scenario_error("use of PK/PD treatment requires use of a compatible infection model and "
                                    "specification of pharmacology/treatments");
 }
-size_t LSTMTreatments::find_schedule(const string& name) {
+size_t CourseRegistry::find_schedule(const string& name) const {
     if (schedule_names.size() == 0)
         invalid_model();
     auto iter = schedule_names.find(name);
@@ -122,7 +110,7 @@ size_t LSTMTreatments::find_schedule(const string& name) {
     return iter->second;
 }
 
-size_t LSTMTreatments::find_dosages(const string& name) {
+size_t CourseRegistry::find_dosages(const string& name) const {
     if (dosages_names.size() == 0)
         invalid_model();
     auto iter = dosages_names.find(name);
@@ -130,6 +118,14 @@ size_t LSTMTreatments::find_dosages(const string& name) {
         throw util::xml_scenario_error(string("no dosage table with this name: ").append(name));
     }
     return iter->second;
+}
+
+size_t LSTMTreatments::find_schedule(const string& name) {
+    return bridge::within_host_model().common.pk_pd.courses.find_schedule(name);
+}
+
+size_t LSTMTreatments::find_dosages(const string& name) {
+    return bridge::within_host_model().common.pk_pd.courses.find_dosages(name);
 }
 
 }

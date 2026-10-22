@@ -58,7 +58,7 @@ CommonWithinHostParams::CommonWithinHostParams(const scnXml::Scenario& scenario,
 
 CommonWithinHost::CommonWithinHost(const FalciparumParams& params, const CommonWithinHostParams& common_params,
                                    LocalRng& rng, double comorbidity_factor)
-    : WHFalciparum(params, rng, comorbidity_factor), common_params(&common_params) {
+    : WHFalciparum(params, rng, comorbidity_factor), pkpd_model(common_params.pk_pd), common_params(&common_params) {
     assert(Sim::one_ts() == Sim::from_days(1) || Sim::one_ts() == Sim::from_days(5));
 
     opt_vaccine_genotype = params.vaccine_genotype;

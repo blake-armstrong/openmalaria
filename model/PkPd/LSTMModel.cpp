@@ -24,7 +24,7 @@
 #include "PkPd/Drug/LSTMDrugOneComp.h"
 #include "PkPd/LSTMModel.h"
 #include "PkPd/LSTMMedicate.h"
-#include "PkPd/LSTMTreatments.h"
+#include "PkPd/PkPdParams.h"
 #include "mon/Monitoring.h"
 #include "util/checkpoint_containers.h"
 #include "util/errors.h"
@@ -35,12 +35,11 @@
 
 namespace OM::pk_pd {
 
-// ———  static  ———
-
-void LSTMModel::init(const scnXml::Scenario& scenario) {
+PkPdParams::PkPdParams(const scnXml::Scenario& scenario, const WithinHost::GenotypeRegistry& genotypes,
+                       const util::CommandLineOptions& command_line) {
     if (scenario.getPharmacology().present()) {
-        LSTMDrugType::init(scenario.getPharmacology().get().getDrugs());
-        LSTMTreatments::init(scenario.getPharmacology().get().getTreatments());
+        drugs = DrugRegistry(scenario.getPharmacology().get().getDrugs(), genotypes, command_line);
+        courses = CourseRegistry(scenario.getPharmacology().get().getTreatments(), drugs);
     }
 }
 
@@ -57,7 +56,7 @@ void LSTMModel::checkpoint(istream& stream) {
     for (size_t i = 0; i < num_drugs; ++i) {
         size_t index = 0;
         index & stream;
-        drugs.push_back(LSTMDrugType::create_instance(rng, index));
+        drugs.push_back(params->drugs.create_instance(rng, index));
         drugs.back() & stream;
     }
     medicate_queue & stream;
@@ -75,10 +74,10 @@ void LSTMModel::checkpoint(ostream& stream) {
 // ———  non-static simulation time functions  ———
 
 void LSTMModel::prescribe(size_t schedule, size_t dosage, double age, double body_mass, double delay_d) {
-    DosageTable& table = dosages[dosage];
+    const DosageTable& table = params->courses.dosage_table(dosage);
     const double key = table.use_mass ? body_mass : age;
     const double dose_mult = table.get_multiplier(key);
-    for (MedicateData& medicate_data : schedules[schedule].medications) {
+    for (const MedicateData& medicate_data : params->courses.schedule(schedule).medications) {
         MedicateData data = medicate_data.multiplied(dose_mult);
         data.time += delay_d;
         medicate_queue.push_back(data);
@@ -112,7 +111,7 @@ void LSTMModel::medicate_drug(LocalRng& rng, size_t type_index, double qty, doub
         }
     }
     // No match, so insert one:
-    drugs.push_back(LSTMDrugType::create_instance(rng, type_index));
+    drugs.push_back(params->drugs.create_instance(rng, type_index));
     (*drugs.back()).medicate(time, qty);
 }
 
@@ -153,7 +152,7 @@ void LSTMModel::decay_drugs(double body_mass) {
 }
 
 void LSTMModel::summarize(const Host::Human& human) const {
-    const vector<size_t>& drugs_in_use(LSTMDrugType::get_drugs_in_use());
+    const vector<size_t>& drugs_in_use(params->drugs.drugs_in_use());
     for (size_t index : drugs_in_use) {
         for (auto& drug : drugs) {
             const double conc = drug->get_concentration(index);

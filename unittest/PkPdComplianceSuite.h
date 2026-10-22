@@ -68,7 +68,7 @@ public:
         m_rng.seed(0, 721347520444481703);
         UnittestUtil::initTime(1);
         UnittestUtil::PkPdSuiteSetup();
-        proxy = new LSTMModel();
+        proxy = new LSTMModel(UnittestUtil::pk_pd_params());
         inf = new DummyInfection(UnittestUtil::infection_latent_p(), m_rng, 0, InfectionOrigin::Indigenous);
         schedule.clear();
     }
@@ -76,7 +76,7 @@ public:
     void tearDown() {
         delete inf;
         delete proxy;
-        LSTMDrugType::clear();
+        UnittestUtil::pk_pd_params().drugs = DrugRegistry();
     }
 
     void assembleTripleDosageSchedule(double dosage) {
@@ -159,10 +159,11 @@ public:
         PCS_VERBOSE(cout << "\n\033[32mTesting \033[1m" << drugName;
                     if (hasSecondDrug) { cout << " - " << drug2Name << " Conversion"; } cout << endl
                                                                                              << "====\033[0m" << endl;)
-        size_t drugIndex = LSTMDrugType::find_drug(drugName);
-        size_t drug2Ind = hasSecondDrug ? LSTMDrugType::find_drug(drug2Name) : 0;
-        double conc_abs_tol = LSTMDrugType::get(drugIndex).get_negligible_concentration();
-        double conc_abs_tol2 = hasSecondDrug ? LSTMDrugType::get(drug2Ind).get_negligible_concentration() : 0;
+        DrugRegistry& drugs = UnittestUtil::pk_pd_params().drugs;
+        size_t drug_index = drugs.find_drug(drugName);
+        size_t drug2_index = hasSecondDrug ? drugs.find_drug(drug2Name) : 0;
+        double conc_abs_tol = drugs.get(drug_index).get_negligible_concentration();
+        double conc_abs_tol2 = hasSecondDrug ? drugs.get(drug2_index).get_negligible_concentration() : 0;
         const size_t maxDays = 6;
         PCS_VERBOSE(double res_Fac[maxDays];)
         double res_Conc[maxDays];
@@ -180,14 +181,14 @@ public:
             proxy->decay_drugs(bodymass);
 
             // after update:
-            res_Conc[i] = proxy->get_drug_conc(drugIndex);
+            res_Conc[i] = proxy->get_drug_conc(drug_index);
             TS_ASSERT_APPROX_TOL(res_Conc[i], drug_conc[i], PKPD_CONC_REL_TOL, conc_abs_tol);
-            res_Conc2[i] = hasSecondDrug ? proxy->get_drug_conc(drug2Ind) : 0.0;
+            res_Conc2[i] = hasSecondDrug ? proxy->get_drug_conc(drug2_index) : 0.0;
             if (hasSecondDrug)
                 TS_ASSERT_APPROX_TOL(res_Conc2[i], drug2_conc[i], PKPD_CONC_REL_TOL, conc_abs_tol2);
 
             // medicate (take effect on next update):
-            medicate(drugIndex, i);
+            medicate(drug_index, i);
         }
         PCS_VERBOSE(string fmt = drugDebugOutputHeader(hasSecondDrug, drugName); for (size_t i = 0; i < maxDays; i++) {
             // calculate relative and absolute differences to expected values

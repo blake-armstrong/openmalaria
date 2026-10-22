@@ -44,6 +44,10 @@ class Phenotype;
 namespace OM {
 namespace WithinHost {
 class CommonInfection;
+class GenotypeRegistry;
+}
+namespace util {
+class CommandLineOptions;
 }
 namespace pk_pd {
 using util::LocalRng;
@@ -52,6 +56,7 @@ using util::NormalSample;
 
 class LSTMDrugType;
 class LSTMDrug;
+class DrugRegistry;
 
 /** Drug PD parameters (specified per phenotype), as well as applicable
  * functions to calculate drug factors and concentrations.
@@ -92,48 +97,21 @@ private:
 
 /** Drug PK & PD parameters (one instance per drug type).
  * 
- * Static data contains a list of all available drug types.
- * 
- * None of this data is checkpointed, because it is loaded by init() from XML
- * data. (Although if it cannot be reproduced by reloading it should be
- * checkpointed.) */
+ * None of this data is checkpointed, because it is loaded from XML data by
+ * DrugRegistry. (Although if it cannot be reproduced by reloading it should
+ * be checkpointed.) */
 class LSTMDrugType {
 public:
-    ///@brief Static functions
-    //@{
-    /** Initialise the drug model. Called at start of simulation. */
-    static void init(const scnXml::Drugs& data);
-    /** Clear previous data. Only needed for testing. */
-    static void clear();
-
-    /** Get the number of drug types. */
-    static size_t num_drug_types();
-
-    /** Find a DrugType by its abbreviation, and returns its index.
-     *
-     * Throws if the drug isn't found, so you can rely on it returning a valid
-     * index if it doesn't throw. */
-    static size_t find_drug(const string& abbreviation);
-
-    /** Get a reference to drug type data for some index. This can't be used
-     * to change the data. */
-    static LSTMDrugType& get(size_t index);
-
-    /** Get a list of all drug types which are (possibly) being used. */
-    static const vector<size_t>& get_drugs_in_use();
-
-    /** Create a per-human drug module for a given drug index. */
-    static unique_ptr<LSTMDrug> create_instance(LocalRng& rng, size_t index);
-    //@}
-
-    ///@brief Non static (per instance) functions
-    //@{
     /** Create a new DrugType.
      *
      * @param index     Index of drug in internal list
      * @param drugData Scenario data for this drug (PK params, PD params per phenotype)
+     * @param registry The registry being built, which already holds any metabolite
+     * @param genotypes Parasite genotypes, mapped to phenotypes
+     * @param print_genotypes Print the genotype to phenotype mapping
      */
-    LSTMDrugType(size_t index, const scnXml::PKPDDrug& drug_data);
+    LSTMDrugType(size_t index, const scnXml::PKPDDrug& drug_data, DrugRegistry& registry,
+                 const WithinHost::GenotypeRegistry& genotypes, bool print_genotypes);
     ~LSTMDrugType();
 
     LSTMDrugType(const LSTMDrugType&) = delete;
@@ -162,7 +140,6 @@ public:
 
     /** Return reference to correct drug-phenotype data. */
     const LSTMDrugPD& get_pd(uint32_t genotype) const;
-    //@}
 
 private:
     /** The drug index in drugTypes and a unique identifier for the drug type.
@@ -210,8 +187,42 @@ private:
 
     // Allow LSTMDrug to access private members
     friend class LSTMDrugPD;
+    friend class DrugRegistry;
     friend inline double drug_effect(const LSTMDrugType& drug_type, double& concentration, double duration,
                                      double weight_kg, double dose_mg);
+};
+
+/** The list of all available drug types. */
+class DrugRegistry {
+public:
+    DrugRegistry() = default;
+    /** Load the drug types from XML. */
+    DrugRegistry(const scnXml::Drugs& data, const WithinHost::GenotypeRegistry& genotypes,
+                 const util::CommandLineOptions& command_line);
+
+    /** Find a DrugType by its abbreviation, and returns its index.
+     *
+     * Throws if the drug isn't found, so you can rely on it returning a valid
+     * index if it doesn't throw. Marks the drug and its metabolite as in use. */
+    size_t find_drug(const string& abbreviation);
+
+    /** Get a reference to drug type data for some index. */
+    const LSTMDrugType& get(size_t index) const { return drug_types.at(index); }
+
+    /** Get a list of all drug types which are (possibly) being used. */
+    const vector<size_t>& drugs_in_use() const { return in_use; }
+
+    /** Create a per-human drug module for a given drug index. */
+    unique_ptr<LSTMDrug> create_instance(LocalRng& rng, size_t index) const;
+
+private:
+    void drug_is_used(size_t index);
+
+    // Not checkpointed.
+    vector<LSTMDrugType> drug_types;
+    map<string, size_t> drug_type_names;
+    // List of all indices of drugs being used
+    vector<size_t> in_use;
 };
 
 }
