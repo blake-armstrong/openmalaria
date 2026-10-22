@@ -13,6 +13,7 @@ See `PLAN.md` for the session protocol, chunks and gates. Append one log entry p
 | B3 | done | 1b9b22f6, 06642bf8, 5efb309c, 1d56c288, db529f37, 5dc5baab, b3685dfe, (this log entry) |
 | B4 | done | 57afa057, e7074755, cae5d3b5, f82cb9a5, ee7e0471, (this log entry) |
 | B5 | done | 16851d20, 65710e16, dcae0a40, 6b870e04, 658cf62b, ab06df46, 8ca36c75, (this log entry) |
+| B6 | todo | |
 | P1 | done | f29d38e3, 81a14090, b0309128, 6bfcf8c0, 4b803c7f, (this log entry) |
 | S1 | done | b372c2f6, (this log entry) |
 | S2 | done | 841b2a9f, 720c0f09, 3c40c24b, (this log entry) |
@@ -1164,3 +1165,8 @@ The user asked for both D6b findings to be fixed, each in its own commit, with n
   - Before the F59 fix, scenarioESChangeHS's whole `changeHS` was a no-op for the output: every other value it carries equals ESTS's, and the one that differs was ignored.
   - F60 changed nothing observable here, even on a variant built to reach the uninitialised read; the poisoned-storage unit test is what shows the old code read an indeterminate value.
 - Next: D6c.
+
+### Plan amendment: B6, make CI pass (2026-10-22, after D6b)
+- The user asked for fixing CI to be added to the plan: every push of the branch fails CI. The user had read the failures as GitHub Pages failing to deploy; the Pages workflow in fact passes on this branch. What fails (C/C++ CI 39557798562 and Style 39557798559, at 4db10096): the macOS jobs' statistical tests (F61), the Linux jobs' LifeNet1/2 and EffectiveDrug outputs (F62), the ubuntu-22.04 job's configure (F63) and the Style job (F64).
+- B6 added to PLAN.md (Stage B) and to § Recommended order as row 11b, so it is the next chunk, before D6c.
+

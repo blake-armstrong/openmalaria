@@ -118,6 +118,7 @@ The dependency graph allows many orders. Follow this one unless the user says ot
 | 10a | **S7** | Added after S6 (F31). Must be done before D2b: G-stat is the only gate for draw-order changes, and S6 showed the current check misses shifts of about 2 SD. Confirm its three choices with the user first. Independent of V1. |
 | 10b | **V1** | Added after S5 (F16, F24, F26, F27). Must be done before D2b: with new draws, a scenario's own seed could start aborting in vector warmup. Each fix changes outputs, so ask the user first. |
 | 11 | **D2b**, then **M4** | **First ask the user Decision 1.** The first chunk allowed to change draw order; it is gated by G-stat, not G-exact. M4 also changes draws, so do it straight after and regenerate `test/expected/` once for both. |
+| 11b | **B6** | Added after D6b (2026-10-22) at the user's request: do it next, before D6c. Each push for a CI run needs the user's approval. |
 | 12 | **D3 → D9** | |
 | 12b | **M3**, **M7** | Logging and replicate-level parallelism, once `Simulation` owns all its state. **Ask the user Decision 6 before M7.** |
 | 13 | **E1 → E6** | **Ask the user Decision 3 before E1.** |
@@ -218,6 +219,19 @@ Each chunk has the same fields:
   - Add a GitHub Actions job in `.github/workflows/` that runs clang-format and `clang-tidy-diff` against the merge base.
 - **Done when:** the job definition passes locally (e.g. with `act`, or by running its script by hand).
 - **Gates:** G-style.
+
+### B6: Make CI pass
+Added after D6b at the user's request (2026-10-22). Every push of `throwaway_ai_rework` fails CI; the last run (C/C++ CI 39557798562 and Style 39557798559, at D4c's 4db10096) failed in every build job and in Style. The GitHub Pages workflow passes on this branch (its deploy step runs on `main` only); if Pages failures are seen, look at the failing run first, since they would come from `main` or the repository's Pages settings, not from this branch. Until B6 is done, a push can skip CI with `[skip ci]` in the head commit's message.
+- **Needs:** B5. **Read:** FINDINGS F61–F64, F49, F12.
+- **Do:**
+  1. Get the current state: a CI run of the branch HEAD. Pushing needs the user's approval; ask, then read each failing job's log (`gh run view <id> --log-failed`). Update F61–F64 with what is still failing.
+  2. macOS jobs (F61): the statistical tests and `stats_tool_*` fail with `TypeError: zip() takes no keyword arguments`: `test/stats` uses `zip(..., strict=True)` (Python 3.10+), and the runners' `python3` is older. Pin a Python ≥ 3.10 in the workflow (`actions/setup-python`) and make CMake require that version for the statistical tests (note the project's own `FindPython.cmake`), so an old Python disables them with a message instead of failing 52 tests.
+  3. ubuntu-22.04 job (F63): configure fails because `cmake_minimum_required` is 3.24 (M0) and 22.04 has 3.22. Either install a newer CMake in that job or drop 22.04 from the matrix; **ask the user which**.
+  4. Linux x86-64 and arm64 jobs (F62): LifeNet1/2 (and EffectiveDrug on arm64) differ from `test/expected/` by more than `run.py`'s 1e-6 (LifeNet1: measure 36, simulated EIR, 2.3e-6 relative). The expected outputs come from macOS arm64 (Apple clang). Find the cause: math-library results (`exp`, `log`, `pow`), floating-point contraction (FMA; GCC and clang default differently, and arm64 fuses), or summation order. Bring the options to the user before changing anything: make the arithmetic the same on every platform (e.g. `-ffp-contract=off` everywhere, own implementations where libm results differ), a per-platform tolerance in CI, or per-platform expected outputs. A change that moves macOS outputs needs regenerated `test/expected/` (ask first; plan it with G-stat as for M4).
+  5. Style job (F64): `util/ci-style.sh` checks every line changed since the merge base with `origin/main`, on Ubuntu's `xsdcxx` (4.0) headers, and reports `cppcoreguidelines-slicing` on a generated string type (`LSTMDrugType.cpp`, at 4db10096) that the local `xsd` 4.2 headers do not produce. Reproduce it with Ubuntu's `xsdcxx` (a container, or `act`), then fix the code or make CI use the same `xsd` as the development machine; also run `util/ci-style.sh origin/main` locally.
+  6. Record each cause and fix in FINDINGS (close F61–F64 or leave them open with the user's decision).
+- **Done when:** every job of C/C++ CI and Style passes on a pushed commit of `throwaway_ai_rework`, or the jobs that still fail are failing only by a decision the user took (e.g. a dropped job) and are recorded so.
+- **Gates:** G-exact, G-unit, G-style locally; G-stat if test tooling changes; the CI jobs themselves.
 
 ## Stage P: Performance baseline
 
