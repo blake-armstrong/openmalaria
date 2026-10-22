@@ -215,6 +215,14 @@ def dt5_section():
     return section("scenario1.xml", "<DecisionTree5Day", "</DecisionTree5Day>")
 
 
+def severe_mda(s):
+    s = rep_first(s, "<decisionTree>", '<decisionTree><severe><positive><treatPKPD schedule="AL_treat" '
+                                       'dosage="AL_dosages"/></positive><negative>')
+    s = rep_first(s, "</decisionTree>", "</negative></severe></decisionTree>")
+    return rep(s, '<deploy coverage="0.85" time="1484"/>',
+               '<deploy coverage="1" time="1484" repeatStep="1t" repeatEnd="1849t"/>')
+
+
 DAILY_PR_TWO_DAYS = "<dailyPrImmUCTS>0.2</dailyPrImmUCTS><dailyPrImmUCTS>0.8</dailyPrImmUCTS>"
 CLINICAL_READ_ORDER = (17, 19, 38, 33)
 
@@ -385,6 +393,7 @@ GROUPS = {
         Variant("dt5_wrong_section", "scenario1.xml",
                 replace_element("<DecisionTree5Day", "</DecisionTree5Day>",
                                 lambda: section(ES, "<EventScheduler>", "</EventScheduler>"))),
+        Variant("dt_intervention_severe_node", "scenarioMSAT.xml", severe_mda),
         Variant("io_bad_drug", "scenario5.xml", lambda s: rep_first(s, 'firstLine="', 'firstLine="XX')),
         Variant("dt5_uncomplicated_memory", "scenarioDecisionTree5DayDielmo.xml",
                 lambda s: rep_first(s, "<uncomplicated>", '<uncomplicated memory="2t">')),
