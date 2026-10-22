@@ -23,17 +23,21 @@
 #ifndef Hmod_ClinicalModel
 #define Hmod_ClinicalModel
 
+#include "Clinical/ClinicalParams.h"
 #include "Host/Human.h"
 #include "Episode.h"
+#include <cassert>
 #include <memory>
+#include <vector>
 
-namespace scnXml {
-class Scenario;
-class HealthSystem;
-}
 namespace OM {
+namespace Host {
+class NeonatalMortality;
+}
 namespace Clinical {
 using Host::Human;
+
+class InfantMortality;
 
 /** The clinical model models the effects of sickness dependant on malarial
  * parasite densities and administers anti-malaria treatments via the drug
@@ -48,22 +52,6 @@ using Host::Human;
  * RDTs (Rapid Diagnostic Tests) for costing purposes. */
 class ClinicalModel {
 public:
-    /// @brief Static functions
-    //@{
-    /// First stage of initialisation
-    static void init(const Parameters& parameters, const scnXml::Scenario& model);
-
-    /** Second stage of initialisation, done after interventions are configured
-     * 
-     * Also done when a certain intervention is deployed. */
-    static void setHS(const scnXml::HealthSystem& healthSystem);
-
-    /** Return a new ClinicalModel.
-     *
-     * @param tSF	treatment seeking factor, passed to CaseManagementModel */
-    static unique_ptr<ClinicalModel> createClinicalModel(double tSF);
-    //@}
-
     /// Destructor
     virtual ~ClinicalModel();
 
@@ -81,17 +69,17 @@ public:
      * 
      * @param ageYears Age of human.
      * @param newBorn True if human age is one time step old */
-    void update(Human& human, double ageYears, bool newBorn);
+    void update(Human& human, double ageYears, bool newBorn, const Host::NeonatalMortality& neonatal_mortality);
 
     /** For infants, updates the infantIntervalsAtRisk and potentially
      * infantDeaths arrays. */
-    void updateInfantDeaths(SimTime age);
+    void updateInfantDeaths(SimTime age, InfantMortality& infant_mortality);
 
     /** Special option to allow reports not to be delivered for existing cases
      * (within health-system-memory and not new cases). */
     virtual bool isExistingCase() = 0;
 
-    inline static SimTime hsMemory() { return healthSystemMemory; }
+    inline static SimTime hsMemory() { return bridge::clinical_params().health_system_memory; }
 
     /// Force all pending summaries to be reported. Should only be called when
     /// class is about to be destroyed anyway to avoid affecting output.
@@ -109,7 +97,9 @@ public:
 
 protected:
     /// Constructor.
-    ClinicalModel();
+    explicit ClinicalModel(const ClinicalParams& params);
+
+    const ClinicalParams& params() const { return *clinical_params; }
 
     /** Update for clinical model - new pathogenesis status, treatment, etc.
      *
@@ -148,42 +138,26 @@ protected:
      * updateInfantDeaths() counts deaths after the fact, thus cannot remove immediately. */
     int doomed;
 
-    /// True if bug-fix is enabled
-    static bool indirectMortBugfix;
-
-    /// The maximum age of a sickness bout, for another bout to be considered
-    /// part of the same episode.
-    ///
-    /// Used by both the clinical models in roughly the same way, but will have
-    /// different values in each to match Global::interval.
-    static SimTime healthSystemMemory;
-
-    ///@brief Case fatality and sequelae "rate" data
-    //@{
     /// Calculate the case fatality "rate" in the community as a function of
     /// that in hospitals.
-    static double getCommunityCFR(double caseFatalityRatio);
+    double getCommunityCFR(double caseFatalityRatio) const;
 
-    /// Age-specific hospital case fatality "rates"
-    static util::AgeGroupInterpolator caseFatalityRate;
-    /// Age-specific in-hospital rates of sequelae given a severe malaria bout
-    /// Note: out-patients have currently have the same probabilities of sequelae
-    static util::AgeGroupInterpolator pSequelaeInpatient;
-    //@}
+private:
+    const ClinicalParams* clinical_params;
 };
 
 /// Infant mortality reporting
 class InfantMortality {
 public:
-    /** Initialise parameters. */
-    static void init(const Parameters& parameters);
-    static void preMainSimInit();
+    InfantMortality() = default;
+    explicit InfantMortality(double non_malaria_mortality);
 
-    /// Static checkpointing
-    static void staticCheckpoint(istream& stream);
-    static void staticCheckpoint(ostream& stream);
+    void preMainSimInit();
 
-    static void reportRisk(size_t index, bool isDoomed);
+    void checkpoint(istream& stream);
+    void checkpoint(ostream& stream);
+
+    void reportRisk(size_t index, bool isDoomed);
 
     /// Calculate infant mortality as deaths/1000 livebirths for the whole main-
     /// simulation period (not as deaths/1000 years-at-risk per survey).
@@ -193,9 +167,46 @@ public:
     /// a stable age-distribution but unfortunately does not accurately describe
     /// death rates. The kaplan-meier estimate is the product of the proportion of
     /// infants survivng at each interval.
-    static double allCause();
+    double allCause() const;
+
+private:
+    // Infant death summaries (checkpointed).
+    std::vector<int> infantDeaths;
+    std::vector<int> infantIntervalsAtRisk;
+
+    /// Non-malaria mortality in under 1year olds.
+    double nonMalariaMortality = 0.0;
 };
 
 }
+
+namespace bridge {
+
+// NOLINTNEXTLINE(cppcoreguidelines-avoid-non-const-global-variables)
+inline const Clinical::InfantMortality* current_infant_mortality = nullptr;
+
+inline const Clinical::InfantMortality& infant_mortality() {
+    assert(current_infant_mortality != nullptr);
+    return *current_infant_mortality;
+}
+
+}
+
+class InfantMortalityBinding {
+public:
+    explicit InfantMortalityBinding(const Clinical::InfantMortality& infant_mortality)
+        : previous(bridge::current_infant_mortality) {
+        bridge::current_infant_mortality = &infant_mortality;
+    }
+    InfantMortalityBinding(const InfantMortalityBinding&) = delete;
+    InfantMortalityBinding& operator=(const InfantMortalityBinding&) = delete;
+    InfantMortalityBinding(InfantMortalityBinding&&) = delete;
+    InfantMortalityBinding& operator=(InfantMortalityBinding&&) = delete;
+    ~InfantMortalityBinding() { bridge::current_infant_mortality = previous; }
+
+private:
+    const Clinical::InfantMortality* previous;
+};
+
 }
 #endif

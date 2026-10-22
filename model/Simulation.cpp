@@ -36,9 +36,6 @@
 #include "mon/init.h"
 
 #include "interventions/InterventionManager.h"
-#include "Clinical/ClinicalModel.h"
-
-#include "Host/NeonatalMortality.h"
 
 #include <cerrno>
 #include <cstdio>
@@ -99,8 +96,9 @@ Simulation::Simulation(std::unique_ptr<scnXml::Scenario> scenario, util::Command
     Transmission::PerHost::init(scenario_xml->getModel().getHuman().getAvailabilityToMosquitoes());
     Host::InfectionIncidenceModel::init(parameters);
     within_host_model = WithinHost::WithinHostModel(parameters, model_options, command_line, genotypes, *scenario_xml);
-    Clinical::ClinicalModel::init(parameters, *scenario_xml);
-    Host::NeonatalMortality::init(scenario_xml->getModel().getClinical());
+    clinical = Clinical::ClinicalParams(parameters, model_options, command_line, *scenario_xml);
+    infant_mortality = Clinical::InfantMortality(clinical.non_malaria_infant_mortality);
+    neonatal_mortality = Host::NeonatalMortality(scenario_xml->getModel().getClinical(), diagnostics, command_line);
     AgeStructure::init(scenario_xml->getDemography());
 
     // 3) elements depending on other elements; dependencies on (1) are not mentioned:
@@ -119,8 +117,8 @@ Simulation::Simulation(std::unique_ptr<scnXml::Scenario> scenario, util::Command
     // Depends on transmission model (for species indexes):
     // MDA1D may depend on health system (too complex to verify)
     interventions::InterventionManager::init(scenario_xml->getInterventions(), *population_model, *transmission_model);
-    Clinical::ClinicalModel::setHS(scenario_xml->getHealthSystem()); // Depends on interventions, PK/PD (from humanPop)
-    mon::initCohorts(scenario_xml->getMonitoring());                 // Depends on interventions
+    clinical.set_health_system(scenario_xml->getHealthSystem()); // Depends on interventions, PK/PD (from humanPop)
+    mon::initCohorts(scenario_xml->getMonitoring());             // Depends on interventions
 
     clock.reset_time();
 
@@ -160,8 +158,8 @@ void Simulation::run(const CheckpointOptions& checkpointing) {
 
 void Simulation::resume(const std::string& checkpoint_file) {
     mon::Continuous::init(scenario_xml->getMonitoring(), true);
-    read_checkpoint(checkpoint_file, command_line, clock, master_rngs, genotypes, end_time, est_end_time,
-                    *population_model, *transmission_model);
+    read_checkpoint(checkpoint_file, command_line, clock, master_rngs, genotypes, neonatal_mortality, infant_mortality,
+                    end_time, est_end_time, *population_model, *transmission_model);
 
     /** Calculate ento availability percentiles **/
     Transmission::PerHostAnophParams::calcAvailabilityPercentiles();
@@ -204,15 +202,16 @@ void Simulation::start_new(const CheckpointOptions& checkpointing) {
     est_end_time = end_time = end_time + (clock.end_date() - clock.start_date()) + clock.one_ts();
     clock.start_intervention_period();
     Host::InfectionIncidenceModel::preMainSimInit();
-    Clinical::InfantMortality::preMainSimInit();
+    infant_mortality.preMainSimInit();
     genotypes.pre_main_sim_init();
     population_model->resetRecentBirths();
     transmission_model->summarize(); // Only to reset TransmissionModel::inoculationsPerAgeGroup
     mon::initMainSim();
 
     if (checkpointing.enabled) {
-        write_checkpoint(false, checkpointing.file_name, command_line, clock, master_rngs, genotypes, end_time,
-                         est_end_time, *population_model, *transmission_model);
+        write_checkpoint(false, checkpointing.file_name, command_line, clock, master_rngs, genotypes,
+                         neonatal_mortality, infant_mortality, end_time, est_end_time, *population_model,
+                         *transmission_model);
         if (checkpointing.stop_after_write)
             throw util::cmd_exception("Checkpoint test: checkpoint written", util::Error::None);
     }
@@ -278,11 +277,11 @@ void Simulation::step() {
 
     // NOTE: no neonatal mortalities will occur in the first 20 years of warmup
     // (until humans old enough to be pregnate get updated and can be infected).
-    Host::NeonatalMortality::update(population.humans);
+    neonatal_mortality.update(population.humans);
 
     for (Host::Human& human : population.humans) {
         if (human.getDOB() + clock.max_human_age() >= warmup_length) // this is last time of possible update
-            Host::update(human, transmission);
+            Host::update(human, transmission, neonatal_mortality, infant_mortality);
     }
 
     population.update();

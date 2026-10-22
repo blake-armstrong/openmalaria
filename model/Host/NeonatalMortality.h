@@ -27,29 +27,50 @@
 #include "util/random.h"
 #include "Host/Human.h"
 
+#include <vector>
+
 namespace scnXml {
 class Clinical;
 }
 namespace OM {
 class Population;
+namespace util {
+class CommandLineOptions;
+}
+namespace WithinHost {
+class Diagnostic;
+class DiagnosticRegistry;
+}
 namespace Host {
 
 using util::LocalRng;
 
 class NeonatalMortality {
 public:
-    /// Initialisation
-    static void init(const scnXml::Clinical& clinical);
+    NeonatalMortality() = default;
+    NeonatalMortality(const scnXml::Clinical& clinical, const WithinHost::DiagnosticRegistry& diagnostics,
+                      const util::CommandLineOptions& command_line);
 
-    static void staticCheckpoint(istream& stream);
-    static void staticCheckpoint(ostream& stream);
+    void checkpoint(istream& stream);
+    void checkpoint(ostream& stream);
 
     /** Called for each birth; returns true if infant dies due to mother's
    * infection. */
-    static bool eventNeonatalMortality(LocalRng& rng);
+    bool eventNeonatalMortality(LocalRng& rng) const;
 
     /** Calculate risk of a neonatal mortality based on humans 20-25 years old. */
-    static void update(vector<Human>& population);
+    void update(vector<Human>& population);
+
+private:
+    /// Probability for a newborn to die (indirect death) because the mother is infected.
+    /// Depends on the prevalence of parasitaemia in mother at some previous t.
+    double riskFromMaternalInfection = 0.0;
+    /// Array of stored prevalences of mothers over last 5 months
+    std::vector<double> prevByGestationalAge;
+
+    // The model is parameterised based on patency levels; the diagnostic
+    // used for this may be important.
+    const WithinHost::Diagnostic* neonatalDiagnostic = nullptr;
 };
 
 }

@@ -47,47 +47,41 @@ const double pBirthPrim = 0.3;
 const double y = pBirthPrim * gEst;
 const double z = -1.0 / critPrev2025;
 
-/// Probability for a newborn to die (indirect death) because the mother is infected.
-/// Depends on the prevalence of parasitaemia in mother at some previous t.
-double riskFromMaternalInfection = 0.0;
-/// Array of stored prevalences of mothers over last 5 months
-std::vector<double> prevByGestationalAge;
-
 /// Lower and upper bounds for potential mothers (as in model description)
 SimTime ageLb = Sim::from_years_i(20), ageUb = Sim::from_years_i(25);
 
-// The model is parameterised based on patency levels; the diagnostic
-// used for this may be important.
-const WithinHost::Diagnostic* neonatalDiagnostic = 0;
-
-void NeonatalMortality::init(const scnXml::Clinical& clinical) {
+NeonatalMortality::NeonatalMortality(const scnXml::Clinical& clinical,
+                                     const WithinHost::DiagnosticRegistry& diagnostics,
+                                     const util::CommandLineOptions& command_line) {
     SimTime fiveMonths = Sim::from_days(5 * 30);
     prevByGestationalAge.assign(Sim::in_steps(fiveMonths), 0.0);
 
     if (clinical.getNeonatalMortality().present()) {
-        neonatalDiagnostic = &WithinHost::Diagnostics::get(clinical.getNeonatalMortality().get().getDiagnostic());
+        neonatalDiagnostic = &diagnostics.get(clinical.getNeonatalMortality().get().getDiagnostic());
     } else {
         //NOTE: this is a compatibility option for older scenarios
-        if (CommandLine::option(CommandLine::DeprecationWarnings)) {
+        if (command_line.option(CommandLine::DeprecationWarnings)) {
             cerr << "Deprecation warning: specification of the diagnostic "
                     "used by the Neonatal Mortality model is recommended "
                     "(model/clinical/neonatalMortality)"
-                 << endl;
+                 << endl; // NOLINT(performance-avoid-endl)
         }
-        neonatalDiagnostic = &WithinHost::Diagnostics::monitoring_diagnostic();
+        neonatalDiagnostic = &diagnostics.monitoring_diagnostic();
     }
 }
 
-void NeonatalMortality::staticCheckpoint(istream& stream) {
+void NeonatalMortality::checkpoint(istream& stream) {
     riskFromMaternalInfection & stream;
     prevByGestationalAge & stream;
 }
-void NeonatalMortality::staticCheckpoint(ostream& stream) {
+void NeonatalMortality::checkpoint(ostream& stream) {
     riskFromMaternalInfection & stream;
     prevByGestationalAge & stream;
 }
 
-bool NeonatalMortality::eventNeonatalMortality(LocalRng& rng) { return rng.uniform_01() <= riskFromMaternalInfection; }
+bool NeonatalMortality::eventNeonatalMortality(LocalRng& rng) const {
+    return rng.uniform_01() <= riskFromMaternalInfection;
+}
 
 void NeonatalMortality::update(vector<Host::Human>& population) {
     // ———  find potential mothers and their prevalence  ———

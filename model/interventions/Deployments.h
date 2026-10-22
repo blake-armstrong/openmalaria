@@ -87,7 +87,7 @@ public:
     TimedChangeHSDeployment(SimTime date, const scnXml::ChangeHS::TimedDeploymentType& hs)
         : TimedDeployment(date), newHS(hs._clone()) {}
     virtual void deploy(vector<Host::Human>& population, Transmission::TransmissionModel& transmission) {
-        Clinical::ClinicalModel::setHS(*newHS);
+        bridge::mutable_clinical_params().set_health_system(*newHS);
         delete newHS;
         newHS = 0;
     }

@@ -38,27 +38,19 @@ using Host::Human;
  */
 class CM5DayCommon : public ClinicalModel {
 public:
-    static void init();
-
     /** Construct an instance (per-human).
      * 
      * @param tSF Treatment-seeking factor. Normally 1 but allows simple heterogeneity.
      */
-    CM5DayCommon(double tSF);
+    CM5DayCommon(const ClinicalParams& params, double tSF);
 
     virtual bool isExistingCase() {
         // If treated in the recent past:
-        return Sim::now() > m_tLastTreatment && Sim::now() <= m_tLastTreatment + healthSystemMemory;
+        return Sim::now() > m_tLastTreatment && Sim::now() <= m_tLastTreatment + params().health_system_memory;
     }
 
 protected:
-    enum CaseType { FirstLine, SecondLine, NumCaseTypes };
     static mon::Measure measures[NumCaseTypes];
-    static double accessUCAny[NumCaseTypes];
-    static double accessUCSelfTreat[NumCaseTypes];
-    static double accessSevere;
-    static double cureRateSevere;
-    static WithinHost::TreatmentId treatmentSevere;
 
     virtual void doClinicalUpdate(Human& human, double ageYears, WithinHost::Pathogenesis::StatePair& pg);
 

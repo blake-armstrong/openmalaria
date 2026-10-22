@@ -35,34 +35,14 @@ namespace OM {
 namespace Clinical {
 using namespace OM::util;
 
-SimTime ClinicalEventScheduler::maxUCSeekingMemory(Sim::never());
-SimTime ClinicalEventScheduler::uncomplicatedCaseDuration(Sim::never());
-SimTime ClinicalEventScheduler::complicatedCaseDuration(Sim::never());
-SimTime ClinicalEventScheduler::extraDaysAtRisk(Sim::never());
-vector<double> ClinicalEventScheduler::cumDailyPrImmUCTS;
-double ClinicalEventScheduler::neg_v;
-double ClinicalEventScheduler::alpha;
+// -----  simulation-wide parameters  -----
 
-double ClinicalEventScheduler::logOddsAbBase = std::numeric_limits<double>::signaling_NaN();
-double ClinicalEventScheduler::logOddsAbNegTest = std::numeric_limits<double>::signaling_NaN();
-double ClinicalEventScheduler::logOddsAbPosTest = std::numeric_limits<double>::signaling_NaN();
-double ClinicalEventScheduler::logOddsAbNeed = std::numeric_limits<double>::signaling_NaN();
-double ClinicalEventScheduler::logOddsAbInformal = std::numeric_limits<double>::signaling_NaN();
-double ClinicalEventScheduler::oneMinusEfficacyAb = std::numeric_limits<double>::signaling_NaN();
-AgeGroupInterpolator ClinicalEventScheduler::severeNmfMortality;
-
-bool opt_non_malaria_fevers = false;
-
-AgeGroupInterpolator ClinicalEventScheduler::NMF_need_antibiotic;
-AgeGroupInterpolator ClinicalEventScheduler::MF_need_antibiotic;
-
-// -----  static init  -----
-
-void ClinicalEventScheduler::init(const Parameters& parameters, const scnXml::Clinical& clinical) {
+EventSchedulerParams::EventSchedulerParams(const OM::Parameters& parameters, const util::ModelOptionFlags& options,
+                                           const scnXml::Clinical& clinical) {
     if (Sim::one_ts() != Sim::one_day())
         throw util::xml_scenario_error("ClinicalEventScheduler is only designed for a 1-day time step.");
 
-    opt_non_malaria_fevers = util::ModelOptions::option(util::NonMalariaFevers);
+    non_malaria_fevers = options.option(util::NonMalariaFevers);
 
     alpha = exp(-parameters[Parameter::CfrNegLogAlpha]);
     if (!(0.0 <= alpha && alpha <= 1.0)) {
@@ -70,7 +50,7 @@ void ClinicalEventScheduler::init(const Parameters& parameters, const scnXml::Cl
     }
     neg_v = -parameters[Parameter::CfrScaleFactor];
 
-    if (util::ModelOptions::option(util::NonMalariaFevers)) {
+    if (options.option(util::NonMalariaFevers)) {
         if (!clinical.getNonMalariaFevers().present()) {
             throw util::xml_scenario_error("NonMalariaFevers element of model->clinical required");
         }
@@ -85,7 +65,8 @@ void ClinicalEventScheduler::init(const Parameters& parameters, const scnXml::Cl
     }
 }
 
-void ClinicalEventScheduler::setParameters(const scnXml::HSEventScheduler& esData) {
+void EventSchedulerParams::set_parameters(const scnXml::HSEventScheduler& esData,
+                                          util::AgeGroupInterpolator& case_fatality_rate) {
     const scnXml::ClinicalOutcomes& coData = esData.getClinicalOutcomes();
 
     maxUCSeekingMemory = Sim::from_days(coData.getMaxUCSeekingMemory());
@@ -112,9 +93,9 @@ void ClinicalEventScheduler::setParameters(const scnXml::HSEventScheduler& esDat
     }
     cumDailyPrImmUCTS.back() = 1.0;
 
-    caseFatalityRate.scale(alpha);
+    case_fatality_rate.scale(alpha);
 
-    if (util::ModelOptions::option(util::NonMalariaFevers)) {
+    if (non_malaria_fevers) {
         if (!esData.getNonMalariaFevers().present()) {
             throw util::xml_scenario_error("NonMalariaFevers element of healthSystem->EventScheduler required");
         }
@@ -133,8 +114,8 @@ void ClinicalEventScheduler::setParameters(const scnXml::HSEventScheduler& esDat
 
 // -----  construction, destruction and checkpointing  -----
 
-ClinicalEventScheduler::ClinicalEventScheduler(double tSF)
-    : pgState(Episode::NONE), caseStartTime(Sim::never()), timeOfRecovery(Sim::never()),
+ClinicalEventScheduler::ClinicalEventScheduler(const ClinicalParams& params, double tSF)
+    : ClinicalModel(params), pgState(Episode::NONE), caseStartTime(Sim::never()), timeOfRecovery(Sim::never()),
       timeLastTreatment(Sim::never()), previousDensity(numeric_limits<double>::quiet_NaN()) {
     if (tSF != 1.0) {
         // p(treatment seeking) is part of tree & handled generically, so we
@@ -147,10 +128,11 @@ ClinicalEventScheduler::ClinicalEventScheduler(double tSF)
 
 bool ClinicalEventScheduler::isExistingCase() {
     // If treated in the recent past:
-    return Sim::now() > timeLastTreatment && Sim::now() <= timeLastTreatment + healthSystemMemory;
+    return Sim::now() > timeLastTreatment && Sim::now() <= timeLastTreatment + params().health_system_memory;
 }
 
 void ClinicalEventScheduler::doClinicalUpdate(Human& human, double ageYears, WithinHost::Pathogenesis::StatePair& pg) {
+    const EventSchedulerParams& es = params().event_scheduler;
     WHInterface& withinHostModel = *human.withinHostModel;
     Episode::State newState = static_cast<Episode::State>(pg.state);
     util::streamValidate((newState << 16) & pgState);
@@ -163,7 +145,7 @@ void ClinicalEventScheduler::doClinicalUpdate(Human& human, double ageYears, Wit
             latestReport.update(human, pgState);
         } else {
             if (pgState & Episode::COMPLICATED) {
-                const double pSequelae = pSequelaeInpatient.eval(ageYears);
+                const double pSequelae = params().p_sequelae_inpatient.eval(ageYears);
                 mon::recordStat(mon::measure("expectedSequelae"), human, pSequelae);
                 if (human.clinical_rng.uniform_01() < pSequelae) {
                     pgState = Episode::State(pgState | Episode::SEQUELAE);
@@ -186,7 +168,7 @@ void ClinicalEventScheduler::doClinicalUpdate(Human& human, double ageYears, Wit
 
     // The bug fixed here is that indirectMortality was not set if no event occurred
     bool indirectMortality = false;
-    if (indirectMortBugfix)
+    if (params().indirect_mort_bugfix)
         indirectMortality = pg.indirect_mortality;
 
     if (newState & Episode::SICK) {
@@ -212,8 +194,8 @@ void ClinicalEventScheduler::doClinicalUpdate(Human& human, double ageYears, Wit
 
                     double u_variate = human.clinical_rng.uniform_01();
                     size_t i = 0; // units: days
-                    for (; i < cumDailyPrImmUCTS.size(); ++i) {
-                        if (u_variate < cumDailyPrImmUCTS[i]) {
+                    for (; i < es.cumDailyPrImmUCTS.size(); ++i) {
+                        if (u_variate < es.cumDailyPrImmUCTS[i]) {
                             goto gotDelay;
                         }
                     }
@@ -234,11 +216,11 @@ void ClinicalEventScheduler::doClinicalUpdate(Human& human, double ageYears, Wit
         pgState = Episode::State(pgState & ~Episode::RUN_CM_TREE);
 
         // If last treatment prescribed was in recent memory, consider second line.
-        if (timeLastTreatment + healthSystemMemory > Sim::ts0()) {
+        if (timeLastTreatment + params().health_system_memory > Sim::ts0()) {
             pgState = Episode::State(pgState | Episode::SECOND_CASE);
         }
 
-        CMDTOut aux_out = ESCaseManagement::execute(CMHostData(human, human.clinical_rng, ageYears, pgState));
+        CMDTOut aux_out = ESCaseManagement::execute(es, CMHostData(human, human.clinical_rng, ageYears, pgState));
 
         if (aux_out.treated) { // I.E. some treatment was given
             timeLastTreatment = Sim::ts0();
@@ -267,7 +249,7 @@ void ClinicalEventScheduler::doClinicalUpdate(Human& human, double ageYears, Wit
         // P(death) is some fixed input scaled by age-specific CFR.
         if ((pgState & Episode::COMPLICATED) && !(pgState & Episode::DIRECT_DEATH)) {
             const bool inHospital = true /*FIXME auxOut.hospitalisation == CMAuxOutput::IMMEDIATE */;
-            double pDeath = caseFatalityRate.eval(ageYears);
+            double pDeath = params().case_fatality_rate.eval(ageYears);
             // community fatality rate when not in hospital or delayed hospital entry
             if (!inHospital)
                 pDeath = getCommunityCFR(pDeath);
@@ -282,14 +264,15 @@ void ClinicalEventScheduler::doClinicalUpdate(Human& human, double ageYears, Wit
             previousDensity = withinHostModel.get_total_density();
         }
 
-        if (opt_non_malaria_fevers) {
+        if (es.non_malaria_fevers) {
             if ((pgState & Episode::SICK) && !(pgState & Episode::COMPLICATED)) {
                 // Have a NMF or UC malaria case
 
                 /** Given a non-malaria fever, return the probability of it requiring
                  * treatment. */
                 bool isMalarial = pgState & Episode::MALARIA;
-                double pNeedTreat = isMalarial ? MF_need_antibiotic.eval(ageYears) : NMF_need_antibiotic.eval(ageYears);
+                double pNeedTreat =
+                    isMalarial ? es.MF_need_antibiotic.eval(ageYears) : es.NMF_need_antibiotic.eval(ageYears);
                 bool need_treat = human.clinical_rng.bernoulli(pNeedTreat);
 
                 // Calculate chance of antibiotic administration:
@@ -329,7 +312,7 @@ void ClinicalEventScheduler::doClinicalUpdate(Human& human, double ageYears, Wit
                 // In a severe NMF case (only when not malarial), there is a
                 // chance of death:
                 if (need_treat) {
-                    double pDeath = severeNmfMortality.eval(ageYears) * treatmentEffectMult;
+                    double pDeath = es.severeNmfMortality.eval(ageYears) * treatmentEffectMult;
                     if (human.clinical_rng.uniform_01() < pDeath) {
                         pgState = Episode::State(pgState | Episode::DIRECT_DEATH);
                     }
@@ -342,7 +325,7 @@ void ClinicalEventScheduler::doClinicalUpdate(Human& human, double ageYears, Wit
         // Case fatality rate (subsequent days)
         // Complicated case & at risk of death (note: extraDaysAtRisk <= 0)
         if ((pgState & Episode::COMPLICATED) && !(pgState & Episode::DIRECT_DEATH) &&
-            (Sim::ts0() < timeOfRecovery + extraDaysAtRisk)) {
+            (Sim::ts0() < timeOfRecovery + es.extraDaysAtRisk)) {
             // In complicated episodes, S(t), the probability of survival on
             // subsequent days t, is described by log(S(t)) = -v(Y(t)/Y(t-1)),
             // for parasite density Y(t). v_neg below is -v.
@@ -350,7 +333,7 @@ void ClinicalEventScheduler::doClinicalUpdate(Human& human, double ageYears, Wit
             // within the WHFalciparum class (or a subclass).
             if (withinHostModel.get_total_density() > 0.0) { // avoid division by zero
                 double parasiteReductionEffect = withinHostModel.get_total_density() / previousDensity;
-                double pDeath = 1.0 - exp(neg_v * parasiteReductionEffect);
+                double pDeath = 1.0 - exp(es.neg_v * parasiteReductionEffect);
                 // community fatality rate when not in hospital
                 if (!(pgState & Episode::EVENT_IN_HOSPITAL))
                     pDeath = getCommunityCFR(pDeath);
@@ -360,7 +343,7 @@ void ClinicalEventScheduler::doClinicalUpdate(Human& human, double ageYears, Wit
                 if (human.clinical_rng.uniform_01() < pDeath) {
                     pgState = Episode::State(pgState | Episode::DIRECT_DEATH);
                     // Human is killed at end of time at risk
-                    timeOfRecovery = timeOfRecovery + extraDaysAtRisk; // may be re-set later (see ATORWD)
+                    timeOfRecovery = timeOfRecovery + es.extraDaysAtRisk; // may be re-set later (see ATORWD)
                 }
             }
             previousDensity = withinHostModel.get_total_density();
@@ -382,12 +365,12 @@ void ClinicalEventScheduler::doClinicalUpdate(Human& human, double ageYears, Wit
             // exiting hospital are OK and medications terminating before the
             // end of hospitalisation shouldn't matter too much if the person
             // can't recieve new infections due to zero transmission in hospital.
-            timeOfRecovery = Sim::ts0() + complicatedCaseDuration;
+            timeOfRecovery = Sim::ts0() + es.complicatedCaseDuration;
             // Time should be adjusted to end of at-risk period when patient dies:
-            if (pgState & Episode::DIRECT_DEATH)                   // death may already have been determined
-                timeOfRecovery = timeOfRecovery + extraDaysAtRisk; // ATORWD (search keyword)
+            if (pgState & Episode::DIRECT_DEATH)                      // death may already have been determined
+                timeOfRecovery = timeOfRecovery + es.extraDaysAtRisk; // ATORWD (search keyword)
         } else {
-            timeOfRecovery = Sim::ts0() + uncomplicatedCaseDuration;
+            timeOfRecovery = Sim::ts0() + es.uncomplicatedCaseDuration;
         }
     }
 

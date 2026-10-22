@@ -21,7 +21,6 @@
  */
 
 #include "Clinical/Episode.h"
-#include "Clinical/ClinicalModel.h"
 #include "Host/Human.h"
 #include "Host/WithinHost/WHInterface.h"
 
@@ -38,9 +37,9 @@ void Episode::flush() {
 void Episode::update(const Host::Human& human, Episode::State newState) {
     bool toReport = false;
 
-    if (healthSystemMemoryFix && (time + ClinicalModel::hsMemory() <= Sim::ts0()))
+    if (healthSystemMemoryFix && (time + health_system_memory <= Sim::ts0()))
         toReport = true;
-    else if (!healthSystemMemoryFix && (time + ClinicalModel::hsMemory() < Sim::ts0()))
+    else if (!healthSystemMemoryFix && (time + health_system_memory < Sim::ts0()))
         toReport = true;
 
     if (toReport) {

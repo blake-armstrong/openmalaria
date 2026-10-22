@@ -227,6 +227,8 @@ util::ModelOptionFlags model_options;
 ModelOptionsBinding model_options_binding{model_options};
 WithinHost::WithinHostModel within_host_model;
 WithinHostModelBinding within_host_model_binding{within_host_model};
+Clinical::ClinicalParams clinical;
+ClinicalParamsBinding clinical_binding{clinical};
 WithinHost::GenotypeRegistry genotypes;
 GenotypesBinding genotypes_binding{genotypes};
 WithinHost::DiagnosticRegistry diagnostics;

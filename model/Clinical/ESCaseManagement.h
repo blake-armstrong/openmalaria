@@ -25,6 +25,7 @@
 
 #include "Global.h"
 #include "Clinical/CMDecisionTree.h" // needed for ESDecisionMap
+#include "Clinical/ClinicalParams.h"
 #include "Host/WithinHost/WHInterface.h"
 #include "schema/pharmacology.h"
 
@@ -37,11 +38,7 @@ using WithinHost::WHInterface;
  *****************************************************************************/
 class ESCaseManagement {
 public:
-    /** Load health system data from initial data or an intervention's data (both from XML).
-    * (Re)loads all data affected by this healthSystem element. */
-    static void setHealthSystem(const scnXml::HSEventScheduler& esData);
-
-    static CMDTOut execute(const CMHostData& hostData);
+    static CMDTOut execute(const EventSchedulerParams& params, const CMHostData& hostData);
 };
 
 }

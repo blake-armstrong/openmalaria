@@ -27,7 +27,6 @@
 #include "Host/WithinHost/Pathogenesis/State.h"
 #include "Host/WithinHost/Infection/Infection.h"
 #include "mon/Monitoring.h"
-#include "util/ModelOptions.h"
 #include <ostream>
 
 namespace OM {
@@ -82,9 +81,9 @@ public:
         RUN_CM_TREE = 0x10000, ///< Flag to indicate that CM tree should be run now or after a delay
     };
 
-    Episode() : time(Sim::never()), surveyPeriod(mon::NOT_USED), ageGroup(0), cohortSet(0), state(NONE) {
-        healthSystemMemoryFix = util::ModelOptions::option(util::HealthSystemMemoryFix);
-    };
+    Episode(SimTime health_system_memory, bool health_system_memory_fix)
+        : time(Sim::never()), surveyPeriod(mon::NOT_USED), ageGroup(0), cohortSet(0), state(NONE),
+          healthSystemMemoryFix(health_system_memory_fix), health_system_memory(health_system_memory) {}
 
     ~Episode();
 
@@ -126,6 +125,7 @@ private:
     void report();
 
     bool healthSystemMemoryFix = false;
+    SimTime health_system_memory = Sim::never();
 };
 
 }

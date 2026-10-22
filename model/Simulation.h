@@ -23,7 +23,10 @@
 #ifndef HMOD_SIMULATION
 #define HMOD_SIMULATION
 
+#include "Clinical/ClinicalModel.h"
+#include "Clinical/ClinicalParams.h"
 #include "Global.h"
+#include "Host/NeonatalMortality.h"
 #include "Host/WithinHost/Diagnostic.h"
 #include "Host/WithinHost/Genotypes.h"
 #include "Host/WithinHost/WithinHostModel.h"
@@ -87,6 +90,11 @@ private:
     DiagnosticsBinding diagnostics_binding{diagnostics};
     WithinHost::WithinHostModel within_host_model;
     WithinHostModelBinding within_host_model_binding{within_host_model};
+    Clinical::ClinicalParams clinical;
+    ClinicalParamsBinding clinical_binding{clinical};
+    Clinical::InfantMortality infant_mortality;
+    InfantMortalityBinding infant_mortality_binding{infant_mortality};
+    Host::NeonatalMortality neonatal_mortality;
     std::unique_ptr<scnXml::Scenario> scenario_xml;
     std::unique_ptr<Population> population_model;
     std::unique_ptr<Transmission::TransmissionModel> transmission_model;

@@ -36,93 +36,87 @@
 namespace OM {
 namespace Clinical {
 
-bool opt_event_scheduler = false;
-bool opt_imm_outcomes = false;
+// -----  simulation-wide parameters  -----
 
-bool ClinicalModel::indirectMortBugfix;
-SimTime ClinicalModel::healthSystemMemory{Sim::never()};
-
-//log odds ratio of case-fatality in community compared to hospital
-double oddsRatioThreshold;
-
-util::AgeGroupInterpolator ClinicalModel::caseFatalityRate;
-util::AgeGroupInterpolator ClinicalModel::pSequelaeInpatient;
-
-// -----  static methods  -----
-
-void ClinicalModel::init(const Parameters& parameters, const scnXml::Scenario& scenario) {
+ClinicalParams::ClinicalParams(const OM::Parameters& parameters, const util::ModelOptionFlags& options,
+                               const util::CommandLineOptions& command_line, const scnXml::Scenario& scenario) {
     const scnXml::Clinical& clinical = scenario.getModel().getClinical();
     try {
-        indirectMortBugfix = util::ModelOptions::option(util::IndirectMortalityFix);
+        indirect_mort_bugfix = options.option(util::IndirectMortalityFix);
         //NOTE: if changing XSD, this should not have a default unit:
-        healthSystemMemory = UnitParse::readShortDuration(clinical.getHealthSystemMemory(), UnitParse::STEPS);
-        oddsRatioThreshold = exp(parameters[Parameter::LogOddsRatioCfCommunity]);
-        InfantMortality::init(parameters);
+        health_system_memory = UnitParse::readShortDuration(clinical.getHealthSystemMemory(), UnitParse::STEPS);
+        odds_ratio_threshold = exp(parameters[Parameter::LogOddsRatioCfCommunity]);
+        non_malaria_infant_mortality = parameters[Parameter::NonMalariaInfantMortality];
     } catch (const util::format_error& e) {
         throw util::xml_scenario_error(string("model/clinical/healthSystemMemory: ").append(e.message()));
     }
 
-    if (util::ModelOptions::option(util::ClinicalEventScheduler)) {
-        opt_event_scheduler = true;
-        ClinicalEventScheduler::init(parameters, clinical);
+    if (options.option(util::ClinicalEventScheduler)) {
+        kind = Kind::EventScheduler;
+        event_scheduler = EventSchedulerParams(parameters, options, clinical);
     } else {
         if (scenario.getHealthSystem().getImmediateOutcomes().present()) {
-            opt_imm_outcomes = true;
+            kind = Kind::ImmediateOutcomes;
 
-            if (util::CommandLine::option(util::CommandLine::DeprecationWarnings)) {
+            if (command_line.option(util::CommandLine::DeprecationWarnings)) {
                 cerr << "Deprecation warning: healthSystem: use of ImmediateOutcomes can be replaced by the more "
                         "flexible DecisionTree5Day (optional)"
-                     << endl;
+                     << endl; // NOLINT(performance-avoid-endl)
             }
         }
         // else: decision tree 5 day
 
-        CM5DayCommon::init();
+        five_day.cfr_pf_use_hospital = options.option(util::CfrPfUseHospital);
     }
+
+    health_system_memory_fix = options.option(util::HealthSystemMemoryFix);
+    vivax_simple_model = options.option(util::VivaxSimpleModel);
 }
 
-void ClinicalModel::setHS(const scnXml::HealthSystem& healthSystem) {
-    caseFatalityRate.set(healthSystem.getCFR(), "CFR");
-    pSequelaeInpatient.set(healthSystem.getPSequelaeInpatient(), "pSequelaeInpatient");
-    if (opt_event_scheduler) {
-        if (!healthSystem.getEventScheduler().present()) {
+void ClinicalParams::set_health_system(const scnXml::HealthSystem& health_system) {
+    case_fatality_rate.set(health_system.getCFR(), "CFR");
+    p_sequelae_inpatient.set(health_system.getPSequelaeInpatient(), "pSequelaeInpatient");
+    if (kind == Kind::EventScheduler) {
+        if (!health_system.getEventScheduler().present()) {
             throw util::xml_scenario_error("Expected EventScheduler "
                                            "section in healthSystem data (initial or intervention)");
         }
-        ESCaseManagement::setHealthSystem(healthSystem.getEventScheduler().get());
-    } else if (opt_imm_outcomes) {
-        if (!healthSystem.getImmediateOutcomes().present()) {
+        event_scheduler.set_health_system(health_system.getEventScheduler().get(), case_fatality_rate);
+    } else if (kind == Kind::ImmediateOutcomes) {
+        if (!health_system.getImmediateOutcomes().present()) {
             throw util::xml_scenario_error("Expected ImmediateOutcomes "
                                            "section in healthSystem data (initial or intervention)");
         }
-        ImmediateOutcomes::setHealthSystem(healthSystem.getImmediateOutcomes().get());
+        set_immediate_outcomes(health_system.getImmediateOutcomes().get());
     } else {
-        if (!healthSystem.getDecisionTree5Day().present()) {
+        if (!health_system.getDecisionTree5Day().present()) {
             throw util::xml_scenario_error("Expected DecisionTree5Day "
                                            "section in healthSystem data (initial or intervention)");
         }
-        DecisionTree5Day::setHealthSystem(healthSystem.getDecisionTree5Day().get());
+        set_decision_tree_5day(health_system.getDecisionTree5Day().get());
     }
 }
 
-unique_ptr<ClinicalModel> ClinicalModel::createClinicalModel(double tSF) {
-    if (opt_event_scheduler) {
-        return unique_ptr<ClinicalModel>(new ClinicalEventScheduler(tSF));
-    } else if (opt_imm_outcomes) {
-        return unique_ptr<ClinicalModel>(new ImmediateOutcomes(tSF));
+unique_ptr<ClinicalModel> ClinicalParams::create(double treatment_seeking_factor) const {
+    if (kind == Kind::EventScheduler) {
+        return unique_ptr<ClinicalModel>(new ClinicalEventScheduler(*this, treatment_seeking_factor));
+    } else if (kind == Kind::ImmediateOutcomes) {
+        return unique_ptr<ClinicalModel>(new ImmediateOutcomes(*this, treatment_seeking_factor));
     } else {
-        return unique_ptr<ClinicalModel>(new DecisionTree5Day(tSF));
+        return unique_ptr<ClinicalModel>(new DecisionTree5Day(*this, treatment_seeking_factor));
     }
 }
 
-double ClinicalModel::getCommunityCFR(double caseFatalityRatio) {
-    double x = caseFatalityRatio * oddsRatioThreshold;
+double ClinicalModel::getCommunityCFR(double caseFatalityRatio) const {
+    double x = caseFatalityRatio * params().odds_ratio_threshold;
     return x / (1 - caseFatalityRatio + x);
 }
 
 // -----  non-static construction, destruction and checkpointing  -----
 
-ClinicalModel::ClinicalModel() : doomed(NOT_DOOMED) {}
+ClinicalModel::ClinicalModel(const ClinicalParams& params)
+    : latestReport(params.health_system_memory, params.health_system_memory_fix), doomed(NOT_DOOMED),
+      clinical_params(&params) {}
 ClinicalModel::~ClinicalModel() {
     // latestReport is reported, if any, by destructor
 }
@@ -135,7 +129,8 @@ bool ClinicalModel::isDead(SimTime age) {
     return doomed > NOT_DOOMED; // killed by some means
 }
 
-void ClinicalModel::update(Human& human, double ageYears, bool newBorn) {
+void ClinicalModel::update(Human& human, double ageYears, bool newBorn,
+                           const Host::NeonatalMortality& neonatal_mortality) {
     if (doomed < NOT_DOOMED) // Countdown to indirect mortality
         doomed -= Sim::one_ts();
 
@@ -147,7 +142,7 @@ void ClinicalModel::update(Human& human, double ageYears, bool newBorn) {
     }
     if (newBorn /* i.e. first update since birth */) {
         // Chance of neonatal mortality:
-        if (Host::NeonatalMortality::eventNeonatalMortality(human.clinical_rng)) {
+        if (neonatal_mortality.eventNeonatalMortality(human.clinical_rng)) {
             mon::recordEvent(mon::measure("nIndDeaths"), human);
             doomed = DOOMED_NEONATAL;
             return;
@@ -161,7 +156,7 @@ void ClinicalModel::update(Human& human, double ageYears, bool newBorn) {
     doClinicalUpdate(human, ageYears, pg);
 }
 
-void ClinicalModel::updateInfantDeaths(SimTime age) {
+void ClinicalModel::updateInfantDeaths(SimTime age, InfantMortality& infant_mortality) {
     // update array for the infant death rates
     if (age < Sim::one_year()) {
         size_t index = age / Sim::one_ts();
@@ -169,7 +164,7 @@ void ClinicalModel::updateInfantDeaths(SimTime age) {
         // Testing doomed == DOOMED_NEXT_TS gives very slightly different results than
         // testing doomed == DOOMED_INDIRECT (due to above if(..))
         bool isDoomed = doomed == DOOMED_COMPLICATED || doomed == DOOMED_NEXT_TS || doomed == DOOMED_NEONATAL;
-        InfantMortality::reportRisk(index, isDoomed);
+        infant_mortality.reportRisk(index, isDoomed);
     }
 }
 
@@ -184,30 +179,20 @@ void ClinicalModel::checkpoint(ostream& stream) {
 
 // ——— infant mortality ———
 
-// Infant death summaries (checkpointed).
-vector<int> infantDeaths;
-vector<int> infantIntervalsAtRisk;
-
-/// Non-malaria mortality in under 1year olds.
-/// Set by init ()
-double nonMalariaMortality;
-
-void InfantMortality::init(const OM::Parameters& parameters) {
-    infantDeaths.resize(Sim::steps_per_year());
-    infantIntervalsAtRisk.resize(Sim::steps_per_year());
-    nonMalariaMortality = parameters[Parameter::NonMalariaInfantMortality];
-}
+InfantMortality::InfantMortality(double non_malaria_mortality)
+    : infantDeaths(Sim::steps_per_year()), infantIntervalsAtRisk(Sim::steps_per_year()),
+      nonMalariaMortality(non_malaria_mortality) {}
 
 void InfantMortality::preMainSimInit() {
     std::fill(infantDeaths.begin(), infantDeaths.end(), 0);
     std::fill(infantIntervalsAtRisk.begin(), infantIntervalsAtRisk.end(), 0);
 }
 
-void InfantMortality::staticCheckpoint(istream& stream) {
+void InfantMortality::checkpoint(istream& stream) {
     infantDeaths & stream;
     infantIntervalsAtRisk & stream;
 }
-void InfantMortality::staticCheckpoint(ostream& stream) {
+void InfantMortality::checkpoint(ostream& stream) {
     infantDeaths & stream;
     infantIntervalsAtRisk & stream;
 }
@@ -218,7 +203,7 @@ void InfantMortality::reportRisk(size_t index, bool isDoomed) {
         infantDeaths[index] += 1; // deaths
 }
 
-double InfantMortality::allCause() {
+double InfantMortality::allCause() const {
     double infantPropSurviving = 1.0; // use to calculate proportion surviving
     for (size_t i = 0; i < Sim::steps_per_year(); i += 1) {
         // multiply by proportion of infants surviving at each interval

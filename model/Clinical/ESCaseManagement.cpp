@@ -35,24 +35,22 @@ using namespace OM::util;
 
 // -----  ESCaseManagement  -----
 
-const CMDecisionTree *escm_uncomplicated = 0, *escm_complicated = 0;
+void EventSchedulerParams::set_health_system(const scnXml::HSEventScheduler& esData,
+                                             util::AgeGroupInterpolator& case_fatality_rate) {
+    uncomplicated_tree = &CMDecisionTree::create(esData.getUncomplicated(), true);
+    complicated_tree = &CMDecisionTree::create(esData.getComplicated(), false);
 
-void ESCaseManagement::setHealthSystem(const scnXml::HSEventScheduler& esData) {
-    escm_uncomplicated = &CMDecisionTree::create(esData.getUncomplicated(), true);
-    escm_complicated = &CMDecisionTree::create(esData.getComplicated(), false);
-
-    // Calling our parent class like this is messy. Changing this would require
-    // moving change-of-health-system handling into ClinicalModel.
-    ClinicalEventScheduler::setParameters(esData);
+    set_parameters(esData, case_fatality_rate);
 }
 
-CMDTOut ESCaseManagement::execute(const CMHostData& hostData) {
+CMDTOut ESCaseManagement::execute(const EventSchedulerParams& params, const CMHostData& hostData) {
     assert(hostData.pgState & Episode::SICK);
     //TODO: should we remove any existing prescriptions?
     //TODO: Note that these trees do both "access" and "case management" decisions.
     //TODO: medicateQueue.clear();
 
-    const CMDecisionTree& tree = (hostData.pgState & Episode::COMPLICATED) ? *escm_complicated : *escm_uncomplicated;
+    const CMDecisionTree& tree =
+        (hostData.pgState & Episode::COMPLICATED) ? *params.complicated_tree : *params.uncomplicated_tree;
     return tree.exec(hostData);
 }
 

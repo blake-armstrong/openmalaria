@@ -32,26 +32,22 @@ namespace OM {
 namespace Clinical {
 using namespace ::OM::util;
 
-enum CaseType { FirstLine, SecondLine, NumCaseTypes };
-
-// These parameters are set by setHealthSystem() and do not need checkpointing.
-const CMDecisionTree *treeUCOfficial = 0, *treeUCSelfTreat = 0;
-
 // ———  static, init  ———
 
-void DecisionTree5Day::setHealthSystem(const scnXml::HSDT5Day& hsDescription) {
+void ClinicalParams::set_decision_tree_5day(const scnXml::HSDT5Day& hsDescription) {
     double accessUCOfficial1 = hsDescription.getPSeekOfficialCareUncomplicated1().getValue();
     double accessUCOfficial2 = hsDescription.getPSeekOfficialCareUncomplicated2().getValue();
     // Note: this asymmetry is historical, and probably matters little:
-    accessUCSelfTreat[FirstLine] = hsDescription.getPSelfTreatUncomplicated().getValue();
-    accessUCSelfTreat[SecondLine] = 0.0;
-    accessUCAny[FirstLine] = accessUCOfficial1 + accessUCSelfTreat[FirstLine];
-    accessUCAny[SecondLine] = accessUCOfficial1 + accessUCSelfTreat[SecondLine];
-    accessSevere = hsDescription.getPSeekOfficialCareSevere().getValue();
+    five_day.access_uc_self_treat[FirstLine] = hsDescription.getPSelfTreatUncomplicated().getValue();
+    five_day.access_uc_self_treat[SecondLine] = 0.0;
+    five_day.access_uc_any[FirstLine] = accessUCOfficial1 + five_day.access_uc_self_treat[FirstLine];
+    five_day.access_uc_any[SecondLine] = accessUCOfficial1 + five_day.access_uc_self_treat[SecondLine];
+    five_day.access_severe = hsDescription.getPSeekOfficialCareSevere().getValue();
 
-    if (accessUCOfficial1 < 0.0 || accessUCSelfTreat[FirstLine] < 0.0 || accessUCAny[FirstLine] > 1.0 ||
-        accessUCOfficial2 < 0.0 || accessUCSelfTreat[SecondLine] < 0.0 || accessUCAny[SecondLine] > 1.0 ||
-        accessSevere < 0.0 || accessSevere > 1.0) {
+    if (accessUCOfficial1 < 0.0 || five_day.access_uc_self_treat[FirstLine] < 0.0 ||
+        five_day.access_uc_any[FirstLine] > 1.0 || accessUCOfficial2 < 0.0 ||
+        five_day.access_uc_self_treat[SecondLine] < 0.0 || five_day.access_uc_any[SecondLine] > 1.0 ||
+        five_day.access_severe < 0.0 || five_day.access_severe > 1.0) {
         throw util::xml_scenario_error("healthSystem: "
                                        "pSeekOfficialCareUncomplicated1 and pSelfTreatUncomplicated must be"
                                        " at least 0 and their sum must be at most 1, and"
@@ -59,13 +55,13 @@ void DecisionTree5Day::setHealthSystem(const scnXml::HSDT5Day& hsDescription) {
                                        "be in range [0,1]");
     }
 
-    treeUCOfficial = &CMDecisionTree::create(hsDescription.getTreeUCOfficial(), true);
-    treeUCSelfTreat = &CMDecisionTree::create(hsDescription.getTreeUCSelfTreat(), true);
+    decision_tree_5day.tree_uc_official = &CMDecisionTree::create(hsDescription.getTreeUCOfficial(), true);
+    decision_tree_5day.tree_uc_self_treat = &CMDecisionTree::create(hsDescription.getTreeUCSelfTreat(), true);
 
-    cureRateSevere = hsDescription.getCureRateSevere().getValue();
-    treatmentSevere = WHInterface::add_treatment(hsDescription.getTreatmentSevere());
+    five_day.cure_rate_severe = hsDescription.getCureRateSevere().getValue();
+    five_day.treatment_severe = WHInterface::add_treatment(hsDescription.getTreatmentSevere());
 
-    if (ModelOptions::option(util::VivaxSimpleModel)) {
+    if (vivax_simple_model) {
         WithinHost::WHVivax::set_hs_parameters(
             hsDescription.getLiverStageDrug().present() ? &hsDescription.getLiverStageDrug().get() : 0);
     } else if (hsDescription.getLiverStageDrug().present()) {
@@ -78,7 +74,7 @@ void DecisionTree5Day::setHealthSystem(const scnXml::HSDT5Day& hsDescription) {
 void DecisionTree5Day::uncomplicatedEvent(Human& human, Episode::State pgState) {
     // If last treatment prescribed was in recent memory, consider second line.
     CaseType regimen = FirstLine;
-    if (m_tLastTreatment + healthSystemMemory > Sim::ts0()) {
+    if (m_tLastTreatment + params().health_system_memory > Sim::ts0()) {
         pgState = Episode::State(pgState | Episode::SECOND_CASE);
         regimen = SecondLine;
     }
@@ -86,12 +82,13 @@ void DecisionTree5Day::uncomplicatedEvent(Human& human, Episode::State pgState) 
     latestReport.update(human, Episode::State(pgState));
 
     double x = human.clinical_rng.uniform_01();
-    if (x < accessUCAny[regimen] * m_treatmentSeekingFactor) {
+    if (x < params().five_day.access_uc_any[regimen] * m_treatmentSeekingFactor) {
         CMHostData host_data(human, human.clinical_rng, Sim::in_years(human.age(Sim::ts0())), pgState);
 
         // Run tree (which may deploy treatment)
-        CMDTOut output = (x < accessUCSelfTreat[regimen] * m_treatmentSeekingFactor) ? treeUCSelfTreat->exec(host_data)
-                                                                                     : treeUCOfficial->exec(host_data);
+        CMDTOut output = (x < params().five_day.access_uc_self_treat[regimen] * m_treatmentSeekingFactor)
+                             ? params().decision_tree_5day.tree_uc_self_treat->exec(host_data)
+                             : params().decision_tree_5day.tree_uc_official->exec(host_data);
 
         if (output.treated) { // if any treatment or intervention deployed
             m_tLastTreatment = Sim::ts0();

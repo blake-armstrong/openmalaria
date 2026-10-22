@@ -34,24 +34,15 @@ using namespace ::OM::util;
 
 // ———  static pararmeters and methods  ———
 
-// These parameters are set by setHealthSystem() and do not need checkpointing.
 mon::Measure CM5DayCommon::measures[NumCaseTypes] = {
     mon::measure("nTreatments1"), // first line official
     mon::measure("nTreatments2")  // second line official
 };
-double CM5DayCommon::accessUCAny[NumCaseTypes];
-double CM5DayCommon::accessUCSelfTreat[NumCaseTypes];
-double CM5DayCommon::accessSevere;
-double CM5DayCommon::cureRateSevere;
-WithinHost::TreatmentId CM5DayCommon::treatmentSevere;
-
-bool cfr_pf_use_hospital = false;
-
-void CM5DayCommon::init() { cfr_pf_use_hospital = util::ModelOptions::option(util::CfrPfUseHospital); }
 
 // ———  per-human, construction and destruction  ———
 
-CM5DayCommon::CM5DayCommon(double tSF) : m_treatmentSeekingFactor(tSF) {}
+CM5DayCommon::CM5DayCommon(const ClinicalParams& params, double tSF)
+    : ClinicalModel(params), m_treatmentSeekingFactor(tSF) {}
 
 // ———  per-human, update  ———
 
@@ -61,7 +52,7 @@ void CM5DayCommon::doClinicalUpdate(Human& human, double ageYears, WithinHost::P
     if (pgState & Episode::MALARIA) {
         if (pgState & Episode::COMPLICATED) {
             severeMalaria(human, pgState, ageYears, doomed);
-        } else if (indirectMortBugfix || !pg.indirect_mortality) {
+        } else if (params().indirect_mort_bugfix || !pg.indirect_mortality) {
             // NOTE: the "not indirect mortality" bit is a historical accident.
             // Validity is debatable, but there's no point changing now.
             // (This does affect tests.)
@@ -82,19 +73,20 @@ void CM5DayCommon::doClinicalUpdate(Human& human, double ageYears, WithinHost::P
 }
 
 void CM5DayCommon::severeMalaria(Human& human, Episode::State pgState, double ageYears, int& doomed) {
+    const CM5DayParams& five_day = params().five_day;
     // Probability of getting treatment (only part which is case managment):
-    double p2 = accessSevere * m_treatmentSeekingFactor;
+    double p2 = five_day.access_severe * m_treatmentSeekingFactor;
     // Probability of getting cured after getting treatment:
-    double p3 = cureRateSevere;
+    double p3 = five_day.cure_rate_severe;
     // p4 is the hospital case-fatality rate from Tanzania
-    double p4 = caseFatalityRate.eval(ageYears);
+    double p4 = params().case_fatality_rate.eval(ageYears);
     // p5a here is the community threshold case-fatality rate
     double p5a = getCommunityCFR(p4);
     // p5b here is the in-hospital treatment-failure case-fatality rate
     // In our code it was originally the community CFR, but in the published model description it should be the hospital CFR
-    double p5b = (cfr_pf_use_hospital) ? p4 : p5a;
+    double p5b = (five_day.cfr_pf_use_hospital) ? p4 : p5a;
     // p6 is P(seq) for treated patients
-    double p6 = pSequelaeInpatient.eval(ageYears);
+    double p6 = params().p_sequelae_inpatient.eval(ageYears);
     // p7 is P(seq) when parasites aren't cleared
     // note: if p7 were not equal p6, we might have to do something similar to p5b
     double p7 = p6;
@@ -143,7 +135,7 @@ void CM5DayCommon::severeMalaria(Human& human, Episode::State pgState, double ag
 
         if (prandom >= q[5]) { // treatment successful at clearing parasites
             // this actually means successful treatment in this case:
-            human.withinHostModel->treatment(human, treatmentSevere);
+            human.withinHostModel->treatment(human, five_day.treatment_severe);
 
             if (prandom < q[6]) { // death (despite success in clearing parasites)
                 latestReport.update(human, Episode::State(stateTreated | Episode::DIRECT_DEATH));

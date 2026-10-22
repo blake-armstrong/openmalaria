@@ -44,11 +44,7 @@ namespace Clinical {
  */
 class DecisionTree5Day : public CM5DayCommon {
 public:
-    /** Load health system data from initial data or an intervention's data (both from XML).
-     * (Re)loads all data affected by this healthSystem element. */
-    static void setHealthSystem(const scnXml::HSDT5Day& hsDescription);
-
-    DecisionTree5Day(double tSF) : CM5DayCommon(tSF) {}
+    DecisionTree5Day(const ClinicalParams& params, double tSF) : CM5DayCommon(params, tSF) {}
 
 protected:
     virtual void uncomplicatedEvent(Human& human, Episode::State pgState);

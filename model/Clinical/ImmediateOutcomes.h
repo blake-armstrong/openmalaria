@@ -45,21 +45,11 @@ namespace Clinical {
  */
 class ImmediateOutcomes : public CM5DayCommon {
 public:
-    /** Load health system data from initial data or an intervention's data (both from XML).
-     * (Re)loads all data affected by this healthSystem element. */
-    static void setHealthSystem(const scnXml::HSImmediateOutcomes& hsioData);
-
-    ImmediateOutcomes(double tSF) : CM5DayCommon(tSF) {}
+    ImmediateOutcomes(const ClinicalParams& params, double tSF) : CM5DayCommon(params, tSF) {}
 
 protected:
     /** Called when a non-severe/complicated malaria sickness occurs. */
     virtual void uncomplicatedEvent(Human& human, Episode::State pgState);
-
-private:
-    static double cureRateUCOfficial[CM5DayCommon::NumCaseTypes];
-    static double cureRateUCSelfTreat[CM5DayCommon::NumCaseTypes];
-    static WithinHost::TreatmentId treatmentUC[CM5DayCommon::NumCaseTypes];
-    static bool useDiagnosticUC;
 };
 
 }

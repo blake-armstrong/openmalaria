@@ -32,6 +32,7 @@
 namespace OM {
 namespace Clinical {
 class ClinicalModel;
+class InfantMortality;
 }
 namespace WithinHost {
 class WHInterface;
@@ -41,6 +42,7 @@ class TransmissionModel;
 }
 
 namespace Host {
+class NeonatalMortality;
 
 /** Interface to all sub-models storing data per-human individual.
  *
@@ -152,7 +154,8 @@ private:
 
 void summarize(Human& human, bool surveyOnlyNewEp);
 
-void update(Human& human, Transmission::TransmissionModel& transmission);
+void update(Human& human, Transmission::TransmissionModel& transmission, const NeonatalMortality& neonatal_mortality,
+            Clinical::InfantMortality& infant_mortality);
 
 inline SimTime Human::age(SimTime time) const { return time - dateOfBirth; }
 
