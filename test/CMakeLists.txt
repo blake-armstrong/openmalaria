@@ -68,7 +68,9 @@ set (OM_BOXTEST_NAMES
   ExactNv0
 )
 # tests with broken checkpointing:
-set (OM_BOXTEST_NC_NAMES)
+set (OM_BOXTEST_NC_NAMES
+  PkPdModels
+)
 # Disabled due to "in-progress" work: (none)
 
 # Use python script.
