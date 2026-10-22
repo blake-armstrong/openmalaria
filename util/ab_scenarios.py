@@ -167,6 +167,9 @@ def vivax_nmf(s):
     return rep(nmf_on(s), '<clinical healthSystemMemory="6t">', '<clinical healthSystemMemory="6t">\n      ' + NMF)
 
 
+PYROGEN_READ_ORDER = (18, 21, 24, 30, 28, 25, 13, 14, 26)
+
+
 V = "scenarioVivax.xml"
 G = "scenarioGenotypes.xml"
 M = "scenarioMSAT_HRP2.xml"
@@ -287,6 +290,16 @@ GROUPS = {
         Variant("mueller_checkpoint", "scenario10.xml", args=["--checkpoint"], runs=2),
         Variant("predetermined_checkpoint", "scenario9.xml", args=["--checkpoint"], runs=2),
         Variant("pyrogen_nmf_checkpoint", "scenarioNonHumanHosts.xml", args=["--checkpoint"], runs=2),
+    ] + [
+        Variant(f"pyrogen_no_param_{n}", "scenario5.xml", lambda s, n=n: drop_parameter(s, n))
+        for n in PYROGEN_READ_ORDER
+    ] + [
+        Variant(f"pyrogen_no_params_{m}_{n}", "scenario5.xml", lambda s, m=m, n=n: drop_parameter(drop_parameter(s, m), n))
+        for m, n in zip(PYROGEN_READ_ORDER, PYROGEN_READ_ORDER[1:])
+    ] + [
+        Variant(f"mueller_no_param_{n}", "scenario10.xml", lambda s, n=n: drop_parameter(s, n)) for n in (31, 32)
+    ] + [
+        Variant("mueller_no_params_31_32", "scenario10.xml", lambda s: drop_parameter(drop_parameter(s, 31), 32)),
     ],
     "falciparum-init": [
         Variant("molineaux_no_weight", "scenarioMolineaux.xml", lambda s: drop_element(s, "<weight ", "</weight>")),
