@@ -39,9 +39,10 @@ namespace OM::WithinHost {
 // -----  Initialization  -----
 
 DescriptiveWithinHostModel::DescriptiveWithinHostModel(const FalciparumParams& params,
+                                                       const Pathogenesis::PathogenesisParams& pathogenesis,
                                                        const DescriptiveWithinHostParams& descriptive_params,
                                                        LocalRng& rng, double comorbidity_factor)
-    : WHFalciparum(params, rng, comorbidity_factor), descriptive_params(&descriptive_params) {
+    : WHFalciparum(params, pathogenesis, rng, comorbidity_factor), descriptive_params(&descriptive_params) {
     assert(Sim::one_ts() == Sim::from_days(5));
     opt_vaccine_genotype = params.vaccine_genotype;
 }

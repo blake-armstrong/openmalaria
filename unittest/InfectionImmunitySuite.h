@@ -27,6 +27,7 @@
 #include "UnittestUtil.h"
 #include "ExtraAsserts.h"
 #include "Host/WithinHost/DescriptiveWithinHost.h"
+#include "Host/WithinHost/Pathogenesis/PathogenesisModel.h"
 #include <limits>
 
 using namespace OM::WithinHost;
@@ -44,7 +45,8 @@ public:
 
         // We need a concrete class deriving from WHFalciparum; this will do
         LocalRng rng(0, 721347520444481703);
-        wh = new DescriptiveWithinHostModel{params, descriptive_params, rng, numeric_limits<double>::quiet_NaN()};
+        wh = new DescriptiveWithinHostModel{params, pathogenesis, descriptive_params, rng,
+                                            numeric_limits<double>::quiet_NaN()};
     }
     void tearDown() { delete wh; }
 
@@ -69,6 +71,7 @@ public:
 
 private:
     FalciparumParams params;
+    Pathogenesis::PathogenesisParams pathogenesis;
     DescriptiveWithinHostParams descriptive_params;
     WHFalciparum* wh;
 };

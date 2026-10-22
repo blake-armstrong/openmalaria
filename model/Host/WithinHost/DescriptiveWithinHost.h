@@ -47,8 +47,9 @@ struct DescriptiveWithinHostParams {
 class DescriptiveWithinHostModel : public WHFalciparum {
 public:
     /// Create a new WHM
-    DescriptiveWithinHostModel(const FalciparumParams& params, const DescriptiveWithinHostParams& descriptive_params,
-                               LocalRng& rng, double comorbidity_factor);
+    DescriptiveWithinHostModel(const FalciparumParams& params, const Pathogenesis::PathogenesisParams& pathogenesis,
+                               const DescriptiveWithinHostParams& descriptive_params, LocalRng& rng,
+                               double comorbidity_factor);
 
     void import_infection(LocalRng& rng) override;
 

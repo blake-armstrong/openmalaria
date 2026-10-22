@@ -310,8 +310,9 @@ void VivaxBrood::treatment_ls() {
 
 // ———  per-host code  ———
 
-WHVivax::WHVivax(const VivaxParams& params, LocalRng& rng, double comorbidity_factor)
-    : params(&params), p_event(numeric_limits<double>::quiet_NaN()),
+WHVivax::WHVivax(const VivaxParams& params, const Pathogenesis::PathogenesisParams& pathogenesis, LocalRng& rng,
+                 double comorbidity_factor)
+    : params(&params), pathogenesis(&pathogenesis), p_event(numeric_limits<double>::quiet_NaN()),
       p_first_relapse_event(numeric_limits<double>::quiet_NaN()) {
     if (comorbidity_factor != 1.0) {
         throw TRACED_EXCEPTION_DEFAULT("This vivax model cannot be used with comorbidity heterogeneity");
@@ -460,7 +461,7 @@ void WHVivax::update(Host::Human& human, LocalRng& rng, int& n_new_infs_i, int& 
 
     //NOTE: currently we don't model co-infection or indirect deaths
     if (morbidity == Pathogenesis::NONE) {
-        morbidity = Pathogenesis::PathogenesisModel::sampleNMF(rng, age_in_years);
+        morbidity = pathogenesis->sample_nmf(rng, age_in_years);
     }
 }
 

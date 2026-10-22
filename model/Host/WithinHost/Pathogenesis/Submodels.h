@@ -35,13 +35,10 @@ namespace Pathogenesis {
 /// Müller presentation model.
 class MuellerPathogenesis : public PathogenesisModel {
 public:
-    MuellerPathogenesis(double cF) : PathogenesisModel(cF) {}
+    MuellerPathogenesis(const PathogenesisParams& params, double cF) : PathogenesisModel(params, cF) {}
     ~MuellerPathogenesis() {}
 
     virtual double getPEpisode(double timeStepMaxDensity, double totalDensity);
-
-    /// Read parameters
-    static void init(const Parameters& parameters);
 };
 
 /// Pyrogenic threshold presentation model.
@@ -53,13 +50,10 @@ protected:
     virtual void updatePyrogenThres(double totalDensity);
 
 public:
-    PyrogenPathogenesis(double cF);
+    PyrogenPathogenesis(const PathogenesisParams& params, double cF);
     virtual ~PyrogenPathogenesis() {}
     virtual void summarize(const Host::Human& human);
     virtual double getPEpisode(double timeStepMaxDensity, double totalDensity);
-
-    /// Read parameters from XML
-    static void init(const OM::Parameters& parameters);
 
 protected:
     virtual void checkpoint(istream& stream);
@@ -69,7 +63,7 @@ protected:
 /// Predetermined episodes presentation model.
 class PredetPathogenesis : public PyrogenPathogenesis {
 public:
-    PredetPathogenesis(double cF) : PyrogenPathogenesis(cF) {}
+    PredetPathogenesis(const PathogenesisParams& params, double cF) : PyrogenPathogenesis(params, cF) {}
     ~PredetPathogenesis() {}
 
     virtual double getPEpisode(double timeStepMaxDensity, double totalDensity);

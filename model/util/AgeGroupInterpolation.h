@@ -73,7 +73,7 @@ struct AgeGroupInterpolator {
     void reset();
 
     /// Return true if set() was ever called.
-    bool isSet();
+    bool isSet() const;
 
     /** Return a value interpolated for age ageYears. */
     inline double eval(double ageYears) const { return obj->eval(ageYears); }

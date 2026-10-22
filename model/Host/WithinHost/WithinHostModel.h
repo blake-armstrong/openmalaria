@@ -27,6 +27,7 @@
 #include "Host/WithinHost/CommonWithinHost.h"
 #include "Host/WithinHost/DescriptiveWithinHost.h"
 #include "Host/WithinHost/Genotypes.h"
+#include "Host/WithinHost/Pathogenesis/PathogenesisModel.h"
 #include "Host/WithinHost/Treatments.h"
 #include "Host/WithinHost/WHFalciparum.h"
 #include "Host/WithinHost/WHInterface.h"
@@ -62,6 +63,7 @@ struct WithinHostModel {
     CommonWithinHostParams common;
     DescriptiveWithinHostParams descriptive;
     VivaxParams vivax;
+    Pathogenesis::PathogenesisParams pathogenesis;
     TreatmentRegistry treatments;
 };
 

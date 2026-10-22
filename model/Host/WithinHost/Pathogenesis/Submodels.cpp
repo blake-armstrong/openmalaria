@@ -33,51 +33,40 @@ namespace Pathogenesis {
 
 // ———  Müller presentation model  ———
 
-// Müller model parameters
-double rateMultiplier_31;
-double densityExponent_32;
-
-void MuellerPathogenesis::init(const Parameters& parameters) {
-    rateMultiplier_31 = parameters[Parameter::MuellerRateMultiplier] * Sim::years_per_step();
-    densityExponent_32 = parameters[Parameter::MuellerDensityExponent];
-}
+MuellerParams::MuellerParams(const OM::Parameters& parameters)
+    : rate_multiplier_31(parameters[Parameter::MuellerRateMultiplier] * Sim::years_per_step()),
+      density_exponent_32(parameters[Parameter::MuellerDensityExponent]) {}
 
 double MuellerPathogenesis::getPEpisode(double, double totalDensity) {
-    double incidenceDensity = rateMultiplier_31 * (pow(totalDensity, densityExponent_32));
+    double incidenceDensity =
+        params->mueller.rate_multiplier_31 * (pow(totalDensity, params->mueller.density_exponent_32));
     return 1.0 - exp(-incidenceDensity);
 }
 
 // ———  Pyrogenic threshold model  ———
 
-//Pyrogenic threshold at birth (Y*0)
-double initPyroThres;
-// Ystar2: critical value in determining increase in pyrogenic threshold
-double Ystar2_13;
-double Ystar1_26;
-
 //Number of categories in the numerical approximation used in updatePyrogenThres()
 const size_t n = 11;
-// Derived parameters without good names:
-double a = numeric_limits<double>::signaling_NaN(), b = numeric_limits<double>::signaling_NaN();
 
-void PyrogenPathogenesis::init(const Parameters& parameters) {
-    initPyroThres = parameters[Parameter::YStar0];
+PyrogenParams::PyrogenParams(const OM::Parameters& parameters) {
+    init_pyro_thres = parameters[Parameter::YStar0];
 
     double delt = 1.0 / n;
     double smuY = -log(0.5) / (Sim::steps_per_year() * parameters[Parameter::YStarHalfLife]);
     b = -smuY * delt;
 
-    Ystar2_13 = parameters[Parameter::YStarSq];
+    ystar2_13 = parameters[Parameter::YStarSq];
 
     //alpha: factor determining increase in pyrogenic threshold
     double alpha14 = parameters[Parameter::Alpha];
     a = alpha14 * Sim::one_ts() * delt;
 
     //Ystar1: critical value of parasite density in determing increase in pyrog t
-    Ystar1_26 = parameters[Parameter::YStar1];
+    ystar1_26 = parameters[Parameter::YStar1];
 }
 
-PyrogenPathogenesis::PyrogenPathogenesis(double cF) : PathogenesisModel(cF), _pyrogenThres(initPyroThres) {}
+PyrogenPathogenesis::PyrogenPathogenesis(const PathogenesisParams& params, double cF)
+    : PathogenesisModel(params, cF), _pyrogenThres(params.pyrogen.init_pyro_thres) {}
 
 double PyrogenPathogenesis::getPEpisode(double timeStepMaxDensity, double totalDensity) {
     updatePyrogenThres(totalDensity);
@@ -92,10 +81,14 @@ void PyrogenPathogenesis::summarize(const Host::Human& human) {
 void PyrogenPathogenesis::updatePyrogenThres(double totalDensity) {
     // Note: this calculation is slow (something like 5% of runtime)
 
+    const double a = params->pyrogen.a;
+    const double b = params->pyrogen.b;
+    const double ystar1_26 = params->pyrogen.ystar1_26;
+    const double ystar2_13 = params->pyrogen.ystar2_13;
     //Numerical approximation to equation 2, AJTMH p.57
     for (size_t i = 1; i <= n; ++i) {
         _pyrogenThres +=
-            totalDensity * a / ((Ystar1_26 + totalDensity) * (Ystar2_13 + _pyrogenThres)) + b * _pyrogenThres;
+            totalDensity * a / ((ystar1_26 + totalDensity) * (ystar2_13 + _pyrogenThres)) + b * _pyrogenThres;
     }
 }
 

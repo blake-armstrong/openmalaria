@@ -39,6 +39,7 @@ class InfectionImmunitySuite;
 namespace OM::WithinHost {
 namespace Pathogenesis {
 class PathogenesisModel;
+struct PathogenesisParams;
 }
 
 struct FalciparumParams {
@@ -90,7 +91,8 @@ class WHFalciparum : public WHInterface {
 public:
     /// @brief Constructors, destructors and checkpointing functions
     //@{
-    WHFalciparum(const FalciparumParams& params, LocalRng& rng, double comorbidity_factor);
+    WHFalciparum(const FalciparumParams& params, const Pathogenesis::PathogenesisParams& pathogenesis, LocalRng& rng,
+                 double comorbidity_factor);
     ~WHFalciparum() override;
     //@}
 

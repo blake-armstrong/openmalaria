@@ -289,6 +289,6 @@ void AgeGroupInterpolator::reset() {
         obj = &AgeGroupDummy::singleton;
     }
 }
-bool AgeGroupInterpolator::isSet() { return obj != &AgeGroupDummy::singleton; }
+bool AgeGroupInterpolator::isSet() const { return obj != &AgeGroupDummy::singleton; }
 }
 }

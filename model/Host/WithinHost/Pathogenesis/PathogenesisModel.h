@@ -26,7 +26,13 @@
 #include "Global.h"
 #include "Parameters.h"
 #include "Host/WithinHost/Pathogenesis/State.h"
+#include "util/AgeGroupInterpolation.h"
+#include "util/ModelOptions.h"
 #include "util/random.h"
+
+#include <cstdint>
+#include <limits>
+#include <memory>
 
 namespace scnXml {
 class HSESNMF;
@@ -42,19 +48,63 @@ namespace Pathogenesis {
 
 using util::LocalRng;
 
+class PathogenesisModel;
+
+struct MuellerParams {
+    double rate_multiplier_31 = 0.0;
+    double density_exponent_32 = 0.0;
+
+    MuellerParams() = default;
+    explicit MuellerParams(const OM::Parameters& parameters);
+};
+
+struct PyrogenParams {
+    //Pyrogenic threshold at birth (Y*0)
+    double init_pyro_thres = 0.0;
+    // Ystar2: critical value in determining increase in pyrogenic threshold
+    double ystar2_13 = 0.0;
+    double ystar1_26 = 0.0;
+    // Derived parameters without good names:
+    double a = std::numeric_limits<double>::signaling_NaN();
+    double b = std::numeric_limits<double>::signaling_NaN();
+
+    PyrogenParams() = default;
+    explicit PyrogenParams(const OM::Parameters& parameters);
+};
+
+struct PathogenesisParams {
+    enum class Kind : std::uint8_t { Pyrogen, Mueller, Predetermined };
+
+    PathogenesisParams() = default;
+    PathogenesisParams(const OM::Parameters& parameters, const util::ModelOptionFlags& options,
+                       const scnXml::Clinical& clinical, bool nmf_only);
+
+    std::unique_ptr<PathogenesisModel> create(double comorbidity_factor) const;
+
+    /** For Vivax: determine the chance of a NMF and sample, returning either
+     * NONE or STATE_NMF. */
+    Pathogenesis::State sample_nmf(LocalRng& rng, double age_years) const;
+
+    Kind kind = Kind::Pyrogen;
+    /// Comorbidity prevalence at birth as a risk factor for indirect mortality
+    double indir_risk_co_factor = 0.0;
+    /// sevMal: critical density for severe malaria bout (Y*B1)
+    double severe_mal_threshold = 0.0;
+    /// Comorbidity prevalence at birth as a risk factor for severe
+    double comorb_intercept = 0.0;
+    /// One over critical age for co-morbidity (for both severe and indirect)
+    double inv_crit_age_comorb = 0.0;
+    /// Rate of Non-Malaria Fever incidence by age. Non-seasonal.
+    util::AgeGroupInterpolator nmf_incidence;
+    MuellerParams mueller;
+    PyrogenParams pyrogen;
+};
+
 /*! PathogenesisModel abstract base class.
  *
  * Previously named MorbidityModel and PresentationModel. */
 class PathogenesisModel {
 public:
-    /// Calls static init on correct PathogenesisModel.
-    static void init(const Parameters& parameters, const scnXml::Clinical& clinical, bool nmfOnly);
-
-    /** Create a sub-class instance, dependant on global options.
-    *
-    * @param cF = Comorbidity factor (currently set in Human). */
-    static PathogenesisModel* createPathogenesisModel(double cF);
-
     virtual ~PathogenesisModel() {}
 
     /** Determines the health of the individual based on his/her parasitemia.
@@ -63,10 +113,6 @@ public:
      * malaria fevers. */
     StatePair determineState(Host::Human& human, double ageYears, double timeStepMaxDensity, double endDensity,
                              bool isDoomed);
-
-    /** For Vivax: determine the chance of a NMF and sample, returning either
-     * NONE or STATE_NMF. */
-    static Pathogenesis::State sampleNMF(LocalRng& rng, double ageYears);
 
     /** Summarize PathogenesisModel details
      *
@@ -79,13 +125,15 @@ public:
 
 protected:
     /** Create a PathogenesisModel. */
-    PathogenesisModel(double cF);
+    PathogenesisModel(const PathogenesisParams& params, double cF);
 
     virtual void checkpoint(istream& stream);
     virtual void checkpoint(ostream& stream);
 
 protected:
     virtual double getPEpisode(double timeStepMaxDensity, double totalDensity) = 0;
+
+    const PathogenesisParams* params;
 
     //! comorbidity factor for heterogeneity
     double _comorbidityFactor;

@@ -63,15 +63,15 @@ FalciparumParams::FalciparumParams(const OM::Parameters& parameters, const util:
 
 // -----  Non-static  -----
 
-WHFalciparum::WHFalciparum(const FalciparumParams& params, LocalRng& rng, double comorbidity_factor)
+WHFalciparum::WHFalciparum(const FalciparumParams& params, const Pathogenesis::PathogenesisParams& pathogenesis,
+                           LocalRng& rng, double comorbidity_factor)
     : WHInterface(),
       // NOTE: negating a Gaussian sample with mean 0 is pointless — except that
       // the individual samples change. In any case the overhead is negligible.
       //FIXME: Should this be allowed to be greater than 1?
       // Oldest code on GoogleCode: _innateImmunity=(double)(W_GAUSS((0), (sigma_i)));
       innate_imm_surv_fact(exp(-rng.gauss(0.0, params.sigma_i))),
-      pathogenesis_model(Pathogenesis::PathogenesisModel::createPathogenesisModel(comorbidity_factor)),
-      falciparum_params(&params) {
+      pathogenesis_model(pathogenesis.create(comorbidity_factor)), falciparum_params(&params) {
     y_lag_imported.resize(params.y_lag_len * Genotypes::count());
     y_lag_local.resize(params.y_lag_len * Genotypes::count());
 }

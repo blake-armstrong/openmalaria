@@ -48,7 +48,7 @@ class CommandLineOptions;
 }
 namespace WithinHost {
 namespace Pathogenesis {
-class PathogenesisModel;
+struct PathogenesisParams;
 }
 
 class HypnozoiteReleaseDistribution {
@@ -197,7 +197,8 @@ public:
 
     /// @brief Constructors, destructors and checkpointing functions
     //@{
-    WHVivax(const VivaxParams& params, LocalRng& rng, double comorbidity_factor);
+    WHVivax(const VivaxParams& params, const Pathogenesis::PathogenesisParams& pathogenesis, LocalRng& rng,
+            double comorbidity_factor);
     WHVivax(const WHVivax&) = delete;
     WHVivax& operator=(const WHVivax&) = delete;
     WHVivax(WHVivax&&) = delete;
@@ -239,6 +240,7 @@ protected:
 
 private:
     const VivaxParams* params;
+    const Pathogenesis::PathogenesisParams* pathogenesis;
 
     list<VivaxBrood> infections;
 
