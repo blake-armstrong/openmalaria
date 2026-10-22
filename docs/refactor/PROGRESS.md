@@ -33,7 +33,7 @@ See `PLAN.md` for the session protocol, chunks and gates. Append one log entry p
 | D4b | done | 1dd81ae7, 7ffc4e6c, 4db82617, 0ddf6209, 808c0e48, 3e1394d2, b4063a76, 7a828ea1, dd059491, (this log entry) |
 | D4c | done | 25afa630, f511b389, 24fec740, 73829aad, e53617ab, c7ee238b, d527bbbf, 20f29f45, cc748c60, (this log entry) |
 | D4d | done | 6e83ea3f, ed6fad49, 85edc7ef, 5f89fcb0, 35eadf9c, e67dbef9, 1357ccba, 760980b6, caa82068, (this log entry) |
-| D5 | todo | |
+| D5 | done | 8dcdf512, 5c0449e9, c92d9d36, b543d8fd, de48455e, 0c859fb0, a210a53d, (this log entry) |
 | D6 | todo | |
 | D7 | todo | |
 | D8 | todo | |
@@ -438,7 +438,7 @@ See `PLAN.md` for the session protocol, chunks and gates. Append one log entry p
 
   | Module | Rename | Modernise |
   |---|---|---|
-  | `model/PkPd` | cae5d3b5 (B4) | a0f1112c + 7b330170 (M2) |
+  | `model/PkPd` | cae5d3b5 (B4); D5: nothing to rename | a0f1112c + 7b330170 (M2); c92d9d36 + 0c859fb0 (D5) |
   | `model/` root: `sim.h`, `Clock.{h,cpp}`, `Simulation.{h,cpp}`, `checkpoint.{h,cpp}` | 4252cba1 (D1) | 48d3476c + 21e09c0d (D1) |
   | `model/util/random.h`, `model/util/xoshiro.h` | c98ffe6f (D2) | 0808f323 + 82e3c602 (D2) |
   | `model/util/CommandLine.{h,cpp}`, `model/util/ModelOptions.{h,cpp}`, `model/Parameters.h`, `model/util/ModelNameProvider.h` | 6e96d1cf (D3) | efb5ad9d + 39f23abd (D3) |
@@ -1010,3 +1010,39 @@ The user asked for confirmation that every model change is documented and justif
   - D9: remove `bridge::current_genotypes`, `bridge::current_diagnostics` and the facades; `mon::` uses `Genotypes::count()` in `addStore`.
   - F51/F52: ask the user whether to fix (stdout changes), e.g. in I2 with the other print options (F41).
 - Next: D5.
+
+### D5: PK/PD registries → `PkPdParams` owned by the within-host model (done, 2026-10-22)
+- Base: 78d96f4c. The G-perf base worktree `../om-bench-base` was moved to 78d96f4c and rebuilt; it is also the A/B base.
+- **Scope, a deviation from the plan row:** `PerHost::params` is `Transmission::PerHostAnophParams::params`, vector parameters filled by the transmission init and adjusted by `AnophelesModel`, read by interventions. It moves with the rest of `Transmission/` in D7 (PLAN.md rows amended). D5 covers `model/PkPd`.
+- Commits:
+  - 8dcdf512: **logic.**
+    - `pk_pd::DrugRegistry` (`LSTMDrugType.h`): the drug types, name map and drugs-in-use list that were file statics; constructor = the old `LSTMDrugType::init`; `find_drug` (still marks the drug and its metabolite as in use), `get`, `drugs_in_use`, `create_instance`. `LSTMDrugType`'s constructor takes the registry being built (metabolite lookup), the `GenotypeRegistry` (D4d follow-up: no `Genotypes` facade) and the `--print-genotypes` flag.
+    - `pk_pd::CourseRegistry` (`LSTMMedicate.h`): schedules, dosage tables and their names; constructor = the old `LSTMTreatments::init`, finding drugs in the `DrugRegistry`.
+    - `pk_pd::PkPdParams` (new `PkPd/PkPdParams.h`) holds both; its constructor is the old `LSTMModel::init`, called at the same point of `WithinHostModel`'s constructor (Common model only), stored in `CommonWithinHostParams::pk_pd`. `WithinHostModel` takes the `GenotypeRegistry` for it. Every read and error happens in the old order.
+    - Each `LSTMModel` holds a `const PkPdParams*` (from `CommonWithinHost`'s params) for `prescribe`, `medicate`, `summarize` and the checkpoint load.
+    - **Bridge:** the static `LSTMTreatments::find_schedule`/`find_dosages` (clinical decision trees, D6; the `treatPKPD` intervention, D8) delegate through `bridge::within_host_model()`. An empty registry raises the same "use of PK/PD treatment requires…" error the empty statics did. No new bridge pointer.
+    - Removed: `num_drug_types` (no caller), the static `init`/`clear` functions. `DosageTable::get_multiplier` and `MedicateData::multiplied` became `const` (neither changed state).
+    - Unit tests: `UnittestUtil::pk_pd_params()` is the bound `WithinHostModel`'s `PkPdParams`; `PkPdSuiteSetup` assigns registries to it, suites build `LSTMModel`s with it and reset it where they cleared the statics (the old `clear()` kept the drugs-in-use list; no test reads it). `WHMock` takes the bound model's. Two `PkPdComplianceSuite` locals on changed lines renamed.
+  - 5c0449e9: `util/ab_scenarios.py` group `pkpd` (26 variants, below). The script no longer compares the source file and line in a traced exception's "Call stack, starting from" line, which differ between any two builds whose code moved (the message and exit code are compared).
+  - Rename: `util/style.sh rename model/PkPd --dry-run` printed `nothing to rename` (B4 renamed the module; the new names follow the rules), so no rename commit. The uncompiled suites (F9) don't use PkPd.
+  - c92d9d36 + b543d8fd: **modernise, tool:** 1 `use-ranges`, the `is_sorted` in an `assert` that M2's run could not see before F50's fix.
+  - de48455e: **logic.** The two GSL integration workspaces (mutable file globals allocated at static init, never freed; M2 left them for D5) → `thread_local`, allocated at first use, freed at thread end. Per thread rather than per simulation because they are scratch memory (`gsl_integration_qag` initialises the workspace each call) and a per-simulation buffer would race under M8's threaded update; per thread suits M7 and M8. Only the allocation time changed (now after `main` sets the GSL error handler), which matters only if it fails.
+  - 0c859fb0: **modernise, hand:** the four `ParamsConvFactor` helpers take `const&` (M2's follow-up; the one caller that assigns into the struct does so after the call); explicit casts for the four `size_t` narrowings. Left, as M2: protected data (34), the `const LSTMDrugType&` members, GSL's `const_cast`, `endl` (F14). No `new`/`delete`, macros, plain enums or const gaps were left.
+  - a210a53d: FINDINGS F54, F55; PLAN.md D5 row as built, D7 row.
+- Gates:
+  - G-exact / G-unit: 56/56 (strict) on `build-rework/` (Release) and `build-debug/` (Debug) after each C++ commit. 14 ctest scenarios use pharmacology (one- and two-compartment drugs, age, body-mass and multiply dosages, phenotype restrictions, drug-concentration measures, decision-tree and intervention `treatPKPD`), all with checkpoint stop and resume.
+  - G-stat: plain `ctest -j4` at 0c859fb0: 109 passed, 3 disabled (the vivax scenarios' `stat_` tests).
+  - G-style: `util/style.sh check 78d96f4c` clean at 0c859fb0; the tool commit's format half clean and a second dry run applied nothing.
+  - G-perf: `util/bench.sh --compare ../om-bench-base/build-rework`, candidate 0c859fb0, load ~6.4 at the start: median per-pair ratio 0.9903 (−0.97%), spreads 3.4% / 1.5%. The benchmark prescribes PK/PD treatment (one-compartment drugs). On `scenarioBSV.xml` (two-compartment drugs, so the per-thread workspace), `-n 7`: 0.9968 (−0.32%).
+  - A/B (`util/ab_scenarios.py <base> <candidate>`, base 78d96f4c): `pkpd` 26 of 26 identical after the logic commit, after de48455e, and with all 83 variants (`falciparum-init`, `pkpd`, `registries`, `vivax`) after the hand commit. The group covers what ctest can't: the conversion (metabolite) and three-compartment models, which no ctest scenario uses, plain, with `--checkpoint` (checkpoint bytes compared) and `--print-genotypes`; each drug, phenotype and dosage-table init error; unknown drug, schedule and dosage names; no pharmacology; an unknown schedule in the `treatPKPD` intervention and that intervention with `--checkpoint`. Each variant was checked to reach its target; the runtime ones report non-zero concentrations for all four drugs (CQ, the DHA metabolite, AS, PPQ3).
+- Findings: F54 (checkpointed drug indices unchecked), F55 (duplicate drug reported as a code error; two message typos).
+- Surprises:
+  - The modernise tool found one more fix in a file D5 did not otherwise touch: an `assert` body, visible only since F50.
+  - The A/B script's first `pkpd` run flagged `drug_twice` as different: only the traced exception's source path and line differ, since the worktrees differ and the code moved.
+- Follow-ups:
+  - D6: the clinical decision trees call `LSTMTreatments::find_schedule`/`find_dosages` through the bridge; pass the `PkPdParams` (or the `WithinHostModel`) to the decision-tree factory.
+  - D7: `Transmission::PerHostAnophParams` and `PerHost::relAvailAge` statics (from D5's plan row).
+  - D8: the `treatPKPD` intervention component uses the same facade.
+  - D9: remove the `LSTMTreatments` facade with the bridge.
+  - Optional: a ctest scenario for the conversion and three-compartment models (expected output from 78d96f4c), so later chunks get them under G-exact without the A/B base; adding it means new `test/expected/` files, so ask first.
+- Next: D6.
