@@ -33,7 +33,7 @@ See `PLAN.md` for the session protocol, chunks and gates. Append one log entry p
 | D4b | done | 1dd81ae7, 7ffc4e6c, 4db82617, 0ddf6209, 808c0e48, 3e1394d2, b4063a76, 7a828ea1, dd059491, (this log entry) |
 | D4c | done | 25afa630, f511b389, 24fec740, 73829aad, e53617ab, c7ee238b, d527bbbf, 20f29f45, cc748c60, (this log entry) |
 | D4d | done | 6e83ea3f, ed6fad49, 85edc7ef, 5f89fcb0, 35eadf9c, e67dbef9, 1357ccba, 760980b6, caa82068, (this log entry) |
-| D5 | done | 8dcdf512, 5c0449e9, c92d9d36, b543d8fd, de48455e, 0c859fb0, a210a53d, (this log entry) |
+| D5 | done | 8dcdf512, 5c0449e9, c92d9d36, b543d8fd, de48455e, 0c859fb0, a210a53d, eb07d51e, a3789f2f; follow-up 89c90989, 5355535c, 74843c0a, (its log entry) |
 | D6 | todo | |
 | D7 | todo | |
 | D8 | todo | |
@@ -1044,5 +1044,28 @@ The user asked for confirmation that every model change is documented and justif
   - D7: `Transmission::PerHostAnophParams` and `PerHost::relAvailAge` statics (from D5's plan row).
   - D8: the `treatPKPD` intervention component uses the same facade.
   - D9: remove the `LSTMTreatments` facade with the bridge.
-  - Optional: a ctest scenario for the conversion and three-compartment models (expected output from 78d96f4c), so later chunks get them under G-exact without the A/B base; adding it means new `test/expected/` files, so ask first.
+  - Optional: a ctest scenario for the conversion and three-compartment models (expected output from 78d96f4c), so later chunks get them under G-exact without the A/B base; adding it means new `test/expected/` files, so ask first. **Done after the log entry, with the user's approval; see the next entry.**
 - Next: D6.
+
+### D5 follow-up: a scenario test for the PK conversion and three-compartment models (2026-10-22, after D5)
+The user approved adding the scenario test proposed in D5's follow-ups.
+- **First attempt, on scenarioGenotypes** (the A/B variant): its checkpoint holds no drug instances (nobody is treated before the intervention period), so planted checkpoint bugs passed. Rebased on scenarioBSV, whose checkpoint holds treated humans.
+- **The BSV-based scenario failed its own checkpoint-stop test on the base build:** resuming does not reproduce the uninterrupted run (F56). Three values are not checkpointed: each drug instance's sampled `vol_dist`, the conversion model's `vol_dist_metabolite` and `last_bm`, and each infection's cached `kn` (IC50^slope), whose re-draw after resume uses the human's RNG for conversion drugs. Shown by: BSV with a CV added to PPQ's `vol_dist` diverges on resume (base build); a temporary patch checkpointing the first two made the scenario resume exactly; an AS-only variant still diverged through `kn`. The patch was reverted; fixing F56 changes the checkpoint format and resumed outputs, so it waits for the user (H3 fits).
+- **Harness bug (F57):** the registration for tests without checkpointing (`OM_BOXTEST_NC_NAMES`, empty until now) passed the scenario name after `--`, i.e. to openMalaria. Fixed in 89c90989.
+- Commits:
+  - 89c90989: the NC registration fix.
+  - 5355535c: `test/scenarioPkPdModels.xml` (scenarioBSV plus DHA, AS converted to DHA, and three-compartment PPQ3, with sampled conversion rate and volumes), expected `output`/`ctsout` from the 78d96f4c build (byte-identical to the current build's), registered without `--checkpoint-stop`. Its `stat_`/`statfull_` tests are disabled (no reference).
+  - 74843c0a: `util/ab_scenarios.py` `pkpd/models_checkpoint`, the scenario with `--checkpoint` twice: about 490 conversion and 980 three-compartment instances are written to and read from its checkpoint.
+- Planted bugs, each run against the full non-statistical ctest and the A/B `pkpd` group (base 78d96f4c):
+  | Plant | ctest | A/B |
+  |---|---|---|
+  | conversion factor `min` instead of `max` | PkPdModels only | 4 runtime variants |
+  | conversion model built with the parent as metabolite | PkPdModels only | 4 runtime variants |
+  | three-compartment `k21 * k13` doubled (invisible when k13 = 0, as in BSV, PEV, TBV) | PkPdModels only | 4 runtime variants |
+  | conversion checkpoint reads `nk_p_sample`/`nconv_sample` swapped | none | `models_checkpoint` |
+  | three-compartment checkpoint reads `k13`/`k31` swapped | none | `models_checkpoint` |
+
+  Two earlier plants were dropped as not real bugs for this input: not marking the metabolite as in use (the parent's constructor already marks it through `find_drug`), and not checkpointing `qty_m` (DHA's elimination at 25.4/day leaves nothing visible).
+- Gates: 57/57 non-statistical tests on Release and Debug (strict); A/B `pkpd` 27/27 identical.
+- Process note: the user stopped a diagnostic command that cleared scratch directories with `rm -rf` on a variable-built path. Later runs used fresh `mktemp -d` directories and delete nothing.
+- Follow-ups: F56 (ask the user; when fixed, move PkPdModels to `OM_BOXTEST_NAMES`).
