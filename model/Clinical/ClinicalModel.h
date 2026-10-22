@@ -146,7 +146,7 @@ protected:
     double get_community_cfr(double case_fatality_ratio) const;
 
 private:
-    Episode::State latest_state;
+    Episode::State latest_state = Episode::None;
     const ClinicalParams* clinical_params;
 };
 

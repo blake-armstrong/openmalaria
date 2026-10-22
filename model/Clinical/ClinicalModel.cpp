@@ -117,7 +117,7 @@ double ClinicalModel::get_community_cfr(double case_fatality_ratio) const {
 
 // -----  non-static construction, destruction and checkpointing  -----
 
-ClinicalModel::ClinicalModel(const ClinicalParams& params) // NOLINT(cppcoreguidelines-pro-type-member-init): F60
+ClinicalModel::ClinicalModel(const ClinicalParams& params)
     : latest_report(params.health_system_memory, params.health_system_memory_fix), clinical_params(&params) {}
 
 // -----  other non-static methods  -----
