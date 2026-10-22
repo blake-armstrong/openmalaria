@@ -35,7 +35,7 @@ See `PLAN.md` for the session protocol, chunks and gates. Append one log entry p
 | D4d | done | 6e83ea3f, ed6fad49, 85edc7ef, 5f89fcb0, 35eadf9c, e67dbef9, 1357ccba, 760980b6, caa82068, (this log entry) |
 | D5 | done | 8dcdf512, 5c0449e9, c92d9d36, b543d8fd, de48455e, 0c859fb0, a210a53d, eb07d51e, a3789f2f; follow-up 89c90989, 5355535c, 74843c0a, (its log entry) |
 | D6 | split | D6a–D6c |
-| D6a | todo | |
+| D6a | done | 1b084b2e, 910bf9a9, 3be68cb7, c38704fb, 225947ca, 4ed41e45, aa825247, f7849271, c2e8281b, f4b0cfd2, c5dc1e95, 25082ee3, 44666fc1, 0d84e89f, (this log entry) |
 | D6b | todo | |
 | D6c | todo | |
 | D7 | todo | |
@@ -449,6 +449,7 @@ See `PLAN.md` for the session protocol, chunks and gates. Append one log entry p
   | `model/Host/WithinHost/Infection/` (not the uncompiled IPT files, F45) | 4db82617 + b4063a76's hand rename (D4b) | 808c0e48 + b4063a76 (D4b) |
   | `model/Host/WithinHost/WHVivax.{h,cpp}` | f511b389 + 24fec740 (D4c) | e53617ab + d527bbbf (D4c) |
   | `model/Host/WithinHost/`: `Genotypes`, `Diagnostic`, `Treatments` | 85edc7ef (D4d) | e67dbef9 + 760980b6 (D4d) |
+  | `model/Host/WithinHost/Pathogenesis` | c38704fb + 225947ca's hand rename (D6a) | c2e8281b + c5dc1e95 (D6a) |
 
   Rows from D4a on were added in D4d; the D4 entries had recorded the commits only in their logs.
 
@@ -1075,3 +1076,36 @@ The user approved adding the scenario test proposed in D5's follow-ups.
 
 ### Plan amendment: D6 split (2026-10-22, at the start of D6)
 - D6 covers about 30 files of non-mechanical change, past the protocol's ~20: the pathogenesis models (5 files) whose init `WithinHostModel` already runs, the seven clinical model classes with infant and neonatal mortality and their callers (`Simulation`, `checkpoint.cpp`, `Human`, `Deployments.h`, `Monitoring.cpp`), and the decision-tree library that the health system and an intervention share. Split in advance by owner, as D4 was: D6a (pathogenesis into `WithinHostModel`), D6b (the clinical models and neonatal mortality into an object owned by `Simulation`), D6c (the decision-tree library). Rows in PLAN.md § Stage D.
+
+### D6a: pathogenesis statics → `PathogenesisParams` in the within-host model (done, 2026-10-22)
+- Base: 1b084b2e (the D6 split; same C++ as 9bae2646). The G-perf base worktree `../om-bench-base` was moved to 1b084b2e and rebuilt; it is also the A/B base.
+- Commits:
+  - 910bf9a9: **logic.**
+    - `Pathogenesis::PathogenesisParams` (`PathogenesisModel.h`): the `pg_*` file statics, the NMF incidence interpolator, the model choice (`Kind`: pyrogenic, Mueller, predetermined) and the two submodels' parameters as `MuellerParams` and `PyrogenParams`. Its constructor is the old `PathogenesisModel::init`, assigned at the same two points of `WithinHostModel`'s constructor (NMF only for vivax), taking the `ModelOptionFlags` instead of the bridge; every read and error in the old order.
+    - `PathogenesisParams::create` replaces `createPathogenesisModel` (now `unique_ptr`); each pathogenesis model holds a pointer to the params. `sample_nmf` replaces the static `sampleNMF`; `WHVivax` holds a pointer for it. `WHFalciparum`, `CommonWithinHost`, `DescriptiveWithinHostModel` and `WHVivax` take the params from `WithinHostModel::create`. No new bridge.
+    - `update_pyrogen_thres` (the hot loop, ~5% of run time per its comment) reads its four parameters into locals before the loop.
+    - Default construction is the old pre-init state (pyrogenic, zero parameters, NaN `a`/`b`, no NMF incidence), which `InfectionImmunitySuite` passes explicitly; no other unit test reaches pathogenesis. `AgeGroupInterpolator::isSet` became `const`.
+  - 3be68cb7: `util/ab_scenarios.py` group `pathogenesis` (below).
+  - c38704fb + 225947ca: **rename**, 49 by the tool (29 parameter, 4 enum constant, 4 variable, 3 member, 3 method, 3 local constant, 2 header guards, 1 global constant). Maps: `cF=comorbidity_factor` (the tool's `c_f`; it initialises that member), `n=NumCategories`. Collisions reviewed: `comorbidity_factor` and `age_years` already appear as parameters of `PathogenesisParams` methods, a different class. Then a hand commit for the six single-word all-caps `State` enumerators (`NONE` → `None`, …, 23 code sites; as D3), which the tool can't see; `Episode::State`'s enumerators of the same names are Clinical's (D6b). Both listed in `.git-blame-ignore-revs` (4ed41e45).
+  - aa825247: **logic, F58.** The first modernise run's `prefer-member-initializer` fix moved the `YStarSq` and `YStar1` reads of `PyrogenParams` ahead of `YStarHalfLife` and `Alpha`. `Parameters::operator[]` throws for a missing parameter, so that changes which one a bad scenario reports. Reverted; the members are now declared in the old read order and built in the initializer list (`b` and `a` by two file-local helpers with the old expressions).
+  - f7849271: the A/B group's parameter-order variants, which catch the tool's order (plant below).
+  - c2e8281b + f4b0cfd2: **modernise, tool:** 9 `use-override`, 5 `concat-nested-namespaces`, 5 `use-equals-default`, 2 `use-default-member-init`.
+  - c5dc1e95: **modernise, hand:** four consts; `NumCategories` `constexpr` with an explicit cast where it divides 1.0. Left: protected data (read by the submodels), `State` as a plain enum (bit flags reused by `Episode::State`, D6b; checkpointed as an `int` by `WHVivax`, H3), the header guard.
+  - 25082ee3: G-style on changed lines: the params pointer private behind a protected `params()` (as `WHFalciparum`), an explicit `size_t` → `double` cast, `NOLINT(readability-identifier-naming)` on `isSet` (util's own rename).
+  - 44666fc1: FINDINGS F58; PLAN.md D6a row as built; the modernize-module skill's dry-run step names the F58 hazard. 0d84e89f: README's A/B row.
+- Gates:
+  - G-exact / G-unit: 57/57 (strict) on `build-rework/` (Release) and `build-debug/` (Debug) after each C++ commit. ctest reaches the pyrogenic (most scenarios), Mueller (scenario10) and predetermined (scenario9) models, falciparum NMF (VecFullTest, NonHumanHosts) and vivax without NMF, all with checkpoint stop and resume.
+  - G-stat: plain `ctest -j4` at 25082ee3: 110 passed, 4 disabled (the vivax liver-stage scenarios' and PkPdModels' `stat_` tests).
+  - G-style: `util/style.sh check 1b084b2e` clean at 25082ee3. Rename: format half clean, second dry run `nothing to rename`, token check passed, `check c38704fb^` clean. Modernise tool commit: format half clean, second dry run applies nothing, `check c2e8281b^` clean.
+  - G-perf: `util/bench.sh --compare ../om-bench-base/build-rework`, candidate 25082ee3, load ~5.5 at the start: median per-pair ratio 1.0037 (+0.37%), spreads 5.4% / 0.7%. The benchmark runs the pyrogenic model's threshold loop for every human each step. scenario10 (Mueller), `-n 7`: 1.0000, but its runs take 0.05 s, so that says little.
+  - A/B (`util/ab_scenarios.py <base> <candidate>`, base 1b084b2e): `pathogenesis` 8 of 8 identical after the logic commit, 28 of 28 after f7849271; all 112 variants (`falciparum-init`, `pathogenesis`, `pkpd`, `registries`, `vivax`) identical at c5dc1e95, and `pathogenesis` again at 25082ee3. The group covers what ctest can't: vivax with non-malaria fevers (every vivax ctest scenario sets `NON_MALARIA_FEVERS` false; the variant moves output measures 0, 11, 12 and 14 against plain scenarioVivax, so it reaches `sample_nmf`), plain and with `--checkpoint`; the missing `NonMalariaFevers` element for vivax and falciparum, and before a bad `latentp` (error order); the Mueller, predetermined and pyrogenic-with-NMF models with `--checkpoint` (checkpoint bytes compared); each pathogenesis parameter dropped alone, and each consecutive pair in the old read order (18, 21, 24, 30, 28, 25, 13, 14, 26; Mueller 31, 32).
+  - Planted bugs (A/B `pathogenesis`, then reverted): vivax NMF sampled at age 0 → `vivax_nmf` and `vivax_nmf_checkpoint` differ; the tool's `PyrogenParams` read order → `pyrogen_no_params_25_13` and `_14_26` differ.
+- Findings: F58 (the modernise tool's `prefer-member-initializer` can reorder throwing reads). The earlier tool commits that applied the check were reviewed; none moved a throwing read past another.
+- Surprises:
+  - No ctest scenario runs the vivax model with non-malaria fevers, so the vivax side of D6a would have had no gate without the A/B group.
+  - The first commit attempt failed on the pre-commit clang-format hook (line wrapping); the hook's edits were staged and the commit retried, so the history has no formatting-only commits.
+- Follow-ups:
+  - D6b: `Episode::State` copies `Pathogenesis::State` values by name; rename its single-word enumerators by hand too, and consider `enum class` for both together. `ClinicalModel::update` calls `determine_morbidity` and neonatal mortality; F53 for `NeonatalMortality`.
+  - Tool: F58's candidate fix (report, not apply, a `prefer-member-initializer` move of a call that is not the body's first statement).
+  - `util/AgeGroupInterpolation`'s rename removes the `isSet` NOLINT.
+- Next: D6b.
