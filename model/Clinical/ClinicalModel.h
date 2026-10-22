@@ -53,7 +53,11 @@ class InfantMortality;
 class ClinicalModel {
 public:
     /// Destructor
-    virtual ~ClinicalModel();
+    ClinicalModel(const ClinicalModel&) = delete;
+    ClinicalModel& operator=(const ClinicalModel&) = delete;
+    ClinicalModel(ClinicalModel&&) = delete;
+    ClinicalModel& operator=(ClinicalModel&&) = delete;
+    virtual ~ClinicalModel() = default;
 
     /** Returns true if the human has been killed by some means.
      * 
@@ -114,7 +118,6 @@ protected:
 
     /** Last episode; report to survey pending a new episode or human's death. */
     Episode latest_report;
-    Episode::State latest_state;
 
     /** @brief Positive values of _doomed variable (codes). */
     enum {
@@ -143,6 +146,7 @@ protected:
     double get_community_cfr(double case_fatality_ratio) const;
 
 private:
+    Episode::State latest_state;
     const ClinicalParams* clinical_params;
 };
 

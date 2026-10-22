@@ -28,15 +28,10 @@
 #include "util/ModelOptions.h"
 #include "util/random.h"
 
+#include <array>
+
 namespace OM::Clinical {
 using namespace ::OM::util;
-
-// ———  static pararmeters and methods  ———
-
-mon::Measure CM5DayCommon::measures[NumCaseTypes] = {
-    mon::measure("nTreatments1"), // first line official
-    mon::measure("nTreatments2")  // second line official
-};
 
 // ———  per-human, construction and destruction  ———
 
@@ -46,7 +41,7 @@ CM5DayCommon::CM5DayCommon(const ClinicalParams& params, double tsf)
 // ———  per-human, update  ———
 
 void CM5DayCommon::do_clinical_update(Human& human, double age_years, WithinHost::Pathogenesis::StatePair& pg) {
-    Episode::State pg_state = static_cast<Episode::State>(pg.state);
+    const auto pg_state = static_cast<Episode::State>(pg.state);
 
     if (pg_state & Episode::Malaria) {
         if (pg_state & Episode::Complicated) {
@@ -74,23 +69,23 @@ void CM5DayCommon::do_clinical_update(Human& human, double age_years, WithinHost
 void CM5DayCommon::severe_malaria(Human& human, Episode::State pg_state, double age_years, int& doomed) {
     const CM5DayParams& five_day = params().five_day;
     // Probability of getting treatment (only part which is case managment):
-    double p2 = five_day.access_severe * treatment_seeking_factor;
+    const double p2 = five_day.access_severe * treatment_seeking_factor;
     // Probability of getting cured after getting treatment:
-    double p3 = five_day.cure_rate_severe;
+    const double p3 = five_day.cure_rate_severe;
     // p4 is the hospital case-fatality rate from Tanzania
-    double p4 = params().case_fatality_rate.eval(age_years);
+    const double p4 = params().case_fatality_rate.eval(age_years);
     // p5a here is the community threshold case-fatality rate
-    double p5a = get_community_cfr(p4);
+    const double p5a = get_community_cfr(p4);
     // p5b here is the in-hospital treatment-failure case-fatality rate
     // In our code it was originally the community CFR, but in the published model description it should be the hospital CFR
-    double p5b = (five_day.cfr_pf_use_hospital) ? p4 : p5a;
+    const double p5b = (five_day.cfr_pf_use_hospital) ? p4 : p5a;
     // p6 is P(seq) for treated patients
-    double p6 = params().p_sequelae_inpatient.eval(age_years);
+    const double p6 = params().p_sequelae_inpatient.eval(age_years);
     // p7 is P(seq) when parasites aren't cleared
     // note: if p7 were not equal p6, we might have to do something similar to p5b
-    double p7 = p6;
+    const double p7 = p6;
 
-    double q[9];
+    std::array<double, 9> q{};
     // Community deaths
     q[0] = (1 - p2) * p5a;
     // Community sequelae
@@ -124,13 +119,13 @@ void CM5DayCommon::severe_malaria(Human& human, Episode::State pg_state, double 
     const double ex_seq = (p2 * (p3 * (1 - p4) + (1 - p3) * (1 - p5b)) + (1 - p2) * (1 - p5a)) * p6;
     mon::recordStat(mon::measure("expectedSequelae"), human, ex_seq);
 
-    double prandom = human.clinical_rng.uniform_01();
+    const double prandom = human.clinical_rng.uniform_01();
 
     //NOTE: we do not model diagnostics in this case
     if (prandom >= q[2]) { // treated in hospital
         t_last_treatment = Sim::ts0();
         mon::recordEvent(mon::measure("nTreatments3"), human);
-        Episode::State state_treated = Episode::State(pg_state | Episode::EventInHospital);
+        const auto state_treated = Episode::State(pg_state | Episode::EventInHospital);
 
         if (prandom >= q[5]) { // treatment successful at clearing parasites
             // this actually means successful treatment in this case:

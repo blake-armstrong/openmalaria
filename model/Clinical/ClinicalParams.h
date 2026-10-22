@@ -47,12 +47,12 @@ class HSEventScheduler;
 }
 
 namespace OM {
-namespace Clinical {
+namespace Clinical { // NOLINT(readability-identifier-naming)
 
 class ClinicalModel;
 class CMDecisionTree;
 
-enum CaseType { FirstLine, SecondLine, NumCaseTypes };
+enum CaseType : std::uint8_t { FirstLine, SecondLine, NumCaseTypes }; // NOLINT(cppcoreguidelines-use-enum-class)
 
 struct CM5DayParams {
     bool cfr_pf_use_hospital = false;

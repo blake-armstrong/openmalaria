@@ -85,6 +85,10 @@ public:
         : time(Sim::never()), health_system_memory_fix(health_system_memory_fix),
           health_system_memory(health_system_memory) {}
 
+    Episode(const Episode&) = delete;
+    Episode& operator=(const Episode&) = delete;
+    Episode(Episode&&) = delete;
+    Episode& operator=(Episode&&) = delete;
     ~Episode();
 
     /// Report anything pending, as on destruction

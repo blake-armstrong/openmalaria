@@ -83,8 +83,8 @@ void EventSchedulerParams::set_parameters(const scnXml::HSEventScheduler& es_dat
 
     cum_daily_pr_imm_ucts.reserve(co_data.getDailyPrImmUCTS().size());
     double cum_p = 0.0;
-    for (double it : co_data.getDailyPrImmUCTS()) {
-        cum_p += it;
+    for (const double daily_pr : co_data.getDailyPrImmUCTS()) {
+        cum_p += daily_pr;
         cum_daily_pr_imm_ucts.push_back(cum_p);
     }
     if (cum_p < 0.999 || cum_p > 1.001) {
@@ -100,7 +100,7 @@ void EventSchedulerParams::set_parameters(const scnXml::HSEventScheduler& es_dat
         }
         const scnXml::HSESNMF& nmf_desc = es_data.getNonMalariaFevers().get();
 
-        double p_t = nmf_desc.getPrTreatment();
+        const double p_t = nmf_desc.getPrTreatment();
         log_odds_ab_base = log(p_t / (1.0 - p_t));
         log_odds_ab_neg_test = log(nmf_desc.getEffectNegativeTest());
         log_odds_ab_pos_test = log(nmf_desc.getEffectPositiveTest());
@@ -134,7 +134,7 @@ void ClinicalEventScheduler::do_clinical_update(Human& human, double age_years,
                                                 WithinHost::Pathogenesis::StatePair& pg) {
     const EventSchedulerParams& es = params().event_scheduler;
     WHInterface& within_host_model = *human.withinHostModel;
-    Episode::State new_state = static_cast<Episode::State>(pg.state);
+    const auto new_state = static_cast<Episode::State>(pg.state);
     util::streamValidate((new_state << 16) & pg_state);
 
     if (Sim::ts0() == time_of_recovery) {
@@ -192,17 +192,15 @@ void ClinicalEventScheduler::do_clinical_update(Human& human, double age_years,
                     pg_state = Episode::State(pg_state | new_state | Episode::RunCmTree);
                     indirect_mortality = pg.indirect_mortality;
 
-                    double u_variate = human.clinical_rng.uniform_01();
+                    const double u_variate = human.clinical_rng.uniform_01();
                     size_t i = 0; // units: days
                     for (; i < es.cum_daily_pr_imm_ucts.size(); ++i) {
-                        if (u_variate < es.cum_daily_pr_imm_ucts[i]) {
-                            goto gotDelay;
-                        }
+                        if (u_variate < es.cum_daily_pr_imm_ucts[i])
+                            break;
                     }
-                    assert(false); // should have uVariate < 1 = cumDailyPrImmUCTS[len-1]
-                gotDelay:
+                    assert(i < es.cum_daily_pr_imm_ucts.size()); // should have uVariate < 1 = cumDailyPrImmUCTS[len-1]
                     // set start time: current time plus length of delay (days)
-                    case_start_time = Sim::ts0() + Sim::from_days(i);
+                    case_start_time = Sim::ts0() + Sim::from_days(static_cast<int>(i));
                 }
             }
         }
@@ -220,7 +218,8 @@ void ClinicalEventScheduler::do_clinical_update(Human& human, double age_years,
             pg_state = Episode::State(pg_state | Episode::SecondCase);
         }
 
-        CMDTOut aux_out = ESCaseManagement::execute(es, CMHostData(human, human.clinical_rng, age_years, pg_state));
+        const CMDTOut aux_out =
+            ESCaseManagement::execute(es, CMHostData(human, human.clinical_rng, age_years, pg_state));
 
         if (aux_out.treated) { // I.E. some treatment was given
             time_last_treatment = Sim::ts0();
@@ -270,13 +269,13 @@ void ClinicalEventScheduler::do_clinical_update(Human& human, double age_years,
 
                 /** Given a non-malaria fever, return the probability of it requiring
                  * treatment. */
-                bool is_malarial = pg_state & Episode::Malaria;
-                double p_need_treat =
+                const bool is_malarial = pg_state & Episode::Malaria;
+                const double p_need_treat =
                     is_malarial ? es.mf_need_antibiotic.eval(age_years) : es.nmf_need_antibiotic.eval(age_years);
-                bool need_treat = human.clinical_rng.bernoulli(p_need_treat);
+                const bool need_treat = human.clinical_rng.bernoulli(p_need_treat);
 
                 // Calculate chance of antibiotic administration:
-                double p_treatment = 0.0;
+                const double p_treatment = 0.0;
                 /*FIXME
                 if( auxOut.AB_provider != CMAuxOutput::NO_AB ){
                     // Treatment seeking; may be at a health facility or from
@@ -300,7 +299,7 @@ void ClinicalEventScheduler::do_clinical_update(Human& human, double age_years,
                     pTreatment = oddsTreatment / (1.0 + oddsTreatment);
                 }*/
 
-                double treatment_effect_mult = 1.0;
+                const double treatment_effect_mult = 1.0;
 
                 if (human.clinical_rng.uniform_01() < p_treatment) {
                     /*FIXME: impossible due to above; NMF output removed
@@ -312,7 +311,7 @@ void ClinicalEventScheduler::do_clinical_update(Human& human, double age_years,
                 // In a severe NMF case (only when not malarial), there is a
                 // chance of death:
                 if (need_treat) {
-                    double p_death = es.severe_nmf_mortality.eval(age_years) * treatment_effect_mult;
+                    const double p_death = es.severe_nmf_mortality.eval(age_years) * treatment_effect_mult;
                     if (human.clinical_rng.uniform_01() < p_death) {
                         pg_state = Episode::State(pg_state | Episode::DirectDeath);
                     }
@@ -332,7 +331,7 @@ void ClinicalEventScheduler::do_clinical_update(Human& human, double age_years,
             // TODO: this model should be revisited, and if possible placed
             // within the WHFalciparum class (or a subclass).
             if (within_host_model.get_total_density() > 0.0) { // avoid division by zero
-                double parasite_reduction_effect = within_host_model.get_total_density() / previous_density;
+                const double parasite_reduction_effect = within_host_model.get_total_density() / previous_density;
                 double p_death = 1.0 - exp(es.neg_v * parasite_reduction_effect);
                 // community fatality rate when not in hospital
                 if (!(pg_state & Episode::EventInHospital))

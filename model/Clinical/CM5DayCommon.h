@@ -29,6 +29,8 @@
 #include "Host/WithinHost/WHInterface.h"
 #include "mon/Monitoring.h"
 
+#include <array>
+
 namespace OM::Clinical {
 using Host::Human;
 
@@ -49,7 +51,10 @@ public:
     }
 
 protected:
-    static mon::Measure measures[NumCaseTypes];
+    static constexpr std::array<mon::Measure, NumCaseTypes> TreatmentMeasures = {
+        mon::measure("nTreatments1"), // first line official
+        mon::measure("nTreatments2")  // second line official
+    };
 
     void do_clinical_update(Human& human, double age_years, WithinHost::Pathogenesis::StatePair& pg) override;
 

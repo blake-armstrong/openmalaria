@@ -35,6 +35,8 @@
 #include "util/UnitParse.h"
 #include "schema/scenario.h"
 
+#include <memory>
+
 namespace OM::Clinical {
 
 // -----  simulation-wide parameters  -----
@@ -100,26 +102,23 @@ void ClinicalParams::set_health_system(const scnXml::HealthSystem& health_system
 
 unique_ptr<ClinicalModel> ClinicalParams::create(double treatment_seeking_factor) const {
     if (kind == Kind::EventScheduler) {
-        return unique_ptr<ClinicalModel>(new ClinicalEventScheduler(*this, treatment_seeking_factor));
+        return std::make_unique<ClinicalEventScheduler>(*this, treatment_seeking_factor);
     } else if (kind == Kind::ImmediateOutcomes) {
-        return unique_ptr<ClinicalModel>(new ImmediateOutcomes(*this, treatment_seeking_factor));
+        return std::make_unique<ImmediateOutcomes>(*this, treatment_seeking_factor);
     } else {
-        return unique_ptr<ClinicalModel>(new DecisionTree5Day(*this, treatment_seeking_factor));
+        return std::make_unique<DecisionTree5Day>(*this, treatment_seeking_factor);
     }
 }
 
 double ClinicalModel::get_community_cfr(double case_fatality_ratio) const {
-    double x = case_fatality_ratio * params().odds_ratio_threshold;
+    const double x = case_fatality_ratio * params().odds_ratio_threshold;
     return x / (1 - case_fatality_ratio + x);
 }
 
 // -----  non-static construction, destruction and checkpointing  -----
 
-ClinicalModel::ClinicalModel(const ClinicalParams& params)
+ClinicalModel::ClinicalModel(const ClinicalParams& params) // NOLINT(cppcoreguidelines-pro-type-member-init): F60
     : latest_report(params.health_system_memory, params.health_system_memory_fix), clinical_params(&params) {}
-ClinicalModel::~ClinicalModel() {
-    // latestReport is reported, if any, by destructor
-}
 
 // -----  other non-static methods  -----
 
@@ -159,11 +158,11 @@ void ClinicalModel::update(Human& human, double age_years, bool new_born,
 void ClinicalModel::update_infant_deaths(SimTime age, InfantMortality& infant_mortality) {
     // update array for the infant death rates
     if (age < Sim::one_year()) {
-        size_t index = age / Sim::one_ts();
+        const size_t index = age / Sim::one_ts();
 
         // Testing doomed == DOOMED_NEXT_TS gives very slightly different results than
         // testing doomed == DOOMED_INDIRECT (due to above if(..))
-        bool is_doomed = doomed == DoomedComplicated || doomed == DoomedNextTs || doomed == DoomedNeonatal;
+        const bool is_doomed = doomed == DoomedComplicated || doomed == DoomedNextTs || doomed == DoomedNeonatal;
         infant_mortality.report_risk(index, is_doomed);
     }
 }
@@ -207,8 +206,8 @@ double InfantMortality::all_cause() const {
     double infant_prop_surviving = 1.0; // use to calculate proportion surviving
     for (size_t i = 0; i < Sim::steps_per_year(); i += 1) {
         // multiply by proportion of infants surviving at each interval
-        infant_prop_surviving *=
-            double(infant_intervals_at_risk[i] - infant_deaths[i]) / double(infant_intervals_at_risk[i]);
+        infant_prop_surviving *= static_cast<double>(infant_intervals_at_risk[i] - infant_deaths[i]) /
+                                 static_cast<double>(infant_intervals_at_risk[i]);
     }
     // Child deaths due to malaria (per 1000), plus non-malaria child deaths. Deaths per 1000 births is the return unit.
     return (1.0 - infant_prop_surviving) * 1000.0 + non_malaria_mortality;

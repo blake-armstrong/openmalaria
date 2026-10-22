@@ -34,12 +34,8 @@ void Episode::flush() {
 }
 
 void Episode::update(const Host::Human& human, Episode::State new_state) {
-    bool to_report = false;
-
-    if (health_system_memory_fix && (time + health_system_memory <= Sim::ts0()))
-        to_report = true;
-    else if (!health_system_memory_fix && (time + health_system_memory < Sim::ts0()))
-        to_report = true;
+    const bool to_report =
+        health_system_memory_fix ? time + health_system_memory <= Sim::ts0() : time + health_system_memory < Sim::ts0();
 
     if (to_report) {
         infection_type = human.withinHostModel->infection_origin();

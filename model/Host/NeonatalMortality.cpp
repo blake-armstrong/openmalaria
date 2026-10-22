@@ -46,13 +46,10 @@ const double PBirthPrim = 0.3;
 const double Y = PBirthPrim * GEst;
 const double Z = -1.0 / CritPrev2025;
 
-/// Lower and upper bounds for potential mothers (as in model description)
-SimTime age_lb = Sim::from_years_i(20), age_ub = Sim::from_years_i(25);
-
 NeonatalMortality::NeonatalMortality(const scnXml::Clinical& clinical,
                                      const WithinHost::DiagnosticRegistry& diagnostics,
                                      const util::CommandLineOptions& command_line) {
-    SimTime five_months = Sim::from_days(5 * 30);
+    const SimTime five_months = Sim::from_days(5 * 30);
     prev_by_gestational_age.assign(Sim::in_steps(five_months), 0.0);
 
     if (clinical.getNeonatalMortality().present()) {
@@ -87,11 +84,14 @@ void NeonatalMortality::update(vector<Host::Human>& population) {
     // For individuals in the age range 20-25, we sum:
     int n_counter = 0; // total number
     int p_counter = 0; // number with patent infections, needed for prev in 20-25y
+    // Lower and upper bounds for potential mothers (as in model description)
+    const SimTime age_lb = Sim::from_years_i(20);
+    const SimTime age_ub = Sim::from_years_i(25);
 
     for (Human& human : population) {
         // diagnosticDefault() gives patency after the last time step's
         // update, so it's appropriate to use age at the beginning of this step.
-        SimTime age = human.age(Sim::ts0());
+        const SimTime age = human.age(Sim::ts0());
 
         // Note: since we're using a linked list, we have to iterate until we reach
         // the individuals we're interested in. Due to population structure, it's
@@ -111,20 +111,20 @@ void NeonatalMortality::update(vector<Host::Human>& population) {
     //default value for prev2025, for use when there are no 20-25 year olds
     double prev2025 = 0.25;
     if (n_counter > 0)
-        prev2025 = double(p_counter) / n_counter;
+        prev2025 = static_cast<double>(p_counter) / n_counter;
 
     double max_prev = prev2025;
     //update the vector containing the prevalence by gestational age
-    size_t index = Sim::modulo_steps(Sim::ts0(), prev_by_gestational_age.size());
+    const size_t index = Sim::modulo_steps(Sim::ts0(), static_cast<int>(prev_by_gestational_age.size()));
     prev_by_gestational_age[index] = prev2025;
-    for (double i : prev_by_gestational_age) {
-        if (i > max_prev) {
-            max_prev = i;
+    for (const double prev : prev_by_gestational_age) {
+        if (prev > max_prev) {
+            max_prev = prev;
         }
     }
 
     // equation (2) p 75 AJTMH 75 suppl 2
-    double prev_pg = max_prev / (CritPrevPrim + max_prev);
+    const double prev_pg = max_prev / (CritPrevPrim + max_prev);
     // equation (1) p 75 AJTMH 75 suppl 2 including 30% multiplier
     risk_from_maternal_infection = Y * (1.0 - exp(prev_pg * Z));
 }

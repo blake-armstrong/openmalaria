@@ -96,8 +96,8 @@ void ClinicalParams::set_immediate_outcomes(const scnXml::HSImmediateOutcomes& h
 
     // ———  calculate probability of getting treatment  ———
 
-    double access_uc_official1 = hs_description.getPSeekOfficialCareUncomplicated1().getValue();
-    double access_uc_official2 = hs_description.getPSeekOfficialCareUncomplicated2().getValue();
+    const double access_uc_official1 = hs_description.getPSeekOfficialCareUncomplicated1().getValue();
+    const double access_uc_official2 = hs_description.getPSeekOfficialCareUncomplicated2().getValue();
     // Note: this asymmetry is historical, and probably matters little:
     five_day.access_uc_self_treat[FirstLine] = hs_description.getPSelfTreatUncomplicated().getValue();
     five_day.access_uc_self_treat[SecondLine] = 0.0;
@@ -189,7 +189,7 @@ void ImmediateOutcomes::uncomplicated_event(Human& human, Episode::State pg_stat
 
     latest_report.update(human, Episode::State(pg_state));
 
-    double x = human.clinical_rng.uniform_01();
+    const double x = human.clinical_rng.uniform_01();
     if (x < params().five_day.access_uc_any[regimen] * treatment_seeking_factor) {
         // UC1: official care OR self treatment
         // UC2: official care only
@@ -202,11 +202,11 @@ void ImmediateOutcomes::uncomplicated_event(Human& human, Episode::State pg_stat
         }
 
         t_last_treatment = Sim::ts0();
-        mon::recordEvent(measures[regimen], human);
+        mon::recordEvent(TreatmentMeasures[regimen], human);
 
-        double p = (x < params().five_day.access_uc_self_treat[regimen] * treatment_seeking_factor)
-                       ? io.cure_rate_uc_self_treat[regimen]
-                       : io.cure_rate_uc_official[regimen];
+        const double p = (x < params().five_day.access_uc_self_treat[regimen] * treatment_seeking_factor)
+                             ? io.cure_rate_uc_self_treat[regimen]
+                             : io.cure_rate_uc_official[regimen];
         if (human.clinical_rng.bernoulli(p)) {
             // Could report Episode::Recovery to latestReport,
             // but we don't report out-of-hospital recoveries anyway.
