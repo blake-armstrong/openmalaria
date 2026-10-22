@@ -187,7 +187,7 @@ void ClinicalEventScheduler::doClinicalUpdate(Human& human, double ageYears, Wit
     // The bug fixed here is that indirectMortality was not set if no event occurred
     bool indirectMortality = false;
     if (indirectMortBugfix)
-        indirectMortality = pg.indirectMortality;
+        indirectMortality = pg.indirect_mortality;
 
     if (newState & Episode::SICK) {
         // we have some new case: is it severe/complicated?
@@ -197,7 +197,7 @@ void ClinicalEventScheduler::doClinicalUpdate(Human& human, double ageYears, Wit
             } else {
                 // previously healthy or UC: progress to severe
                 pgState = Episode::State(pgState | newState | Episode::RUN_CM_TREE);
-                indirectMortality = pg.indirectMortality;
+                indirectMortality = pg.indirect_mortality;
                 caseStartTime = Sim::ts0();
             }
         } else {
@@ -208,7 +208,7 @@ void ClinicalEventScheduler::doClinicalUpdate(Human& human, double ageYears, Wit
                 if (caseStartTime < Sim::ts0()) {
                     // new UC case
                     pgState = Episode::State(pgState | newState | Episode::RUN_CM_TREE);
-                    indirectMortality = pg.indirectMortality;
+                    indirectMortality = pg.indirect_mortality;
 
                     double u_variate = human.clinical_rng.uniform_01();
                     size_t i = 0; // units: days

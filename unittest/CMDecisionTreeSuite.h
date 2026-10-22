@@ -133,11 +133,11 @@ public:
         dt.setCaseType(ct);
 
         using Underlying = std::underlying_type_t<Pathogenesis::State>;
-        hd->pgState = static_cast<Episode::State>(static_cast<Underlying>(Pathogenesis::STATE_MALARIA));
+        hd->pgState = static_cast<Episode::State>(static_cast<Underlying>(Pathogenesis::StateMalaria));
         TS_ASSERT_EQUALS(propTreatmentsNReps(1, dt), 1);
 
         hd->pgState =
-            static_cast<Episode::State>(static_cast<Underlying>(Pathogenesis::STATE_MALARIA) | Episode::SECOND_CASE);
+            static_cast<Episode::State>(static_cast<Underlying>(Pathogenesis::StateMalaria) | Episode::SECOND_CASE);
 
         TS_ASSERT_EQUALS(propTreatmentsNReps(1, dt), 0);
     }
@@ -161,7 +161,7 @@ public:
         scnXml::DecisionTree dt_rdt;
         dt_rdt.setDiagnostic(rdt);
 
-        hd->pgState = static_cast<Episode::State>(Pathogenesis::STATE_MALARIA);
+        hd->pgState = static_cast<Episode::State>(Pathogenesis::StateMalaria);
         const int N = 20000;
         const double LIM = .02;
 

@@ -447,9 +447,9 @@ void WHVivax::update(Host::Human& human, LocalRng& rng, int& n_new_infs_i, int& 
             if (clinical_event) {
                 p_severe = p_severe + (1.0 - p_severe) * params->p_event_is_severe;
                 if (rng.bernoulli(params->p_event_is_severe))
-                    morbidity = static_cast<Pathogenesis::State>(morbidity | Pathogenesis::STATE_SEVERE);
+                    morbidity = static_cast<Pathogenesis::State>(morbidity | Pathogenesis::StateSevere);
                 else
-                    morbidity = static_cast<Pathogenesis::State>(morbidity | Pathogenesis::STATE_MALARIA);
+                    morbidity = static_cast<Pathogenesis::State>(morbidity | Pathogenesis::StateMalaria);
             }
         }
 

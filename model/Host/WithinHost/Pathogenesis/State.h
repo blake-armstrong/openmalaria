@@ -46,17 +46,17 @@ enum State {
     COMPLICATED = 0x20, ///< Flag used to indicate SEVERE and/or COINFECTION
 
     // Flags for outcome reporting:
-    STATE_NMF = SICK, ///< Alias: SICK
+    StateNmf = SICK, ///< Alias: SICK
     //STATE_NMF_NEED_AB    = SICK | NEED_ANTIBIOTIC,       ///< Combination: SICK, NEED_ANTIBIOTIC
-    STATE_MALARIA = SICK | MALARIA,                      ///< Combination: SICK, MALARIA
-    STATE_SEVERE = STATE_MALARIA | COMPLICATED | SEVERE, ///< Combination: SICK, MALARIA, COMPLICATED, SEVERE
-    STATE_COINFECTION =
-        STATE_MALARIA | COMPLICATED | COINFECTION, ///< Combination: SICK, MALARIA, COMPLICATED, COINFECTION
+    StateMalaria = SICK | MALARIA,                     ///< Combination: SICK, MALARIA
+    StateSevere = StateMalaria | COMPLICATED | SEVERE, ///< Combination: SICK, MALARIA, COMPLICATED, SEVERE
+    StateCoinfection =
+        StateMalaria | COMPLICATED | COINFECTION, ///< Combination: SICK, MALARIA, COMPLICATED, COINFECTION
 };
 struct StatePair {
-    StatePair() : state(NONE), indirectMortality(false) {}
+    StatePair() : state(NONE), indirect_mortality(false) {}
     State state;
-    bool indirectMortality; // implies death a little later on which may not be seen as a malaria death
+    bool indirect_mortality; // implies death a little later on which may not be seen as a malaria death
 };
 
 }

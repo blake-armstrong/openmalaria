@@ -20,8 +20,8 @@
  * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301, USA.
  */
 
-#ifndef Hmod_PathogenesisModel
-#define Hmod_PathogenesisModel
+#ifndef HMOD_PATHOGENESIS_MODEL
+#define HMOD_PATHOGENESIS_MODEL
 
 #include "Global.h"
 #include "Parameters.h"
@@ -111,8 +111,8 @@ public:
      *
      * May introduce severe or uncomplicated cases of malaria, as well as non-
      * malaria fevers. */
-    StatePair determineState(Host::Human& human, double ageYears, double timeStepMaxDensity, double endDensity,
-                             bool isDoomed);
+    StatePair determine_state(Host::Human& human, double age_years, double time_step_max_density, double end_density,
+                              bool is_doomed);
 
     /** Summarize PathogenesisModel details
      *
@@ -125,18 +125,18 @@ public:
 
 protected:
     /** Create a PathogenesisModel. */
-    PathogenesisModel(const PathogenesisParams& params, double cF);
+    PathogenesisModel(const PathogenesisParams& params, double comorbidity_factor);
 
     virtual void checkpoint(istream& stream);
     virtual void checkpoint(ostream& stream);
 
 protected:
-    virtual double getPEpisode(double timeStepMaxDensity, double totalDensity) = 0;
+    virtual double get_p_episode(double time_step_max_density, double total_density) = 0;
 
     const PathogenesisParams* params;
 
     //! comorbidity factor for heterogeneity
-    double _comorbidityFactor;
+    double comorbidity_factor;
 };
 
 }

@@ -205,7 +205,7 @@ bool WHFalciparum::treat_simple(Host::Human& human, SimTime time_liver, SimTime 
 
 Pathogenesis::StatePair WHFalciparum::determine_morbidity(Host::Human& human, double age_years, bool is_doomed) {
     Pathogenesis::StatePair result =
-        pathogenesis_model->determineState(human, age_years, time_step_max_density, total_density, is_doomed);
+        pathogenesis_model->determine_state(human, age_years, time_step_max_density, total_density, is_doomed);
 
     /* Note: this model can easily be re-enabled, but is not used and not considered to be a good model.
     if( (result.state & Pathogenesis::MALARIA) && util::ModelOptions::option( util::PENALISATION_EPISODES ) ){

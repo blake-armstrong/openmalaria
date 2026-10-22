@@ -61,7 +61,7 @@ void CM5DayCommon::doClinicalUpdate(Human& human, double ageYears, WithinHost::P
     if (pgState & Episode::MALARIA) {
         if (pgState & Episode::COMPLICATED) {
             severeMalaria(human, pgState, ageYears, doomed);
-        } else if (indirectMortBugfix || !pg.indirectMortality) {
+        } else if (indirectMortBugfix || !pg.indirect_mortality) {
             // NOTE: the "not indirect mortality" bit is a historical accident.
             // Validity is debatable, but there's no point changing now.
             // (This does affect tests.)
@@ -71,7 +71,7 @@ void CM5DayCommon::doClinicalUpdate(Human& human, double ageYears, WithinHost::P
         uncomplicatedEvent(human, pgState);
     }
 
-    if (pg.indirectMortality && doomed == NOT_DOOMED)
+    if (pg.indirect_mortality && doomed == NOT_DOOMED)
         doomed = -Sim::one_ts();
 
     if (m_tLastTreatment == Sim::ts0())

@@ -20,8 +20,8 @@
  * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301, USA.
  */
 
-#ifndef Hmod_WH_Path_Submodels
-#define Hmod_WH_Path_Submodels
+#ifndef HMOD_WH_PATH_SUBMODELS
+#define HMOD_WH_PATH_SUBMODELS
 
 #include "Global.h"
 #include "Host/WithinHost/Pathogenesis/PathogenesisModel.h"
@@ -35,25 +35,26 @@ namespace Pathogenesis {
 /// Müller presentation model.
 class MuellerPathogenesis : public PathogenesisModel {
 public:
-    MuellerPathogenesis(const PathogenesisParams& params, double cF) : PathogenesisModel(params, cF) {}
+    MuellerPathogenesis(const PathogenesisParams& params, double comorbidity_factor)
+        : PathogenesisModel(params, comorbidity_factor) {}
     ~MuellerPathogenesis() {}
 
-    virtual double getPEpisode(double timeStepMaxDensity, double totalDensity);
+    virtual double get_p_episode(double time_step_max_density, double total_density);
 };
 
 /// Pyrogenic threshold presentation model.
 class PyrogenPathogenesis : public PathogenesisModel {
 protected:
     /// Critical density for fever (clinical episodes)
-    double _pyrogenThres;
+    double pyrogen_thres;
     /// Determine the current pyrogenic threshold.
-    virtual void updatePyrogenThres(double totalDensity);
+    virtual void update_pyrogen_thres(double total_density);
 
 public:
-    PyrogenPathogenesis(const PathogenesisParams& params, double cF);
+    PyrogenPathogenesis(const PathogenesisParams& params, double comorbidity_factor);
     virtual ~PyrogenPathogenesis() {}
     virtual void summarize(const Host::Human& human);
-    virtual double getPEpisode(double timeStepMaxDensity, double totalDensity);
+    virtual double get_p_episode(double time_step_max_density, double total_density);
 
 protected:
     virtual void checkpoint(istream& stream);
@@ -63,10 +64,11 @@ protected:
 /// Predetermined episodes presentation model.
 class PredetPathogenesis : public PyrogenPathogenesis {
 public:
-    PredetPathogenesis(const PathogenesisParams& params, double cF) : PyrogenPathogenesis(params, cF) {}
+    PredetPathogenesis(const PathogenesisParams& params, double comorbidity_factor)
+        : PyrogenPathogenesis(params, comorbidity_factor) {}
     ~PredetPathogenesis() {}
 
-    virtual double getPEpisode(double timeStepMaxDensity, double totalDensity);
+    virtual double get_p_episode(double time_step_max_density, double total_density);
 };
 
 }

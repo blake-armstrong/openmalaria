@@ -86,60 +86,61 @@ Pathogenesis::State PathogenesisParams::sample_nmf(LocalRng& rng, double age_yea
     if (nmf_incidence.isSet()) {
         double p_nmf = nmf_incidence.eval(age_years);
         if (rng.bernoulli(p_nmf))
-            return Pathogenesis::STATE_NMF;
+            return Pathogenesis::StateNmf;
     }
     return Pathogenesis::NONE;
 }
 
-PathogenesisModel::PathogenesisModel(const PathogenesisParams& params, double cF)
-    : params(&params), _comorbidityFactor(cF) {}
+PathogenesisModel::PathogenesisModel(const PathogenesisParams& params, double comorbidity_factor)
+    : params(&params), comorbidity_factor(comorbidity_factor) {}
 
-Pathogenesis::StatePair PathogenesisModel::determineState(Host::Human& human, double ageYears,
-                                                          double timeStepMaxDensity, double endDensity, bool isDoomed) {
-    double pMalariaFever = getPEpisode(timeStepMaxDensity, endDensity);
+Pathogenesis::StatePair PathogenesisModel::determine_state(Host::Human& human, double age_years,
+                                                           double time_step_max_density, double end_density,
+                                                           bool is_doomed) {
+    double p_malaria_fever = get_p_episode(time_step_max_density, end_density);
     StatePair result;
     //TODO(performance): would using a single RNG sample and manipulating probabilities be faster?
     //Decide whether a clinical episode occurs and if so, which type
-    if (human.host_rng.bernoulli(pMalariaFever)) {
-        const double prSevereEpisode = timeStepMaxDensity / (timeStepMaxDensity + params->severe_mal_threshold);
-        const double comorb_factor = _comorbidityFactor / (1.0 + ageYears * params->inv_crit_age_comorb);
-        const double pCoinfection = params->comorb_intercept * comorb_factor;
+    if (human.host_rng.bernoulli(p_malaria_fever)) {
+        const double pr_severe_episode = time_step_max_density / (time_step_max_density + params->severe_mal_threshold);
+        const double comorb_factor = comorbidity_factor / (1.0 + age_years * params->inv_crit_age_comorb);
+        const double p_coinfection = params->comorb_intercept * comorb_factor;
 
         // Expectation of a severe bout:
-        const double exSevere = prSevereEpisode + (1.0 - prSevereEpisode) * pCoinfection;
-        mon::recordStat(mon::measure("expectedSevere"), human, exSevere);
-        mon::recordStat(mon::measure("expectedSevereWithoutComorbidities"), human, prSevereEpisode);
+        const double ex_severe = pr_severe_episode + (1.0 - pr_severe_episode) * p_coinfection;
+        mon::recordStat(mon::measure("expectedSevere"), human, ex_severe);
+        mon::recordStat(mon::measure("expectedSevereWithoutComorbidities"), human, pr_severe_episode);
 
-        if (human.host_rng.bernoulli(prSevereEpisode))
-            result.state = STATE_SEVERE;
+        if (human.host_rng.bernoulli(pr_severe_episode))
+            result.state = StateSevere;
         else {
-            if (human.host_rng.bernoulli(pCoinfection))
-                result.state = STATE_COINFECTION;
+            if (human.host_rng.bernoulli(p_coinfection))
+                result.state = StateCoinfection;
             else
-                result.state = STATE_MALARIA;
+                result.state = StateMalaria;
         }
 
         // Indirect mortality:
         // IndirectRisk is the probability of dying from the indirect effects
         // of malaria conditional on not having an acute attack of malaria
-        double indirectRisk = params->indir_risk_co_factor * comorb_factor;
-        if (!isDoomed) {
-            mon::recordStat(mon::measure("expectedIndirectDeaths"), human, indirectRisk);
+        double indirect_risk = params->indir_risk_co_factor * comorb_factor;
+        if (!is_doomed) {
+            mon::recordStat(mon::measure("expectedIndirectDeaths"), human, indirect_risk);
         }
         //NOTE: we could only evaluate indirectMortality if not already doomed,
         // except that (a) it affects random numbers, and (b) it affects
         // evaluation of uncomplicated cases with the 5-day HS when
         // indirectMortBugfix is not enabled.
-        if (human.host_rng.bernoulli(indirectRisk))
-            result.indirectMortality = true;
+        if (human.host_rng.bernoulli(indirect_risk))
+            result.indirect_mortality = true;
     } else {
-        result.state = params->sample_nmf(human.host_rng, ageYears);
+        result.state = params->sample_nmf(human.host_rng, age_years);
     }
     return result;
 }
 
-void PathogenesisModel::checkpoint(istream& stream) { _comorbidityFactor & stream; }
-void PathogenesisModel::checkpoint(ostream& stream) { _comorbidityFactor & stream; }
+void PathogenesisModel::checkpoint(istream& stream) { comorbidity_factor & stream; }
+void PathogenesisModel::checkpoint(ostream& stream) { comorbidity_factor & stream; }
 
 }
 }
