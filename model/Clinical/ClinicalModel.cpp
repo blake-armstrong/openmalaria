@@ -22,6 +22,8 @@
 
 #include "Clinical/ClinicalModel.h"
 
+#include <algorithm>
+
 #include "Clinical/EventScheduler.h"
 #include "Clinical/ImmediateOutcomes.h"
 #include "Clinical/DecisionTree5Day.h"
@@ -33,8 +35,7 @@
 #include "util/UnitParse.h"
 #include "schema/scenario.h"
 
-namespace OM {
-namespace Clinical {
+namespace OM::Clinical {
 
 // -----  simulation-wide parameters  -----
 
@@ -115,8 +116,7 @@ double ClinicalModel::get_community_cfr(double case_fatality_ratio) const {
 // -----  non-static construction, destruction and checkpointing  -----
 
 ClinicalModel::ClinicalModel(const ClinicalParams& params)
-    : latest_report(params.health_system_memory, params.health_system_memory_fix), doomed(NotDoomed),
-      clinical_params(&params) {}
+    : latest_report(params.health_system_memory, params.health_system_memory_fix), clinical_params(&params) {}
 ClinicalModel::~ClinicalModel() {
     // latestReport is reported, if any, by destructor
 }
@@ -184,8 +184,8 @@ InfantMortality::InfantMortality(double non_malaria_mortality)
       non_malaria_mortality(non_malaria_mortality) {}
 
 void InfantMortality::pre_main_sim_init() {
-    std::fill(infant_deaths.begin(), infant_deaths.end(), 0);
-    std::fill(infant_intervals_at_risk.begin(), infant_intervals_at_risk.end(), 0);
+    std::ranges::fill(infant_deaths, 0);
+    std::ranges::fill(infant_intervals_at_risk, 0);
 }
 
 void InfantMortality::checkpoint(istream& stream) {
@@ -214,5 +214,4 @@ double InfantMortality::all_cause() const {
     return (1.0 - infant_prop_surviving) * 1000.0 + non_malaria_mortality;
 }
 
-}
 }

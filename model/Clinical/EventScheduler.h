@@ -29,8 +29,7 @@
 
 #include <list>
 
-namespace OM {
-namespace Clinical {
+namespace OM::Clinical {
 
 /** Tracks clinical status (sickness), triggers case management for new events,
  * medicates treatment, determines patient recovery, death and sequelae.
@@ -43,20 +42,20 @@ class ClinicalEventScheduler : public ClinicalModel {
 public:
     ClinicalEventScheduler(const ClinicalParams& params, double tsf);
 
-    virtual bool is_existing_case();
+    bool is_existing_case() override;
 
 protected:
-    virtual void do_clinical_update(Human& human, double age_years, WithinHost::Pathogenesis::StatePair& pg);
+    void do_clinical_update(Human& human, double age_years, WithinHost::Pathogenesis::StatePair& pg) override;
 
-    virtual void checkpoint(istream& stream);
-    virtual void checkpoint(ostream& stream);
+    void checkpoint(istream& stream) override;
+    void checkpoint(ostream& stream) override;
 
 private:
     // Note on memory usage: Pathogenesis::State is and enum (an int), so we
     // have a vtable followed by 3 ints, a double and a list. Alignment probably
     // wastes some space.
     /// Current state of sickness
-    Episode::State pg_state;
+    Episode::State pg_state{Episode::None};
 
     /** Set to when a bout should start. If sim::ts0() equals this, a bout
      * is started (UC & severe behaviour different).
@@ -76,5 +75,5 @@ private:
 };
 
 }
-}
+
 #endif

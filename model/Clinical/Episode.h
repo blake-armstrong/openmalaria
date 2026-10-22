@@ -82,8 +82,8 @@ public:
     };
 
     Episode(SimTime health_system_memory, bool health_system_memory_fix)
-        : time(Sim::never()), survey_period(mon::NOT_USED), age_group(0), cohort_set(0), state(None),
-          health_system_memory_fix(health_system_memory_fix), health_system_memory(health_system_memory) {}
+        : time(Sim::never()), health_system_memory_fix(health_system_memory_fix),
+          health_system_memory(health_system_memory) {}
 
     ~Episode();
 
@@ -104,14 +104,14 @@ public:
     /// Time of event, potentially never
     SimTime time = Sim::never();
     /// Survey during which the event occured
-    size_t survey_period;
+    size_t survey_period{mon::NOT_USED};
     /// Age group of the individual when the episode's first bout occurred
-    size_t age_group;
+    size_t age_group{0};
     /// Cohort membership
-    uint32_t cohort_set;
+    uint32_t cohort_set{0};
     /// Descriptor of state, containing reporting info. Not all information will
     /// be reported (e.g. indirect deaths are reported independantly).
-    Episode::State state;
+    Episode::State state{None};
 
     WithinHost::InfectionOrigin infection_type = WithinHost::InfectionOrigin::Indigenous;
 

@@ -24,8 +24,7 @@
 #include "Host/Human.h"
 #include "Host/WithinHost/WHInterface.h"
 
-namespace OM {
-namespace Clinical {
+namespace OM::Clinical {
 
 Episode::~Episode() { report(); }
 
@@ -122,7 +121,7 @@ void Episode::operator&(istream& stream) {
         survey_period & stream;
         age_group & stream;
         cohort_set & stream;
-        int s;
+        int s = 0;
         s & stream;
         state = Episode::State(s);
     }
@@ -137,5 +136,4 @@ void Episode::operator&(ostream& stream) {
     }
 }
 
-}
 }

@@ -25,8 +25,7 @@
 
 #include "Clinical/CM5DayCommon.h"
 
-namespace OM {
-namespace Clinical {
+namespace OM::Clinical {
 
 /**
  * This models case management at a 5-day time step with all-or-nothing
@@ -49,9 +48,9 @@ public:
 
 protected:
     /** Called when a non-severe/complicated malaria sickness occurs. */
-    virtual void uncomplicated_event(Human& human, Episode::State pg_state);
+    void uncomplicated_event(Human& human, Episode::State pg_state) override;
 };
 
 }
-}
+
 #endif

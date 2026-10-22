@@ -21,20 +21,21 @@
  */
 
 #include "Clinical/ImmediateOutcomes.h"
+
+#include <cmath>
 #include "Host/WithinHost/WHInterface.h"
 #include "Host/WithinHost/WHVivax.h"
 #include "util/errors.h"
 #include "util/ModelOptions.h"
 #include "util/random.h"
 
-namespace OM {
-namespace Clinical {
+namespace OM::Clinical {
 using namespace ::OM::util;
 
 // ———  static, utility functions  ———
 
 double get_health_system_acr_by_name(const scnXml::TreatmentDetails& td, const string& drug) {
-    double val;
+    double val = NAN;
     if (drug == "CQ")
         val = td.getCQ().present() ? td.getCQ().get().getValue() : 0;
     else if (drug == "SP")
@@ -169,7 +170,7 @@ void ClinicalParams::set_immediate_outcomes(const scnXml::HSImmediateOutcomes& h
 
     if (vivax_simple_model) {
         WithinHost::WHVivax::set_hs_parameters(
-            hs_description.getLiverStageDrug().present() ? &hs_description.getLiverStageDrug().get() : 0);
+            hs_description.getLiverStageDrug().present() ? &hs_description.getLiverStageDrug().get() : nullptr);
     } else if (hs_description.getLiverStageDrug().present()) {
         throw util::xml_scenario_error("health-system's liverStageDrug element only supported by vivax");
     }
@@ -220,5 +221,4 @@ void ImmediateOutcomes::uncomplicated_event(Human& human, Episode::State pg_stat
     }
 }
 
-}
 }

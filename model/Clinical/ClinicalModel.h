@@ -136,7 +136,7 @@ protected:
      * If doomed > 0, the individual is dead, and will be removed from the
      * population at the beginning of the next time step. NOTE:
      * updateInfantDeaths() counts deaths after the fact, thus cannot remove immediately. */
-    int doomed;
+    int doomed{NotDoomed};
 
     /// Calculate the case fatality "rate" in the community as a function of
     /// that in hospitals.

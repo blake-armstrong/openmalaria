@@ -30,8 +30,7 @@
 
 #include <cmath>
 
-namespace OM {
-namespace Host {
+namespace OM::Host {
 using namespace OM::util;
 
 //Goodman estimated for neonatal mortality due to malaria in pregnancy
@@ -118,9 +117,9 @@ void NeonatalMortality::update(vector<Host::Human>& population) {
     //update the vector containing the prevalence by gestational age
     size_t index = Sim::modulo_steps(Sim::ts0(), prev_by_gestational_age.size());
     prev_by_gestational_age[index] = prev2025;
-    for (size_t i = 0; i < prev_by_gestational_age.size(); ++i) {
-        if (prev_by_gestational_age[i] > max_prev) {
-            max_prev = prev_by_gestational_age[i];
+    for (double i : prev_by_gestational_age) {
+        if (i > max_prev) {
+            max_prev = i;
         }
     }
 
@@ -130,5 +129,4 @@ void NeonatalMortality::update(vector<Host::Human>& population) {
     risk_from_maternal_infection = Y * (1.0 - exp(prev_pg * Z));
 }
 
-}
 }

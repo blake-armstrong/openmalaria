@@ -31,8 +31,7 @@
 
 #include <limits>
 
-namespace OM {
-namespace Clinical {
+namespace OM::Clinical {
 using namespace OM::util;
 
 // -----  simulation-wide parameters  -----
@@ -84,8 +83,8 @@ void EventSchedulerParams::set_parameters(const scnXml::HSEventScheduler& es_dat
 
     cum_daily_pr_imm_ucts.reserve(co_data.getDailyPrImmUCTS().size());
     double cum_p = 0.0;
-    for (auto it = co_data.getDailyPrImmUCTS().begin(); it != co_data.getDailyPrImmUCTS().end(); ++it) {
-        cum_p += *it;
+    for (double it : co_data.getDailyPrImmUCTS()) {
+        cum_p += it;
         cum_daily_pr_imm_ucts.push_back(cum_p);
     }
     if (cum_p < 0.999 || cum_p > 1.001) {
@@ -115,7 +114,7 @@ void EventSchedulerParams::set_parameters(const scnXml::HSEventScheduler& es_dat
 // -----  construction, destruction and checkpointing  -----
 
 ClinicalEventScheduler::ClinicalEventScheduler(const ClinicalParams& params, double tsf)
-    : ClinicalModel(params), pg_state(Episode::None), case_start_time(Sim::never()), time_of_recovery(Sim::never()),
+    : ClinicalModel(params), case_start_time(Sim::never()), time_of_recovery(Sim::never()),
       time_last_treatment(Sim::never()), previous_density(numeric_limits<double>::quiet_NaN()) {
     if (tsf != 1.0) {
         // p(treatment seeking) is part of tree & handled generically, so we
@@ -385,7 +384,7 @@ void ClinicalEventScheduler::do_clinical_update(Human& human, double age_years,
 
 void ClinicalEventScheduler::checkpoint(istream& stream) {
     ClinicalModel::checkpoint(stream);
-    int s;
+    int s = 0;
     s & stream;
     pg_state = Episode::State(s);
     case_start_time & stream;
@@ -402,5 +401,4 @@ void ClinicalEventScheduler::checkpoint(ostream& stream) {
     previous_density & stream;
 }
 
-}
 }

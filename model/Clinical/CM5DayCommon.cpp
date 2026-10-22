@@ -28,8 +28,7 @@
 #include "util/ModelOptions.h"
 #include "util/random.h"
 
-namespace OM {
-namespace Clinical {
+namespace OM::Clinical {
 using namespace ::OM::util;
 
 // ———  static pararmeters and methods  ———
@@ -184,5 +183,4 @@ void CM5DayCommon::checkpoint(ostream& stream) {
     treatment_seeking_factor & stream;
 }
 
-}
 }

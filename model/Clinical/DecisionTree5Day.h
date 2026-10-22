@@ -25,8 +25,7 @@
 
 #include "Clinical/CM5DayCommon.h"
 
-namespace OM {
-namespace Clinical {
+namespace OM::Clinical {
 
 /**
  * This models case management with 5-day time steps, optionally including
@@ -47,9 +46,9 @@ public:
     DecisionTree5Day(const ClinicalParams& params, double tsf) : CM5DayCommon(params, tsf) {}
 
 protected:
-    virtual void uncomplicated_event(Human& human, Episode::State pg_state);
+    void uncomplicated_event(Human& human, Episode::State pg_state) override;
 };
 
 }
-}
+
 #endif

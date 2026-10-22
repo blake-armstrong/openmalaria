@@ -29,8 +29,7 @@
 #include "Host/WithinHost/WHInterface.h"
 #include "mon/Monitoring.h"
 
-namespace OM {
-namespace Clinical {
+namespace OM::Clinical {
 using Host::Human;
 
 /**
@@ -44,7 +43,7 @@ public:
      */
     CM5DayCommon(const ClinicalParams& params, double tsf);
 
-    virtual bool is_existing_case() {
+    bool is_existing_case() override {
         // If treated in the recent past:
         return Sim::now() > t_last_treatment && Sim::now() <= t_last_treatment + params().health_system_memory;
     }
@@ -52,10 +51,10 @@ public:
 protected:
     static mon::Measure measures[NumCaseTypes];
 
-    virtual void do_clinical_update(Human& human, double age_years, WithinHost::Pathogenesis::StatePair& pg);
+    void do_clinical_update(Human& human, double age_years, WithinHost::Pathogenesis::StatePair& pg) override;
 
-    virtual void checkpoint(istream& stream);
-    virtual void checkpoint(ostream& stream);
+    void checkpoint(istream& stream) override;
+    void checkpoint(ostream& stream) override;
 
     /** Called when a non-severe/complicated malaria sickness occurs. */
     virtual void uncomplicated_event(Human& human, Episode::State pg_state) = 0;
@@ -71,5 +70,5 @@ private:
 };
 
 }
-}
+
 #endif

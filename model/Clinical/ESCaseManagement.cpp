@@ -29,8 +29,7 @@
 #include <set>
 #include <sstream>
 
-namespace OM {
-namespace Clinical {
+namespace OM::Clinical {
 using namespace OM::util;
 
 // -----  ESCaseManagement  -----
@@ -54,5 +53,4 @@ CMDTOut ESCaseManagement::execute(const EventSchedulerParams& params, const CMHo
     return tree.exec(host_data);
 }
 
-}
 }

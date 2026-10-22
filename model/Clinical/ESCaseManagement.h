@@ -29,8 +29,7 @@
 #include "Host/WithinHost/WHInterface.h"
 #include "schema/pharmacology.h"
 
-namespace OM {
-namespace Clinical {
+namespace OM::Clinical {
 using WithinHost::WHInterface;
 
 /** Tracks clinical status (sickness), does case management for new events,
@@ -42,5 +41,5 @@ public:
 };
 
 }
-}
+
 #endif

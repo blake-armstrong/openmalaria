@@ -28,8 +28,7 @@
 #include "util/random.h"
 #include "util/errors.h"
 
-namespace OM {
-namespace Clinical {
+namespace OM::Clinical {
 using namespace ::OM::util;
 
 // ———  static, init  ———
@@ -63,7 +62,7 @@ void ClinicalParams::set_decision_tree_5day(const scnXml::HSDT5Day& hs_descripti
 
     if (vivax_simple_model) {
         WithinHost::WHVivax::set_hs_parameters(
-            hs_description.getLiverStageDrug().present() ? &hs_description.getLiverStageDrug().get() : 0);
+            hs_description.getLiverStageDrug().present() ? &hs_description.getLiverStageDrug().get() : nullptr);
     } else if (hs_description.getLiverStageDrug().present()) {
         throw util::xml_scenario_error("health-system's liverStageDrug element only supported by vivax");
     }
@@ -104,5 +103,4 @@ void DecisionTree5Day::uncomplicated_event(Human& human, Episode::State pg_state
     }
 }
 
-}
 }
