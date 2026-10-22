@@ -25,13 +25,18 @@
 #include "Clinical/DecisionTree5Day.h"
 #include "Clinical/EventScheduler.h"
 #include "Clinical/ImmediateOutcomes.h"
+#include "schema/healthSystem.h"
+#include "util/AgeGroupInterpolation.h"
+#include "util/CommandLine.h"
 
 #include <catch2/catch_test_macros.hpp>
 
 #include <array>
 #include <cstddef>
+#include <initializer_list>
 #include <memory>
 #include <new>
+#include <vector>
 
 namespace {
 
@@ -64,6 +69,38 @@ TEST_CASE("each kind of clinical model from ClinicalParams::create starts in sta
         params.kind = kind;
         CHECK(params.create(1.0)->get_latest_state() == Episode::None);
     }
+}
+
+scnXml::HSEventScheduler event_scheduler(std::initializer_list<double> daily_pr_imm_ucts) {
+    scnXml::ClinicalOutcomes outcomes(3, 3, 6, 6);
+    for (const double p : daily_pr_imm_ucts)
+        outcomes.getDailyPrImmUCTS().push_back(p);
+    return {scnXml::DecisionTree(), scnXml::DecisionTree(), outcomes};
+}
+
+OM::util::AgeGroupInterpolator case_fatality_rate() {
+    scnXml::AgeGroupValues values;
+    values.setInterpolation("none");
+    values.getGroup().push_back(scnXml::Group(0.1, 0.0));
+    OM::util::AgeGroupInterpolator cfr;
+    cfr.set(values, "CFR");
+    return cfr;
+}
+
+TEST_CASE("each health system replaces the event scheduler's dailyPrImmUCTS", "[clinical][F59]") {
+    const OM::util::CommandLineOptions command_line;
+    const OM::CommandLineBinding command_line_binding{command_line};
+    OM::util::AgeGroupInterpolator cfr = case_fatality_rate();
+    OM::Clinical::EventSchedulerParams params;
+
+    params.set_parameters(event_scheduler({1.0}), cfr);
+    CHECK(params.cum_daily_pr_imm_ucts == std::vector<double>{1.0});
+
+    params.set_parameters(event_scheduler({0.2, 0.8}), cfr);
+    CHECK(params.cum_daily_pr_imm_ucts == std::vector<double>{0.2, 1.0});
+
+    params.set_parameters(event_scheduler({1.0}), cfr);
+    CHECK(params.cum_daily_pr_imm_ucts == std::vector<double>{1.0});
 }
 
 } // namespace

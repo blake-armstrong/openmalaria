@@ -81,6 +81,7 @@ void EventSchedulerParams::set_parameters(const scnXml::HSEventScheduler& es_dat
             "Clinical outcomes: constraints on case/risk/memory duration not met (see documentation)");
     }
 
+    cum_daily_pr_imm_ucts.clear();
     cum_daily_pr_imm_ucts.reserve(co_data.getDailyPrImmUCTS().size());
     double cum_p = 0.0;
     for (const double daily_pr : co_data.getDailyPrImmUCTS()) {
