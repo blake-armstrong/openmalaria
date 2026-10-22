@@ -170,6 +170,55 @@ def vivax_nmf(s):
 PYROGEN_READ_ORDER = (18, 21, 24, 30, 28, 25, 13, 14, 26)
 
 
+ES = "scenarioESTS.xml"
+AGES = '<group lowerbound="0" value="{}"/><group lowerbound="5" value="{}"/>'
+CLINICAL_NMF = ("<NonMalariaFevers><incidence>" + AGES.format(0.32, 0.18) + "</incidence>"
+                "<prNeedTreatmentNMF>" + AGES.format(0.1, 0.05) + "</prNeedTreatmentNMF>"
+                "<prNeedTreatmentMF>" + AGES.format(0.05, 0.02) + "</prNeedTreatmentMF></NonMalariaFevers>")
+HS_NMF = ("<NonMalariaFevers><prTreatment>0.5</prTreatment><effectNegativeTest>1.2</effectNegativeTest>"
+          "<effectPositiveTest>0.8</effectPositiveTest><effectNeed>1.5</effectNeed><effectInformal>0.9</effectInformal>"
+          "<CFR>" + AGES.format(0.3, 0.1) + "</CFR><TreatmentEfficacy>0.6</TreatmentEfficacy></NonMalariaFevers>")
+
+
+def es_nmf(clinical=CLINICAL_NMF, hs=HS_NMF):
+    def transform(s):
+        s = model_option("NON_MALARIA_FEVERS")(s)
+        s = rep(s, '<clinical healthSystemMemory="14d"/>', f'<clinical healthSystemMemory="14d">{clinical}</clinical>')
+        return rep(s, "</ClinicalOutcomes>", "</ClinicalOutcomes>" + hs)
+    return transform
+
+
+def es_change_hs(transform_body=lambda b: b):
+    def transform(s):
+        body = s[s.index("<healthSystem>") + len("<healthSystem>"):s.index("</healthSystem>")]
+        change = f'<changeHS><timedDeployment time="0">{transform_body(body)}</timedDeployment></changeHS>'
+        return rep(s, '<interventions name="No intervention"/>',
+                   f'<interventions name="No intervention">{change}</interventions>')
+    return transform
+
+
+def section(name, start, end):
+    text = read(name)
+    i = text.index(start)
+    return text[i:text.index(end, i) + len(end)]
+
+
+def replace_element(start, end, new):
+    def transform(s):
+        i = s.index(start)
+        j = s.index(end, i) + len(end)
+        return s[:i] + new() + s[j:]
+    return transform
+
+
+def dt5_section():
+    return section("scenario1.xml", "<DecisionTree5Day", "</DecisionTree5Day>")
+
+
+DAILY_PR_TWO_DAYS = "<dailyPrImmUCTS>0.2</dailyPrImmUCTS><dailyPrImmUCTS>0.8</dailyPrImmUCTS>"
+CLINICAL_READ_ORDER = (17, 19, 38, 33)
+
+
 V = "scenarioVivax.xml"
 G = "scenarioGenotypes.xml"
 M = "scenarioMSAT_HRP2.xml"
@@ -300,6 +349,57 @@ GROUPS = {
         Variant(f"mueller_no_param_{n}", "scenario10.xml", lambda s, n=n: drop_parameter(s, n)) for n in (31, 32)
     ] + [
         Variant("mueller_no_params_31_32", "scenario10.xml", lambda s: drop_parameter(drop_parameter(s, 31), 32)),
+    ],
+    "clinical": [
+        Variant("io_plain", "scenario5.xml"),
+        Variant("io_nodeprec", "scenario5.xml", args=["--no-deprecation-warnings"]),
+        Variant("io_checkpoint", "scenario5.xml", args=["--checkpoint"], runs=2),
+        Variant("dt5_checkpoint", "scenario1.xml", args=["--checkpoint"], runs=2),
+        Variant("es_checkpoint", ES, args=["--checkpoint"], runs=2),
+        Variant("io_cfr_pf_use_hospital", "scenario5.xml", model_option("CFR_PF_USE_HOSPITAL")),
+        Variant("es_nmf", ES, es_nmf()),
+        Variant("es_nmf_checkpoint", ES, es_nmf(), ["--checkpoint"], runs=2),
+        Variant("es_nmf_no_need_treatment", ES, es_nmf(clinical=CLINICAL_NMF[:CLINICAL_NMF.index("<prNeed")]
+                                                       + "</NonMalariaFevers>")),
+        Variant("es_nmf_no_hs_element", ES, es_nmf(hs="")),
+        Variant("es_changehs_daily_pr", ES, es_change_hs(lambda b: rep(b, "<dailyPrImmUCTS>1</dailyPrImmUCTS>",
+                                                                       DAILY_PR_TWO_DAYS))),
+        Variant("es_changehs_daily_pr_checkpoint", ES,
+                es_change_hs(lambda b: rep(b, "<dailyPrImmUCTS>1</dailyPrImmUCTS>", DAILY_PR_TWO_DAYS)),
+                ["--checkpoint"], runs=2),
+        Variant("es_changehs_same", ES, es_change_hs()),
+        Variant("es_changehs_case_duration", ES, es_change_hs(
+            lambda b: rep(b, "<uncomplicatedCaseDuration>3</uncomplicatedCaseDuration>",
+                          "<uncomplicatedCaseDuration>9</uncomplicatedCaseDuration>"))),
+        Variant("es_changehs_wrong_section", ES,
+                es_change_hs(replace_element("<EventScheduler>", "</EventScheduler>", dt5_section))),
+        Variant("es_wrong_section", ES, replace_element("<EventScheduler>", "</EventScheduler>", dt5_section)),
+        Variant("es_5_day", "scenario5.xml", model_option("CLINICAL_EVENT_SCHEDULER")),
+        Variant("es_treat_het", ES, model_option("TREAT_HET")),
+        Variant("es_daily_pr_sum", ES, lambda s: rep(s, "<dailyPrImmUCTS>1</dailyPrImmUCTS>",
+                                                    "<dailyPrImmUCTS>0.5</dailyPrImmUCTS>")),
+        Variant("es_risk_duration", ES, lambda s: rep(s, "<complicatedRiskDuration>6</complicatedRiskDuration>",
+                                                     "<complicatedRiskDuration>7</complicatedRiskDuration>")),
+        Variant("io_changehs_wrong_section", "scenario4.xml",
+                replace_element('<ImmediateOutcomes name="Test HS">', "</ImmediateOutcomes>", dt5_section)),
+        Variant("dt5_wrong_section", "scenario1.xml",
+                replace_element("<DecisionTree5Day", "</DecisionTree5Day>",
+                                lambda: section(ES, "<EventScheduler>", "</EventScheduler>"))),
+        Variant("io_bad_drug", "scenario5.xml", lambda s: rep_first(s, 'firstLine="', 'firstLine="XX')),
+        Variant("dt5_uncomplicated_memory", "scenarioDecisionTree5DayDielmo.xml",
+                lambda s: rep_first(s, "<uncomplicated>", '<uncomplicated memory="2t">')),
+        Variant("hs_memory_bad", "scenario5.xml", lambda s: rep(s, 'healthSystemMemory="6"', 'healthSystemMemory="abc"')),
+        Variant("hs_memory_bad_no_param_17", "scenario5.xml",
+                lambda s: drop_parameter(rep(s, 'healthSystemMemory="6"', 'healthSystemMemory="abc"'), 17)),
+    ] + [
+        Variant(f"io_no_param_{n}", "scenario5.xml", lambda s, n=n: drop_parameter(s, n)) for n in (17, 19)
+    ] + [
+        Variant("io_no_params_17_19", "scenario5.xml", lambda s: drop_parameter(drop_parameter(s, 17), 19)),
+    ] + [
+        Variant(f"es_no_param_{n}", ES, lambda s, n=n: drop_parameter(s, n)) for n in CLINICAL_READ_ORDER
+    ] + [
+        Variant(f"es_no_params_{m}_{n}", ES, lambda s, m=m, n=n: drop_parameter(drop_parameter(s, m), n))
+        for m, n in zip(CLINICAL_READ_ORDER, CLINICAL_READ_ORDER[1:])
     ],
     "falciparum-init": [
         Variant("molineaux_no_weight", "scenarioMolineaux.xml", lambda s: drop_element(s, "<weight ", "</weight>")),
