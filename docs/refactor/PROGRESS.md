@@ -32,7 +32,7 @@ See `PLAN.md` for the session protocol, chunks and gates. Append one log entry p
 | D4a | done | fa7f275c, 49271693, 02029c1e, a07021c4, 06ddff71, 4b223446, 89a7167b, f28d6070, acb0e0c0, f28ffcbe, (this log entry) |
 | D4b | done | 1dd81ae7, 7ffc4e6c, 4db82617, 0ddf6209, 808c0e48, 3e1394d2, b4063a76, 7a828ea1, dd059491, (this log entry) |
 | D4c | done | 25afa630, f511b389, 24fec740, 73829aad, e53617ab, c7ee238b, d527bbbf, 20f29f45, cc748c60, (this log entry) |
-| D4d | todo | |
+| D4d | done | 6e83ea3f, ed6fad49, 85edc7ef, 5f89fcb0, 35eadf9c, e67dbef9, 1357ccba, 760980b6, caa82068, (this log entry) |
 | D5 | todo | |
 | D6 | todo | |
 | D7 | todo | |
@@ -442,6 +442,12 @@ See `PLAN.md` for the session protocol, chunks and gates. Append one log entry p
   | `model/` root: `sim.h`, `Clock.{h,cpp}`, `Simulation.{h,cpp}`, `checkpoint.{h,cpp}` | 4252cba1 (D1) | 48d3476c + 21e09c0d (D1) |
   | `model/util/random.h`, `model/util/xoshiro.h` | c98ffe6f (D2) | 0808f323 + 82e3c602 (D2) |
   | `model/util/CommandLine.{h,cpp}`, `model/util/ModelOptions.{h,cpp}`, `model/Parameters.h`, `model/util/ModelNameProvider.h` | 6e96d1cf (D3) | efb5ad9d + 39f23abd (D3) |
+  | `model/Host/WithinHost/`: `WHInterface`, `WHFalciparum`, `CommonWithinHost`, `DescriptiveWithinHost`, `WithinHostModel` | 06ddff71 (D4a) | 89a7167b + acb0e0c0 (D4a) |
+  | `model/Host/WithinHost/Infection/` (not the uncompiled IPT files, F45) | 4db82617 + b4063a76's hand rename (D4b) | 808c0e48 + b4063a76 (D4b) |
+  | `model/Host/WithinHost/WHVivax.{h,cpp}` | f511b389 + 24fec740 (D4c) | e53617ab + d527bbbf (D4c) |
+  | `model/Host/WithinHost/`: `Genotypes`, `Diagnostic`, `Treatments` | 85edc7ef (D4d) | e67dbef9 + 760980b6 (D4d) |
+
+  Rows from D4a on were added in D4d; the D4 entries had recorded the commits only in their logs.
 
 - Follow-ups:
   - D chunks: run `/rename-module` then `/modernize-module` on each module the chunk owns, and add a row to the table above.
@@ -970,3 +976,37 @@ The user asked for confirmation that every model change is documented and justif
 - **Consequence for M5/M6** (Decision 1 keeps them under G-exact): a library swap will likely change last bits even with the same draws; if so, bring it to the user before M5 rather than loosening the check. Noted in PLAN.md § Open decisions.
 - **Also added:** `docs/refactor/README.md`, a guide to reading the refactor afterwards: what each document holds, the commit pattern of a chunk and how to trace it (`git log`, the `Mechanical:` marker, `.git-blame-ignore-revs`), what each gate shows and does not show, and how to re-run the evidence.
 - FINDINGS: F49 closed.
+
+### D4d: `Genotypes`, `diagnostics` and `Treatments` registries → state owned by `Simulation` (done, 2026-10-22)
+- Base: d386e12f. The G-perf base worktree `../om-bench-base` was moved to d386e12f and rebuilt; it is also the A/B base.
+- Commits:
+  - 6e83ea3f: **logic.**
+    - `WithinHost::GenotypeRegistry` (`Genotypes.h`): the `GT::` namespace globals and `Genotypes::N_genotypes` as members. Its constructor is the old `Genotypes::init`, assigned to a new `Simulation` member at step 1 as before, with every check and error in the old order; `--print-genotypes` comes from the `CommandLineOptions` and the table code moved unchanged into `print_genotypes()`, still called last. Default construction is the old pre-init state, so the unit tests see what they saw. `pre_main_sim_init` and `checkpoint` (same bytes, same stream position) are methods; `read_checkpoint`/`write_checkpoint` take the registry.
+    - `WithinHost::DiagnosticRegistry` (`Diagnostic.h`): the map and the monitoring-diagnostic pointer as members; constructor = the old `diagnostics::init`, assigned at step 4 as before, taking `ModelOptionFlags` and `CommandLineOptions` instead of the bridge. Copies deleted, moves defaulted (map moves keep node addresses, so the pointer and the references other modules hold stay valid). `diagnostics::clear` gone; `make_deterministic` private (no outside caller).
+    - `TreatmentRegistry` (`Treatments.h`), a member of `WithinHostModel` rather than a third bridge: like D4c's `VivaxParams::health_system` it is health-system state that `setHS` and each `changeHS` extend at run time. `WHInterface::add_treatment` and the two `treatment()` methods reach it through the D4c bridge accessors.
+    - **Bridge:** `bridge::current_genotypes`/`genotypes()` with `GenotypesBinding`, and `bridge::current_diagnostics`/`diagnostics()` with `DiagnosticsBinding`, both declared in `Simulation` after `Parameters`. The static `Genotypes::` and `diagnostics::` functions other modules call stay as inline delegates, so transmission, monitoring, PK/PD, clinical and intervention code is unchanged until D5–D8.
+    - Unit tests: `UnittestUtil` binds a default `GenotypeRegistry` and `DiagnosticRegistry`; `PkPdSuiteSetup` calls `init_single` on it; `setDiagnostics` assigns a new registry where it called `diagnostics::init` (which cleared the map first).
+  - ed6fad49: `util/ab_scenarios.py` group `registries`, 27 variants (below).
+  - 85edc7ef + 5f89fcb0: **rename**, 35 renames over 24 files. Maps: `N=count` (the tool's `n` is the name of locals next to many uses; `count` matches the registry), `densHRP2=dens_hrp2` (bad split), `iFreq=freq`. No skips. The facade class `diagnostics` became `Diagnostics`. Collisions reviewed: facade and registry methods share names in different classes, always called qualified; `Diagnostics` vs the `scnXml::Diagnostics` forward declaration is a different namespace. The uncompiled `ESCaseManagementSuite.h` doesn't use the module.
+  - 35eadf9c: **tool fix (F50).** The first modernise run converted loops whose iterator an `assert` still used: Release and G-exact passed, the Debug build did not compile. Reverted; `util/modernize_module.py` now passes `-UNDEBUG` as the rename tool does (F23).
+  - e67dbef9 + 1357ccba: **modernise, tool:** 10 `loop-convert`, 5 `prefer-member-initializer`, 4 `concat-nested-namespaces`, 1 `use-emplace`, 1 `init-variables`.
+  - 760980b6: **modernise, hand:** 17 consts; `SampleMode` an `enum class` over `uint8_t` (private; checkpointed through an explicit `int`, so the bytes are unchanged, compared by the A/B's two checkpoint variants); `Diagnostic::uses_hrp2` initialised (it was indeterminate after the XML constructor's `VIVAX_SIMPLE_MODEL` early return; never read there, since `WHVivax::diagnostic_result` ignores the diagnostic and the monitoring diagnostic is then the deterministic one, which set it); in `print_genotypes` the never-printed `stringstream fmt` removed, `setw` narrowing casts, named loop variables, the assert loop the tool skipped converted by hand, `contains()` → `std::ranges::find`; a raw string; `NOLINT(performance-avoid-endl)` on moved lines. Left: `Treatments::Stages` (bit flags used outside the module), `endl` (F14), `using namespace std;` in `Treatments.h`, F51/F52.
+  - caa82068: FINDINGS F51–F53; PLAN.md D4d row as built.
+- Gates:
+  - G-exact / G-unit: 56/56 (strict) on `build-rework/` (Release) and `build-debug/` (Debug) after each C++ commit (the first modernise attempt failed Debug to compile, F50, and was reverted).
+  - G-stat: plain `ctest -j4` at 760980b6: 109 passed, 3 disabled (the vivax scenarios' `stat_` tests).
+  - G-style: `util/style.sh check d386e12f` clean at 760980b6. The rename and modernise tool commits passed their skill checks (format half clean, second dry run with nothing to do, token check), and `check <tool commit>^` is clean after each ignore-revs commit.
+  - G-perf: `util/bench.sh --compare ../om-bench-base/build-rework`, candidate 760980b6, load ~5.8 at the start: median per-pair ratio 1.0041 (+0.41%), spreads 1.7% / 5.6%. On `scenarioGenotypes.xml` (vector, tracking mode, where `Genotypes::count()` runs in the per-step loops), `-n 7`: 0.9989 (−0.11%). The bridge's extra load costs nothing measurable.
+  - A/B (`util/ab_scenarios.py <base> <candidate>`, base d386e12f): `registries` 27 of 27 identical after the logic commit; all 57 variants (`registries`, `vivax`, `falciparum-init`) identical after the hand commit. The group covers `--print-genotypes` (one and two loci, MolPairwise, no `parasiteGenetics`), tracking and initial sampling with `--checkpoint` (checkpoint bytes compared), the genotype, diagnostic and treatment init errors, unknown diagnostic names from surveys, an intervention and neonatal mortality, the detectionLimit deprecation and analysisNo warnings, and MSAT with HRP2. Each variant was checked to reach its target; an invalid `clearInfections` stage is rejected by the schema, so it is not a variant.
+- Findings: F50 (modernise tool missed assert bodies; fixed), F51 (`--print-genotypes` crashes with a one-allele locus), F52 (its table is misaligned), F53 (diagnostics held by address in statics outlive `Simulation`).
+- Surprises:
+  - F23 had noted the modernise tool's Release-only view as harmless; `loop-convert` made it a compile break. Only the Debug build caught it, so building `build-debug/` after every C++ commit is what makes the tool commits safe.
+  - Checking the print variants by hand showed `--scenario` resolves against `--resource-path`, so reruns outside `ab_scenarios.py` need absolute scenario paths.
+- Follow-ups:
+  - D5: `LSTMDrugType` uses `Genotypes::find_allele_code`/`get_genotypes` through the facade.
+  - D6: `NeonatalMortality`, the clinical models and `CMDTDiagnostic` hold diagnostics by address (F53); `WHFalciparum`/`WHVivax::treatment` and `WHInterface::add_treatment` still use the within-host bridge; pass the registries instead.
+  - D7: the transmission and vector models call `Genotypes::count()` in per-step loops; take the count from the registry at construction.
+  - D8: intervention components hold diagnostics by reference (F53); `Vaccine` uses the genotype facade.
+  - D9: remove `bridge::current_genotypes`, `bridge::current_diagnostics` and the facades; `mon::` uses `Genotypes::count()` in `addStore`.
+  - F51/F52: ask the user whether to fix (stdout changes), e.g. in I2 with the other print options (F41).
+- Next: D5.
