@@ -52,3 +52,5 @@ c92d9d367cc128f17832909988b5d64310e841a1
 c38704fb3e8adcda7f57290d582f43059d093f01
 # D6a: rename the single-word Pathogenesis::State enumerators (hand, text replacement)
 225947cac5346b7e5dcfaa9e60543b3c81ad5ec6
+# D6a: model/Host/WithinHost/Pathogenesis safe modernize fix-its (util/style.sh modernize)
+c2e8281b3c7e31922984b3bc80ddae485c397b26
