@@ -29,6 +29,7 @@
 #include <cmath>
 #include <format>
 #include <limits>
+#include <memory>
 #include <numbers>
 
 using namespace std;
@@ -118,9 +119,14 @@ double func_f_c(double t, void* pp) {
     return f_c;
 }
 const size_t GslIntgMaxIter = 1000; // 10 seems enough, but no harm in using a higher value
-gsl_integration_workspace* gsl_intgr_wksp = gsl_integration_workspace_alloc(GslIntgMaxIter);
-//NOTE: we "should" free, but mem-leaks at end of program aren't really important
-// gsl_integration_workspace_free (gsl_intgr_wksp);
+
+namespace {
+gsl_integration_workspace* integration_workspace() {
+    thread_local std::unique_ptr<gsl_integration_workspace, decltype(&gsl_integration_workspace_free)> workspace(
+        gsl_integration_workspace_alloc(GslIntgMaxIter), &gsl_integration_workspace_free);
+    return workspace.get();
+}
+}
 
 double LSTMDrugThreeComp::calculate_factor(const ParamsFC& p, double duration) const {
     gsl_function f;
@@ -134,8 +140,8 @@ double LSTMDrugThreeComp::calculate_factor(const ParamsFC& p, double duration) c
     const int qag_rule = 1; // alg 1 seems to be good enough
     double intf_c = NAN, err_eps = NAN;
 
-    const int r = gsl_integration_qag(&f, 0.0, duration, abs_eps, rel_eps, GslIntgMaxIter, qag_rule, gsl_intgr_wksp,
-                                      &intf_c, &err_eps);
+    const int r = gsl_integration_qag(&f, 0.0, duration, abs_eps, rel_eps, GslIntgMaxIter, qag_rule,
+                                      integration_workspace(), &intf_c, &err_eps);
     if (r != 0) {
         throw TRACED_EXCEPTION("calculateFactor: error from gsl_integration_qag", util::Error::GSL);
     }

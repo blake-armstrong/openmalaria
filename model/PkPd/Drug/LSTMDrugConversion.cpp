@@ -29,6 +29,7 @@
 #include <gsl/gsl_integration.h>
 #include <cmath>
 #include <limits>
+#include <memory>
 
 using namespace std;
 
@@ -117,9 +118,15 @@ double func_conv_factor(double t, void* pp) {
 }
 
 const size_t GslIntgConvMaxIter = 1000; // 10 seems enough, but no harm in using a higher value
-gsl_integration_workspace* gsl_intgr_conv_wksp = gsl_integration_workspace_alloc(GslIntgConvMaxIter);
-//NOTE: we "should" free, but mem-leaks at end of program aren't really important
-// gsl_integration_workspace_free (gsl_intgr_conv_wksp);
+
+namespace {
+gsl_integration_workspace* integration_workspace() {
+    thread_local std::unique_ptr<gsl_integration_workspace, decltype(&gsl_integration_workspace_free)> workspace(
+        gsl_integration_workspace_alloc(GslIntgConvMaxIter), &gsl_integration_workspace_free);
+    return workspace.get();
+}
+}
+
 double LSTMDrugConversion::calculate_factor(const ParamsConvFactor& p, double duration) const {
     gsl_function f;
     f.function = &func_conv_factor;
@@ -135,7 +142,7 @@ double LSTMDrugConversion::calculate_factor(const ParamsConvFactor& p, double du
 
     //     intg_steps = 0;
     const int r = gsl_integration_qag(&f, 0.0, duration, abs_eps, rel_eps, GslIntgConvMaxIter, qag_rule,
-                                      gsl_intgr_conv_wksp, &intf_c, &err_eps);
+                                      integration_workspace(), &intf_c, &err_eps);
     if (r != 0) {
         throw TRACED_EXCEPTION("calculateFactor: error from gsl_integration_qag", util::Error::GSL);
     }
