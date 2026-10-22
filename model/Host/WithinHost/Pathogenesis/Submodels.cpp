@@ -36,26 +36,26 @@ MuellerParams::MuellerParams(const OM::Parameters& parameters)
       density_exponent_32(parameters[Parameter::MuellerDensityExponent]) {}
 
 double MuellerPathogenesis::get_p_episode(double, double total_density) {
-    double incidence_density =
+    const double incidence_density =
         params->mueller.rate_multiplier_31 * (pow(total_density, params->mueller.density_exponent_32));
     return 1.0 - exp(-incidence_density);
 }
 
 // ———  Pyrogenic threshold model  ———
 
-//Number of categories in the numerical approximation used in updatePyrogenThres()
-const size_t NumCategories = 11;
+//Number of categories in the numerical approximation used in update_pyrogen_thres()
+constexpr size_t NumCategories = 11;
 
 namespace {
 
 double pyrogen_b(const OM::Parameters& parameters) {
-    const double delt = 1.0 / NumCategories;
+    const double delt = 1.0 / static_cast<double>(NumCategories);
     const double smu_y = -log(0.5) / (Sim::steps_per_year() * parameters[Parameter::YStarHalfLife]);
     return -smu_y * delt;
 }
 
 double pyrogen_a(const OM::Parameters& parameters) {
-    const double delt = 1.0 / NumCategories;
+    const double delt = 1.0 / static_cast<double>(NumCategories);
     //alpha: factor determining increase in pyrogenic threshold
     const double alpha14 = parameters[Parameter::Alpha];
     return alpha14 * Sim::one_ts() * delt;

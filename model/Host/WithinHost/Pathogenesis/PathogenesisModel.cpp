@@ -82,7 +82,7 @@ std::unique_ptr<PathogenesisModel> PathogenesisParams::create(double comorbidity
 
 Pathogenesis::State PathogenesisParams::sample_nmf(LocalRng& rng, double age_years) const {
     if (nmf_incidence.isSet()) {
-        double p_nmf = nmf_incidence.eval(age_years);
+        const double p_nmf = nmf_incidence.eval(age_years);
         if (rng.bernoulli(p_nmf))
             return Pathogenesis::StateNmf;
     }
@@ -95,7 +95,7 @@ PathogenesisModel::PathogenesisModel(const PathogenesisParams& params, double co
 Pathogenesis::StatePair PathogenesisModel::determine_state(Host::Human& human, double age_years,
                                                            double time_step_max_density, double end_density,
                                                            bool is_doomed) {
-    double p_malaria_fever = get_p_episode(time_step_max_density, end_density);
+    const double p_malaria_fever = get_p_episode(time_step_max_density, end_density);
     StatePair result;
     //TODO(performance): would using a single RNG sample and manipulating probabilities be faster?
     //Decide whether a clinical episode occurs and if so, which type
@@ -121,7 +121,7 @@ Pathogenesis::StatePair PathogenesisModel::determine_state(Host::Human& human, d
         // Indirect mortality:
         // IndirectRisk is the probability of dying from the indirect effects
         // of malaria conditional on not having an acute attack of malaria
-        double indirect_risk = params->indir_risk_co_factor * comorb_factor;
+        const double indirect_risk = params->indir_risk_co_factor * comorb_factor;
         if (!is_doomed) {
             mon::recordStat(mon::measure("expectedIndirectDeaths"), human, indirect_risk);
         }
