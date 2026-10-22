@@ -258,6 +258,7 @@ GROUPS = {
                 lambda s: rep(s, '<component id="MDA">\n        <treatPKPD schedule="MQ1"',
                               '<component id="MDA">\n        <treatPKPD schedule="nope"')),
         Variant("intervention_checkpoint", "scenarioCohort.xml", args=["--checkpoint"], runs=2),
+        Variant("models_checkpoint", "scenarioPkPdModels.xml", args=["--checkpoint"], runs=2),
     ],
     "falciparum-init": [
         Variant("molineaux_no_weight", "scenarioMolineaux.xml", lambda s: drop_element(s, "<weight ", "</weight>")),
