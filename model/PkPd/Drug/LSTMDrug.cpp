@@ -50,7 +50,7 @@ void LSTMDrug::medicate(double time, double qty) {
     auto elt = make_pair(time, qty);
     auto pos = std::ranges::lower_bound(doses, elt, comp);
     doses.insert(pos, std::move(elt));
-    assert(is_sorted(doses.begin(), doses.end(), comp));
+    assert(std::ranges::is_sorted(doses, comp));
 }
 
 }
