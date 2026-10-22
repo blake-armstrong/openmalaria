@@ -34,7 +34,10 @@ See `PLAN.md` for the session protocol, chunks and gates. Append one log entry p
 | D4c | done | 25afa630, f511b389, 24fec740, 73829aad, e53617ab, c7ee238b, d527bbbf, 20f29f45, cc748c60, (this log entry) |
 | D4d | done | 6e83ea3f, ed6fad49, 85edc7ef, 5f89fcb0, 35eadf9c, e67dbef9, 1357ccba, 760980b6, caa82068, (this log entry) |
 | D5 | done | 8dcdf512, 5c0449e9, c92d9d36, b543d8fd, de48455e, 0c859fb0, a210a53d, eb07d51e, a3789f2f; follow-up 89c90989, 5355535c, 74843c0a, (its log entry) |
-| D6 | todo | |
+| D6 | split | D6a–D6c |
+| D6a | todo | |
+| D6b | todo | |
+| D6c | todo | |
 | D7 | todo | |
 | D8 | todo | |
 | D9 | todo | |
@@ -1069,3 +1072,6 @@ The user approved adding the scenario test proposed in D5's follow-ups.
 - Gates: 57/57 non-statistical tests on Release and Debug (strict); A/B `pkpd` 27/27 identical.
 - Process note: the user stopped a diagnostic command that cleared scratch directories with `rm -rf` on a variable-built path. Later runs used fresh `mktemp -d` directories and delete nothing.
 - Follow-ups: F56, **to be fixed in H3 (the user's decision, 2026-10-22)**; then move PkPdModels to `OM_BOXTEST_NAMES`.
+
+### Plan amendment: D6 split (2026-10-22, at the start of D6)
+- D6 covers about 30 files of non-mechanical change, past the protocol's ~20: the pathogenesis models (5 files) whose init `WithinHostModel` already runs, the seven clinical model classes with infant and neonatal mortality and their callers (`Simulation`, `checkpoint.cpp`, `Human`, `Deployments.h`, `Monitoring.cpp`), and the decision-tree library that the health system and an intervention share. Split in advance by owner, as D4 was: D6a (pathogenesis into `WithinHostModel`), D6b (the clinical models and neonatal mortality into an object owned by `Simulation`), D6c (the decision-tree library). Rows in PLAN.md § Stage D.
