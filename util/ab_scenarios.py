@@ -106,6 +106,50 @@ SECOND_LOCUS = """</locus>
     </locus>"""
 
 
+PHENOTYPE = "<max_killing_rate>{v}</max_killing_rate><IC50 mean=\"{ic50}\"/><slope>{slope}</slope>"
+DHA = ('<drug abbrev="DHA"><PD><phenotype>' + PHENOTYPE.format(v=27.6, ic50=0.009, slope=4) + "</phenotype></PD>"
+       '<PK><negligible_concentration>1e-17</negligible_concentration><k mean="25.4"/><m_exponent>0</m_exponent>'
+       '<vol_dist mean="1.49"/></PK></drug>')
+
+
+def artesunate(correlation="1.0", compartment2=False):
+    return ('<drug abbrev="AS"><PD><phenotype>' + PHENOTYPE.format(v=27.6, ic50=0.0016, slope=4) + "</phenotype></PD>"
+            '<PK><negligible_concentration>1e-45</negligible_concentration><k mean="0"/><m_exponent>0</m_exponent>'
+            '<k_a mean="252"/><conversion><metabolite>DHA</metabolite><rate mean="30.96" CV="0.2" distr="lognormal"/>'
+            f"<molRatio>0.741155</molRatio><IC50_log_correlation>{correlation}</IC50_log_correlation></conversion>"
+            '<vol_dist mean="7.1" CV="0.3" distr="lognormal"/>' + ("<compartment2><k12 mean=\"1\"/><k21 mean=\"1\"/></compartment2>"
+                                                 if compartment2 else "") + "</PK></drug>")
+
+
+def piperaquine(k_a=True, compartment2=True):
+    return ('<drug abbrev="PPQ3"><PD><phenotype>' + PHENOTYPE.format(v=3.45, ic50=0.020831339, slope=6)
+            + "</phenotype></PD><PK><negligible_concentration>0.005</negligible_concentration>"
+            '<k mean="16.314788273615637"/><m_exponent>1</m_exponent>' + ('<k_a mean="3.4825"/>' if k_a else "")
+            + '<vol_dist mean="57.5625" CV="0.2" distr="lognormal"/>'
+            + ('<compartment2><k12 mean="1.854166666666667"/><k21 mean="1.1545945945945946"/></compartment2>'
+               if compartment2 else "")
+            + '<compartment3><k13 mean="0.9027777777777778"/><k31 mean="0.07948639559767655"/></compartment3>'
+            "</PK></drug>")
+
+
+def with_drugs(*drugs, schedule=('<medicate drug="AS" hour="0" mg="4"/>', '<medicate drug="PPQ3" hour="0" mg="18"/>')):
+    def transform(s):
+        s = rep(s, "</drugs>", "".join(drugs) + "</drugs>")
+        return rep(s, '<medicate drug="CQ" hour="0" mg="10"/>', '<medicate drug="CQ" hour="0" mg="10"/>'
+                   + "".join(schedule))
+    return transform
+
+
+def duplicate_cq(s):
+    i = s.index('<drug abbrev="CQ">')
+    j = s.index("</drug>", i) + len("</drug>")
+    return s[:j] + s[i:j] + s[j:]
+
+
+SENSITIVE = '<restriction onLocus="mdr" toAllele="sensitive"/>'
+RESISTANT = '<restriction onLocus="mdr" toAllele="resistant"/>'
+
+
 V = "scenarioVivax.xml"
 G = "scenarioGenotypes.xml"
 M = "scenarioMSAT_HRP2.xml"
@@ -174,6 +218,47 @@ GROUPS = {
         Variant("latentp_steps", V, lambda s: rep(s, 'latentp="10d"', 'latentp="3t"')),
         Variant("no_vivax", V, lambda s: drop_element(s, "<vivax>", "</vivax>")),
     ],
+    "pkpd": [
+        Variant("conversion_three_comp", G, with_drugs(DHA, artesunate(), piperaquine())),
+        Variant("conversion_three_comp_checkpoint", G, with_drugs(DHA, artesunate(), piperaquine()), ["--checkpoint"],
+                runs=2),
+        Variant("conversion_three_comp_print", G, with_drugs(DHA, artesunate(), piperaquine()), ["--print-genotypes"]),
+        Variant("print_two_loci", G, lambda s: rep_first(s, "</locus>", SECOND_LOCUS), ["--print-genotypes"]),
+        Variant("drug_twice", G, duplicate_cq),
+        Variant("metabolite_after_parent", G, with_drugs(artesunate(), DHA, piperaquine())),
+        Variant("metabolite_missing", G, with_drugs(artesunate(), piperaquine())),
+        Variant("conversion_with_compartment2", G, with_drugs(DHA, artesunate(compartment2=True), piperaquine())),
+        Variant("ic50_correlation_bad", G, with_drugs(DHA, artesunate("1.5"), piperaquine())),
+        Variant("compartment2_without_k_a", G, with_drugs(DHA, artesunate(), piperaquine(k_a=False))),
+        Variant("compartment3_without_compartment2", G, with_drugs(DHA, artesunate(), piperaquine(compartment2=False))),
+        Variant("k_a_without_compartment2", G, lambda s: rep(s, "<half_life>30.006</half_life>",
+                                                            '<half_life>30.006</half_life><k_a mean="1"/>')),
+        Variant("phenotype_unknown_allele", G, lambda s: rep(s, SENSITIVE, SENSITIVE.replace("sensitive", "nope"))),
+        Variant("phenotype_locus_only_second", G, lambda s: rep(s, RESISTANT, RESISTANT.replace('"mdr"', '"x"'))),
+        Variant("phenotype_locus_only_first", G, lambda s: rep(rep_first(s, "</locus>", SECOND_LOCUS), SENSITIVE,
+                                                              SENSITIVE + '<restriction onLocus="hrp2" '
+                                                                          'toAllele="present"/>')),
+        Variant("phenotype_ambiguous", G, lambda s: rep(s, RESISTANT, SENSITIVE)),
+        Variant("phenotype_too_restrictive", G, lambda s: rep(
+            rep(rep_first(s, "</locus>", SECOND_LOCUS), SENSITIVE,
+                SENSITIVE + '<restriction onLocus="hrp2" toAllele="present"/>'),
+            RESISTANT, RESISTANT + '<restriction onLocus="hrp2" toAllele="present"/>')),
+        Variant("phenotypes_without_restrictions", G, lambda s: rep(rep(s, SENSITIVE, ""), RESISTANT, "")),
+        Variant("dosage_first_bound", G, lambda s: rep(s, '<bodymass lowerbound="0" dose_mult="5"/>',
+                                                      '<bodymass lowerbound="1" dose_mult="5"/>')),
+        Variant("dosage_order", G, lambda s: rep(s, '<bodymass lowerbound="10" dose_mult="20"/>',
+                                                '<bodymass lowerbound="4" dose_mult="20"/>')),
+        Variant("unknown_drug", G, lambda s: rep(s, '<medicate drug="CQ" hour="0" mg="10"/>',
+                                                '<medicate drug="XX" hour="0" mg="10"/>')),
+        Variant("unknown_schedule", G, lambda s: rep(s, '<treatPKPD schedule="CQ_3_dose"',
+                                                    '<treatPKPD schedule="nope"')),
+        Variant("unknown_dosage", G, lambda s: rep(s, 'dosage="CQ"/>', 'dosage="nope"/>')),
+        Variant("no_pharmacology", G, lambda s: drop_element(s, "<pharmacology>", "</pharmacology>")),
+        Variant("intervention_unknown_schedule", "scenarioCohort.xml",
+                lambda s: rep(s, '<component id="MDA">\n        <treatPKPD schedule="MQ1"',
+                              '<component id="MDA">\n        <treatPKPD schedule="nope"')),
+        Variant("intervention_checkpoint", "scenarioCohort.xml", args=["--checkpoint"], runs=2),
+    ],
     "falciparum-init": [
         Variant("molineaux_no_weight", "scenarioMolineaux.xml", lambda s: drop_element(s, "<weight ", "</weight>")),
         Variant("molineaux_no_param_34", "scenarioMolineaux.xml", lambda s: drop_parameter(s, 34)),
@@ -188,6 +273,9 @@ GROUPS = {
         Variant("descriptive_no_params_23_27", "scenario5.xml", lambda s: drop_parameter(drop_parameter(s, 23), 27)),
     ],
 }
+
+
+TRACE = re.compile(r"(?<=Call stack, starting from )\S+:\d+(?=:)")
 
 
 def schema_name(text):
@@ -219,7 +307,7 @@ def run(binary, variant, text, work):
     for _ in range(variant.runs):
         p = subprocess.run([binary, "--resource-path", resources, "--scenario", scenario] + variant.args,
                            cwd=work, capture_output=True, text=True)
-        results.append((p.returncode, p.stdout.replace(work, "WORK"), p.stderr.replace(work, "WORK")))
+        results.append((p.returncode, p.stdout.replace(work, "WORK"), TRACE.sub("SOURCE", p.stderr.replace(work, "WORK"))))
     files = {}
     for f in sorted(os.listdir(work)):
         if f.startswith(("output", "ctsout", "checkpoint")):
@@ -231,7 +319,8 @@ def run(binary, variant, text, work):
 def main():
     parser = argparse.ArgumentParser(
         description="Run crafted scenario variants with a base and a candidate openMalaria and compare their "
-                    "stdout, stderr, exit codes, outputs and checkpoint files.")
+                    "stdout, stderr, exit codes, outputs and checkpoint files. The source file and line that a "
+                    "traced exception reports in stderr are not compared.")
     parser.add_argument("base", help="base openMalaria binary")
     parser.add_argument("candidate", help="candidate openMalaria binary")
     parser.add_argument("groups", nargs="*", default=sorted(GROUPS), help=f"variant groups (default: all of "
