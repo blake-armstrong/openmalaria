@@ -74,11 +74,11 @@ struct ParamsConvFactor {
     double kn_p, kn_m;         // IC50^n: (mg/kg) ^ n
 };
 
-double calculate_parent_quantity(struct ParamsConvFactor p, double exp_absorb, double exp_p_loss) {
+double calculate_parent_quantity(const ParamsConvFactor& p, double exp_absorb, double exp_p_loss) {
     return p.f * p.qty_g * exp_absorb + (p.qty_p - p.f * p.qty_g) * exp_p_loss;
 }
 
-double calculate_parent_drug_factor(struct ParamsConvFactor p, double exp_absorb, double exp_p_loss) {
+double calculate_parent_drug_factor(const ParamsConvFactor& p, double exp_absorb, double exp_p_loss) {
     const double qty_p = calculate_parent_quantity(p, exp_absorb, exp_p_loss);
     const double c_p = qty_p * p.inv_vd_p;             // concentrations; mg/l*/
     const double cn_p = pow(c_p, p.n_p);               // (mg/l) ^ n
@@ -86,12 +86,12 @@ double calculate_parent_drug_factor(struct ParamsConvFactor p, double exp_absorb
     return f_cp;
 }
 
-double calculate_metabolite_quantity(struct ParamsConvFactor p, double exp_absorb, double exp_p_loss, double t) {
+double calculate_metabolite_quantity(const ParamsConvFactor& p, double exp_absorb, double exp_p_loss, double t) {
     return p.g * p.qty_g * exp_absorb + (p.h * p.qty_g - p.i * p.qty_p) * exp_p_loss +
            (p.j * p.qty_g + p.i * p.qty_p + p.qty_m) * exp(p.nk_m * t);
 }
 
-double calculate_metabolite_drug_factor(struct ParamsConvFactor p, double exp_absorb, double exp_p_loss, double t) {
+double calculate_metabolite_drug_factor(const ParamsConvFactor& p, double exp_absorb, double exp_p_loss, double t) {
     const double qty_m = calculate_metabolite_quantity(p, exp_absorb, exp_p_loss, t);
     const double c_m = qty_m * p.inv_vd_m;             // concentrations; mg/l
     const double cn_m = pow(c_m, p.n_m);               // (mg/l) ^ n
@@ -286,7 +286,7 @@ void LSTMDrugConversion::update_concentration(double body_mass) {
         p.qty_g *= exp_absorb;
     }
     //NOTE: would be faster if elements were stored in reverse order — though prescribing would probably be slower
-    doses.erase(doses.begin(), doses.begin() + doses_taken);
+    doses.erase(doses.begin(), doses.begin() + static_cast<ptrdiff_t>(doses_taken));
 
     qty_m = p.qty_m;
     qty_p = p.qty_p;

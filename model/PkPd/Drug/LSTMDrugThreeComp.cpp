@@ -241,7 +241,7 @@ void LSTMDrugThreeComp::update_concentration(double body_mass) {
         }
     }
     //NOTE: would be faster if elements were stored in reverse order — though prescribing would probably be slower
-    doses.erase(doses.begin(), doses.begin() + doses_taken);
+    doses.erase(doses.begin(), doses.begin() + static_cast<ptrdiff_t>(doses_taken));
 
     util::streamValidate(conc());
     if (conc() < type_data.get_negligible_concentration()) {
