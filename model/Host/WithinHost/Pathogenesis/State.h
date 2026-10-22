@@ -36,25 +36,25 @@ enum State {
      * http://en.wikipedia.org/wiki/Flag_byte
      * Max: 0x80000000
      * (note & | ^ are C++'s binary AND, OR and XOR operators). */
-    NONE = 0, ///< Not sick
+    None = 0, ///< Not sick
 
     // Flags for current state/worst state to report:
-    SICK = 0x1,         ///< Sick (may or may not be from malaria)
-    MALARIA = 0x2,      ///< Malaria sickness
-    SEVERE = 0x8,       ///< Severe malaria case
-    COINFECTION = 0x4,  ///< Malaria with a coinfection
-    COMPLICATED = 0x20, ///< Flag used to indicate SEVERE and/or COINFECTION
+    Sick = 0x1,         ///< Sick (may or may not be from malaria)
+    Malaria = 0x2,      ///< Malaria sickness
+    Severe = 0x8,       ///< Severe malaria case
+    Coinfection = 0x4,  ///< Malaria with a coinfection
+    Complicated = 0x20, ///< Flag used to indicate Severe and/or Coinfection
 
     // Flags for outcome reporting:
-    StateNmf = SICK, ///< Alias: SICK
-    //STATE_NMF_NEED_AB    = SICK | NEED_ANTIBIOTIC,       ///< Combination: SICK, NEED_ANTIBIOTIC
-    StateMalaria = SICK | MALARIA,                     ///< Combination: SICK, MALARIA
-    StateSevere = StateMalaria | COMPLICATED | SEVERE, ///< Combination: SICK, MALARIA, COMPLICATED, SEVERE
+    StateNmf = Sick, ///< Alias: Sick
+    //STATE_NMF_NEED_AB    = Sick | NEED_ANTIBIOTIC,       ///< Combination: Sick, NEED_ANTIBIOTIC
+    StateMalaria = Sick | Malaria,                     ///< Combination: Sick, Malaria
+    StateSevere = StateMalaria | Complicated | Severe, ///< Combination: Sick, Malaria, Complicated, Severe
     StateCoinfection =
-        StateMalaria | COMPLICATED | COINFECTION, ///< Combination: SICK, MALARIA, COMPLICATED, COINFECTION
+        StateMalaria | Complicated | Coinfection, ///< Combination: Sick, Malaria, Complicated, Coinfection
 };
 struct StatePair {
-    StatePair() : state(NONE), indirect_mortality(false) {}
+    StatePair() : state(None), indirect_mortality(false) {}
     State state;
     bool indirect_mortality; // implies death a little later on which may not be seen as a malaria death
 };

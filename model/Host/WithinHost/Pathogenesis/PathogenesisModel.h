@@ -82,7 +82,7 @@ struct PathogenesisParams {
     std::unique_ptr<PathogenesisModel> create(double comorbidity_factor) const;
 
     /** For Vivax: determine the chance of a NMF and sample, returning either
-     * NONE or STATE_NMF. */
+     * None or StateNmf. */
     Pathogenesis::State sample_nmf(LocalRng& rng, double age_years) const;
 
     Kind kind = Kind::Pyrogen;

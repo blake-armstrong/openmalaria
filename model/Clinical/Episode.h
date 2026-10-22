@@ -56,16 +56,16 @@ public:
         * http://en.wikipedia.org/wiki/Flag_byte
         * Max: 0x80000000
         * (note & | ^ are C++'s binary AND, OR and XOR operators). */
-        NONE = WithinHost::Pathogenesis::NONE, ///< Not sick
+        NONE = WithinHost::Pathogenesis::None, ///< Not sick
 
         // Flags for current state/worst state to report:
-        SICK = WithinHost::Pathogenesis::SICK,       ///< Sick (may or may not be from malaria)
-        MALARIA = WithinHost::Pathogenesis::MALARIA, ///< Malaria sickness
+        SICK = WithinHost::Pathogenesis::Sick,       ///< Sick (may or may not be from malaria)
+        MALARIA = WithinHost::Pathogenesis::Malaria, ///< Malaria sickness
         /// Used by ClinicalEventScheduler to indicate a second bout of malarial sickness within the same episode (roughly)
         SECOND_CASE = 0x10,
         SEVERE = 0x8,                                        ///< Severe malaria case
         COINFECTION = 0x4,                                   ///< Malaria with a coinfection
-        COMPLICATED = WithinHost::Pathogenesis::COMPLICATED, ///< Flag used to indicate SEVERE and/or COINFECTION
+        COMPLICATED = WithinHost::Pathogenesis::Complicated, ///< Flag used to indicate SEVERE and/or COINFECTION
 
         //NEED_ANTIBIOTIC     = 0x40,         ///< Flag indicates a non-malaria fever requires (antibiotic) treatment
 

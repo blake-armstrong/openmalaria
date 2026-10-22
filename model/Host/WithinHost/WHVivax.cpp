@@ -385,7 +385,7 @@ void WHVivax::update(Host::Human& human, LocalRng& rng, int& n_new_infs_i, int& 
 
     // update infections
     // NOTE: currently no BSV model
-    morbidity = Pathogenesis::NONE;
+    morbidity = Pathogenesis::None;
     const uint32_t old_cum_inf = cum_prim_inf;
     const bool treatment_liver = treat_expiry_liver > Sim::ts0();
     const bool treatment_blood = treat_expiry_blood > Sim::ts0();
@@ -460,7 +460,7 @@ void WHVivax::update(Host::Human& human, LocalRng& rng, int& n_new_infs_i, int& 
     }
 
     //NOTE: currently we don't model co-infection or indirect deaths
-    if (morbidity == Pathogenesis::NONE) {
+    if (morbidity == Pathogenesis::None) {
         morbidity = pathogenesis->sample_nmf(rng, age_in_years);
     }
 }

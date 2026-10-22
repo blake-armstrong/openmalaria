@@ -88,7 +88,7 @@ Pathogenesis::State PathogenesisParams::sample_nmf(LocalRng& rng, double age_yea
         if (rng.bernoulli(p_nmf))
             return Pathogenesis::StateNmf;
     }
-    return Pathogenesis::NONE;
+    return Pathogenesis::None;
 }
 
 PathogenesisModel::PathogenesisModel(const PathogenesisParams& params, double comorbidity_factor)

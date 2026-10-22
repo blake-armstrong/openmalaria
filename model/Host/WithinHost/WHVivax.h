@@ -250,7 +250,7 @@ private:
      * chance a male being tested and found to be G6PD deficient. */
     bool no_pq;
 
-    Pathogenesis::State morbidity = Pathogenesis::NONE;
+    Pathogenesis::State morbidity = Pathogenesis::None;
 
     // The number of primary blood stage infections to have started since this
     // human was born.
