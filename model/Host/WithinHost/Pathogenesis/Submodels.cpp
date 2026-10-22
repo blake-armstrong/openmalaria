@@ -37,7 +37,7 @@ MuellerParams::MuellerParams(const OM::Parameters& parameters)
 
 double MuellerPathogenesis::get_p_episode(double, double total_density) {
     const double incidence_density =
-        params->mueller.rate_multiplier_31 * (pow(total_density, params->mueller.density_exponent_32));
+        params().mueller.rate_multiplier_31 * (pow(total_density, params().mueller.density_exponent_32));
     return 1.0 - exp(-incidence_density);
 }
 
@@ -50,7 +50,8 @@ namespace {
 
 double pyrogen_b(const OM::Parameters& parameters) {
     const double delt = 1.0 / static_cast<double>(NumCategories);
-    const double smu_y = -log(0.5) / (Sim::steps_per_year() * parameters[Parameter::YStarHalfLife]);
+    const double smu_y =
+        -log(0.5) / (static_cast<double>(Sim::steps_per_year()) * parameters[Parameter::YStarHalfLife]);
     return -smu_y * delt;
 }
 
@@ -83,10 +84,10 @@ void PyrogenPathogenesis::summarize(const Host::Human& human) {
 void PyrogenPathogenesis::update_pyrogen_thres(double total_density) {
     // Note: this calculation is slow (something like 5% of runtime)
 
-    const double a = params->pyrogen.a;
-    const double b = params->pyrogen.b;
-    const double ystar1_26 = params->pyrogen.ystar1_26;
-    const double ystar2_13 = params->pyrogen.ystar2_13;
+    const double a = params().pyrogen.a;
+    const double b = params().pyrogen.b;
+    const double ystar1_26 = params().pyrogen.ystar1_26;
+    const double ystar2_13 = params().pyrogen.ystar2_13;
     //Numerical approximation to equation 2, AJTMH p.57
     for (size_t i = 1; i <= NumCategories; ++i) {
         pyrogen_thres +=

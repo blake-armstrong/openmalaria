@@ -134,10 +134,13 @@ protected:
 protected:
     virtual double get_p_episode(double time_step_max_density, double total_density) = 0;
 
-    const PathogenesisParams* params;
+    const PathogenesisParams& params() const { return *pathogenesis_params; }
 
     //! comorbidity factor for heterogeneity
     double comorbidity_factor;
+
+private:
+    const PathogenesisParams* pathogenesis_params;
 };
 
 }

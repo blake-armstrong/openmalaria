@@ -90,7 +90,7 @@ Pathogenesis::State PathogenesisParams::sample_nmf(LocalRng& rng, double age_yea
 }
 
 PathogenesisModel::PathogenesisModel(const PathogenesisParams& params, double comorbidity_factor)
-    : params(&params), comorbidity_factor(comorbidity_factor) {}
+    : comorbidity_factor(comorbidity_factor), pathogenesis_params(&params) {}
 
 Pathogenesis::StatePair PathogenesisModel::determine_state(Host::Human& human, double age_years,
                                                            double time_step_max_density, double end_density,
@@ -100,9 +100,10 @@ Pathogenesis::StatePair PathogenesisModel::determine_state(Host::Human& human, d
     //TODO(performance): would using a single RNG sample and manipulating probabilities be faster?
     //Decide whether a clinical episode occurs and if so, which type
     if (human.host_rng.bernoulli(p_malaria_fever)) {
-        const double pr_severe_episode = time_step_max_density / (time_step_max_density + params->severe_mal_threshold);
-        const double comorb_factor = comorbidity_factor / (1.0 + age_years * params->inv_crit_age_comorb);
-        const double p_coinfection = params->comorb_intercept * comorb_factor;
+        const double pr_severe_episode =
+            time_step_max_density / (time_step_max_density + params().severe_mal_threshold);
+        const double comorb_factor = comorbidity_factor / (1.0 + age_years * params().inv_crit_age_comorb);
+        const double p_coinfection = params().comorb_intercept * comorb_factor;
 
         // Expectation of a severe bout:
         const double ex_severe = pr_severe_episode + (1.0 - pr_severe_episode) * p_coinfection;
@@ -121,7 +122,7 @@ Pathogenesis::StatePair PathogenesisModel::determine_state(Host::Human& human, d
         // Indirect mortality:
         // IndirectRisk is the probability of dying from the indirect effects
         // of malaria conditional on not having an acute attack of malaria
-        const double indirect_risk = params->indir_risk_co_factor * comorb_factor;
+        const double indirect_risk = params().indir_risk_co_factor * comorb_factor;
         if (!is_doomed) {
             mon::recordStat(mon::measure("expectedIndirectDeaths"), human, indirect_risk);
         }
@@ -132,7 +133,7 @@ Pathogenesis::StatePair PathogenesisModel::determine_state(Host::Human& human, d
         if (human.host_rng.bernoulli(indirect_risk))
             result.indirect_mortality = true;
     } else {
-        result.state = params->sample_nmf(human.host_rng, age_years);
+        result.state = params().sample_nmf(human.host_rng, age_years);
     }
     return result;
 }
