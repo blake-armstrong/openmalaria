@@ -20,6 +20,7 @@ set (OM_BOXTEST_NAMES
   Empirical
   # ESCMTest (cannot be updated to new format due to dropped features and weirdness)
   ESTS
+  ESChangeHS
   Genotypes
   IRS30
   KK_20150612
