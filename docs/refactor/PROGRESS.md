@@ -36,7 +36,7 @@ See `PLAN.md` for the session protocol, chunks and gates. Append one log entry p
 | D5 | done | 8dcdf512, 5c0449e9, c92d9d36, b543d8fd, de48455e, 0c859fb0, a210a53d, eb07d51e, a3789f2f; follow-up 89c90989, 5355535c, 74843c0a, (its log entry) |
 | D6 | split | D6a–D6c |
 | D6a | done | 1b084b2e, 910bf9a9, 3be68cb7, c38704fb, 225947ca, 4ed41e45, aa825247, f7849271, c2e8281b, f4b0cfd2, c5dc1e95, 25082ee3, 44666fc1, 0d84e89f, (this log entry) |
-| D6b | done | 66fdf1e1, 38a88580, a0e9a737, 18a6f0c2, f1831c6f, 227daa2f, d4e7b71c, 51663e3e, 9011466e, (this log entry) |
+| D6b | done | 66fdf1e1, 38a88580, a0e9a737, 18a6f0c2, f1831c6f, 227daa2f, d4e7b71c, 51663e3e, 9011466e, (this log entry); F59/F60 fixes e169341c, 75700eda, 41c35aa4, f8f0896b, (their log entry) |
 | D6c | todo | |
 | D7 | todo | |
 | D8 | todo | |
@@ -1143,5 +1143,24 @@ The user approved adding the scenario test proposed in D5's follow-ups.
   - D9: monitoring's `bridge::infant_mortality()`.
   - H3: `Episode::State` and the doomed codes to `enum class` (both checkpointed as ints).
   - The uncompiled `ESCaseManagementSuite.h` (F9) still uses the old names (`Episode::NONE`, the old `CMHostData` constructor).
-  - F59 and F60 wait for the user.
+  - F59 and F60 wait for the user. **Fixed after the log entry, with the user's approval; see the next entry.**
+- Next: D6c.
+
+### D6b follow-up: F59 and F60 fixed, with tests (2026-10-22, after D6b)
+The user asked for both D6b findings to be fixed, each in its own commit, with new tests that validate the changes. Both change behaviour on purpose; the base for the A/B runs and G-perf stayed f79fcb79 (`../om-bench-base`).
+- Commits:
+  - e169341c: `util/ab_scenarios.py` `clinical/dt_intervention_severe_node`: scenarioMSAT's MDA tree behind a `<severe>` node, deployed every step from day 1484 to 1849 at full coverage, so every newborn gets the tree on its first step, before its first clinical update, when `latest_state` is not yet set. First attempts did not reach that window: MSAT's two timed deployments fall on days with no newborn (100 people, 1-day steps), and a continuous deployment needs a target age above zero, i.e. after the first update. A build that initialises `latest_state` to `Complicated` moves this variant (nMDAs 2080 → 2094, mass screenings 36588 → 36568), so the variant does read the value; the base build and the fixed build agree on it.
+  - 75700eda: **F60 fix.** `latest_state` starts at `Episode::None`; the constructor's NOLINT goes. New Catch2 file `unittest/ClinicalTests.cpp` (in `unittest-catch2`), `[clinical][F60]`: each of the three models built by placement new in storage filled with 0xA5 reports `None` (without the fix: `-1515870811 == 0` for all three), and `ClinicalParams::create` gives `None` for each kind (this one passes without the fix by chance: fresh heap memory is zero).
+  - 41c35aa4: **F59 fix.** `EventSchedulerParams::set_parameters` clears `cum_daily_pr_imm_ucts` before filling it. Catch2 `[clinical][F59]`: three successive health systems (1; 0.2, 0.8; 1) each leave exactly their own cumulative values (without the fix: `{1.0, 0.2, 1.0}` and `{1.0, 0.2, 1.0, 1.0}`). The test's CFR uses piecewise-constant interpolation, since the linear one reads the maximum human age from the clock, which a unit test does not bind.
+  - f8f0896b: scenario test scenarioESChangeHS (scenarioESTS plus a `changeHS` at the start of the intervention period changing `dailyPrImmUCTS` from 1 to 0.2, 0.8), registered in `OM_BOXTEST_NAMES` (checkpoint stop and resume). New files only: `test/scenarioESChangeHS.xml` and `test/expected/outputESChangeHS.txt`, from the fixed build (Release and Debug identical). The build before the fix gives output byte-identical to `outputESTS.txt` and fails the test with 1360 differing cells.
+- Gates:
+  - G-exact / G-unit: after each fix 57/57 (strict) on Release and Debug, then 58/58 with scenarioESChangeHS; `unittest-catch2` 14 test cases. Neither fix moves any existing `test/expected/` file.
+  - A/B (base f79fcb79): after the F60 fix 0 of 149 variants differ; after the F59 fix 2 of 149, exactly `clinical/es_changehs_daily_pr` and `es_changehs_daily_pr_checkpoint` (nUncomp 541 → 597; before the fix both equalled `es_changehs_same`). The fixed build's checkpointed run equals its uninterrupted run, as the base's did: on resume the `changeHS` is deployed again and now replaces the list too.
+  - G-stat: plain `ctest -j4` at f8f0896b: 111 passed, 5 disabled (the vivax liver-stage scenarios', PkPdModels' and the new ESChangeHS's `stat_` tests, which have no reference).
+  - G-style: `util/style.sh check` clean on each commit's changes.
+  - G-perf: candidate f8f0896b against f79fcb79: median per-pair ratio 1.0135 (+1.35%), spreads 6.0% / 0.9%, load ~2.3–3.
+- Findings: F59 and F60 moved to FINDINGS § Closed.
+- Surprises:
+  - Before the F59 fix, scenarioESChangeHS's whole `changeHS` was a no-op for the output: every other value it carries equals ESTS's, and the one that differs was ignored.
+  - F60 changed nothing observable here, even on a variant built to reach the uninitialised read; the poisoned-storage unit test is what shows the old code read an indeterminate value.
 - Next: D6c.
