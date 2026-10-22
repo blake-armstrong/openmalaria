@@ -48,3 +48,7 @@ e53617abd5e7652c744891a68c701e202e31f5d2
 e67dbef97fb988c33e2f30416cd5afe3d2284415
 # D5: model/PkPd safe modernize fix-its (util/style.sh modernize)
 c92d9d367cc128f17832909988b5d64310e841a1
+# D6a: rename model/Host/WithinHost/Pathogenesis identifiers (util/style.sh rename)
+c38704fb3e8adcda7f57290d582f43059d093f01
+# D6a: rename the single-word Pathogenesis::State enumerators (hand, text replacement)
+225947cac5346b7e5dcfaa9e60543b3c81ad5ec6
