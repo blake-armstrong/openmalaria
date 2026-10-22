@@ -50,8 +50,12 @@ util/style.sh modernize <dir> --dry-run
 About 10 s per pass. It prints the first pass's fixes, then three lists:
 overlapping fixes (left for the next pass), fixes that reach outside the module, and
 findings with no fix-it. Read the fixes for anything that would change behaviour in this
-module, e.g. a `modernize-loop-convert` over a container the loop body modifies. If one
-would, stop and tell the user; the check list may need narrowing.
+module, e.g. a `modernize-loop-convert` over a container the loop body modifies, or a
+`cppcoreguidelines-prefer-member-initializer` that moves a read which can throw (e.g.
+`Parameters::operator[]`) ahead of another, which changes the error reported (F58). If one
+would, stop and tell the user; the check list may need narrowing. For F58, D6a instead
+reverted the tool output and, in a logic commit, built the members in the initializer list
+in the old read order, so the check had nothing left to move.
 
 ## 3. Apply, build, test
 
