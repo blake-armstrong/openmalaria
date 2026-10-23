@@ -41,11 +41,11 @@ namespace OM {
 namespace mon {
 
 using internal::Condition;
-using internal::runtime;
 
 namespace {
 
 uint32_t cohortSetOutputId(uint32_t cohortSet) {
+    MonitoringState& runtime = bridge::monitoring();
     uint32_t outNum = 0;
     assert((cohortSet >> runtime.cohortSubPopNumbers.size()) == 0);
     for (uint32_t i = 0; i < runtime.cohortSubPopNumbers.size(); ++i) {
@@ -78,6 +78,7 @@ size_t MeasureStore::index(size_t a, size_t c, size_t sp, size_t g, size_t d) co
 namespace {
 
 void addStore(const OutMeasure& om, size_t nSpecies, size_t nDrugs, bool forceNoCategories) {
+    MonitoringState& runtime = bridge::monitoring();
     assert(om.measure < MeasureCount);
     MeasureStore store;
     store.output = om;
@@ -103,6 +104,7 @@ void addStore(const OutMeasure& om, size_t nSpecies, size_t nDrugs, bool forceNo
 } // namespace
 
 void initStores(const vector<OutMeasure>& enabledMeasures, size_t nSpecies, size_t nDrugs) {
+    MonitoringState& runtime = bridge::monitoring();
     runtime.stores.clear();
     runtime.storesByMeasure.assign(MeasureCount, {});
     for (const OutMeasure& om : enabledMeasures)
@@ -110,12 +112,14 @@ void initStores(const vector<OutMeasure>& enabledMeasures, size_t nSpecies, size
 }
 
 void ensureConditionStore(const OutMeasure& om) {
+    MonitoringState& runtime = bridge::monitoring();
     assert(om.measure < MeasureCount);
     if (runtime.storesByMeasure[om.measure].empty())
         addStore(om, 1, 1, true);
 }
 
 double surveySum(Measure measure, size_t survey) {
+    MonitoringState& runtime = bridge::monitoring();
     assert(measure < runtime.storesByMeasure.size());
     if (runtime.storesByMeasure[measure].empty())
         throw SWITCH_DEFAULT_EXCEPTION;
@@ -128,13 +132,12 @@ double surveySum(Measure measure, size_t survey) {
         store.reports);
 }
 
-RuntimeState runtime;
-
 } // namespace internal
 
 namespace {
 
 void updateConditions() {
+    MonitoringState& runtime = bridge::monitoring();
     const size_t survey = statSurveyNumber();
     if (survey == NOT_USED)
         return;
@@ -194,6 +197,7 @@ void writeMeasure(ostream& stream, Writer writeRow, size_t survey, const interna
 enum class ValueType { All, Integer, Double };
 
 template <class Writer> void writeRows(ostream& stream, Writer writeRow, ValueType type = ValueType::All) {
+    MonitoringState& runtime = bridge::monitoring();
     for (size_t survey = 0; survey < runtime.nSurveys; ++survey) {
         for (const internal::MeasureStore& store : runtime.stores) {
             if (store.output.outId < 0 || (type == ValueType::Integer && store.output.isDouble) ||
@@ -208,6 +212,7 @@ template <class Writer> void writeRows(ostream& stream, Writer writeRow, ValueTy
 }
 
 uint64_t countRows(bool isDouble) {
+    MonitoringState& runtime = bridge::monitoring();
     uint64_t count = isDouble && runtime.reportIMR >= 0 ? 1 : 0;
     for (const internal::MeasureStore& store : runtime.stores) {
         if (store.output.outId < 0 || store.output.isDouble != isDouble)
@@ -272,6 +277,7 @@ template <class Stream, class Writer> void writeOutput(const string& filename, i
 }
 
 void updateSurveyNumbers() {
+    MonitoringState& runtime = bridge::monitoring();
     runtime.survNumEvent = NOT_USED;
     for (size_t i = runtime.surveyIndex; i < runtime.surveyDates.size(); ++i) {
         runtime.survNumEvent = runtime.surveyDates[i].num;
@@ -282,6 +288,7 @@ void updateSurveyNumbers() {
 
 } // namespace
 size_t setupCondition(const string& measureName, double minValue, double maxValue, bool initialState) {
+    MonitoringState& runtime = bridge::monitoring();
     const OutMeasure om = findOutMeasure(measureName);
     if (om.measure == invalidMeasure) {
         throw util::xml_scenario_error("unrecognised measure: " + measureName);
@@ -297,6 +304,7 @@ size_t setupCondition(const string& measureName, double minValue, double maxValu
 }
 
 bool checkCondition(size_t conditionKey) {
+    MonitoringState& runtime = bridge::monitoring();
     assert(conditionKey < runtime.conditions.size());
     return runtime.conditions[conditionKey].value;
 }
@@ -305,6 +313,7 @@ static void recordValue(Measure measure, size_t survey, size_t age, uint32_t coh
                         size_t drug, double val, int outId = 0) {
     if (survey == NOT_USED)
         return;
+    MonitoringState& runtime = bridge::monitoring();
     assert(measure < runtime.storesByMeasure.size());
     for (size_t idx : runtime.storesByMeasure[measure]) {
         internal::MeasureStore& store = runtime.stores[idx];
@@ -350,6 +359,7 @@ void recordDeploy(Measure timedMeasure, Measure ctsMeasure, const Host::Human& h
 }
 
 template <typename Stream> void checkpoint(Stream& stream) {
+    MonitoringState& runtime = bridge::monitoring();
     runtime.isInit & stream;
     runtime.surveyIndex & stream;
     runtime.survNumEvent & stream;
@@ -375,12 +385,14 @@ template void checkpoint<istream>(istream& stream);
 // ———  surveys  ———
 
 void initMainSim() {
+    MonitoringState& runtime = bridge::monitoring();
     runtime.surveyIndex = 0;
     runtime.isInit = true;
     updateSurveyNumbers();
 }
 
 void concludeSurvey() {
+    MonitoringState& runtime = bridge::monitoring();
     updateConditions();
     runtime.surveyIndex += 1;
     updateSurveyNumbers();
@@ -400,12 +412,14 @@ void writeSurveyData() {
 }
 
 void updateAgeGroup(size_t& index, SimTime age) {
+    MonitoringState& runtime = bridge::monitoring();
     while (age >= runtime.ageGroupUpperBound[index]) {
         ++index;
     }
 }
 
 uint32_t updateCohortSet(uint32_t old, interventions::ComponentId subPop, bool isMember) {
+    MonitoringState& runtime = bridge::monitoring();
     auto it = runtime.cohortSubPopIds.find(subPop);
     if (it == runtime.cohortSubPopIds.end())
         return old;

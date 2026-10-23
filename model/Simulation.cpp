@@ -93,8 +93,8 @@ Simulation::Simulation(std::unique_ptr<scnXml::Scenario> scenario, util::Command
     // Init models used by humans
     per_host_params = Transmission::PerHostParams(scenario_xml->getModel().getHuman().getAvailabilityToMosquitoes());
     infection_incidence = Host::InfectionIncidenceParams(parameters, model_options);
-    mon::Continuous::registerCallback("new infections", "\tnew infections",
-                                      [this](ostream& stream) { new_infections.report(stream); });
+    continuous.registerCallback("new infections", "\tnew infections",
+                                [this](ostream& stream) { new_infections.report(stream); });
     within_host_model = WithinHost::WithinHostModel(parameters, model_options, command_line, genotypes, *scenario_xml);
     clinical = Clinical::ClinicalParams(parameters, model_options, command_line, *scenario_xml);
     decision_trees =
@@ -116,9 +116,9 @@ Simulation::Simulation(std::unique_ptr<scnXml::Scenario> scenario, util::Command
         master_rngs.population);
     transmission_model =
         Transmission::create_transmission_model(scenario_xml->getEntomology(), static_cast<int>(pop_size),
-                                                per_host_params, master_rngs.transmission, genotypes);
+                                                per_host_params, master_rngs.transmission, genotypes, continuous);
 
-    registerContinousPopulationCallbacks();
+    registerContinousPopulationCallbacks(continuous);
 
     // Depends on transmission model (for species indexes):
     // MDA1D may depend on health system (too complex to verify)
@@ -165,9 +165,9 @@ void Simulation::run(const CheckpointOptions& checkpointing) {
 }
 
 void Simulation::resume(const std::string& checkpoint_file) {
-    mon::Continuous::init(scenario_xml->getMonitoring(), true);
+    continuous.init(scenario_xml->getMonitoring(), true);
     read_checkpoint(checkpoint_file, command_line, clock, master_rngs, genotypes, neonatal_mortality, new_infections,
-                    infant_mortality, end_time, est_end_time, *population_model, *transmission_model,
+                    infant_mortality, continuous, end_time, est_end_time, *population_model, *transmission_model,
                     intervention_manager);
 
     /** Calculate ento availability percentiles **/
@@ -175,7 +175,7 @@ void Simulation::resume(const std::string& checkpoint_file) {
 }
 
 void Simulation::start_new(const CheckpointOptions& checkpointing) {
-    mon::Continuous::init(scenario_xml->getMonitoring(), false);
+    continuous.init(scenario_xml->getMonitoring(), false);
     population_model->createInitialHumans();
     transmission_model->init2(population_model->humans);
 
@@ -219,7 +219,7 @@ void Simulation::start_new(const CheckpointOptions& checkpointing) {
 
     if (checkpointing.enabled) {
         write_checkpoint(false, checkpointing.file_name, command_line, clock, master_rngs, genotypes,
-                         neonatal_mortality, new_infections, infant_mortality, end_time, est_end_time,
+                         neonatal_mortality, new_infections, infant_mortality, continuous, end_time, est_end_time,
                          *population_model, *transmission_model, intervention_manager);
         if (checkpointing.stop_after_write)
             throw util::cmd_exception("Checkpoint test: checkpoint written", util::Error::None);
@@ -265,7 +265,7 @@ void Simulation::step() {
 
     // Monitoring. clock.now() gives time of end of last step,
     // and is when reporting happens in our time-series.
-    mon::Continuous::update(population);
+    continuous.update(population);
     if (clock.interv_date() == mon::nextSurveyDate()) {
         for (Host::Human& human : population.humans)
             Host::summarize(human, only_new_episode);

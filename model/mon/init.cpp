@@ -40,7 +40,6 @@
 namespace OM {
 namespace mon {
 
-using internal::runtime;
 using internal::SurveyDate;
 
 namespace {
@@ -48,6 +47,7 @@ namespace {
 constexpr uint32_t maxCohortNumber = uint32_t{1} << 21;
 
 void initAgeGroups(const scnXml::Monitoring& monitoring) {
+    MonitoringState& runtime = bridge::monitoring();
     const scnXml::MonAgeGroup::GroupSequence& groups = monitoring.getAgeGroup().getGroup();
     if (!(monitoring.getAgeGroup().getLowerbound() <= 0.0)) {
         throw util::xml_scenario_error("Expected survey age-group lowerbound of 0");
@@ -63,6 +63,7 @@ void initAgeGroups(const scnXml::Monitoring& monitoring) {
 } // namespace
 
 void initReporting(const scnXml::Scenario& scenario) {
+    MonitoringState& runtime = bridge::monitoring();
     runtime.reportIMR = -1;
     const scnXml::MonitoringOptions& optsElt = scenario.getMonitoring().getSurveyOptions();
     std::vector<OutMeasure> reportedMeasures;
@@ -128,6 +129,7 @@ void initReporting(const scnXml::Scenario& scenario) {
 }
 
 SimTime readSurveyDates(const scnXml::Monitoring& monitoring) {
+    MonitoringState& runtime = bridge::monitoring();
     const scnXml::Surveys::SurveyTimeSequence& survs = monitoring.getSurveys().getSurveyTime();
     std::map<SimTime, bool> surveys;
 
@@ -203,6 +205,7 @@ SimTime readSurveyDates(const scnXml::Monitoring& monitoring) {
 }
 
 void initCohorts(const scnXml::Monitoring& monitoring) {
+    MonitoringState& runtime = bridge::monitoring();
     runtime.cohortSubPopNumbers.clear();
     runtime.cohortSubPopIds.clear();
     if (!monitoring.getCohorts().present())

@@ -115,21 +115,21 @@ protected:
     /// Reads all entomological parameters from the input datafile.
     /// @param entoData input configuration for model
     /// @param n_genotypes number of genotypes transmission model is using
-    TransmissionModel(vector<double> initialisation_eir, int intervention_mode, size_t n_genotypes, SimTime adult_age)
+    TransmissionModel(vector<double> initialisation_eir, int intervention_mode, size_t n_genotypes, SimTime adult_age,
+                      mon::Continuous& continuous)
         : n_genotypes(n_genotypes), initialisation_eir(std::move(initialisation_eir)),
           intervention_mode(intervention_mode), lagged_kappa(Sim::steps_per_year(), 0.0),
           annual_average_kappa(numeric_limits<double>::signaling_NaN()), adult_age(adult_age),
           opt_vaccine_genotype(util::ModelOptions::option(util::VaccineGenotype)) {
         // Set VACCINE_GENOTYPE option
 
-        mon::Continuous::registerCallback("input EIR", "\tinput EIR",
-                                          [this](ostream& stream) { cts_cb_input_eir(stream); });
-        mon::Continuous::registerCallback("simulated EIR", "\tsimulated EIR",
-                                          [this](ostream& stream) { cts_cb_simulated_eir(stream); });
-        mon::Continuous::registerCallback("human infectiousness", "\thuman infectiousness",
-                                          [this](ostream& stream) { cts_cb_kappa(stream); });
-        mon::Continuous::registerCallback("num transmitting humans", "\tnum transmitting humans",
-                                          [this](ostream& stream) { cts_cb_num_transmitting_humans(stream); });
+        continuous.registerCallback("input EIR", "\tinput EIR", [this](ostream& stream) { cts_cb_input_eir(stream); });
+        continuous.registerCallback("simulated EIR", "\tsimulated EIR",
+                                    [this](ostream& stream) { cts_cb_simulated_eir(stream); });
+        continuous.registerCallback("human infectiousness", "\thuman infectiousness",
+                                    [this](ostream& stream) { cts_cb_kappa(stream); });
+        continuous.registerCallback("num transmitting humans", "\tnum transmitting humans",
+                                    [this](ostream& stream) { cts_cb_num_transmitting_humans(stream); });
     }
 
 public:

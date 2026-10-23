@@ -49,7 +49,7 @@ inline SimulationMode read_mode(const string& str) {
 }
 
 inline std::unique_ptr<NonVectorModel> create_non_vector_model(const scnXml::Entomology& ento_data, size_t n_genotypes,
-                                                               SimTime adult_age) {
+                                                               SimTime adult_age, mon::Continuous& continuous) {
     const scnXml::NonVector& non_vector_data = ento_data.getNonVector().get();
 
     const int intervention_mode = read_mode(ento_data.getMode());
@@ -59,7 +59,7 @@ inline std::unique_ptr<NonVectorModel> create_non_vector_model(const scnXml::Ent
     initialisation_eir.assign(Sim::steps_per_year(), 0.0);
 
     return std::make_unique<NonVectorModel>(initialisation_eir, intervention_mode, ento_data, non_vector_data,
-                                            eip_duration, n_genotypes, adult_age);
+                                            eip_duration, n_genotypes, adult_age, continuous);
 }
 
 inline bool anopheles_compare(const scnXml::AnophelesParams& a1, const scnXml::AnophelesParams& a2) {
@@ -300,7 +300,8 @@ create_anopheles_model(size_t i, const scnXml::AnophelesParams& anoph, vector<do
 inline std::unique_ptr<VectorModel> create_vector_model(const scnXml::Entomology& ento_data, int population_size,
                                                         PerHostParams& per_host_params,
                                                         util::MasterRng& transmission_rng,
-                                                        const WithinHost::GenotypeRegistry& genotypes) {
+                                                        const WithinHost::GenotypeRegistry& genotypes,
+                                                        mon::Continuous& continuous) {
     const scnXml::Vector& vector_data = ento_data.getVector().get();
     scnXml::Vector::AnophelesSequence anopheles_list = vector_data.getAnopheles();
 
@@ -348,7 +349,7 @@ inline std::unique_ptr<VectorModel> create_vector_model(const scnXml::Entomology
 
     return std::make_unique<VectorModel>(initialisation_eir, intervention_mode, std::move(species),
                                          std::move(emergence_rate_estimators), species_index, population_size,
-                                         transmission_rng, genotypes.count(), per_host_params.adult_age());
+                                         transmission_rng, genotypes.count(), per_host_params.adult_age(), continuous);
 }
 
 ///@brief Creation, destruction and checkpointing
@@ -357,12 +358,14 @@ inline std::unique_ptr<VectorModel> create_vector_model(const scnXml::Entomology
 inline std::unique_ptr<TransmissionModel> create_transmission_model(const scnXml::Entomology& ento_data,
                                                                     int population_size, PerHostParams& per_host_params,
                                                                     util::MasterRng& transmission_rng,
-                                                                    const WithinHost::GenotypeRegistry& genotypes) {
+                                                                    const WithinHost::GenotypeRegistry& genotypes,
+                                                                    mon::Continuous& continuous) {
     // Entomology contains either a list of at least one anopheles or a list of at
     // least one EIRDaily.
     std::unique_ptr<TransmissionModel> model;
     if (ento_data.getVector().present())
-        model = create_vector_model(ento_data, population_size, per_host_params, transmission_rng, genotypes);
+        model =
+            create_vector_model(ento_data, population_size, per_host_params, transmission_rng, genotypes, continuous);
     else {
         if (!ento_data.getNonVector().present()) // should be a validation error, but anyway...
             throw util::xml_scenario_error("Neither vector nor non-vector data present in the XML!");
@@ -370,7 +373,7 @@ inline std::unique_ptr<TransmissionModel> create_transmission_model(const scnXml
             util::ModelOptions::option(util::VectorSimpleMpdModel))
             throw util::xml_scenario_error(
                 "VECTOR_*_MODEL is only compatible with the vector model (and non-vector data is present).");
-        model = create_non_vector_model(ento_data, genotypes.count(), per_host_params.adult_age());
+        model = create_non_vector_model(ento_data, genotypes.count(), per_host_params.adult_age(), continuous);
     }
 
     if (ento_data.getScaledAnnualEIR().present()) {

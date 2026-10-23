@@ -38,8 +38,9 @@ namespace OM::Transmission {
 class NonVectorModel : public TransmissionModel {
 public:
     NonVectorModel(vector<double> init_eir, int intervention_mode, const scnXml::Entomology& ento_data,
-                   const scnXml::NonVector& non_vector_data, int eip_duration, size_t n_genotypes, SimTime adult_age)
-        : TransmissionModel(std::move(init_eir), intervention_mode, n_genotypes, adult_age),
+                   const scnXml::NonVector& non_vector_data, int eip_duration, size_t n_genotypes, SimTime adult_age,
+                   mon::Continuous& continuous)
+        : TransmissionModel(std::move(init_eir), intervention_mode, n_genotypes, adult_age, continuous),
           n_spore(Sim::from_days(eip_duration)) {
         lagged_kappa.resize(Sim::in_steps(n_spore) + 1, 0.0);
 

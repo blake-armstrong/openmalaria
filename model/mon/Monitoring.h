@@ -73,37 +73,68 @@ struct MeasureStore {
     size_t index(size_t a, size_t c, size_t sp, size_t g, size_t d) const;
 };
 
-struct RuntimeState {
+} // namespace internal
+
+struct MonitoringState {
     bool isInit = false;
     size_t surveyIndex = 0;
     size_t survNumEvent = NOT_USED;
     size_t nSurveys = 0;
     size_t nCohorts = 1;
     int reportIMR = -1;
-    std::vector<Condition> conditions;
-    std::vector<SurveyDate> surveyDates;
+    std::vector<internal::Condition> conditions;
+    std::vector<internal::SurveyDate> surveyDates;
     std::vector<SimTime> ageGroupUpperBound;
     std::vector<uint32_t> cohortSubPopNumbers;
     std::map<interventions::ComponentId, uint32_t> cohortSubPopIds;
-    std::vector<MeasureStore> stores;
+    std::vector<internal::MeasureStore> stores;
     std::vector<std::vector<size_t>> storesByMeasure;
 };
 
-extern RuntimeState runtime;
+namespace internal {
 void initStores(const std::vector<OutMeasure>& enabledMeasures, size_t nSpecies, size_t nDrugs);
-
 } // namespace internal
+
+} // namespace mon
+
+namespace bridge {
+
+inline mon::MonitoringState* current_monitoring = nullptr; // NOLINT(cppcoreguidelines-avoid-non-const-global-variables)
+
+inline mon::MonitoringState& monitoring() {
+    assert(current_monitoring != nullptr);
+    return *current_monitoring;
+}
+
+}
+
+class MonitoringBinding {
+public:
+    explicit MonitoringBinding(mon::MonitoringState& state) : previous(bridge::current_monitoring) {
+        bridge::current_monitoring = &state;
+    }
+    MonitoringBinding(const MonitoringBinding&) = delete;
+    MonitoringBinding& operator=(const MonitoringBinding&) = delete;
+    MonitoringBinding(MonitoringBinding&&) = delete;
+    MonitoringBinding& operator=(MonitoringBinding&&) = delete;
+    ~MonitoringBinding() { bridge::current_monitoring = previous; }
+
+private:
+    mon::MonitoringState* previous;
+};
+
+namespace mon {
 
 // ----- info API -----
 
-inline size_t eventSurveyNumber() { return internal::runtime.survNumEvent; }
+inline size_t eventSurveyNumber() { return bridge::monitoring().survNumEvent; }
 inline size_t statSurveyNumber() {
-    const auto& r = internal::runtime;
+    const auto& r = bridge::monitoring();
     return r.isInit && r.surveyIndex < r.surveyDates.size() ? r.surveyDates[r.surveyIndex].num : NOT_USED;
 }
-inline bool isReported() { return !internal::runtime.isInit || statSurveyNumber() != NOT_USED; }
+inline bool isReported() { return !bridge::monitoring().isInit || statSurveyNumber() != NOT_USED; }
 inline SimTime nextSurveyDate() {
-    const auto& r = internal::runtime;
+    const auto& r = bridge::monitoring();
     return r.isInit && r.surveyIndex < r.surveyDates.size() ? r.surveyDates[r.surveyIndex].date : Sim::future();
 }
 size_t setupCondition(const std::string& measureName, double minValue, double maxValue, bool initialState);
@@ -132,7 +163,7 @@ void recordDeploy(Measure timedMeasure, Measure ctsMeasure, const Host::Human& h
                   double val = 1.0);
 inline bool isUsed(Measure measure) {
     assert(measure < MeasureCount);
-    return !internal::runtime.storesByMeasure[measure].empty();
+    return !bridge::monitoring().storesByMeasure[measure].empty();
 }
 
 } // namespace mon

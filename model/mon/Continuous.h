@@ -28,7 +28,11 @@
 #include "Population.h"
 #include "Host/Human.h"
 
+#include <fstream>
 #include <functional>
+#include <map>
+#include <tuple>
+#include <vector>
 
 namespace scnXml {
 class Monitoring;
@@ -36,7 +40,6 @@ class Monitoring;
 namespace OM {
 class Population;
 namespace mon {
-namespace Continuous {
 
 /** Functions dealing with continuous output data.
      *
@@ -44,17 +47,26 @@ namespace Continuous {
      *  (1) frequency of and which data is output should be controllable
      *  (2) format should be compatible with LiveGraph and (German) Excel.
      */
-/** Load XML description of options. If resuming from a checkpoint,
+class Continuous {
+public:
+    Continuous() = default;
+    Continuous(const Continuous&) = delete;
+    Continuous& operator=(const Continuous&) = delete;
+    Continuous(Continuous&&) = delete;
+    Continuous& operator=(Continuous&&) = delete;
+    ~Continuous() = default;
+
+    /** Load XML description of options. If resuming from a checkpoint,
 	 * append to output; if not, make sure it's not there (on boinc we
 	 * assume we shouldn't overwrite existing files for security reasons).
 	 * 
 	 * Callbacks should be registered before init() is called. */
-void init(const scnXml::Monitoring& monitoring, bool isCheckpoint);
+    void init(const scnXml::Monitoring& monitoring, bool isCheckpoint);
 
-void checkpoint(ostream& stream);
-void checkpoint(istream& stream);
+    void checkpoint(ostream& stream);
+    void checkpoint(istream& stream);
 
-/** Register a callback function which produces output.
+    /** Register a callback function which produces output.
 	 *
 	 * This function will be called to generate output, if enabled in XML.
 	 * It may output more than one statistic, if for example vector output
@@ -66,17 +78,34 @@ void checkpoint(istream& stream);
 	 * @param outputCb A callback function, which when called, outputs its
 	 * data to the passed stream, with each entry preceeded by '\t'.
 	 */
-void registerCallback(string optName, string titles, function<void(ostream&)> f);
+    void registerCallback(string optName, string titles, function<void(ostream&)> f);
 
-void registerCallback(string optName, string titles, function<void(const vector<Host::Human>&, ostream&)> f);
+    void registerCallback(string optName, string titles, function<void(const vector<Host::Human>&, ostream&)> f);
 
-void registerCallback(string optName, string titles, function<void(Population&, ostream&)> f);
+    void registerCallback(string optName, string titles, function<void(Population&, ostream&)> f);
 
-/// Generate time-step's output. Called at beginning of time step.
-/// Passed population since some callbacks use this to generate output.
-void update(Population& population);
+    /// Generate time-step's output. Called at beginning of time step.
+    /// Passed population since some callbacks use this to generate output.
+    void update(Population& population);
 
-} // namespace Continuous
+private:
+    /// This is used to output some statistics in a tab-deliminated-value file.
+    /// (It used to be csv, but German Excel can't open csv directly.)
+    fstream ctsOStream;
+
+    // Serializable output position used when resuming from a checkpoint.
+    streamoff streamOffset = 0;
+
+    map<string, tuple<string, std::function<void(Population&, ostream&)>>> registered;
+
+    // List that we report.
+    vector<tuple<string, std::function<void(Population&, ostream&)>>> toReport;
+
+    SimTime ctsPeriod = Sim::zero();
+
+    bool duringInit = false;
+};
+
 } // namespace mon
 } // namespace OM
 #endif

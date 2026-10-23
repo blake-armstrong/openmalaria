@@ -30,6 +30,9 @@
 #include <vector>
 
 namespace OM {
+namespace mon {
+class Continuous;
+}
 
 /** The simulated human population. */
 class Population {
@@ -73,7 +76,7 @@ private:
     int recentBirths = 0;
 };
 
-void registerContinousPopulationCallbacks();
+void registerContinousPopulationCallbacks(mon::Continuous& continuous);
 
 /// Delegate to print the number of hosts
 void ctsHosts(Population& population, ostream& stream);

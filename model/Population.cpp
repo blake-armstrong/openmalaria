@@ -127,22 +127,22 @@ void Population::checkpoint(ostream& stream) {
         human.checkpoint(stream);
 }
 
-void registerContinousPopulationCallbacks() {
+void registerContinousPopulationCallbacks(mon::Continuous& continuous) {
     ostringstream ctsDemogTitle;
     for (double ubound : ctsDemogAgeGroups)
         ctsDemogTitle << "\thost % ≤ " << ubound;
 
-    mon::Continuous::registerCallback("hosts", "\thosts", &ctsHosts);
-    mon::Continuous::registerCallback("host demography", ctsDemogTitle.str(), &ctsHostDemography);
-    mon::Continuous::registerCallback("recent births", "\trecent births", &ctsRecentBirths);
-    mon::Continuous::registerCallback("patent hosts", "\tpatent hosts", &ctsPatentHosts);
-    mon::Continuous::registerCallback("immunity h", "\timmunity h", &ctsImmunityh);
-    mon::Continuous::registerCallback("immunity Y", "\timmunity Y", &ctsImmunityY);
-    mon::Continuous::registerCallback("median immunity Y", "\tmedian immunity Y", &ctsMedianImmunityY);
-    mon::Continuous::registerCallback("human age availability", "\thuman age availability", &ctsMeanAgeAvailEffect);
-    mon::Continuous::registerCallback("ITN coverage", "\tITN coverage", &ctsITNCoverage);
-    mon::Continuous::registerCallback("IRS coverage", "\tIRS coverage", &ctsIRSCoverage);
-    mon::Continuous::registerCallback("GVI coverage", "\tGVI coverage", &ctsGVICoverage);
+    continuous.registerCallback("hosts", "\thosts", &ctsHosts);
+    continuous.registerCallback("host demography", ctsDemogTitle.str(), &ctsHostDemography);
+    continuous.registerCallback("recent births", "\trecent births", &ctsRecentBirths);
+    continuous.registerCallback("patent hosts", "\tpatent hosts", &ctsPatentHosts);
+    continuous.registerCallback("immunity h", "\timmunity h", &ctsImmunityh);
+    continuous.registerCallback("immunity Y", "\timmunity Y", &ctsImmunityY);
+    continuous.registerCallback("median immunity Y", "\tmedian immunity Y", &ctsMedianImmunityY);
+    continuous.registerCallback("human age availability", "\thuman age availability", &ctsMeanAgeAvailEffect);
+    continuous.registerCallback("ITN coverage", "\tITN coverage", &ctsITNCoverage);
+    continuous.registerCallback("IRS coverage", "\tIRS coverage", &ctsIRSCoverage);
+    continuous.registerCallback("GVI coverage", "\tGVI coverage", &ctsGVICoverage);
 }
 
 void ctsHosts(Population& population, ostream& stream) {

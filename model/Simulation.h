@@ -37,6 +37,8 @@
 #include "PopulationAgeStructure.h"
 #include "Transmission/transmission.h"
 #include "interventions/InterventionManager.h"
+#include "mon/Continuous.h"
+#include "mon/Monitoring.h"
 #include "util/CommandLine.h"
 #include "util/ModelOptions.h"
 #include "util/random.h"
@@ -81,6 +83,9 @@ private:
 
     util::CommandLineOptions command_line;
     CommandLineBinding command_line_binding{command_line};
+    mon::MonitoringState monitoring;
+    MonitoringBinding monitoring_binding{monitoring};
+    mon::Continuous continuous;
     Clock clock;
     ClockBinding clock_binding{clock};
     util::MasterRngs master_rngs;

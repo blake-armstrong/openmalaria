@@ -43,6 +43,7 @@
 #include "Host/WithinHost/Genotypes.h"
 #include "Host/WithinHost/Diagnostic.h"
 #include "interventions/InterventionManager.h"
+#include "mon/Monitoring.h"
 
 #include "schema/scenario.h"
 
@@ -224,6 +225,8 @@ namespace unittest_options {
 // NOLINTBEGIN(cppcoreguidelines-avoid-non-const-global-variables,bugprone-throwing-static-initialization)
 util::CommandLineOptions command_line;
 CommandLineBinding command_line_binding{command_line};
+mon::MonitoringState monitoring;
+MonitoringBinding monitoring_binding{monitoring};
 util::ModelOptionFlags model_options;
 ModelOptionsBinding model_options_binding{model_options};
 WithinHost::WithinHostModel within_host_model;

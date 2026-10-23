@@ -155,4 +155,4 @@ target_link_libraries (openMalaria-two-sims
 set_target_properties (openMalaria-two-sims PROPERTIES RUNTIME_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR})
 add_test (NAME two_sims COMMAND ${PYTHON_EXECUTABLE} ${CMAKE_CURRENT_SOURCE_DIR}/two_sims.py
     $<TARGET_FILE:openMalaria-two-sims> NoInterv 1 TriggeredMSAT TriggeredMSAT 9 1 SimpleMPDTest)
-set_tests_properties (two_sims PROPERTIES LABELS two-sims DISABLED TRUE)
+set_tests_properties (two_sims PROPERTIES LABELS two-sims)

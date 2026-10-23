@@ -163,9 +163,9 @@ VectorModel::VectorModel(vector<double> init_eir, int intervention_mode,
                          vector<std::unique_ptr<Anopheles::AnophelesModel>> species_list,
                          vector<std::unique_ptr<Anopheles::EmergenceRateEstimator>> emergence_rate_estimators_list,
                          map<string, size_t> species_index_list, int population_size, util::MasterRng& transmission_rng,
-                         size_t n_genotypes, SimTime adult_age)
-    : TransmissionModel(std::move(init_eir), intervention_mode, n_genotypes, adult_age), rng(transmission_rng),
-      quinquennial_kappa(5 * Sim::steps_per_year(), 0.0), species(std::move(species_list)),
+                         size_t n_genotypes, SimTime adult_age, mon::Continuous& continuous)
+    : TransmissionModel(std::move(init_eir), intervention_mode, n_genotypes, adult_age, continuous),
+      rng(transmission_rng), quinquennial_kappa(5 * Sim::steps_per_year(), 0.0), species(std::move(species_list)),
       emergence_rate_estimators(std::move(emergence_rate_estimators_list)),
       species_index(std::move(species_index_list)),
       opt_vaccine_genotype(util::ModelOptions::option(util::VaccineGenotype)) {
@@ -205,32 +205,32 @@ VectorModel::VectorModel(vector<double> init_eir, int intervention_mode,
         cts_rr << "\tres req(" << name << ")";
     }
 
-    mon::Continuous::registerCallback("N_v0", cts_nv0.str(), [this](ostream& stream) { cts_cb_n_v0(stream); });
-    mon::Continuous::registerCallback("P_A", cts_pa.str(), [this](ostream& stream) { cts_cb_p_a(stream); });
-    mon::Continuous::registerCallback("P_Amu", cts_p_amu.str(), [this](ostream& stream) { cts_cb_p_amu(stream); });
-    mon::Continuous::registerCallback("P_A1", cts_p_a1.str(), [this](ostream& stream) { cts_cb_p_a1(stream); });
-    mon::Continuous::registerCallback("P_Ah", cts_p_ah.str(), [this](ostream& stream) { cts_cb_p_ah(stream); });
-    mon::Continuous::registerCallback("P_df", cts_pdf.str(), [this](ostream& stream) { cts_cb_p_df(stream); });
-    mon::Continuous::registerCallback("P_dif", cts_pdif.str(), [this](ostream& stream) { cts_cb_p_dif(stream); });
-    mon::Continuous::registerCallback("N_v", cts_nv.str(), [this](ostream& stream) { cts_cb_n_v(stream); });
-    mon::Continuous::registerCallback("O_v", cts_ov.str(), [this](ostream& stream) { cts_cb_o_v(stream); });
-    mon::Continuous::registerCallback("S_v", cts_sv.str(), [this](ostream& stream) { cts_cb_s_v(stream); });
+    continuous.registerCallback("N_v0", cts_nv0.str(), [this](ostream& stream) { cts_cb_n_v0(stream); });
+    continuous.registerCallback("P_A", cts_pa.str(), [this](ostream& stream) { cts_cb_p_a(stream); });
+    continuous.registerCallback("P_Amu", cts_p_amu.str(), [this](ostream& stream) { cts_cb_p_amu(stream); });
+    continuous.registerCallback("P_A1", cts_p_a1.str(), [this](ostream& stream) { cts_cb_p_a1(stream); });
+    continuous.registerCallback("P_Ah", cts_p_ah.str(), [this](ostream& stream) { cts_cb_p_ah(stream); });
+    continuous.registerCallback("P_df", cts_pdf.str(), [this](ostream& stream) { cts_cb_p_df(stream); });
+    continuous.registerCallback("P_dif", cts_pdif.str(), [this](ostream& stream) { cts_cb_p_dif(stream); });
+    continuous.registerCallback("N_v", cts_nv.str(), [this](ostream& stream) { cts_cb_n_v(stream); });
+    continuous.registerCallback("O_v", cts_ov.str(), [this](ostream& stream) { cts_cb_o_v(stream); });
+    continuous.registerCallback("S_v", cts_sv.str(), [this](ostream& stream) { cts_cb_s_v(stream); });
 
     // availability to mosquitoes relative to other humans, excluding age factor
-    mon::Continuous::registerCallback(
+    continuous.registerCallback(
         "alpha", cts_alpha.str(),
         [this](const vector<Host::Human>& population, ostream& stream) { cts_cb_alpha(population, stream); });
-    mon::Continuous::registerCallback(
-        "P_B", cts_pb.str(),
-        [this](const vector<Host::Human>& population, ostream& stream) { cts_cb_p_b(population, stream); });
-    mon::Continuous::registerCallback(
+    continuous.registerCallback("P_B", cts_pb.str(), [this](const vector<Host::Human>& population, ostream& stream) {
+        cts_cb_p_b(population, stream);
+    });
+    continuous.registerCallback(
         "P_C*P_D", cts_pcd.str(),
         [this](const vector<Host::Human>& population, ostream& stream) { cts_cb_p_cd(population, stream); });
 
-    mon::Continuous::registerCallback("resource availability", cts_ra.str(),
-                                      [this](ostream& stream) { cts_cb_res_availability(stream); });
-    mon::Continuous::registerCallback("resource requirements", cts_rr.str(),
-                                      [this](ostream& stream) { cts_cb_res_requirements(stream); });
+    continuous.registerCallback("resource availability", cts_ra.str(),
+                                [this](ostream& stream) { cts_cb_res_availability(stream); });
+    continuous.registerCallback("resource requirements", cts_rr.str(),
+                                [this](ostream& stream) { cts_cb_res_requirements(stream); });
 }
 
 VectorModel::~VectorModel() = default;

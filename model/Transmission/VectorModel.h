@@ -50,7 +50,7 @@ public:
                 vector<std::unique_ptr<Anopheles::AnophelesModel>> species_list,
                 vector<std::unique_ptr<Anopheles::EmergenceRateEstimator>> emergence_rate_estimators_list,
                 map<string, size_t> species_index_list, int population_size, util::MasterRng& transmission_rng,
-                size_t n_genotypes, SimTime adult_age);
+                size_t n_genotypes, SimTime adult_age, mon::Continuous& continuous);
 
     ~VectorModel() override;
 

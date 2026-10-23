@@ -32,28 +32,11 @@
 
 namespace OM {
 namespace mon {
-namespace Continuous {
 using util::xml_scenario_error;
-
-/// This is used to output some statistics in a tab-deliminated-value file.
-/// (It used to be csv, but German Excel can't open csv directly.)
-fstream ctsOStream;
-
-// Serializable output position used when resuming from a checkpoint.
-streamoff streamOffset;
-
-map<string, tuple<string, std::function<void(Population&, ostream&)>>> registered;
-
-// List that we report.
-vector<tuple<string, std::function<void(Population&, ostream&)>>> toReport;
-
-SimTime ctsPeriod = Sim::zero();
-
-bool duringInit = false;
 
 /* Initialise: enable outputs registered and requested in XML.
          * Search for Continuous::registerCallback to see outputs available. */
-void init(const scnXml::Monitoring& monitoring, bool isCheckpoint) {
+void Continuous::init(const scnXml::Monitoring& monitoring, bool isCheckpoint) {
     const scnXml::Monitoring::ContinuousOptional& ctsOpt = monitoring.getContinuous();
     if (!ctsOpt.present()) {
         ctsPeriod = Sim::zero();
@@ -102,13 +85,13 @@ void init(const scnXml::Monitoring& monitoring, bool isCheckpoint) {
     streamOffset = ctsOStream.tellp();
 }
 
-void checkpoint(ostream& stream) {
+void Continuous::checkpoint(ostream& stream) {
     if (ctsPeriod == Sim::zero())
         return; // output disabled
 
     streamOffset & stream;
 }
-void checkpoint(istream& stream) {
+void Continuous::checkpoint(istream& stream) {
     if (ctsPeriod == Sim::zero())
         return; // output disabled
 
@@ -126,13 +109,14 @@ void checkpoint(istream& stream) {
         throw util::checkpoint_error("Continuous: resume error (bad pos/file)");
 }
 
-void registerCallback(string optName, string titles, function<void(ostream&)> f) {
+void Continuous::registerCallback(string optName, string titles, function<void(ostream&)> f) {
     assert(registered.count(optName) == 0); // name clash/registered twice?
     function<void(const Population&, ostream&)> _f = [f](const Population&, ostream& ostream) { f(ostream); };
     registered[optName] = {titles, _f};
 }
 
-void registerCallback(string optName, string titles, function<void(const vector<Host::Human>&, ostream&)> f) {
+void Continuous::registerCallback(string optName, string titles,
+                                  function<void(const vector<Host::Human>&, ostream&)> f) {
     assert(registered.count(optName) == 0); // name clash/registered twice?
     function<void(const Population&, ostream&)> _f = [f](const Population& p, ostream& ostream) {
         f(p.humans, ostream);
@@ -140,12 +124,12 @@ void registerCallback(string optName, string titles, function<void(const vector<
     registered[optName] = {titles, _f};
 }
 
-void registerCallback(string optName, string titles, function<void(Population&, ostream&)> f) {
+void Continuous::registerCallback(string optName, string titles, function<void(Population&, ostream&)> f) {
     assert(registered.count(optName) == 0); // name clash/registered twice?
     registered[optName] = {titles, f};
 }
 
-void update(Population& population) {
+void Continuous::update(Population& population) {
     if (ctsPeriod == Sim::zero())
         return; // output disabled
     if (!duringInit) {
@@ -173,6 +157,5 @@ void update(Population& population) {
 
     streamOffset = ctsOStream.tellp();
 }
-} // namespace Continuous
 } // namespace mon
 }
