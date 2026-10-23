@@ -52,13 +52,13 @@ public:
     Kind kind = Kind::Default;
     double baseline_avail_shape_param = 0.0;
     double baseline_avail_offset = 0.0;
-    double inf_rate_shape_param = 0.0;
-    double inf_rate_offset = 0.0;
     double gamma_p = 0.0;
     double s_inf = 0.0;
     double s_imm = 0.0;
-    double x_star_p_inv = 0.0;
     double e_star_inv = 0.0;
+    double x_star_p_inv = 0.0;
+    double inf_rate_shape_param = 0.0;
+    double inf_rate_offset = 0.0;
     bool no_pre_erythrocytic = false;
     bool vaccine_genotype = false;
 };
