@@ -44,7 +44,9 @@ See `PLAN.md` for the session protocol, chunks and gates. Append one log entry p
 | D8 | done | da06b67a, 12449692, 2cee6da6, 0ed86df8, 118b811e, da9bfd0f, 7bdf5f73, 9f5e01f4, e894fa4f, 9e31e86b, (this log entry); F79 fix 0b7567cf, 8d9a79a6, 0f28d92a, (its log entry) |
 | D9 | split | D9a–D9f |
 | D9a | done | 95266baa, a5f91dd1, 2560b4a4, 442d4c81, 39a676fc, 05f577dc, 8313fa51, 5255cf06, 7dddb242, 1d5dcf74, (this log entry) |
-| D9b | todo | |
+| D9b | split | D9b1, D9b2 |
+| D9b1 | todo | |
+| D9b2 | todo | |
 | D9c | todo | |
 | D9d | todo | |
 | D9e | todo | |
@@ -1457,3 +1459,6 @@ D9 (monitoring state into `Simulation`, remove every bridge, G-two-sims) is far 
   - H3: F80 if checkpoints are written later in a run; a G-two-sims case with checkpoint and resume in the same process.
   - Sweep before F0: `Human` and `Population` are still not renamed or modernised.
 - Next: D9b.
+
+### Plan amendment: D9b split (2026-10-23, at the start of D9b)
+An inventory at 09eb5134 put D9b at about 35 files of non-mechanical change. The object bridges (`InterventionManager`, `ClinicalParams`, `WithinHostModel`) interlock: `Human` reaches all three, and the health-system setup (`ClinicalParams::set_health_system` → `ImmediateOutcomes`/`DecisionTree5Day` → `WHInterface::add_treatment` → `TreatmentRegistry` → `TriggeredDeployments`, which takes `bridge::intervention_manager()`) needs the within-host model and the manager together. The flag bridges are independent of them: `ModelOptions::option` (20 reads in 8 files), the `CommandLine` statics (15 reads in 9 files) and `bridge::infant_mortality()` (one read, in the survey writer). UnitParse's three `DeprecationWarnings` reads (32 callers in 11 files) and `AgeGroupInterpolation::outputSamples`' `SampleInterpolations` read the clock too, so D9e has to thread a context through their callers anyway. Split: D9b1 (flags and infant mortality), D9b2 (object bridges, with the rename and modernisation of `Human` and `Population`); the two clock-reading `CommandLine` users and the removal of the CommandLine bridge move to D9e. Rows in PLAN.md.
