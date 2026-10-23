@@ -205,10 +205,6 @@ private:
     unique_ptr<DecayFunction> attritionOfNets;
     vector<ITNAnopheles> species; // vector specific params
 
-    // This is sparse vector: only indexes corresponding to ITN components are
-    // used. No memory management.
-    static vector<ITNComponent*> componentsByIndex;
-
     friend class HumanITN;
 };
 
@@ -219,7 +215,7 @@ private:
 class HumanITN : public PerHostInterventionData {
 public:
     HumanITN(LocalRng& rng, const ITNComponent& params);
-    HumanITN(istream& stream, ComponentId id);
+    HumanITN(istream& stream, ComponentId id, const ITNComponent& params);
 
     virtual void redeploy(LocalRng& rng, const Transmission::HumanVectorInterventionComponent& params);
 
@@ -258,6 +254,7 @@ private:
     double holeRate; // rate at which new holes are created (holes/time-step)
     double ripRate;  // rate at which holes are enlarged (rips/hole/time-step)
     unique_ptr<DecayFunction> insecticideDecayHet;
+    const ITNComponent* component;
 };
 
 }

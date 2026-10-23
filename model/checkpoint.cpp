@@ -56,7 +56,8 @@ void checkpoint(istream& stream, const util::CommandLineOptions& command_line, C
                 util::MasterRngs& master_rngs, WithinHost::GenotypeRegistry& genotypes,
                 Host::NeonatalMortality& neonatal_mortality, Host::NewInfections& new_infections,
                 Clinical::InfantMortality& infant_mortality, SimTime& end_time, SimTime& est_end_time,
-                Population& population, Transmission::TransmissionModel& transmission) {
+                Population& population, Transmission::TransmissionModel& transmission,
+                interventions::InterventionManager& intervention_manager) {
     try {
         util::checkpoint::header(stream);
         command_line.checkpoint(stream);
@@ -75,8 +76,8 @@ void checkpoint(istream& stream, const util::CommandLineOptions& command_line, C
         est_end_time & stream;
         transmission & stream;
         population.checkpoint(stream);
-        interventions::InterventionManager::checkpoint(stream);
-        interventions::InterventionManager::loadFromCheckpoint(population.humans, transmission);
+        intervention_manager.checkpoint(stream);
+        intervention_manager.loadFromCheckpoint(population.humans, transmission);
 
         // read last, because other loads may use random numbers or expect time
         // to be negative
@@ -100,7 +101,8 @@ void checkpoint(ostream& stream, const util::CommandLineOptions& command_line, C
                 util::MasterRngs& master_rngs, WithinHost::GenotypeRegistry& genotypes,
                 Host::NeonatalMortality& neonatal_mortality, Host::NewInfections& new_infections,
                 Clinical::InfantMortality& infant_mortality, SimTime& end_time, SimTime& est_end_time,
-                Population& population, Transmission::TransmissionModel& transmission) {
+                Population& population, Transmission::TransmissionModel& transmission,
+                interventions::InterventionManager& intervention_manager) {
     util::checkpoint::header(stream);
     if (!stream.good())
         throw util::checkpoint_error("Unable to write to file");
@@ -121,7 +123,7 @@ void checkpoint(ostream& stream, const util::CommandLineOptions& command_line, C
     est_end_time & stream;
     transmission & stream;
     population.checkpoint(stream);
-    interventions::InterventionManager::checkpoint(stream);
+    intervention_manager.checkpoint(stream);
 
     clock.checkpoint_step_times(stream);
     master_rngs.checkpoint(stream);
@@ -135,7 +137,8 @@ void write_checkpoint(const bool started_from_checkpoint, const string& checkpoi
                       WithinHost::GenotypeRegistry& genotypes, Host::NeonatalMortality& neonatal_mortality,
                       Host::NewInfections& new_infections, Clinical::InfantMortality& infant_mortality,
                       SimTime& end_time, SimTime& est_end_time, Population& population,
-                      Transmission::TransmissionModel& transmission) {
+                      Transmission::TransmissionModel& transmission,
+                      interventions::InterventionManager& intervention_manager) {
     // We alternate between two checkpoints, in case program is closed while writing.
     const int num_checkpoints = 2;
 
@@ -149,7 +152,7 @@ void write_checkpoint(const bool started_from_checkpoint, const string& checkpoi
         const string name = std::format("{}{}.gz", checkpoint_file_name, checkpoint_num);
         ogzstream out(name.c_str(), ios::out | ios::binary);
         checkpoint(out, command_line, clock, master_rngs, genotypes, neonatal_mortality, new_infections,
-                   infant_mortality, end_time, est_end_time, population, transmission);
+                   infant_mortality, end_time, est_end_time, population, transmission, intervention_manager);
         out.close();
     }
 
@@ -174,7 +177,8 @@ void read_checkpoint(const string& checkpoint_file_name, const util::CommandLine
                      util::MasterRngs& master_rngs, WithinHost::GenotypeRegistry& genotypes,
                      Host::NeonatalMortality& neonatal_mortality, Host::NewInfections& new_infections,
                      Clinical::InfantMortality& infant_mortality, SimTime& end_time, SimTime& est_end_time,
-                     Population& population, Transmission::TransmissionModel& transmission) {
+                     Population& population, Transmission::TransmissionModel& transmission,
+                     interventions::InterventionManager& intervention_manager) {
     const int checkpoint_num = read_checkpoint_num(checkpoint_file_name);
 
     // Open the latest file
@@ -184,7 +188,7 @@ void read_checkpoint(const string& checkpoint_file_name, const util::CommandLine
     if (!(in.good() && in.rdbuf()->is_open()))
         throw util::checkpoint_error("Unable to read file");
     checkpoint(in, command_line, clock, master_rngs, genotypes, neonatal_mortality, new_infections, infant_mortality,
-               end_time, est_end_time, population, transmission);
+               end_time, est_end_time, population, transmission, intervention_manager);
     in.close();
 
     cerr << clock.in_steps(clock.now()) << "t loaded checkpoint\n";

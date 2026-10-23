@@ -32,8 +32,6 @@
 namespace OM {
 namespace interventions {
 
-vector<ITNComponent*> ITNComponent::componentsByIndex;
-
 // —————  utility classes (internal use only)  —————
 
 void factors::SurvivalFactor::init(const scnXml::ITNKillingEffect& elt, double maxInsecticide, const char* eltName,
@@ -499,10 +497,6 @@ ITNComponent::ITNComponent(ComponentId id, const scnXml::ITNDescription& elt,
         species[checker.getIndex(it->getMosquito())].init(*it, propUse, maxInsecticide);
     }
     checker.checkNoneMissed();
-
-    if (componentsByIndex.size() <= id.id)
-        componentsByIndex.resize(id.id + 1, 0);
-    componentsByIndex[id.id] = this;
 }
 
 void ITNComponent::deploy(Host::Human& human, mon::Deploy::Method method, VaccineLimits) const {
@@ -518,7 +512,7 @@ unique_ptr<PerHostInterventionData> ITNComponent::make_human_part(LocalRng& rng)
     return unique_ptr<PerHostInterventionData>(new HumanITN(rng, *this));
 }
 unique_ptr<PerHostInterventionData> ITNComponent::make_human_part(istream& stream, ComponentId id) const {
-    return unique_ptr<PerHostInterventionData>(new HumanITN(stream, id));
+    return unique_ptr<PerHostInterventionData>(new HumanITN(stream, id, *this));
 }
 
 void ITNComponent::ITNAnopheles::init(const scnXml::ITNDescription::AnophelesParamsType& elt, double proportionUse,
@@ -584,7 +578,7 @@ void ITNComponent::ITNAnopheles::init(const scnXml::ITNDescription::AnophelesPar
 }
 
 HumanITN::HumanITN(LocalRng& rng, const ITNComponent& params)
-    : PerHostInterventionData(params.id()), nHoles(0), holeIndex(0.0) {
+    : PerHostInterventionData(params.id()), nHoles(0), holeIndex(0.0), component(&params) {
     // Net rips and insecticide loss are assumed to co-vary dependent on
     // handling of net. They are sampled once per human: human handling is
     // presumed to be the largest cause of variance.
@@ -619,7 +613,7 @@ void HumanITN::redeploy(LocalRng& rng, const OM::Transmission::HumanVectorInterv
 }
 
 void HumanITN::update(Host::Human& human) {
-    const ITNComponent& params = *ITNComponent::componentsByIndex[component_id.id];
+    const ITNComponent& params = *component;
     if (deploy_time != Sim::never()) {
         // First use is at age 0 relative to ts0()
         if (Sim::ts0() >= disposalTime) {
@@ -644,7 +638,7 @@ void HumanITN::update(Host::Human& human) {
 double HumanITN::relative_attractiveness(size_t speciesIndex) const {
     if (deploy_time == Sim::never())
         return 1.0;
-    const ITNComponent& params = *ITNComponent::componentsByIndex[component_id.id];
+    const ITNComponent& params = *component;
     const ITNComponent::ITNAnopheles& anoph = params.species[speciesIndex];
     return anoph.relativeAttractiveness(holeIndex, getInsecticideContent(params));
 }
@@ -652,7 +646,7 @@ double HumanITN::relative_attractiveness(size_t speciesIndex) const {
 double HumanITN::preprandial_survival_factor(size_t speciesIndex) const {
     if (deploy_time == Sim::never())
         return 1.0;
-    const ITNComponent& params = *ITNComponent::componentsByIndex[component_id.id];
+    const ITNComponent& params = *component;
     const ITNComponent::ITNAnopheles& anoph = params.species[speciesIndex];
     return anoph.preprandialSurvivalFactor(holeIndex, getInsecticideContent(params));
 }
@@ -660,14 +654,14 @@ double HumanITN::preprandial_survival_factor(size_t speciesIndex) const {
 double HumanITN::postprandial_survival_factor(size_t speciesIndex) const {
     if (deploy_time == Sim::never())
         return 1.0;
-    const ITNComponent& params = *ITNComponent::componentsByIndex[component_id.id];
+    const ITNComponent& params = *component;
     const ITNComponent::ITNAnopheles& anoph = params.species[speciesIndex];
     return anoph.postprandialSurvivalFactor(holeIndex, getInsecticideContent(params));
 }
 double HumanITN::rel_fecundity(size_t speciesIndex) const {
     if (deploy_time == Sim::never())
         return 1.0;
-    const ITNComponent& params = *ITNComponent::componentsByIndex[component_id.id];
+    const ITNComponent& params = *component;
     const ITNComponent::ITNAnopheles& anoph = params.species[speciesIndex];
     return anoph.relFecundity(holeIndex, getInsecticideContent(params));
 }
@@ -680,9 +674,10 @@ void HumanITN::checkpoint(ostream& stream) {
     initialInsecticide & stream;
     holeRate & stream;
     ripRate & stream;
-    ITNComponent::componentsByIndex[component_id.id]->insecticideDecay->checkpointSample(insecticideDecayHet, stream);
+    component->insecticideDecay->checkpointSample(insecticideDecayHet, stream);
 }
-HumanITN::HumanITN(istream& stream, ComponentId id) : PerHostInterventionData(id) {
+HumanITN::HumanITN(istream& stream, ComponentId id, const ITNComponent& params)
+    : PerHostInterventionData(id), component(&params) {
     deploy_time & stream;
     disposalTime & stream;
     nHoles & stream;
@@ -690,7 +685,7 @@ HumanITN::HumanITN(istream& stream, ComponentId id) : PerHostInterventionData(id
     initialInsecticide & stream;
     holeRate & stream;
     ripRate & stream;
-    ITNComponent::componentsByIndex[component_id.id]->insecticideDecay->checkpointSample(insecticideDecayHet, stream);
+    component->insecticideDecay->checkpointSample(insecticideDecayHet, stream);
 }
 
 }

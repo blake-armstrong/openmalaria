@@ -29,6 +29,7 @@
 #include "schema/interventions.h"
 #include "util/StreamValidator.h"
 #include "Host/WithinHost/Genotypes.h"
+#include "interventions/InterventionManager.h"
 
 #include <limits>
 #include <cmath>
@@ -37,21 +38,14 @@ namespace OM {
 namespace interventions {
 using namespace OM::util;
 
-vector<VaccineComponent*> VaccineComponent::params;
-ComponentId VaccineComponent::reportComponent = ComponentId::wholePop();
-
-VaccineComponent::VaccineComponent(ComponentId component, const scnXml::VaccineDescription& vd, Vaccine::Types type)
+VaccineComponent::VaccineComponent(ComponentId component, const scnXml::VaccineDescription& vd, Vaccine::Types type,
+                                   bool reportDeployments)
     : HumanInterventionComponent(component), type(type), decayFunc(DecayFunction::makeObject(vd.getDecay(), "decay")),
-      efficacyB(vd.getEfficacyB().getValue()) {
+      efficacyB(vd.getEfficacyB().getValue()), reportDeployments(reportDeployments) {
     if (type == Vaccine::BSV && ModelOptions::option(util::VivaxSimpleModel))
         throw util::unimplemented_exception("blood stage vaccines (BSV) cannot be used with vivax model");
 
     opt_vaccine_genotype = util::ModelOptions::option(util::VaccineGenotype);
-
-    if (reportComponent == ComponentId::wholePop() /* the initial value */) {
-        // set to the first type described
-        reportComponent = component;
-    }
 
     const scnXml::VaccineDescription::InitialEfficacySequence ies = vd.getInitialEfficacy();
     const scnXml::VaccineDescription::PhenotypeSequence ps = vd.getPhenotype();
@@ -131,16 +125,11 @@ VaccineComponent::VaccineComponent(ComponentId component, const scnXml::VaccineD
     /* initialMeanEfficacy.resize (ies.size());
     for(size_t i = 0; i < initialMeanEfficacy.size(); ++i)
         initialMeanEfficacy[i] = ies[i].getValue();*/
-
-    if (params.size() <= component.id)
-        params.resize(component.id + 1);
-    assert(params[component.id] == 0);
-    params[component.id] = this;
 }
 
 void VaccineComponent::deploy(Host::Human& human, mon::Deploy::Method method, VaccineLimits vaccLimits) const {
-    bool administered = human.vaccine.possiblyVaccinate(human, id(), vaccLimits);
-    if (administered && VaccineComponent::reportComponent == id()) {
+    bool administered = human.vaccine.possiblyVaccinate(human, *this, vaccLimits);
+    if (administered && reportDeployments) {
         mon::recordDeploy(mon::measure("nMassVaccinations"), mon::measure("nEPIVaccinations"), human, method);
     }
     assert(type == Vaccine::PEV || type == Vaccine::BSV || type == Vaccine::TBV);
@@ -202,23 +191,26 @@ void Vaccine::verifyEnabledForR_0 (){
 // this is only used for checkpointing; loaded values are unimportant
 PerEffectPerHumanVaccine::PerEffectPerHumanVaccine() : component(ComponentId::wholePop()), numDosesAdministered(0) {}
 
-PerEffectPerHumanVaccine::PerEffectPerHumanVaccine(LocalRng& rng, ComponentId id, const VaccineComponent& params)
-    : component(id), numDosesAdministered(0) {
+PerEffectPerHumanVaccine::PerEffectPerHumanVaccine(LocalRng& rng, const VaccineComponent& params)
+    : component(params.id()), numDosesAdministered(0), params(&params) {
     hetSample = params.decayFunc->hetSample(rng);
 }
 
 void PerEffectPerHumanVaccine::checkpointHet(ostream& stream) {
-    VaccineComponent::getParams(component).decayFunc->checkpointSample(hetSample, stream);
+    params->decayFunc->checkpointSample(hetSample, stream);
 }
 
 void PerEffectPerHumanVaccine::checkpointHet(istream& stream) {
-    VaccineComponent::getParams(component).decayFunc->checkpointSample(hetSample, stream);
+    const HumanInterventionComponent& componentParams = bridge::intervention_manager().getComponent(component);
+    assert(dynamic_cast<const VaccineComponent*>(&componentParams) != nullptr);
+    params = static_cast<const VaccineComponent*>(&componentParams);
+    params->decayFunc->checkpointSample(hetSample, stream);
 }
 
 double PerHumanVaccine::getFactor(Vaccine::Types type, uint32_t genotype) const {
     double factor = 1.0;
     for (EffectList::const_iterator effect = effects.begin(); effect != effects.end(); ++effect) {
-        if (VaccineComponent::getParams(effect->component).type == type) {
+        if (effect->params->type == type) {
             SimTime age = Sim::ts1() - effect->timeLastDeployment; // implies age 1 TS on first use
             double decayFactor = effect->hetSample->eval(age);
             factor *= 1.0 - effect->perGenotypeInitialEfficacy[genotype] * decayFactor;
@@ -227,11 +219,11 @@ double PerHumanVaccine::getFactor(Vaccine::Types type, uint32_t genotype) const 
     return factor;
 }
 
-bool PerHumanVaccine::possiblyVaccinate(Host::Human& human, ComponentId componentId,
+bool PerHumanVaccine::possiblyVaccinate(Host::Human& human, const VaccineComponent& params,
                                         interventions::VaccineLimits vaccLimits) {
     PerEffectPerHumanVaccine* effect = 0;
     for (EffectList::iterator it = effects.begin(); it != effects.end(); ++it) {
-        if (it->component == componentId) {
+        if (it->component == params.id()) {
             effect = &*it;
             break;
         }
@@ -241,10 +233,8 @@ bool PerHumanVaccine::possiblyVaccinate(Host::Human& human, ComponentId componen
     if (numDosesAdministered < vaccLimits.minPrevDoses || numDosesAdministered >= vaccLimits.maxCumDoses)
         return false; // no vaccination (this replaces the old schedule for continuous doses)
 
-    const VaccineComponent& params = VaccineComponent::getParams(componentId);
-
     if (effect == 0) {
-        effects.push_back(PerEffectPerHumanVaccine(human.intervention_rng, componentId, params));
+        effects.push_back(PerEffectPerHumanVaccine(human.intervention_rng, params));
         effect = &effects.back();
     }
 

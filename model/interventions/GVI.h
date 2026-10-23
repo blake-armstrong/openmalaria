@@ -84,10 +84,6 @@ private:
     unique_ptr<DecayFunction> decay;
     vector<GVIAnopheles> species; // vector specific params
 
-    // This is sparse vector: only indexes corresponding to a GVI component are used
-    // No memory management
-    static vector<GVIComponent*> componentsByIndex;
-
     friend class HumanGVI;
 };
 
@@ -99,7 +95,7 @@ private:
 class HumanGVI : public PerHostInterventionData {
 public:
     HumanGVI(LocalRng& rng, const GVIComponent& params);
-    HumanGVI(istream& stream, ComponentId);
+    HumanGVI(istream& stream, ComponentId id, const GVIComponent& params);
 
     virtual void redeploy(LocalRng& rng, const Transmission::HumanVectorInterventionComponent&);
 
@@ -128,6 +124,7 @@ protected:
 private:
     // this parameter is sampled on first deployment, but never resampled for the same human:
     unique_ptr<DecayFunction> decayHet;
+    const GVIComponent* component;
 };
 
 }

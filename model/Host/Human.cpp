@@ -129,7 +129,7 @@ void Human::addToCohort(ComponentId id, SimTime duration) {
 void Human::removeFromCohort(interventions::ComponentId id) { subPopExp.erase(id); }
 
 void Human::removeFirstEvent(interventions::SubPopRemove::RemoveAtCode code) {
-    const vector<ComponentId>& removeAtList = interventions::removeAtIds[code];
+    const vector<ComponentId>& removeAtList = bridge::intervention_manager().remove_at_ids(code);
     for (auto it = removeAtList.begin(), end = removeAtList.end(); it != end; ++it) {
         auto expIt = subPopExp.find(*it);
         if (expIt != subPopExp.end()) {

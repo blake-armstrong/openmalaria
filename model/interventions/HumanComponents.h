@@ -54,10 +54,6 @@ namespace SubPopRemove {
 enum RemoveAtCode { ON_FIRST_BOUT, ON_FIRST_INFECTION, ON_FIRST_TREATMENT, NUM };
 }
 
-/** For each RemoveAtCode (excluding NUM), this is a list of all sub-population
- * identifiers for which the option is enabled. */
-extern vector<ComponentId> removeAtIds[SubPopRemove::NUM];
-
 // ———  vaccines  ———
 
 namespace Vaccine {
@@ -80,7 +76,7 @@ public:
     }
 
 private:
-    PerEffectPerHumanVaccine(LocalRng& rng, ComponentId id, const VaccineComponent& params);
+    PerEffectPerHumanVaccine(LocalRng& rng, const VaccineComponent& params);
 
     ComponentId component; // id of component (for finding parameters)
     // Type of vaccine
@@ -95,6 +91,7 @@ private:
     /// Efficacy at last deployment (undecayed)
     vector<double> perGenotypeInitialEfficacy;
     unique_ptr<util::DecayFunction> hetSample;
+    const VaccineComponent* params = nullptr;
 
     void checkpointHet(ostream& stream);
     void checkpointHet(istream& stream);
@@ -113,7 +110,7 @@ public:
     /** Vaccinate unless the passed VaccineLimits specify not to.
      * 
      * @returns true when the vaccine is administered */
-    bool possiblyVaccinate(Host::Human& human, ComponentId componentId, interventions::VaccineLimits vaccLimits);
+    bool possiblyVaccinate(Host::Human& human, const VaccineComponent& params, interventions::VaccineLimits vaccLimits);
 
 #if 0
     /// Hack for R_0 experiment: make current human the infection source

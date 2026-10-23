@@ -35,8 +35,6 @@
 #include "mon/Monitoring.h"
 #include "mon/init.h"
 
-#include "interventions/InterventionManager.h"
-
 #include <cerrno>
 #include <cstdio>
 #include <fstream>
@@ -124,7 +122,8 @@ Simulation::Simulation(std::unique_ptr<scnXml::Scenario> scenario, util::Command
 
     // Depends on transmission model (for species indexes):
     // MDA1D may depend on health system (too complex to verify)
-    interventions::InterventionManager::init(scenario_xml->getInterventions(), *population_model, *transmission_model);
+    intervention_manager.init(scenario_xml->getInterventions(), *transmission_model, per_host_params, diagnostics,
+                              within_host_model.common.pk_pd, clinical, decision_trees);
     clinical.set_health_system(scenario_xml->getHealthSystem(),
                                decision_trees);      // Depends on interventions, PK/PD (from humanPop)
     mon::initCohorts(scenario_xml->getMonitoring()); // Depends on interventions
@@ -168,7 +167,8 @@ void Simulation::run(const CheckpointOptions& checkpointing) {
 void Simulation::resume(const std::string& checkpoint_file) {
     mon::Continuous::init(scenario_xml->getMonitoring(), true);
     read_checkpoint(checkpoint_file, command_line, clock, master_rngs, genotypes, neonatal_mortality, new_infections,
-                    infant_mortality, end_time, est_end_time, *population_model, *transmission_model);
+                    infant_mortality, end_time, est_end_time, *population_model, *transmission_model,
+                    intervention_manager);
 
     /** Calculate ento availability percentiles **/
     per_host_params.calc_availability_percentiles();
@@ -220,7 +220,7 @@ void Simulation::start_new(const CheckpointOptions& checkpointing) {
     if (checkpointing.enabled) {
         write_checkpoint(false, checkpointing.file_name, command_line, clock, master_rngs, genotypes,
                          neonatal_mortality, new_infections, infant_mortality, end_time, est_end_time,
-                         *population_model, *transmission_model);
+                         *population_model, *transmission_model, intervention_manager);
         if (checkpointing.stop_after_write)
             throw util::cmd_exception("Checkpoint test: checkpoint written", util::Error::None);
     }
@@ -274,7 +274,7 @@ void Simulation::step() {
     }
 
     // Deploy interventions, at time clock.now().
-    interventions::InterventionManager::deploy(population.humans, transmission);
+    intervention_manager.deploy(population.humans, transmission);
 
     // Time step updates. Time steps are mid-day to mid-day.
     // clock.ts0() gives the date at the start of the step, clock.ts1() the date at the end.

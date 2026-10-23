@@ -42,6 +42,7 @@
 #include "Host/WithinHost/Infection/MolineauxInfection.h"
 #include "Host/WithinHost/Genotypes.h"
 #include "Host/WithinHost/Diagnostic.h"
+#include "interventions/InterventionManager.h"
 
 #include "schema/scenario.h"
 
@@ -234,7 +235,8 @@ GenotypesBinding genotypes_binding{genotypes};
 WithinHost::DiagnosticRegistry diagnostics;
 DiagnosticsBinding diagnostics_binding{diagnostics};
 Transmission::PerHostParams per_host_params;
-PerHostParamsBinding per_host_params_binding{per_host_params};
+interventions::InterventionManager intervention_manager;
+InterventionManagerBinding intervention_manager_binding{intervention_manager};
 Host::InfectionIncidenceParams infection_incidence;
 // NOLINTEND(cppcoreguidelines-avoid-non-const-global-variables,bugprone-throwing-static-initialization)
 }

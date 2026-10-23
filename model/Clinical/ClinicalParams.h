@@ -190,14 +190,9 @@ private:
 namespace bridge {
 
 // NOLINTNEXTLINE(cppcoreguidelines-avoid-non-const-global-variables)
-inline Clinical::ClinicalParams* current_clinical_params = nullptr;
+inline const Clinical::ClinicalParams* current_clinical_params = nullptr;
 
 inline const Clinical::ClinicalParams& clinical_params() {
-    assert(current_clinical_params != nullptr);
-    return *current_clinical_params;
-}
-
-inline Clinical::ClinicalParams& mutable_clinical_params() {
     assert(current_clinical_params != nullptr);
     return *current_clinical_params;
 }
@@ -206,7 +201,7 @@ inline Clinical::ClinicalParams& mutable_clinical_params() {
 
 class ClinicalParamsBinding {
 public:
-    explicit ClinicalParamsBinding(Clinical::ClinicalParams& params) : previous(bridge::current_clinical_params) {
+    explicit ClinicalParamsBinding(const Clinical::ClinicalParams& params) : previous(bridge::current_clinical_params) {
         bridge::current_clinical_params = &params;
     }
     ClinicalParamsBinding(const ClinicalParamsBinding&) = delete;
@@ -216,7 +211,7 @@ public:
     ~ClinicalParamsBinding() { bridge::current_clinical_params = previous; }
 
 private:
-    Clinical::ClinicalParams* previous;
+    const Clinical::ClinicalParams* previous;
 };
 
 }

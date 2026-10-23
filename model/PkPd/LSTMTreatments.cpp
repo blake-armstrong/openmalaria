@@ -20,11 +20,9 @@
  * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301, USA.
  */
 
-#include "PkPd/LSTMTreatments.h"
 #include "PkPd/LSTMMedicate.h"
 #include "PkPd/Drug/LSTMDrugType.h"
 #include "PkPd/LSTMModel.h"
-#include "Host/WithinHost/WithinHostModel.h"
 
 namespace OM::pk_pd {
 
@@ -118,14 +116,6 @@ size_t CourseRegistry::find_dosages(const string& name) const {
         throw util::xml_scenario_error(string("no dosage table with this name: ").append(name));
     }
     return iter->second;
-}
-
-size_t LSTMTreatments::find_schedule(const string& name) {
-    return bridge::within_host_model().common.pk_pd.courses.find_schedule(name);
-}
-
-size_t LSTMTreatments::find_dosages(const string& name) {
-    return bridge::within_host_model().common.pk_pd.courses.find_dosages(name);
 }
 
 }

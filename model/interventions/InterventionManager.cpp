@@ -32,28 +32,24 @@
 #include "interventions/Deployments.h"
 #include "Host/WithinHost/Diagnostic.h"
 #include "Transmission/VectorModel.h"
+#include "Clinical/ClinicalParams.h"
+#include "PkPd/PkPdParams.h"
+
+#include <utility>
 
 namespace OM {
 namespace interventions {
 
 // ———  InterventionManager  ———
 
-// static memory:
+InterventionManager::InterventionManager() = default;
 
-std::map<std::string, ComponentId> InterventionManager::identifierMap;
-vector<unique_ptr<HumanInterventionComponent>> InterventionManager::humanComponents;
-vector<ContinuousHumanDeployment> InterventionManager::continuous;
-vector<unique_ptr<TimedDeployment>> InterventionManager::timed;
-uint32_t InterventionManager::nextTimed;
-OM::Host::ImportedInfections InterventionManager::importedInfections;
+InterventionManager::~InterventionManager() = default;
 
-// declared in HumanComponents.h:
-vector<ComponentId> removeAtIds[SubPopRemove::NUM];
-
-// static functions:
-
-void InterventionManager::init(const scnXml::Interventions& intervElt, const Population& population,
-                               Transmission::TransmissionModel& transmission) {
+void InterventionManager::init(const scnXml::Interventions& intervElt, Transmission::TransmissionModel& transmission,
+                               const Transmission::PerHostParams& per_host_params,
+                               const WithinHost::DiagnosticRegistry& diagnostics, const pk_pd::PkPdParams& pk_pd,
+                               Clinical::ClinicalParams& clinical, Clinical::DecisionTreeLibrary& decision_trees) {
     nextTimed = 0;
 
     if (intervElt.getChangeHS().present()) {
@@ -64,7 +60,8 @@ void InterventionManager::init(const scnXml::Interventions& intervElt, const Pop
                 try {
                     SimTime date = UnitParse::readDate(it->getTime(),
                                                        UnitParse::STEPS /*STEPS is only for backwards compatibility*/);
-                    timed.push_back(unique_ptr<TimedDeployment>(new TimedChangeHSDeployment(date, *it)));
+                    timed.push_back(
+                        unique_ptr<TimedDeployment>(new TimedChangeHSDeployment(date, *it, clinical, decision_trees)));
                 } catch (const util::format_error& e) {
                     throw util::xml_scenario_error(
                         string("interventions/changeHS/timedDeployment/time: ").append(e.message()));
@@ -100,6 +97,7 @@ void InterventionManager::init(const scnXml::Interventions& intervElt, const Pop
 
     if (intervElt.getHuman().present()) {
         const scnXml::HumanInterventions& human = intervElt.getHuman().get();
+        bool first_vaccine = true;
 
         // 1. Read components
         for (auto it = human.getComponent().begin(), end = human.getComponent().end(); it != end; ++it) {
@@ -132,19 +130,22 @@ void InterventionManager::init(const scnXml::Interventions& intervElt, const Pop
 
             HumanInterventionComponent* hiComponent;
             if (component.getScreen().present()) {
-                hiComponent = new ScreenComponent(id, component.getScreen().get());
+                hiComponent = new ScreenComponent(id, component.getScreen().get(), *this, diagnostics);
             } else if (component.getTreatSimple().present()) {
                 hiComponent = new TreatSimpleComponent(id, component.getTreatSimple().get());
             } else if (component.getTreatPKPD().present()) {
-                hiComponent = new TreatPKPDComponent(id, component.getTreatPKPD().get());
+                hiComponent = new TreatPKPDComponent(id, component.getTreatPKPD().get(), pk_pd);
             } else if (component.getDecisionTree().present()) {
-                hiComponent = new DecisionTreeComponent(id, component.getDecisionTree().get());
+                hiComponent = new DecisionTreeComponent(id, component.getDecisionTree().get(), decision_trees);
             } else if (component.getPEV().present()) {
-                hiComponent = new VaccineComponent(id, component.getPEV().get(), Vaccine::PEV);
+                hiComponent = new VaccineComponent(id, component.getPEV().get(), Vaccine::PEV,
+                                                   std::exchange(first_vaccine, false));
             } else if (component.getBSV().present()) {
-                hiComponent = new VaccineComponent(id, component.getBSV().get(), Vaccine::BSV);
+                hiComponent = new VaccineComponent(id, component.getBSV().get(), Vaccine::BSV,
+                                                   std::exchange(first_vaccine, false));
             } else if (component.getTBV().present()) {
-                hiComponent = new VaccineComponent(id, component.getTBV().get(), Vaccine::TBV);
+                hiComponent = new VaccineComponent(id, component.getTBV().get(), Vaccine::TBV,
+                                                   std::exchange(first_vaccine, false));
             } else if (component.getITN().present()) {
                 hiComponent = new ITNComponent(id, component.getITN().get(), species_index_map);
             } else if (component.getIRS().present()) {
@@ -168,7 +169,7 @@ void InterventionManager::init(const scnXml::Interventions& intervElt, const Pop
             const scnXml::Deployment& elt = *it;
             // 2.a intervention components
             auto intervention =
-                shared_ptr<HumanIntervention>(new HumanIntervention(elt.getComponent(), elt.getCondition()));
+                shared_ptr<HumanIntervention>(new HumanIntervention(elt.getComponent(), elt.getCondition(), *this));
 
             // 2.b intervention deployments
             for (auto ctsIt = elt.getContinuous().begin(); ctsIt != elt.getContinuous().end(); ++ctsIt) {
@@ -192,8 +193,8 @@ void InterventionManager::init(const scnXml::Interventions& intervElt, const Pop
                             end = UnitParse::readDate(it2->getEnd().get(),
                                                       UnitParse::STEPS /*STEPS is only for backwards compatibility*/);
                         }
-                        continuous.push_back(
-                            ContinuousHumanDeployment(begin, end, *it2, intervention, subPop, complement));
+                        continuous.push_back(ContinuousHumanDeployment(begin, end, *it2, intervention, subPop,
+                                                                       complement, per_host_params));
                     } catch (const util::format_error& e) {
                         throw util::xml_scenario_error(
                             string("interventions/human/deployment/continuous/deploy: ").append(e.message()));
@@ -258,13 +259,14 @@ void InterventionManager::init(const scnXml::Interventions& intervElt, const Pop
                         const scnXml::CumulativeCoverage& cumCov = timedIt->getCumulativeCoverage().get();
                         ComponentId cumCovComponent = getComponentId(cumCov.getComponent());
                         for (auto deploy = deployTimes.begin(), end = deployTimes.end(); deploy != end; ++deploy) {
-                            timed.push_back(unique_ptr<TimedDeployment>(new TimedCumulativeHumanDeployment(
-                                deploy->first, *deploy->second, intervention, subPop, complement, cumCovComponent)));
+                            timed.push_back(unique_ptr<TimedDeployment>(
+                                new TimedCumulativeHumanDeployment(deploy->first, *deploy->second, intervention, subPop,
+                                                                   complement, cumCovComponent, per_host_params)));
                         }
                     } else {
                         for (auto deploy = deployTimes.begin(), end = deployTimes.end(); deploy != end; ++deploy) {
                             timed.push_back(unique_ptr<TimedDeployment>(new TimedHumanDeployment(
-                                deploy->first, *deploy->second, intervention, subPop, complement)));
+                                deploy->first, *deploy->second, intervention, subPop, complement, per_host_params)));
                         }
                     }
                 } catch (const util::format_error& e) {
@@ -344,7 +346,8 @@ void InterventionManager::init(const scnXml::Interventions& intervElt, const Pop
                             deploy.getTime(), UnitParse::STEPS /*STEPS is only for backwards compatibility*/);
                         SimTime lifespan = UnitParse::readDuration(deploy.getLifespan(), UnitParse::NONE);
                         timed.push_back(unique_ptr<TimedDeployment>(new TimedAddNonHumanHostsDeployment(
-                            date, elt.getName(), lifespan, elt.getDescription().getAnopheles(), transmission)));
+                            date, elt.getName(), lifespan, elt.getDescription().getAnopheles(), transmission,
+                            per_host_params)));
                     }
                     instance++;
                 }
@@ -425,7 +428,7 @@ void InterventionManager::init(const scnXml::Interventions& intervElt, const Pop
     }
 }
 
-ComponentId InterventionManager::getComponentId(const string textId) {
+ComponentId InterventionManager::getComponentId(const string& textId) const {
     auto it = identifierMap.find(textId);
     if (it == identifierMap.end()) {
         ostringstream msg;

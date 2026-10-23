@@ -36,6 +36,7 @@
 #include "Population.h"
 #include "PopulationAgeStructure.h"
 #include "Transmission/transmission.h"
+#include "interventions/InterventionManager.h"
 #include "util/CommandLine.h"
 #include "util/ModelOptions.h"
 #include "util/random.h"
@@ -93,7 +94,6 @@ private:
     WithinHost::WithinHostModel within_host_model;
     WithinHostModelBinding within_host_model_binding{within_host_model};
     Clinical::DecisionTreeLibrary decision_trees;
-    DecisionTreeLibraryBinding decision_trees_binding{decision_trees};
     Clinical::ClinicalParams clinical;
     ClinicalParamsBinding clinical_binding{clinical};
     Clinical::InfantMortality infant_mortality;
@@ -103,7 +103,8 @@ private:
     Host::NewInfections new_infections;
     AgeStructure age_structure;
     Transmission::PerHostParams per_host_params;
-    PerHostParamsBinding per_host_params_binding{per_host_params};
+    interventions::InterventionManager intervention_manager;
+    InterventionManagerBinding intervention_manager_binding{intervention_manager};
     std::unique_ptr<scnXml::Scenario> scenario_xml;
     std::unique_ptr<Population> population_model;
     std::unique_ptr<Transmission::TransmissionModel> transmission_model;

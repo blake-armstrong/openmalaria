@@ -118,33 +118,5 @@ private:
 
 }
 
-namespace bridge {
-
-// NOLINTNEXTLINE(cppcoreguidelines-avoid-non-const-global-variables)
-inline Clinical::DecisionTreeLibrary* current_decision_tree_library = nullptr;
-
-inline Clinical::DecisionTreeLibrary& mutable_decision_tree_library() {
-    assert(current_decision_tree_library != nullptr);
-    return *current_decision_tree_library;
-}
-
-}
-
-class DecisionTreeLibraryBinding {
-public:
-    explicit DecisionTreeLibraryBinding(Clinical::DecisionTreeLibrary& library)
-        : previous(bridge::current_decision_tree_library) {
-        bridge::current_decision_tree_library = &library;
-    }
-    DecisionTreeLibraryBinding(const DecisionTreeLibraryBinding&) = delete;
-    DecisionTreeLibraryBinding& operator=(const DecisionTreeLibraryBinding&) = delete;
-    DecisionTreeLibraryBinding(DecisionTreeLibraryBinding&&) = delete;
-    DecisionTreeLibraryBinding& operator=(DecisionTreeLibraryBinding&&) = delete;
-    ~DecisionTreeLibraryBinding() { bridge::current_decision_tree_library = previous; }
-
-private:
-    Clinical::DecisionTreeLibrary* previous;
-};
-
 }
 #endif

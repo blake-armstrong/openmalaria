@@ -552,7 +552,8 @@ private:
  * interventions to be deployed, though we don't use pointers it finds. */
 class CMDTDeploy : public CMDecisionTree, interventions::HumanIntervention {
 public:
-    CMDTDeploy(const scnXml::DecisionTree::DeploySequence& seq) : HumanIntervention(seq) {}
+    CMDTDeploy(const scnXml::DecisionTree::DeploySequence& seq)
+        : HumanIntervention(seq, bridge::intervention_manager()) {}
 
 protected:
     bool operator==(const CMDecisionTree& that) const override {
@@ -616,8 +617,7 @@ protected:
 
 private:
     CMDTCohort(const std::string& component, const CMDecisionTree& positive, const CMDecisionTree& negative)
-        : component(interventions::InterventionManager::getComponentId(component)), positive(positive),
-          negative(negative) {}
+        : component(bridge::intervention_manager().getComponentId(component)), positive(positive), negative(negative) {}
 
     interventions::ComponentId component;
     const CMDecisionTree& positive;

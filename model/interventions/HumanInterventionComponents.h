@@ -32,7 +32,7 @@
 #include "Host/Human.h"
 #include "Transmission/TransmissionModel.h"
 #include "Host/WithinHost/Diagnostic.h"
-#include "PkPd/LSTMTreatments.h"
+#include "PkPd/PkPdParams.h"
 #include "mon/Monitoring.h"
 #include "util/random.h"
 #include <schema/healthSystem.h>
@@ -42,18 +42,18 @@ namespace OM {
 namespace interventions {
 using Host::Human;
 using WithinHost::Diagnostic;
-using WithinHost::Diagnostics;
 
 // ———  HumanIntervention  ———
 
 bool componentCmp(const HumanInterventionComponent* a, const HumanInterventionComponent* b) {
     return a->componentType() < b->componentType();
 }
-HumanIntervention::HumanIntervention(const xsd::cxx::tree::sequence<scnXml::Component>& componentList) {
+HumanIntervention::HumanIntervention(const xsd::cxx::tree::sequence<scnXml::Component>& componentList,
+                                     const InterventionManager& manager) {
     components.reserve(componentList.size());
     for (auto it = componentList.begin(), end = componentList.end(); it != end; ++it) {
-        ComponentId id = InterventionManager::getComponentId(it->getId());
-        const HumanInterventionComponent* component = &InterventionManager::getComponent(id);
+        ComponentId id = manager.getComponentId(it->getId());
+        const HumanInterventionComponent* component = &manager.getComponent(id);
         components.push_back(component);
     }
 
@@ -70,11 +70,12 @@ HumanIntervention::HumanIntervention(const xsd::cxx::tree::sequence<scnXml::Comp
     std::stable_sort(components.begin(), components.end(), componentCmp);
 }
 HumanIntervention::HumanIntervention(const xsd::cxx::tree::sequence<scnXml::Component>& componentList,
-                                     const xsd::cxx::tree::sequence<scnXml::Condition>& conditionList) {
+                                     const xsd::cxx::tree::sequence<scnXml::Condition>& conditionList,
+                                     const InterventionManager& manager) {
     components.reserve(componentList.size());
     for (auto it = componentList.begin(), end = componentList.end(); it != end; ++it) {
-        ComponentId id = InterventionManager::getComponentId(it->getId());
-        const HumanInterventionComponent* component = &InterventionManager::getComponent(id);
+        ComponentId id = manager.getComponentId(it->getId());
+        const HumanInterventionComponent* component = &manager.getComponent(id);
         components.push_back(component);
     }
 
@@ -96,11 +97,12 @@ HumanIntervention::HumanIntervention(const xsd::cxx::tree::sequence<scnXml::Comp
         conditions.push_back(mon::setupCondition(it->getMeasure(), min, max, it->getInitialState()));
     }
 }
-HumanIntervention::HumanIntervention(const xsd::cxx::tree::sequence<scnXml::DTDeploy>& componentList) {
+HumanIntervention::HumanIntervention(const xsd::cxx::tree::sequence<scnXml::DTDeploy>& componentList,
+                                     const InterventionManager& manager) {
     components.reserve(componentList.size());
     for (auto it = componentList.begin(), end = componentList.end(); it != end; ++it) {
-        ComponentId id = InterventionManager::getComponentId(it->getComponent());
-        const HumanInterventionComponent* component = &InterventionManager::getComponent(id);
+        ComponentId id = manager.getComponentId(it->getComponent());
+        const HumanInterventionComponent* component = &manager.getComponent(id);
         components.push_back(component);
     }
 
@@ -142,10 +144,11 @@ void HumanIntervention::print_details(std::ostream& out) const {
 
 // ———  Utilities  ———
 
-TriggeredDeployments::TriggeredDeployments(const scnXml::TriggeredDeployments& elt) {
+TriggeredDeployments::TriggeredDeployments(const scnXml::TriggeredDeployments& elt,
+                                           const InterventionManager& manager) {
     lists.reserve(elt.getDeploy().size());
     for (auto it = elt.getDeploy().begin(), end = elt.getDeploy().end(); it != end; ++it) {
-        lists.push_back(SubList(*it));
+        lists.push_back(SubList(*it, manager));
     }
 }
 void TriggeredDeployments::deploy(Human& human, mon::Deploy::Method method, VaccineLimits vaccLimits) const {
@@ -154,8 +157,9 @@ void TriggeredDeployments::deploy(Human& human, mon::Deploy::Method method, Vacc
     }
 }
 
-TriggeredDeployments::SubList::SubList(const scnXml::TriggeredDeployments::DeployType& elt)
-    : HumanIntervention(elt.getComponent()), minAge(Sim::from_years_n(elt.getMinAge())), maxAge(Sim::future()),
+TriggeredDeployments::SubList::SubList(const scnXml::TriggeredDeployments::DeployType& elt,
+                                       const InterventionManager& manager)
+    : HumanIntervention(elt.getComponent(), manager), minAge(Sim::from_years_n(elt.getMinAge())), maxAge(Sim::future()),
       coverage(elt.getP()) {
     if (elt.getMaxAge().present())
         maxAge = Sim::from_years_n(elt.getMaxAge().get());
@@ -205,9 +209,10 @@ public:
 
 class ScreenComponent : public HumanInterventionComponent {
 public:
-    ScreenComponent(ComponentId id, const scnXml::Screen& elt)
-        : HumanInterventionComponent(id), diagnostic(Diagnostics::get(elt.getDiagnostic())),
-          positive(elt.getPositive()), negative(elt.getNegative()) {}
+    ScreenComponent(ComponentId id, const scnXml::Screen& elt, const InterventionManager& manager,
+                    const WithinHost::DiagnosticRegistry& diagnostics)
+        : HumanInterventionComponent(id), diagnostic(diagnostics.get(elt.getDiagnostic())),
+          positive(elt.getPositive(), manager), negative(elt.getNegative(), manager) {}
 
     void deploy(Human& human, mon::Deploy::Method method, VaccineLimits vaccLimits) const {
         mon::recordDeploy(mon::measure("nMassScreenings"), mon::measure("nCtsScreenings"), human, method);
@@ -268,10 +273,9 @@ private:
 //NOTE: this is similar to CMDTTreatPKPD, but supporting only a single "treatment"
 class TreatPKPDComponent : public HumanInterventionComponent {
 public:
-    TreatPKPDComponent(ComponentId id, const scnXml::DTTreatPKPD& elt)
-        : HumanInterventionComponent(id), schedule(pk_pd::LSTMTreatments::find_schedule(elt.getSchedule())),
-          dosage(pk_pd::LSTMTreatments::find_dosages(elt.getDosage())),
-          delay_d(elt.getDelay_h() / 24.0 /* convert to days */) {}
+    TreatPKPDComponent(ComponentId id, const scnXml::DTTreatPKPD& elt, const pk_pd::PkPdParams& pk_pd)
+        : HumanInterventionComponent(id), schedule(pk_pd.courses.find_schedule(elt.getSchedule())),
+          dosage(pk_pd.courses.find_dosages(elt.getDosage())), delay_d(elt.getDelay_h() / 24.0 /* convert to days */) {}
 
     void deploy(Human& human, mon::Deploy::Method method, VaccineLimits) const {
         mon::recordDeploy(mon::measure("nMDAs"), mon::measure("nCtsMDA"), human, method);
@@ -291,8 +295,9 @@ private:
 
 class DecisionTreeComponent : public HumanInterventionComponent {
 public:
-    DecisionTreeComponent(ComponentId id, const scnXml::DecisionTree& elt)
-        : HumanInterventionComponent(id), tree(bridge::mutable_decision_tree_library().create(elt, false)) {}
+    DecisionTreeComponent(ComponentId id, const scnXml::DecisionTree& elt,
+                          Clinical::DecisionTreeLibrary& decision_trees)
+        : HumanInterventionComponent(id), tree(decision_trees.create(elt, false)) {}
 
     void deploy(Human& human, mon::Deploy::Method method, VaccineLimits) const {
         Clinical::CMDTOut out =

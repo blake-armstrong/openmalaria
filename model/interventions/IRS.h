@@ -142,10 +142,6 @@ private:
     unique_ptr<DecayFunction> insecticideDecay;
     vector<IRSAnopheles> species; // vector specific params
 
-    // This is sparse vector: only indexes corresponding to a IRS component are used
-    // No memory management
-    static vector<IRSComponent*> componentsByIndex;
-
     friend class HumanIRS;
 };
 
@@ -156,7 +152,7 @@ private:
 class HumanIRS : public PerHostInterventionData {
 public:
     HumanIRS(LocalRng& rng, const IRSComponent& params);
-    HumanIRS(istream& stream, ComponentId id);
+    HumanIRS(istream& stream, ComponentId id, const IRSComponent& params);
 
     virtual void redeploy(LocalRng& rng, const Transmission::HumanVectorInterventionComponent& params);
 
@@ -191,6 +187,7 @@ private:
 
     // this parameter is sampled on first deployment, but never resampled for the same human:
     unique_ptr<DecayFunction> insecticideDecayHet;
+    const IRSComponent* component;
 };
 
 }

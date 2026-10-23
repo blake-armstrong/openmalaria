@@ -345,33 +345,5 @@ private:
 
 }
 
-namespace bridge {
-
-// NOLINTNEXTLINE(cppcoreguidelines-avoid-non-const-global-variables)
-inline const Transmission::PerHostParams* current_per_host_params = nullptr;
-
-inline const Transmission::PerHostParams& per_host_params() {
-    assert(current_per_host_params != nullptr);
-    return *current_per_host_params;
-}
-
-}
-
-class PerHostParamsBinding {
-public:
-    explicit PerHostParamsBinding(const Transmission::PerHostParams& params)
-        : previous(bridge::current_per_host_params) {
-        bridge::current_per_host_params = &params;
-    }
-    PerHostParamsBinding(const PerHostParamsBinding&) = delete;
-    PerHostParamsBinding& operator=(const PerHostParamsBinding&) = delete;
-    PerHostParamsBinding(PerHostParamsBinding&&) = delete;
-    PerHostParamsBinding& operator=(PerHostParamsBinding&&) = delete;
-    ~PerHostParamsBinding() { bridge::current_per_host_params = previous; }
-
-private:
-    const Transmission::PerHostParams* previous;
-};
-
 }
 #endif

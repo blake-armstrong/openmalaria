@@ -148,12 +148,6 @@ namespace WithinHost {
  * objects. */
 class Diagnostics {
 public:
-    /** Look up a diagnostic by name and get a reference to it.
-     * 
-     * @throws util::xml_scenario_error on failure
-     */
-    static const Diagnostic& get(const std::string& name) { return bridge::diagnostics().get(name); }
-
     /// Static access functions
 
     static inline const Diagnostic& monitoring_diagnostic() { return bridge::diagnostics().monitoring_diagnostic(); }

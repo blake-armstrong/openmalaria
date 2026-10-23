@@ -38,6 +38,8 @@ class Human;
 }
 namespace interventions {
 
+class InterventionManager;
+
 /** Enumeration of all available components, in the order that these should be
  * deployed in within a single intervention. */
 namespace Component {
@@ -148,14 +150,17 @@ public:
 
     /** Create from a list of XML elements: list of intervention components
      * with unconditional deployment (for triggered deployments). **/
-    explicit HumanIntervention(const xsd::cxx::tree::sequence<scnXml::Component>& componentList);
+    HumanIntervention(const xsd::cxx::tree::sequence<scnXml::Component>& componentList,
+                      const InterventionManager& manager);
     /** Create from a list of XML elements: list of intervention components
      * and list of conditions of deployment. **/
-    explicit HumanIntervention(const xsd::cxx::tree::sequence<scnXml::Component>& componentList,
-                               const xsd::cxx::tree::sequence<scnXml::Condition>& conditionList);
+    HumanIntervention(const xsd::cxx::tree::sequence<scnXml::Component>& componentList,
+                      const xsd::cxx::tree::sequence<scnXml::Condition>& conditionList,
+                      const InterventionManager& manager);
     /** Create from a list of XML elements: list of intervention components
      * with unconditional deployment (for triggered deployments). **/
-    explicit HumanIntervention(const xsd::cxx::tree::sequence<scnXml::DTDeploy>& componentList);
+    HumanIntervention(const xsd::cxx::tree::sequence<scnXml::DTDeploy>& componentList,
+                      const InterventionManager& manager);
 
     /** Deploy all components to a pre-selected human. */
     void deploy(Host::Human& human, mon::Deploy::Method method, VaccineLimits vaccLimits) const;
@@ -163,7 +168,7 @@ public:
     void print_details(std::ostream& out) const;
 
 protected:
-    // List of pointers to components. Does not manage memory (InterventionManager::humanComponents does that).
+    // List of pointers to components. Does not manage memory (InterventionManager's humanComponents does that).
     vector<const HumanInterventionComponent*> components;
     // List of conditions of deployment. All must be satisfied to deploy.
     vector<size_t> conditions;
@@ -173,13 +178,13 @@ protected:
 // could just store ComponentId instead of inheriting HumanIntervention)
 class TriggeredDeployments {
 public:
-    TriggeredDeployments(const scnXml::TriggeredDeployments& elt);
+    TriggeredDeployments(const scnXml::TriggeredDeployments& elt, const InterventionManager& manager);
 
     void deploy(Host::Human& human, mon::Deploy::Method method, VaccineLimits vaccLimits) const;
 
 private:
     struct SubList : protected HumanIntervention {
-        SubList(const scnXml::TriggeredDeployments::DeployType& elt);
+        SubList(const scnXml::TriggeredDeployments::DeployType& elt, const InterventionManager& manager);
 
         void deploy(Host::Human& human, mon::Deploy::Method method, VaccineLimits vaccLimits) const;
 

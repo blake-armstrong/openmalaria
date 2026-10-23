@@ -85,10 +85,11 @@ public:
 
 class TimedChangeHSDeployment : public TimedDeployment {
 public:
-    TimedChangeHSDeployment(SimTime date, const scnXml::ChangeHS::TimedDeploymentType& hs)
-        : TimedDeployment(date), newHS(hs._clone()) {}
+    TimedChangeHSDeployment(SimTime date, const scnXml::ChangeHS::TimedDeploymentType& hs,
+                            Clinical::ClinicalParams& clinical, Clinical::DecisionTreeLibrary& decision_trees)
+        : TimedDeployment(date), newHS(hs._clone()), clinical(&clinical), decision_trees(&decision_trees) {}
     virtual void deploy(vector<Host::Human>& population, Transmission::TransmissionModel& transmission) {
-        bridge::mutable_clinical_params().set_health_system(*newHS, bridge::mutable_decision_tree_library());
+        clinical->set_health_system(*newHS, *decision_trees);
         delete newHS;
         newHS = 0;
     }
@@ -96,6 +97,8 @@ public:
 
 private:
     scnXml::HealthSystem* newHS;
+    Clinical::ClinicalParams* clinical;
+    Clinical::DecisionTreeLibrary* decision_trees;
 };
 
 class TimedChangeEIRDeployment : public TimedDeployment {
@@ -148,8 +151,9 @@ protected:
      *  to which deployment will be restricted
      */
     HumanDeploymentBase(const scnXml::DeploymentBase& deploy, shared_ptr<const HumanIntervention> intervention,
-                        ComponentId subPop, bool complement)
-        : coverage(deploy.getCoverage()), subPop(subPop), complement(complement), intervention(intervention) {
+                        ComponentId subPop, bool complement, const Transmission::PerHostParams& per_host_params)
+        : coverage(deploy.getCoverage()), subPop(subPop), complement(complement), intervention(intervention),
+          per_host_params(&per_host_params) {
         if (!(coverage >= 0.0 && coverage <= 1.0)) {
             throw util::xml_scenario_error("intervention deployment coverage must be in range [0,1]");
         }
@@ -183,6 +187,7 @@ protected:
     ComponentId subPop; // ComponentId::wholePop() if deployment is not restricted to a sub-population
     bool complement;
     shared_ptr<const HumanIntervention> intervention;
+    const Transmission::PerHostParams* per_host_params;
 };
 
 /// Timed deployment of human-specific interventions
@@ -196,8 +201,9 @@ public:
      * @param subPop Either ComponentId::wholePop() or a sub-population to which deployment is restricted
      */
     TimedHumanDeployment(SimTime date, const scnXml::MassDeployment& mass,
-                         shared_ptr<const HumanIntervention> intervention, ComponentId subPop, bool complement)
-        : TimedDeployment(date), HumanDeploymentBase(mass, intervention, subPop, complement),
+                         shared_ptr<const HumanIntervention> intervention, ComponentId subPop, bool complement,
+                         const Transmission::PerHostParams& per_host_params)
+        : TimedDeployment(date), HumanDeploymentBase(mass, intervention, subPop, complement, per_host_params),
           minAge(Sim::from_years_n(mass.getMinAge())), maxAge(Sim::future()), minAvailability(0), maxAvailability(100) {
         if (mass.getMaxAge().present())
             maxAge = Sim::from_years_n(mass.getMaxAge().get());
@@ -222,7 +228,7 @@ public:
             const SimTime age = human.age(Sim::now());
             if (age >= minAge && age < maxAge) {
                 double availability = 0.0;
-                for (size_t i = 0; i < bridge::per_host_params().num_species(); ++i)
+                for (size_t i = 0; i < per_host_params->num_species(); ++i)
                     availability += human.perHostTransmission.anoph_ento_availability[i];
 
                 double probability = coverage;
@@ -235,10 +241,10 @@ public:
                         const double alpha = ((1.0 - beta_mean) / beta_var - 1.0 / beta_mean) * (beta_mean * beta_mean);
                         const double beta = alpha * (1.0 / beta_mean - 1.0);
 
-                        if (bridge::per_host_params().num_species() > 1)
+                        if (per_host_params->num_species() > 1)
                             throw std::runtime_error("only supports one mosquito species");
 
-                        const double ux = bridge::per_host_params().get(0).ento_availability->cdf(
+                        const double ux = per_host_params->get(0).ento_availability->cdf(
                             human.perHostTransmission.anoph_ento_availability_raw[0]);
                         if (ux < 1) {
                             double xx = gsl_cdf_ugaussian_Pinv(ux); // Unit interval to Normal
@@ -280,8 +286,8 @@ public:
                     }
                 }
 
-                if (availability >= bridge::per_host_params().ento_availability_percentile(minAvailability) &&
-                    availability <= bridge::per_host_params().ento_availability_percentile(maxAvailability)) {
+                if (availability >= per_host_params->ento_availability_percentile(minAvailability) &&
+                    availability <= per_host_params->ento_availability_percentile(maxAvailability)) {
                     if (subPop == ComponentId::wholePop() || (human.isInSubPop(subPop) != complement)) {
                         if (human.intervention_rng.bernoulli(probability)) {
                             deployToHuman(human, mon::Deploy::TIMED);
@@ -322,8 +328,9 @@ public:
      */
     TimedCumulativeHumanDeployment(SimTime date, const scnXml::MassDeployment& mass,
                                    shared_ptr<const HumanIntervention> intervention, ComponentId subPop,
-                                   bool complement, ComponentId cumCuvId)
-        : TimedHumanDeployment(date, mass, intervention, subPop, complement), cumCovInd(cumCuvId) {}
+                                   bool complement, ComponentId cumCuvId,
+                                   const Transmission::PerHostParams& per_host_params)
+        : TimedHumanDeployment(date, mass, intervention, subPop, complement, per_host_params), cumCovInd(cumCuvId) {}
 
     virtual void deploy(vector<Host::Human>& population, Transmission::TransmissionModel& transmission) {
         // Cumulative case: bring target group's coverage up to target coverage
@@ -333,10 +340,10 @@ public:
             SimTime age = human.age(Sim::now());
             if (age >= minAge && age < maxAge) {
                 double availability = 0.0;
-                for (size_t i = 0; i < bridge::per_host_params().num_species(); ++i)
+                for (size_t i = 0; i < per_host_params->num_species(); ++i)
                     availability += human.perHostTransmission.anoph_ento_availability[i];
-                if (availability >= bridge::per_host_params().ento_availability_percentile(minAvailability) &&
-                    availability <= bridge::per_host_params().ento_availability_percentile(maxAvailability)) {
+                if (availability >= per_host_params->ento_availability_percentile(minAvailability) &&
+                    availability <= per_host_params->ento_availability_percentile(maxAvailability)) {
                     if (subPop == ComponentId::wholePop() || (human.isInSubPop(subPop) != complement)) {
                         total += 1;
                         if (!human.isInSubPop(cumCovInd))
@@ -502,8 +509,9 @@ class TimedAddNonHumanHostsDeployment : public TimedDeployment {
 public:
     TimedAddNonHumanHostsDeployment(SimTime date, const string& intervName, SimTime lifespan,
                                     const scnXml::Description3::AnophelesSequence list,
-                                    Transmission::TransmissionModel& transmission)
-        : TimedDeployment(date), intervName(intervName), lifespan(lifespan) {
+                                    Transmission::TransmissionModel& transmission,
+                                    const Transmission::PerHostParams& per_host_params)
+        : TimedDeployment(date), intervName(intervName), lifespan(lifespan), per_host_params(&per_host_params) {
         Transmission::VectorModel* vectorModel = dynamic_cast<Transmission::VectorModel*>(&transmission);
         if (vectorModel) {
             util::SpeciesIndexChecker checker(intervName, vectorModel->species_index);
@@ -538,9 +546,9 @@ public:
                                                    " already deployed during non human hosts deployment");
 
                 const NhhParamsInterv& p = nhhParams[anophModel->mosq.name];
-                const double adult_avail = bridge::per_host_params().get(i).ento_availability->mean();
-                const double avail_i = bridge::per_host_params().get(i).ento_availability_factor * popSize *
-                                       adult_avail * p.mosqRelativeAvailabilityHuman;
+                const double adult_avail = per_host_params->get(i).ento_availability->mean();
+                const double avail_i = per_host_params->get(i).ento_availability_factor * popSize * adult_avail *
+                                       p.mosqRelativeAvailabilityHuman;
                 Transmission::Anopheles::Nhh nhh;
 
                 nhh.avail_i = avail_i;
@@ -571,6 +579,7 @@ private:
     string intervName;
     SimTime lifespan = Sim::never();
     std::map<string, NhhParamsInterv> nhhParams;
+    const Transmission::PerHostParams* per_host_params;
 };
 
 // ———  ContinuousHumanDeployment  ———
@@ -580,8 +589,9 @@ class ContinuousHumanDeployment : protected HumanDeploymentBase {
 public:
     /// Create, passing deployment age
     ContinuousHumanDeployment(SimTime begin, SimTime end, const ::scnXml::ContinuousDeployment& elt,
-                              shared_ptr<const HumanIntervention> intervention, ComponentId subPop, bool complement)
-        : HumanDeploymentBase(elt, intervention, subPop, complement), begin(begin), end(end),
+                              shared_ptr<const HumanIntervention> intervention, ComponentId subPop, bool complement,
+                              const Transmission::PerHostParams& per_host_params)
+        : HumanDeploymentBase(elt, intervention, subPop, complement, per_host_params), begin(begin), end(end),
           deployAge(Sim::from_years_n(elt.getTargetAgeYrs())), minAvailability(0), maxAvailability(100) {
         if (begin < Sim::start_date() || end < begin) {
             throw util::xml_scenario_error("continuous intervention must have startDate <= begin <= end");
@@ -622,11 +632,11 @@ public:
             return false;
         } else if (deployAge == age) {
             double availability = 0.0;
-            for (size_t i = 0; i < bridge::per_host_params().num_species(); ++i)
+            for (size_t i = 0; i < per_host_params->num_species(); ++i)
                 availability += human.perHostTransmission.anoph_ento_availability_raw[i];
 
-            if (availability >= bridge::per_host_params().ento_availability_percentile(minAvailability) &&
-                availability <= bridge::per_host_params().ento_availability_percentile(maxAvailability)) {
+            if (availability >= per_host_params->ento_availability_percentile(minAvailability) &&
+                availability <= per_host_params->ento_availability_percentile(maxAvailability)) {
                 auto now = Sim::interv_date();
                 if (begin <= now && now < end &&
                     (subPop == ComponentId::wholePop() || (human.isInSubPop(subPop) != complement)) &&

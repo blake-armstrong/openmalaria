@@ -29,6 +29,7 @@
 #include "Host/WithinHost/Genotypes.h"
 #include "Population.h"
 #include "Transmission/transmission.h"
+#include "interventions/InterventionManager.h"
 #include "util/CommandLine.h"
 #include "util/random.h"
 
@@ -42,13 +43,15 @@ void write_checkpoint(const bool started_from_checkpoint, const string& checkpoi
                       WithinHost::GenotypeRegistry& genotypes, Host::NeonatalMortality& neonatal_mortality,
                       Host::NewInfections& new_infections, Clinical::InfantMortality& infant_mortality,
                       SimTime& end_time, SimTime& est_end_time, Population& population,
-                      Transmission::TransmissionModel& transmission);
+                      Transmission::TransmissionModel& transmission,
+                      interventions::InterventionManager& intervention_manager);
 
 void read_checkpoint(const string& checkpoint_file_name, const util::CommandLineOptions& command_line, Clock& clock,
                      util::MasterRngs& master_rngs, WithinHost::GenotypeRegistry& genotypes,
                      Host::NeonatalMortality& neonatal_mortality, Host::NewInfections& new_infections,
                      Clinical::InfantMortality& infant_mortality, SimTime& end_time, SimTime& est_end_time,
-                     Population& population, Transmission::TransmissionModel& transmission);
+                     Population& population, Transmission::TransmissionModel& transmission,
+                     interventions::InterventionManager& intervention_manager);
 }
 
 #endif
