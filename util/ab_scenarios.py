@@ -386,6 +386,19 @@ def gvi_in_non_vector(s):
     j = m.index("</component>", i) + len("</component>")
     return rep(s, '<component id="TBV">', m[i:j] + '<component id="TBV">')
 
+def vivax_with_component(component):
+    def transform(s):
+        i = s.index('<interventions name="no interventions">')
+        j = s.index("</interventions>", i) + len("</interventions>")
+        return (s[:i] + '<interventions name="one component"><human><component id="c">' + component
+                + '</component><deployment><component id="c"/><timed><deploy coverage="0.5" time="2t"/></timed>'
+                + "</deployment></human></interventions>" + s[j:])
+    return transform
+
+
+BSV_ELT = ('<BSV><decay L="7.32" k="0.69" function="weibull"/><efficacyB value="10.0"/>'
+           '<initialEfficacy value="1.0"/></BSV>')
+
 TMSAT = "scenarioTriggeredMSAT.xml"
 CTS_MA = '<continuous duringInit="false" period="30t">'
 COHORT_MA = '<subPop id="monitoringCohort" number="1"/>'
@@ -715,6 +728,11 @@ GROUPS = {
                 lambda s: rep(s, '<holeIndexMax value="145200"/>', '<holeIndexMax value="1e-300"/>')),
         Variant("itn_hole_index_max_zero", "scenarioLifeNet2.xml",
                 lambda s: rep(s, '<holeIndexMax value="145200"/>', '<holeIndexMax value="0"/>')),
+        Variant("vivax_bsv", "scenarioVivax.xml", vivax_with_component(BSV_ELT)),
+        Variant("vivax_treat_simple", "scenarioVivax.xml",
+                vivax_with_component('<treatSimple durationLiver="0" durationBlood="-1t"/>')),
+        Variant("vivax_treat_simple_liver", "scenarioVivax.xml",
+                vivax_with_component('<treatSimple durationLiver="-1t" durationBlood="-1t"/>')),
     ],
     "monitoring": [
         Variant("cts_during_init_checkpoint", "scenarioSimpleMPDTest.xml", args=["--checkpoint"], runs=2),
