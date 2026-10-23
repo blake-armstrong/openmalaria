@@ -200,31 +200,5 @@ struct MasterRngs {
 
 }
 
-namespace bridge {
-
-inline util::MasterRngs* current_master_rngs = nullptr; // NOLINT(cppcoreguidelines-avoid-non-const-global-variables)
-
-inline util::MasterRngs& master_rngs() {
-    assert(current_master_rngs != nullptr);
-    return *current_master_rngs;
-}
-
-}
-
-class MasterRngsBinding {
-public:
-    explicit MasterRngsBinding(util::MasterRngs& rngs) : previous(bridge::current_master_rngs) {
-        bridge::current_master_rngs = &rngs;
-    }
-    MasterRngsBinding(const MasterRngsBinding&) = delete;
-    MasterRngsBinding& operator=(const MasterRngsBinding&) = delete;
-    MasterRngsBinding(MasterRngsBinding&&) = delete;
-    MasterRngsBinding& operator=(MasterRngsBinding&&) = delete;
-    ~MasterRngsBinding() { bridge::current_master_rngs = previous; }
-
-private:
-    util::MasterRngs* previous;
-};
-
 }
 #endif

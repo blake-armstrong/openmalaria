@@ -44,6 +44,11 @@ class TransmissionModel;
 namespace Host {
 class NeonatalMortality;
 
+struct HumanParams {
+    const Transmission::PerHostParams* per_host = nullptr;
+    const InfectionIncidenceParams* infection_incidence = nullptr;
+};
+
 /** Interface to all sub-models storing data per-human individual.
  *
  * Still contains some data, but most is now contained in sub-models. */
@@ -52,7 +57,7 @@ public:
     /** Initialise all variables of a human datatype.
     * 
     * @param dateOfBirth date of birth (usually start of next time step) */
-    Human(SimTime dateOfBirth);
+    Human(SimTime dateOfBirth, const HumanParams& params, util::MasterRng& rng);
 
     /// Allow move construction
     Human(Human&&) = default;
@@ -155,7 +160,7 @@ private:
 void summarize(Human& human, bool surveyOnlyNewEp);
 
 void update(Human& human, Transmission::TransmissionModel& transmission, const NeonatalMortality& neonatal_mortality,
-            Clinical::InfantMortality& infant_mortality);
+            Clinical::InfantMortality& infant_mortality, NewInfections& new_infections);
 
 inline SimTime Human::age(SimTime time) const { return time - dateOfBirth; }
 

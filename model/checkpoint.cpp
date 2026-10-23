@@ -54,14 +54,14 @@ int read_checkpoint_num(const string& checkpoint_file_name) {
 
 void checkpoint(istream& stream, const util::CommandLineOptions& command_line, Clock& clock,
                 util::MasterRngs& master_rngs, WithinHost::GenotypeRegistry& genotypes,
-                Host::NeonatalMortality& neonatal_mortality, Clinical::InfantMortality& infant_mortality,
-                SimTime& end_time, SimTime& est_end_time, Population& population,
-                Transmission::TransmissionModel& transmission) {
+                Host::NeonatalMortality& neonatal_mortality, Host::NewInfections& new_infections,
+                Clinical::InfantMortality& infant_mortality, SimTime& end_time, SimTime& est_end_time,
+                Population& population, Transmission::TransmissionModel& transmission) {
     try {
         util::checkpoint::header(stream);
         command_line.checkpoint(stream);
         neonatal_mortality.checkpoint(stream);
-        Host::InfectionIncidenceModel::staticCheckpoint(stream);
+        new_infections.checkpoint(stream);
         infant_mortality.checkpoint(stream);
         genotypes.checkpoint(stream);
         mon::Continuous::checkpoint(stream);
@@ -98,16 +98,16 @@ void checkpoint(istream& stream, const util::CommandLineOptions& command_line, C
 
 void checkpoint(ostream& stream, const util::CommandLineOptions& command_line, Clock& clock,
                 util::MasterRngs& master_rngs, WithinHost::GenotypeRegistry& genotypes,
-                Host::NeonatalMortality& neonatal_mortality, Clinical::InfantMortality& infant_mortality,
-                SimTime& end_time, SimTime& est_end_time, Population& population,
-                Transmission::TransmissionModel& transmission) {
+                Host::NeonatalMortality& neonatal_mortality, Host::NewInfections& new_infections,
+                Clinical::InfantMortality& infant_mortality, SimTime& end_time, SimTime& est_end_time,
+                Population& population, Transmission::TransmissionModel& transmission) {
     util::checkpoint::header(stream);
     if (!stream.good())
         throw util::checkpoint_error("Unable to write to file");
 
     command_line.checkpoint(stream);
     neonatal_mortality.checkpoint(stream);
-    Host::InfectionIncidenceModel::staticCheckpoint(stream);
+    new_infections.checkpoint(stream);
     infant_mortality.checkpoint(stream);
     genotypes.checkpoint(stream);
     mon::Continuous::checkpoint(stream);
@@ -133,8 +133,9 @@ void checkpoint(ostream& stream, const util::CommandLineOptions& command_line, C
 void write_checkpoint(const bool started_from_checkpoint, const string& checkpoint_file_name,
                       const util::CommandLineOptions& command_line, Clock& clock, util::MasterRngs& master_rngs,
                       WithinHost::GenotypeRegistry& genotypes, Host::NeonatalMortality& neonatal_mortality,
-                      Clinical::InfantMortality& infant_mortality, SimTime& end_time, SimTime& est_end_time,
-                      Population& population, Transmission::TransmissionModel& transmission) {
+                      Host::NewInfections& new_infections, Clinical::InfantMortality& infant_mortality,
+                      SimTime& end_time, SimTime& est_end_time, Population& population,
+                      Transmission::TransmissionModel& transmission) {
     // We alternate between two checkpoints, in case program is closed while writing.
     const int num_checkpoints = 2;
 
@@ -147,8 +148,8 @@ void write_checkpoint(const bool started_from_checkpoint, const string& checkpoi
     { // Open the next checkpoint file for writing:
         const string name = std::format("{}{}.gz", checkpoint_file_name, checkpoint_num);
         ogzstream out(name.c_str(), ios::out | ios::binary);
-        checkpoint(out, command_line, clock, master_rngs, genotypes, neonatal_mortality, infant_mortality, end_time,
-                   est_end_time, population, transmission);
+        checkpoint(out, command_line, clock, master_rngs, genotypes, neonatal_mortality, new_infections,
+                   infant_mortality, end_time, est_end_time, population, transmission);
         out.close();
     }
 
@@ -171,9 +172,9 @@ void write_checkpoint(const bool started_from_checkpoint, const string& checkpoi
 
 void read_checkpoint(const string& checkpoint_file_name, const util::CommandLineOptions& command_line, Clock& clock,
                      util::MasterRngs& master_rngs, WithinHost::GenotypeRegistry& genotypes,
-                     Host::NeonatalMortality& neonatal_mortality, Clinical::InfantMortality& infant_mortality,
-                     SimTime& end_time, SimTime& est_end_time, Population& population,
-                     Transmission::TransmissionModel& transmission) {
+                     Host::NeonatalMortality& neonatal_mortality, Host::NewInfections& new_infections,
+                     Clinical::InfantMortality& infant_mortality, SimTime& end_time, SimTime& est_end_time,
+                     Population& population, Transmission::TransmissionModel& transmission) {
     const int checkpoint_num = read_checkpoint_num(checkpoint_file_name);
 
     // Open the latest file
@@ -182,8 +183,8 @@ void read_checkpoint(const string& checkpoint_file_name, const util::CommandLine
     //Note: gzstreams are considered "good" when file not open!
     if (!(in.good() && in.rdbuf()->is_open()))
         throw util::checkpoint_error("Unable to read file");
-    checkpoint(in, command_line, clock, master_rngs, genotypes, neonatal_mortality, infant_mortality, end_time,
-               est_end_time, population, transmission);
+    checkpoint(in, command_line, clock, master_rngs, genotypes, neonatal_mortality, new_infections, infant_mortality,
+               end_time, est_end_time, population, transmission);
     in.close();
 
     cerr << clock.in_steps(clock.now()) << "t loaded checkpoint\n";

@@ -106,17 +106,16 @@ HumanHet hetSample(util::LocalRng& rng) {
     return het;
 }
 
-Human::Human(SimTime dateOfBirth)
-    : infIncidence(InfectionIncidenceModel::createModel()), host_rng(bridge::master_rngs().population),
-      clinical_rng(bridge::master_rngs().population), intervention_rng(bridge::master_rngs().population),
-      monitoring_rng(bridge::master_rngs().population), dateOfBirth(dateOfBirth) {
+Human::Human(SimTime dateOfBirth, const HumanParams& params, util::MasterRng& rng)
+    : infIncidence(params.infection_incidence->create()), host_rng(rng), clinical_rng(rng), intervention_rng(rng),
+      monitoring_rng(rng), dateOfBirth(dateOfBirth) {
     // Initial humans are created at time 0 and may have dateOfBirth in past. Otherwise dateOfBirth must be now.
     assert(dateOfBirth == Sim::now_or_ts1() || (Sim::now() == Sim::zero() && dateOfBirth < Sim::now()));
 
     HumanHet het = hetSample(host_rng);
     withinHostModel = WithinHost::WHInterface::create_within_host_model(host_rng, het.comorbidityFactor);
     double ii_factor = infIncidence->getAvailabilityFactor(host_rng, 1.0);
-    perHostTransmission.initialise(bridge::per_host_params(), host_rng, het.availabilityFactor * ii_factor);
+    perHostTransmission.initialise(*params.per_host, host_rng, het.availabilityFactor * ii_factor);
     clinicalModel = bridge::clinical_params().create(het.treatmentSeekingFactor);
 }
 
@@ -221,7 +220,7 @@ void summarize(Human& human, bool surveyOnlyNewEp) {
 }
 
 void update(Human& human, Transmission::TransmissionModel& transmission, const NeonatalMortality& neonatal_mortality,
-            Clinical::InfantMortality& infant_mortality) {
+            Clinical::InfantMortality& infant_mortality, NewInfections& new_infections) {
     // For integer age checks we use age0 to e.g. get 73 steps comparing less than 1 year old
     SimTime age0 = human.age(Sim::ts0());
     if (human.clinicalModel->is_dead(age0)) {
@@ -266,7 +265,7 @@ void update(Human& human, Transmission::TransmissionModel& transmission, const N
     // age1 used when medicating drugs (small effect) and in immunity model (which was parameterised for it)
     human.withinHostModel->update(human, human.host_rng, nNewInfs_i, nNewInfs_l, EIR_per_genotype_i, EIR_per_genotype_l,
                                   age1);
-    human.infIncidence->reportNumNewInfections(human, nNewInfs_i, nNewInfs_l);
+    human.infIncidence->reportNumNewInfections(human, nNewInfs_i, nNewInfs_l, new_infections);
 
     // age1 used to get case fatality and sequelae probabilities, determine pathogenesis
     human.clinicalModel->update(human, age1, age0 == Sim::zero(), neonatal_mortality);

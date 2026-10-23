@@ -27,12 +27,14 @@
 #include "Clinical/ClinicalModel.h"
 #include "Clinical/ClinicalParams.h"
 #include "Global.h"
+#include "Host/InfectionIncidenceModel.h"
 #include "Host/NeonatalMortality.h"
 #include "Host/WithinHost/Diagnostic.h"
 #include "Host/WithinHost/Genotypes.h"
 #include "Host/WithinHost/WithinHostModel.h"
 #include "Parameters.h"
 #include "Population.h"
+#include "PopulationAgeStructure.h"
 #include "Transmission/transmission.h"
 #include "util/CommandLine.h"
 #include "util/ModelOptions.h"
@@ -81,7 +83,6 @@ private:
     Clock clock;
     ClockBinding clock_binding{clock};
     util::MasterRngs master_rngs;
-    MasterRngsBinding master_rngs_binding{master_rngs};
     util::ModelOptionFlags model_options;
     ModelOptionsBinding model_options_binding{model_options};
     Parameters parameters;
@@ -98,6 +99,9 @@ private:
     Clinical::InfantMortality infant_mortality;
     InfantMortalityBinding infant_mortality_binding{infant_mortality};
     Host::NeonatalMortality neonatal_mortality;
+    Host::InfectionIncidenceParams infection_incidence;
+    Host::NewInfections new_infections;
+    AgeStructure age_structure;
     Transmission::PerHostParams per_host_params;
     PerHostParamsBinding per_host_params_binding{per_host_params};
     std::unique_ptr<scnXml::Scenario> scenario_xml;

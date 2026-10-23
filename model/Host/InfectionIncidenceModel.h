@@ -27,12 +27,55 @@
 #include "Transmission/PerHost.h"
 #include "util/random.h"
 
+#include <memory>
+
 namespace OM {
 class Parameters;
+namespace util {
+class ModelOptionFlags;
+}
 namespace Host {
 class Human;
+class InfectionIncidenceModel;
 
 using util::LocalRng;
+
+class InfectionIncidenceParams {
+public:
+    enum class Kind { Default, HeterogeneityWorkaround, NegativeBinomial, LogNormal };
+
+    InfectionIncidenceParams() = default;
+    InfectionIncidenceParams(const Parameters& parameters, const util::ModelOptionFlags& model_options);
+
+    std::unique_ptr<InfectionIncidenceModel> create() const;
+
+    Kind kind = Kind::Default;
+    double baseline_avail_shape_param = 0.0;
+    double baseline_avail_offset = 0.0;
+    double inf_rate_shape_param = 0.0;
+    double inf_rate_offset = 0.0;
+    double gamma_p = 0.0;
+    double s_inf = 0.0;
+    double s_imm = 0.0;
+    double x_star_p_inv = 0.0;
+    double e_star_inv = 0.0;
+    bool no_pre_erythrocytic = false;
+    bool vaccine_genotype = false;
+};
+
+class NewInfections {
+public:
+    void add(int count) { new_infections += count; }
+    void pre_main_sim_init() { new_infections = 0; }
+    void report(ostream& stream) {
+        stream << '\t' << new_infections;
+        new_infections = 0;
+    }
+    template <class S> void checkpoint(S& stream) { new_infections & stream; }
+
+private:
+    int new_infections = 0;
+};
 
 /** Models how a per-host EIR translates into new infections
  * (roughly when bites from infected mosquitos infect the host).
@@ -47,16 +90,7 @@ using util::LocalRng;
  * of these (see susceptibility()). */
 class InfectionIncidenceModel {
 public:
-    ///@brief Static initialisation & constructors
-    //@{
-    /// Read in/initialise parameters
-    static void init(const Parameters& parameters);
-    /// Create a new instance
-    static InfectionIncidenceModel* createModel();
-
-    /// Reset summary outputs at beginning of main simulation
-    static inline void preMainSimInit() { ctsNewInfections = 0; }
-    //@}
+    explicit InfectionIncidenceModel(const InfectionIncidenceParams& params);
 
     /// Checkpointing
     template <class S> void operator&(S& stream) {
@@ -64,14 +98,6 @@ public:
         m_cumulativeEIRa & stream;
     }
 
-    /// Static checkpointing
-    template <class S> static void staticCheckpoint(S& stream) { ctsNewInfections & stream; }
-
-protected:
-    /// Create a new model
-    InfectionIncidenceModel();
-
-public:
     virtual ~InfectionIncidenceModel() {}
 
     /** Return an availability multiplier, dependant on the model (NegBinomMAII
@@ -119,7 +145,8 @@ public:
    * @param int newNumInfections_i  Number of introduced infections to be reported
    * @param int newNumInfections_l  Number of local (indigenous) infections to be reported
    */
-    void reportNumNewInfections(Human& human, int newNumInfections_i, int newNumInfections_l);
+    void reportNumNewInfections(Human& human, int newNumInfections_i, int newNumInfections_l,
+                                NewInfections& new_infections);
 
 protected:
     /// Calculates the expected number of infections, excluding vaccine effects
@@ -127,7 +154,7 @@ protected:
 
     double susceptibility();
 
-    static void ctsReportNewInfections(const vector<Host::Human>&, ostream& stream);
+    const InfectionIncidenceParams* params;
 
     /** Probability of infection (cumulative or reset to zero in massTreatment).
    *
@@ -137,9 +164,6 @@ protected:
 
     //!Number of infective bites since birth
     double m_cumulativeEIRa; //TODO(memory opt): not needed by NegBinomMAII and LogNormalMAII
-
-    /// Number of new infections introduced, per continuous reporting period
-    static int ctsNewInfections;
 };
 
 //TODO(optimisation): none of these add data members, so should we be using
@@ -152,7 +176,7 @@ protected:
  */
 class HeterogeneityWorkaroundII : public InfectionIncidenceModel {
 public:
-    HeterogeneityWorkaroundII() {}
+    explicit HeterogeneityWorkaroundII(const InfectionIncidenceParams& params) : InfectionIncidenceModel(params) {}
     virtual ~HeterogeneityWorkaroundII() {}
 
 protected:
@@ -160,7 +184,7 @@ protected:
 };
 class NegBinomMAII : public InfectionIncidenceModel {
 public:
-    NegBinomMAII() {}
+    explicit NegBinomMAII(const InfectionIncidenceParams& params) : InfectionIncidenceModel(params) {}
     virtual ~NegBinomMAII() {}
     virtual double getAvailabilityFactor(LocalRng& rng, double baseAvailability = 1.0);
 
@@ -169,7 +193,7 @@ protected:
 };
 class LogNormalMAII : public InfectionIncidenceModel {
 public:
-    LogNormalMAII() {}
+    explicit LogNormalMAII(const InfectionIncidenceParams& params) : InfectionIncidenceModel(params) {}
     virtual ~LogNormalMAII() {}
     virtual double getAvailabilityFactor(LocalRng& rng, double baseAvailability = 1.0);
 

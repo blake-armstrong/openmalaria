@@ -33,47 +33,32 @@
 namespace OM {
 using namespace OM::util;
 
-vector<double> AgeStructure::ageGroupBounds;
-vector<double> AgeStructure::ageGroupPercent;
+namespace {
 
-double AgeStructure::mu0;
-double AgeStructure::mu1;
-double AgeStructure::alpha0;
-double AgeStructure::alpha1;
+struct DemographyFit {
+    explicit DemographyFit(const scnXml::Demography& demography);
 
-vector<double> AgeStructure::cumAgeProp;
+    double setDemoParameters(double param1, double param2);
+    void calcCumAgeProp(vector<double>& cumAgeProp) const;
 
-void AgeStructure::init(const scnXml::Demography& demography) {
-    // this number of cells are needed:
-    cumAgeProp.resize(Sim::in_steps(Sim::max_human_age()) + 1);
+    vector<double> ageGroupBounds;
+    vector<double> ageGroupPercent;
+    double mu0 = 0.0;
+    double mu1 = 0.0;
+    double alpha0 = 0.0;
+    double alpha1 = 0.0;
+    static constexpr double rho = 0.0;
+};
 
-    estimateRemovalRates(demography);
-    calcCumAgeProp();
-}
-
-int AgeStructure::targetCumPop(size_t ageTSteps, int targetPop) {
-    size_t index = cumAgeProp.size() - 1 - ageTSteps;
-    return (int)floor(cumAgeProp[index] * targetPop + 0.5);
-}
-
-// function pointer for wCalcRSS's func
-double (*wCalcRSSFunc)(double param1, double param2);
 double wCalcRSS(const gsl_vector* v, void* params) {
     double x, y;
     x = gsl_vector_get(v, 0);
     y = gsl_vector_get(v, 1);
 
-    return (*wCalcRSSFunc)(x, y);
+    return static_cast<DemographyFit*>(params)->setDemoParameters(x, y);
 }
-/** Presumably from AR. Searches iteratively for a minimum to function func.
- *
- * @param func A function pointer to the function used for ...
- * @param param1 Initial guess of first param taken by func
- * @param param2 Initial guess of second
- */
-void minimizeCalc_rss(double (*func)(double, double), double param1, double param2) {
-    wCalcRSSFunc = func;
 
+void minimizeCalc_rss(DemographyFit& fit, double param1, double param2) {
     gsl_vector* stepSize = gsl_vector_alloc(2);
     gsl_vector_set_all(stepSize, 0.1);
 
@@ -83,7 +68,7 @@ void minimizeCalc_rss(double (*func)(double, double), double param1, double para
 
     gsl_multimin_function minex_func;
     minex_func.f = &wCalcRSS;
-    minex_func.params = nullptr;
+    minex_func.params = &fit;
     minex_func.n = 2;
 
     const gsl_multimin_fminimizer_type* T = gsl_multimin_fminimizer_nmsimplex;
@@ -100,14 +85,14 @@ void minimizeCalc_rss(double (*func)(double, double), double param1, double para
             break;
     }
     // Call again to set final value.
-    wCalcRSS(minimizer->x, nullptr);
+    wCalcRSS(minimizer->x, &fit);
 
     gsl_vector_free(initialValues);
     gsl_vector_free(stepSize);
     gsl_multimin_fminimizer_free(minimizer);
 }
 
-void AgeStructure::estimateRemovalRates(const scnXml::Demography& demography) {
+DemographyFit::DemographyFit(const scnXml::Demography& demography) {
     // mu1, alpha1: These are estimated here
     // mu0, alpha0: These are fixed alpha0=4.0, mu0 calculated from the other parameters
     // rho - population growth rate (input)
@@ -142,11 +127,10 @@ void AgeStructure::estimateRemovalRates(const scnXml::Demography& demography) {
     double p1 = 0.371626412;
     double p2 = 0.841209593;
     // returns "double rss":
-    minimizeCalc_rss(&setDemoParameters, p1, p2);
+    minimizeCalc_rss(*this, p1, p2);
 }
 
-// Static method used by estimateRemovalRates
-double AgeStructure::setDemoParameters(double param1, double param2) {
+double DemographyFit::setDemoParameters(double param1, double param2) {
     const double IMR = 0.1;
     double M_inf = -log(1 - IMR);
 
@@ -186,7 +170,7 @@ double AgeStructure::setDemoParameters(double param1, double param2) {
     return result;
 }
 
-void AgeStructure::calcCumAgeProp() {
+void DemographyFit::calcCumAgeProp(vector<double>& cumAgeProp) const {
     cumAgeProp[0] = 0.0;
     for (size_t j = 1; j < cumAgeProp.size(); ++j) {
         SimTime age = Sim::from_ts(cumAgeProp.size() - j - 1);
@@ -205,6 +189,21 @@ void AgeStructure::calcCumAgeProp() {
         //Scale using the total cumAgeProp
         cumAgeProp[j] = cumAgeProp[j] / totalCumPC;
     }
+}
+
+}
+
+AgeStructure::AgeStructure(const scnXml::Demography& demography) {
+    // this number of cells are needed:
+    cum_age_prop.resize(Sim::in_steps(Sim::max_human_age()) + 1);
+
+    const DemographyFit fit(demography);
+    fit.calcCumAgeProp(cum_age_prop);
+}
+
+int AgeStructure::target_cum_pop(size_t age_steps, int target_pop) const {
+    size_t index = cum_age_prop.size() - 1 - age_steps;
+    return (int)floor(cum_age_prop[index] * target_pop + 0.5);
 }
 
 }

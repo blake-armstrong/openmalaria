@@ -235,6 +235,7 @@ WithinHost::DiagnosticRegistry diagnostics;
 DiagnosticsBinding diagnostics_binding{diagnostics};
 Transmission::PerHostParams per_host_params;
 PerHostParamsBinding per_host_params_binding{per_host_params};
+Host::InfectionIncidenceParams infection_incidence;
 // NOLINTEND(cppcoreguidelines-avoid-non-const-global-variables,bugprone-throwing-static-initialization)
 }
 
@@ -452,8 +453,9 @@ public:
 
     static unique_ptr<Host::Human> createHuman(SimTime dateOfBirth) {
         static util::MasterRngs master_rngs(0);
-        bridge::current_master_rngs = &master_rngs;
-        return unique_ptr<Host::Human>(new Host::Human(dateOfBirth));
+        return unique_ptr<Host::Human>(new Host::Human(
+            dateOfBirth, Host::HumanParams{&unittest_options::per_host_params, &unittest_options::infection_incidence},
+            master_rngs.population));
     }
     // Set the WithinHost model used by the human, and return a pointer to it. Do not delete this!
     static WithinHost::WHInterface* setHumanWH(Host::Human& human, unique_ptr<WithinHost::WHInterface> wh) {

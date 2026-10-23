@@ -40,14 +40,15 @@ namespace OM {
 void write_checkpoint(const bool started_from_checkpoint, const string& checkpoint_file_name,
                       const util::CommandLineOptions& command_line, Clock& clock, util::MasterRngs& master_rngs,
                       WithinHost::GenotypeRegistry& genotypes, Host::NeonatalMortality& neonatal_mortality,
-                      Clinical::InfantMortality& infant_mortality, SimTime& end_time, SimTime& est_end_time,
-                      Population& population, Transmission::TransmissionModel& transmission);
+                      Host::NewInfections& new_infections, Clinical::InfantMortality& infant_mortality,
+                      SimTime& end_time, SimTime& est_end_time, Population& population,
+                      Transmission::TransmissionModel& transmission);
 
 void read_checkpoint(const string& checkpoint_file_name, const util::CommandLineOptions& command_line, Clock& clock,
                      util::MasterRngs& master_rngs, WithinHost::GenotypeRegistry& genotypes,
-                     Host::NeonatalMortality& neonatal_mortality, Clinical::InfantMortality& infant_mortality,
-                     SimTime& end_time, SimTime& est_end_time, Population& population,
-                     Transmission::TransmissionModel& transmission);
+                     Host::NeonatalMortality& neonatal_mortality, Host::NewInfections& new_infections,
+                     Clinical::InfantMortality& infant_mortality, SimTime& end_time, SimTime& est_end_time,
+                     Population& population, Transmission::TransmissionModel& transmission);
 }
 
 #endif

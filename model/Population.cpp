@@ -49,7 +49,9 @@ const vector<double> ctsDemogAgeGroups = {1.0, 5.0, 10.0, 15.0, 25.0};
 
 // -----  non-static methods: creation/destruction, checkpointing  -----
 
-Population::Population(size_t size) : size(size) {}
+Population::Population(size_t size, const AgeStructure& age_structure, Host::HumanParams human_params,
+                       util::MasterRng& rng)
+    : age_structure(&age_structure), human_params(human_params), rng(&rng), size(size) {}
 
 void Population::createInitialHumans() {
     /* We create a whole population here, regardless of whether humans can
@@ -58,13 +60,13 @@ void Population::createInitialHumans() {
     until vector init, which saves computation and memory (no infections). */
 
     int cumulativePop = 0;
-    for (size_t iage_prev = AgeStructure::getMaxTStepsPerLife(), iage = iage_prev - 1; iage_prev > 0;
+    for (size_t iage_prev = age_structure->max_steps_per_life(), iage = iage_prev - 1; iage_prev > 0;
          iage_prev = iage, iage -= 1) {
-        int targetPop = AgeStructure::targetCumPop(iage, size);
+        int targetPop = age_structure->target_cum_pop(iage, size);
         while (cumulativePop < targetPop) {
             SimTime dob = Sim::zero() - Sim::from_ts(iage);
             util::streamValidate(dob);
-            humans.push_back(Host::Human(dob));
+            humans.push_back(Host::Human(dob, human_params, *rng));
             ++cumulativePop;
         }
     }
@@ -86,7 +88,7 @@ void Population::update() {
         // "outmigrate" some to maintain population shape
         //NOTE: better to use age(sim::ts0())? Possibly, but the difference will not be very significant.
         // Also see targetPop = ... comment above
-        bool outmigrate = cumPop >= AgeStructure::targetCumPop(Sim::in_steps(it->age(Sim::ts1())), size);
+        bool outmigrate = cumPop >= age_structure->target_cum_pop(Sim::in_steps(it->age(Sim::ts1())), size);
 
         if (isDead || outmigrate) {
             it = humans.erase(it);
@@ -100,7 +102,7 @@ void Population::update() {
     recentBirths += (size - cumPop);
     while (cumPop < (int)size) {
         // humans born at end of this time step = beginning of next, hence ts1
-        humans.push_back(Host::Human(Sim::ts1()));
+        humans.push_back(Host::Human(Sim::ts1(), human_params, *rng));
         ++cumPop;
     }
 }
@@ -110,7 +112,7 @@ void Population::checkpoint(istream& stream) {
     recentBirths & stream;
 
     for (size_t i = 0; i < size && !stream.eof(); ++i) {
-        humans.push_back(Host::Human(Sim::zero()));
+        humans.push_back(Host::Human(Sim::zero(), human_params, *rng));
         humans.back().checkpoint(stream);
     }
     if (humans.size() != size)

@@ -34,7 +34,7 @@ namespace OM {
 /** The simulated human population. */
 class Population {
 public:
-    Population(size_t size);
+    Population(size_t size, const AgeStructure& age_structure, Host::HumanParams human_params, util::MasterRng& rng);
 
     /** Create the initial population of Humans */
     void createInitialHumans();
@@ -62,6 +62,10 @@ public:
     vector<Host::Human> humans;
 
 private:
+    const AgeStructure* age_structure;
+    Host::HumanParams human_params;
+    util::MasterRng* rng;
+
     /** Size of the human population */
     size_t size = 0;
 
