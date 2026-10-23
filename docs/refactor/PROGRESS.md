@@ -40,6 +40,7 @@ See `PLAN.md` for the session protocol, chunks and gates. Append one log entry p
 | D6b | done | 66fdf1e1, 38a88580, a0e9a737, 18a6f0c2, f1831c6f, 227daa2f, d4e7b71c, 51663e3e, 9011466e, (this log entry); F59/F60 fixes e169341c, 75700eda, 41c35aa4, f8f0896b, (their log entry) |
 | D6c | done | 38f78eda, a7c68da3, 9e34f002, 6e9038b9, 9cf1ff5a, bb46b13d, c78608b6, 0eb65ebb, (this log entry); F68/F71/F72 fixes ee622593, 5ec95acf, 942a1306, 137ce408, (their log entry) |
 | D7 | todo | |
+| D7b | todo | |
 | D8 | todo | |
 | D9 | todo | |
 | E1 | todo | |
@@ -1267,3 +1268,6 @@ The user asked for the three behaviour-changing D6c findings to be fixed. Each f
   - G-perf: `util/bench.sh -n 7 --compare ../om-bench-base/build-rework`, candidate 137ce408 against 15e8a223: median per-pair ratio 0.9988 (−0.12%), spreads 4.0% / 5.1%.
 - Findings: F68, F71 and F72 moved to FINDINGS § Closed.
 - Next: D7.
+
+### Plan amendment: D7b (2026-10-23, at the start of D7)
+- Two global families are in no D chunk: `InfectionIncidenceModel`'s file globals and `ctsNewInfections` counter (`model/Host`, the human side of transmission), and `AgeStructure`'s statics (`model/PopulationAgeStructure`). The user chose to keep D7 to its row (`model/Transmission`: `PerHost`'s statics, plus the follow-ups injecting the transmission RNG and the genotype count) and to add D7b for the two families, with `Human` taking the population RNG by injection (D2's follow-up). Row in PLAN.md § Stage D; § Recommended order row 12 notes it.
