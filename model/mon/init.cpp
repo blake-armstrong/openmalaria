@@ -36,9 +36,9 @@
 #include <cctype>
 #include <iostream>
 #include <map>
+#include <ranges>
 
-namespace OM {
-namespace mon {
+namespace OM::mon {
 
 using internal::SurveyDate;
 
@@ -118,8 +118,8 @@ void init_reporting(const scnXml::Scenario& scenario) {
         }
         reported_measures.push_back(om);
     }
-    std::sort(reported_measures.begin(), reported_measures.end(),
-              [](const OutMeasure& lhs, const OutMeasure& rhs) { return lhs.out_id < rhs.out_id; });
+    std::ranges::sort(reported_measures,
+                      [](const OutMeasure& lhs, const OutMeasure& rhs) { return lhs.out_id < rhs.out_id; });
     const size_t n_species = scenario.getEntomology().getVector().present()
                                  ? scenario.getEntomology().getVector().get().getAnopheles().size()
                                  : 1;
@@ -140,13 +140,13 @@ SimTime read_survey_dates(const scnXml::Monitoring& monitoring) {
             surveys.insert(std::make_pair(date, false));
     };
 
-    for (size_t i = 0; i < survs.size(); ++i) {
-        const scnXml::SurveyTime& surv = survs[i];
+    for (const auto& surv : survs) {
         try {
             std::string s = surv;
-            s.erase(s.begin(), std::find_if(s.begin(), s.end(), [](unsigned char ch) { return !std::isspace(ch); }));
-            s.erase(std::find_if(s.rbegin(), s.rend(), [](unsigned char ch) { return !std::isspace(ch); }).base(),
-                    s.end());
+            s.erase(s.begin(), std::ranges::find_if(s, [](unsigned char ch) { return !std::isspace(ch); }));
+            s.erase(
+                std::ranges::find_if(std::views::reverse(s), [](unsigned char ch) { return !std::isspace(ch); }).base(),
+                s.end());
             SimTime cur = UnitParse::readDate(s, UnitParse::STEPS);
             const bool reporting = surv.getReported();
             if (surv.getRepeatStep().present() != surv.getRepeatEnd().present()) {
@@ -213,18 +213,18 @@ void init_cohorts(const scnXml::Monitoring& monitoring) {
 
     const scnXml::Cohorts mon_cohorts = monitoring.getCohorts().get();
     uint32_t next_id = 0;
-    for (auto it = mon_cohorts.getSubPop().begin(), end = mon_cohorts.getSubPop().end(); it != end; ++it) {
-        const interventions::ComponentId comp_id = bridge::intervention_manager().get_component_id(it->getId());
+    for (const auto& it : mon_cohorts.getSubPop()) {
+        const interventions::ComponentId comp_id = bridge::intervention_manager().get_component_id(it.getId());
         const bool inserted = runtime.cohort_sub_pop_ids.insert(std::make_pair(comp_id, next_id)).second;
         if (!inserted) {
             throw util::xml_scenario_error(std::string("cohort specification uses sub-population \"")
-                                               .append(it->getId())
+                                               .append(it.getId())
                                                .append("\" more than once"));
         }
-        const auto number = it->getNumber();
+        const auto number = it.getNumber();
         if (number < 1 || number > MaxCohortNumber || !std::has_single_bit(static_cast<uint32_t>(number))) {
             throw util::xml_scenario_error(std::string("cohort specification assigns sub-population \"")
-                                               .append(it->getId())
+                                               .append(it.getId())
                                                .append("\" a number which is not a power of 2 between 1 and ")
                                                .append(std::to_string(MaxCohortNumber)));
         }
@@ -233,5 +233,4 @@ void init_cohorts(const scnXml::Monitoring& monitoring) {
     }
 }
 
-} // namespace mon
-} // namespace OM
+} // namespace OM::mon

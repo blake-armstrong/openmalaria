@@ -30,8 +30,7 @@
 #include <map>
 #include <fstream>
 
-namespace OM {
-namespace mon {
+namespace OM::mon {
 using util::xml_scenario_error;
 
 /* Initialise: enable outputs registered and requested in XML.
@@ -109,14 +108,14 @@ void Continuous::checkpoint(istream& stream) {
         throw util::checkpoint_error("Continuous: resume error (bad pos/file)");
 }
 
-void Continuous::register_callback(string opt_name, string titles, function<void(ostream&)> f) {
+void Continuous::register_callback(const string& opt_name, const string& titles, const function<void(ostream&)>& f) {
     assert(registered.count(opt_name) == 0); // name clash/registered twice?
     function<void(const Population&, ostream&)> wrapped = [f](const Population&, ostream& ostream) { f(ostream); };
     registered[opt_name] = {titles, wrapped};
 }
 
-void Continuous::register_callback(string opt_name, string titles,
-                                   function<void(const vector<Host::Human>&, ostream&)> f) {
+void Continuous::register_callback(const string& opt_name, const string& titles,
+                                   const function<void(const vector<Host::Human>&, ostream&)>& f) {
     assert(registered.count(opt_name) == 0); // name clash/registered twice?
     function<void(const Population&, ostream&)> wrapped = [f](const Population& p, ostream& ostream) {
         f(p.humans, ostream);
@@ -124,7 +123,8 @@ void Continuous::register_callback(string opt_name, string titles,
     registered[opt_name] = {titles, wrapped};
 }
 
-void Continuous::register_callback(string opt_name, string titles, function<void(Population&, ostream&)> f) {
+void Continuous::register_callback(const string& opt_name, const string& titles,
+                                   const function<void(Population&, ostream&)>& f) {
     assert(registered.count(opt_name) == 0); // name clash/registered twice?
     registered[opt_name] = {titles, f};
 }
@@ -157,5 +157,4 @@ void Continuous::update(Population& population) {
 
     stream_offset = cts_stream.tellp();
 }
-} // namespace mon
-}
+} // namespace OM::mon

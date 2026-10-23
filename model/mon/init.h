@@ -30,14 +30,12 @@ class Scenario;
 class Monitoring;
 }
 
-namespace OM {
-namespace mon {
+namespace OM::mon {
 
 SimTime read_survey_dates(const scnXml::Monitoring& monitoring);
 void init_reporting(const scnXml::Scenario& scenario);
 void init_cohorts(const scnXml::Monitoring& monitoring);
 
-} // namespace mon
-} // namespace OM
+} // namespace OM::mon
 
 #endif

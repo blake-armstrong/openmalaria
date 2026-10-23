@@ -27,8 +27,7 @@
 #include <limits>
 #include <string_view>
 
-namespace OM {
-namespace mon {
+namespace OM::mon {
 
 using Measure = uint16_t;
 inline constexpr Measure InvalidMeasure = std::numeric_limits<Measure>::max() - 2;
@@ -376,7 +375,6 @@ inline bool is_valid_condition(Measure measure) {
     return true;
 }
 
-} // namespace mon
-} // namespace OM
+} // namespace OM::mon
 
 #endif

@@ -37,8 +37,7 @@
 #include <numeric>
 #include <type_traits>
 
-namespace OM {
-namespace mon {
+namespace OM::mon {
 
 using internal::Condition;
 
@@ -428,5 +427,4 @@ uint32_t update_cohort_set(uint32_t old, interventions::ComponentId sub_pop, boo
     return (old & ~sub_pop_id) | (is_member ? sub_pop_id : 0);
 }
 
-} // namespace mon
-} // namespace OM
+} // namespace OM::mon

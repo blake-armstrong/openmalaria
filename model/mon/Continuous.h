@@ -78,11 +78,13 @@ public:
 	 * @param outputCb A callback function, which when called, outputs its
 	 * data to the passed stream, with each entry preceeded by '\t'.
 	 */
-    void register_callback(string opt_name, string titles, function<void(ostream&)> f);
+    void register_callback(const string& opt_name, const string& titles, const function<void(ostream&)>& f);
 
-    void register_callback(string opt_name, string titles, function<void(const vector<Host::Human>&, ostream&)> f);
+    void register_callback(const string& opt_name, const string& titles,
+                           const function<void(const vector<Host::Human>&, ostream&)>& f);
 
-    void register_callback(string opt_name, string titles, function<void(Population&, ostream&)> f);
+    void register_callback(const string& opt_name, const string& titles,
+                           const function<void(Population&, ostream&)>& f);
 
     /// Generate time-step's output. Called at beginning of time step.
     /// Passed population since some callbacks use this to generate output.
