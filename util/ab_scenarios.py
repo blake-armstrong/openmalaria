@@ -698,6 +698,12 @@ GROUPS = {
         Variant("dt_cohort_later_component", MA, mda_tree_cohort("PEV")),
         Variant("dt_deploy_self", MA, mda_tree_negative('<deploy component="MDA"/>')),
         Variant("dt_deploy_later_component", MA, mda_tree_negative('<deploy component="PEV"/>')),
+        Variant("itn_logit_no_hole_index_max", "scenarioLifeNet2.xml",
+                lambda s: rep(s, '<holeIndexMax value="145200"/>', "")),
+        Variant("itn_hole_index_max_tiny", "scenarioLifeNet2.xml",
+                lambda s: rep(s, '<holeIndexMax value="145200"/>', '<holeIndexMax value="1e-300"/>')),
+        Variant("itn_hole_index_max_zero", "scenarioLifeNet2.xml",
+                lambda s: rep(s, '<holeIndexMax value="145200"/>', '<holeIndexMax value="0"/>')),
     ],
     "falciparum-init": [
         Variant("molineaux_no_weight", "scenarioMolineaux.xml", lambda s: drop_element(s, "<weight ", "</weight>")),
