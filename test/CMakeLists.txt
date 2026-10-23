@@ -26,6 +26,7 @@ set (OM_BOXTEST_NAMES
   KK_20150612
   LifeNet1
   LifeNet2
+  ITNHoleIndexMaxZero
   Molineaux
   MolPairwise
   MSAT
