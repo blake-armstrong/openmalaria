@@ -273,6 +273,21 @@ public:
                           &library.create(treat_simple("0t", "1t"), true));
     }
 
+    void test_case_type_under_severe_only_in_uncomplicated_trees() {
+        scnXml::DTSevere severe(case_type(), no_action());
+        scnXml::DecisionTree tree;
+        tree.setSevere(severe);
+        Clinical::DecisionTreeLibrary library = make_library();
+        TS_ASSERT_THROWS_NOTHING(library.create(tree, true));
+        bool rejected = false;
+        try {
+            library.create(tree, false);
+        } catch (const util::xml_scenario_error&) {
+            rejected = true;
+        }
+        TS_ASSERT(rejected);
+    }
+
 private:
     static Clinical::DecisionTreeLibrary make_library() {
         return {unittest_options::diagnostics, UnittestUtil::pk_pd_params(), Sim::from_ts(5)};
@@ -281,6 +296,12 @@ private:
     static scnXml::DecisionTree no_action() {
         scnXml::DecisionTree tree;
         tree.setNoTreatment(scnXml::DTNoTreatment());
+        return tree;
+    }
+
+    static scnXml::DecisionTree case_type() {
+        scnXml::DecisionTree tree;
+        tree.setCaseType(scnXml::DTCaseType(no_action(), no_action()));
         return tree;
     }
 

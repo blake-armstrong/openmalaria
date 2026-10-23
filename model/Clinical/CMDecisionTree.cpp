@@ -655,7 +655,7 @@ const CMDecisionTree& DecisionTreeLibrary::create(const scnXml::DecisionTree& no
     if (node.getUncomplicated().present())
         return CMDTUncomplicated::create(*this, node.getUncomplicated().get(), is_uc);
     if (node.getSevere().present())
-        return CMDTSevere::create(*this, node.getSevere().get(), true);
+        return CMDTSevere::create(*this, node.getSevere().get(), is_uc);
     if (node.getRandom().present())
         return CMDTRandom::create(*this, node.getRandom().get(), is_uc);
     if (node.getAge().present())
