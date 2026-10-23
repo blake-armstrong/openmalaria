@@ -35,7 +35,7 @@
 #include <vector>
 
 namespace OM {
-namespace Clinical {
+namespace Clinical { // NOLINT(readability-identifier-naming)
 class InfantMortality;
 }
 namespace Host {

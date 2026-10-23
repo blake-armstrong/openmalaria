@@ -51,7 +51,7 @@ struct HumanHet {
     HumanHet() : comorbidityFactor(1.0), treatmentSeekingFactor(1.0), availabilityFactor(1.0) {}
 };
 
-HumanHet hetSample(util::LocalRng& rng, const util::ModelOptionFlags& options) {
+HumanHet het_sample(util::LocalRng& rng, const util::ModelOptionFlags& options) {
     HumanHet het;
     if (options.option(util::TransHet)) {
         het.availabilityFactor = 0.2;
@@ -112,7 +112,7 @@ Human::Human(SimTime date_of_birth, const HumanParams& params, util::MasterRng& 
     // Initial humans are created at time 0 and may have date_of_birth in past. Otherwise date_of_birth must be now.
     assert(date_of_birth == Sim::now_or_ts1() || (Sim::now() == Sim::zero() && date_of_birth < Sim::now()));
 
-    HumanHet het = hetSample(host_rng, *params.options);
+    HumanHet het = het_sample(host_rng, *params.options);
     withinHostModel = WithinHost::WHInterface::create_within_host_model(host_rng, het.comorbidityFactor);
     double ii_factor = infIncidence->get_availability_factor(host_rng, 1.0);
     perHostTransmission.initialise(*params.per_host, host_rng, het.availabilityFactor * ii_factor);
