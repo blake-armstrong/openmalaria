@@ -76,3 +76,5 @@ f4c2f44cf5068cf817b80f29d94da6adc74e6bb9
 13d177cc8214c7b056c28076d7bfcc66178f7726
 # D8: rename model/interventions identifiers (util/style.sh rename)
 2cee6da6fefeef07cc4dabc67a6a9159f47ed99a
+# D8: model/interventions safe modernize fix-its (util/style.sh modernize)
+da9bfd0f261418c2537985d5dbf949977f53ef07
