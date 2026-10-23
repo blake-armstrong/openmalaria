@@ -31,6 +31,8 @@
 
 #include "util/random.h"
 
+#include <cassert>
+
 namespace OM {
 namespace Transmission {
 
@@ -53,66 +55,6 @@ public:
 
     PerHostAnophParams(const PerHostAnophParams&) = delete;
     PerHostAnophParams& operator=(const PerHostAnophParams&) = delete;
-
-    static inline void init(const scnXml::Mosq& mosq) { params.emplace_back(mosq); }
-
-    /// Get the number of vector species
-    static inline size_t numSpecies() { return params.size(); }
-
-    /// Get parameters for the given vector species
-    static inline const PerHostAnophParams& get(size_t species) { return params[species]; }
-
-    /** entoAvailability is calculated externally, then set after other
-     * parameters have been initialised.
-     * 
-     * This function doesn't need to exist, but helps make this fact obvious.
-     * 
-     * It should be called exactly once.
-      */
-    inline static void setEntoAvailabilityFactor(size_t species, double entoAvailability) {
-        params[species].entoAvailabilityFactor = entoAvailability;
-    }
-
-    inline static void calcAvailabilityPercentiles() {
-        int nSamples = 100000;
-        vector<double> samples(nSamples, 0.0);
-
-        // Using a different seed to make sure old results will not change
-        // Does it really matter?
-        util::MasterRng seed(0, 0);
-        seed.seed(0, 0);
-
-        util::LocalRng rng(seed);
-
-        // Sample
-        for (int i = 0; i < nSamples; i++) {
-            double avail = 0.0;
-            for (size_t s = 0; s < Transmission::PerHostAnophParams::numSpecies(); ++s)
-                avail += Transmission::PerHostAnophParams::get(s).entoAvailabilityFactor *
-                         Transmission::PerHostAnophParams::get(s).entoAvailability->sample(rng);
-            samples[i] = avail;
-        }
-
-        // Sort samples
-        sort(samples.begin(), samples.end());
-
-        entoAvailabilityPercentiles.resize(100);
-
-        // Calc percetiles threshold values
-        for (int i = 0; i < 100; i++)
-            entoAvailabilityPercentiles[i] = samples[int(i * nSamples / 100)];
-        entoAvailabilityPercentiles[0] = 0.0;
-    }
-
-    inline static double getEntoAvailabilityPercentile(int p) {
-        if (p >= 0 && p < 100)
-            return entoAvailabilityPercentiles[p];
-        else if (p == 100)
-            return std::numeric_limits<double>::max();
-        else
-            throw util::xml_scenario_error(
-                "Availability percentiles in intervention specifications can only be in [0 and 100]");
-    }
 
     /** @brief Probabilities of finding a host and surviving a feeding cycle
      * 
@@ -137,10 +79,46 @@ public:
      * (P_D_i). */
     util::BetaSampler probMosqSurvivalResting;
     //@}
+};
+
+class PerHostParams {
+public:
+    PerHostParams() = default;
+    explicit PerHostParams(const scnXml::AgeGroupValues& availability_to_mosquitoes);
+
+    void add_species(const scnXml::Mosq& mosq) { species.emplace_back(mosq); }
+
+    /// Get the number of vector species
+    size_t num_species() const { return species.size(); }
+
+    /// Get parameters for the given vector species
+    const PerHostAnophParams& get(size_t index) const { return species[index]; }
+
+    /** entoAvailability is calculated externally, then set after other
+     * parameters have been initialised.
+     * 
+     * This function doesn't need to exist, but helps make this fact obvious.
+     * 
+     * It should be called exactly once.
+      */
+    void set_ento_availability_factor(size_t index, double ento_availability) {
+        species[index].entoAvailabilityFactor = ento_availability;
+    }
+
+    void calc_availability_percentiles();
+
+    double ento_availability_percentile(int p) const;
+
+    double relative_availability_age(double age_years) const { return rel_avail_age.eval(age_years); }
+
+    /** Get the age at which individuals are considered adults (i.e. where
+     * availability to mosquitoes reaches its maximum). */
+    SimTime adult_age() const { return Sim::from_years_d(rel_avail_age.firstGlobalMaximum()); }
 
 private:
-    static vector<PerHostAnophParams> params;
-    static vector<double> entoAvailabilityPercentiles;
+    AgeGroupInterpolator rel_avail_age;
+    vector<PerHostAnophParams> species;
+    vector<double> ento_availability_percentiles;
 };
 
 /**
@@ -221,16 +199,10 @@ protected:
  * Currently many members are public and directly accessed. */
 class PerHost {
 public:
-    /// @brief Static member functions
-    //@{
-    /** Static initialisation. */
-    static void init(const scnXml::AgeGroupValues& availabilityToMosquitoes);
-    //@}
-
     ///@brief Initialisation / checkpionting
     //@{
     PerHost();
-    void initialise(LocalRng& rng, double availabilityFactor);
+    void initialise(const PerHostParams& per_host_params, LocalRng& rng, double availabilityFactor);
     //@}
 
     /// Call once per time step. Updates net holes.
@@ -255,7 +227,7 @@ public:
      * 
      * Also has a switch to put individuals entirely outside transmission. */
     inline double relativeAvailabilityAge(double ageYears) const {
-        return outsideTransmission ? 0.0 : relAvailAge.eval(ageYears);
+        return outsideTransmission ? 0.0 : params->relative_availability_age(ageYears);
     }
 
     /** Get the availability of this host to mosquitoes relative to an average
@@ -313,10 +285,6 @@ public:
 
     ///@brief Miscellaneous
     //@{
-    /** Get the age at which individuals are considered adults (i.e. where
-     * availability to mosquitoes reaches its maximum). */
-    static inline SimTime adultAge() { return Sim::from_years_d(relAvailAge.firstGlobalMaximum()); }
-
     /** Get whether the user has any active deployments of interventions of
      * the given type, where type is one of those interventions deriving the
      * PerHostInterventionData class (in other cases this will always return
@@ -371,9 +339,38 @@ private:
 
     vector<unique_ptr<PerHostInterventionData>> activeComponents;
 
-    static AgeGroupInterpolator relAvailAge;
+    const PerHostParams* params = nullptr;
 };
 
 }
+
+namespace bridge {
+
+// NOLINTNEXTLINE(cppcoreguidelines-avoid-non-const-global-variables)
+inline const Transmission::PerHostParams* current_per_host_params = nullptr;
+
+inline const Transmission::PerHostParams& per_host_params() {
+    assert(current_per_host_params != nullptr);
+    return *current_per_host_params;
+}
+
+}
+
+class PerHostParamsBinding {
+public:
+    explicit PerHostParamsBinding(const Transmission::PerHostParams& params)
+        : previous(bridge::current_per_host_params) {
+        bridge::current_per_host_params = &params;
+    }
+    PerHostParamsBinding(const PerHostParamsBinding&) = delete;
+    PerHostParamsBinding& operator=(const PerHostParamsBinding&) = delete;
+    PerHostParamsBinding(PerHostParamsBinding&&) = delete;
+    PerHostParamsBinding& operator=(PerHostParamsBinding&&) = delete;
+    ~PerHostParamsBinding() { bridge::current_per_host_params = previous; }
+
+private:
+    const Transmission::PerHostParams* previous;
+};
+
 }
 #endif

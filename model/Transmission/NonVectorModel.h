@@ -39,8 +39,8 @@ namespace Transmission {
 class NonVectorModel : public TransmissionModel {
 public:
     NonVectorModel(vector<double> initEIR, int interventionMode, const scnXml::Entomology& entoData,
-                   const scnXml::NonVector& nonVectorData, int eipDuration)
-        : TransmissionModel(std::move(initEIR), interventionMode, 1 /*this model doesn't support multiple genotypes*/),
+                   const scnXml::NonVector& nonVectorData, int eipDuration, size_t n_genotypes, SimTime adult_age)
+        : TransmissionModel(std::move(initEIR), interventionMode, n_genotypes, adult_age),
           nSpore(Sim::from_days(eipDuration)) {
         laggedKappa.resize(Sim::in_steps(nSpore) + 1, 0.0);
 

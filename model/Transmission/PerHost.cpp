@@ -30,12 +30,6 @@ namespace OM {
 namespace Transmission {
 using namespace OM::util;
 
-// -----  PerHost static  -----
-
-AgeGroupInterpolator PerHost::relAvailAge;
-vector<PerHostAnophParams> PerHostAnophParams::params;
-vector<double> PerHostAnophParams::entoAvailabilityPercentiles;
-
 PerHostAnophParams::PerHostAnophParams(const scnXml::Mosq& mosq) {
     if (mosq.getAvailability().getDistr() != "const" &&
         (util::ModelOptions::option(NegativeBinomialMassAction) || util::ModelOptions::option(LognormalMassAction) ||
@@ -51,23 +45,64 @@ PerHostAnophParams::PerHostAnophParams(const scnXml::Mosq& mosq) {
     probMosqSurvivalResting.setParams(mosq.getMosqProbResting());
 }
 
-void PerHost::init(const scnXml::AgeGroupValues& availabilityToMosquitoes) {
-    relAvailAge.set(availabilityToMosquitoes, "availabilityToMosquitoes");
+PerHostParams::PerHostParams(const scnXml::AgeGroupValues& availability_to_mosquitoes) {
+    rel_avail_age.set(availability_to_mosquitoes, "availabilityToMosquitoes");
+}
+
+void PerHostParams::calc_availability_percentiles() {
+    int nSamples = 100000;
+    vector<double> samples(nSamples, 0.0);
+
+    // Using a different seed to make sure old results will not change
+    // Does it really matter?
+    util::MasterRng seed(0, 0);
+    seed.seed(0, 0);
+
+    util::LocalRng rng(seed);
+
+    // Sample
+    for (int i = 0; i < nSamples; i++) {
+        double avail = 0.0;
+        for (size_t s = 0; s < num_species(); ++s)
+            avail += get(s).entoAvailabilityFactor * get(s).entoAvailability->sample(rng);
+        samples[i] = avail;
+    }
+
+    // Sort samples
+    sort(samples.begin(), samples.end());
+
+    ento_availability_percentiles.resize(100);
+
+    // Calc percetiles threshold values
+    for (int i = 0; i < 100; i++)
+        ento_availability_percentiles[i] = samples[int(i * nSamples / 100)];
+    ento_availability_percentiles[0] = 0.0;
+}
+
+double PerHostParams::ento_availability_percentile(int p) const {
+    if (p >= 0 && p < 100)
+        return ento_availability_percentiles[p];
+    else if (p == 100)
+        return std::numeric_limits<double>::max();
+    else
+        throw util::xml_scenario_error(
+            "Availability percentiles in intervention specifications can only be in [0 and 100]");
 }
 
 // -----  PerHost non-static -----
 
 PerHost::PerHost() : outsideTransmission(false), relativeAvailabilityHet(numeric_limits<double>::signaling_NaN()) {}
 
-void PerHost::initialise(LocalRng& rng, double availabilityFactor) {
+void PerHost::initialise(const PerHostParams& per_host_params, LocalRng& rng, double availabilityFactor) {
+    params = &per_host_params;
     relativeAvailabilityHet = availabilityFactor;
-    anophEntoAvailabilityRaw.resize(PerHostAnophParams::numSpecies());
-    anophEntoAvailability.resize(PerHostAnophParams::numSpecies());
-    anophProbMosqBiting.resize(PerHostAnophParams::numSpecies());
-    anophProbMosqResting.resize(PerHostAnophParams::numSpecies());
+    anophEntoAvailabilityRaw.resize(params->num_species());
+    anophEntoAvailability.resize(params->num_species());
+    anophProbMosqBiting.resize(params->num_species());
+    anophProbMosqResting.resize(params->num_species());
 
-    for (size_t i = 0; i < PerHostAnophParams::numSpecies(); ++i) {
-        const PerHostAnophParams& base = PerHostAnophParams::get(i);
+    for (size_t i = 0; i < params->num_species(); ++i) {
+        const PerHostAnophParams& base = params->get(i);
         anophEntoAvailabilityRaw[i] = base.entoAvailability->sample(rng);
         anophEntoAvailability[i] = base.entoAvailabilityFactor * anophEntoAvailabilityRaw[i] * availabilityFactor;
         anophProbMosqBiting[i] = base.probMosqBiting.sample(rng);

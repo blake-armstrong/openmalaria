@@ -116,7 +116,7 @@ Human::Human(SimTime dateOfBirth)
     HumanHet het = hetSample(host_rng);
     withinHostModel = WithinHost::WHInterface::create_within_host_model(host_rng, het.comorbidityFactor);
     double ii_factor = infIncidence->getAvailabilityFactor(host_rng, 1.0);
-    perHostTransmission.initialise(host_rng, het.availabilityFactor * ii_factor);
+    perHostTransmission.initialise(bridge::per_host_params(), host_rng, het.availabilityFactor * ii_factor);
     clinicalModel = bridge::clinical_params().create(het.treatmentSeekingFactor);
 }
 

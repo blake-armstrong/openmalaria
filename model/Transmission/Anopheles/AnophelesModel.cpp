@@ -126,12 +126,14 @@ namespace OM {
 namespace Transmission {
 namespace Anopheles {
 using namespace OM::util;
-using WithinHost::Genotypes;
 
 // -----  Initialisation of model, done before human warmup  ------
 
-void AnophelesModel::initialise(size_t species, MosquitoParams mosqParams) {
+void AnophelesModel::initialise(size_t species, MosquitoParams mosqParams, const PerHostParams& per_host,
+                                const WithinHost::GenotypeRegistry& genotype_registry) {
     mosq = mosqParams;
+    per_host_params = &per_host;
+    genotypes = &genotype_registry;
 
     N_v_length = (mosq.EIPDuration + mosq.restDuration);
 
@@ -150,7 +152,8 @@ void AnophelesModel::initialise(size_t species, MosquitoParams mosqParams) {
     uninfected_v[Sim::zero()] = numeric_limits<double>::quiet_NaN(); // index not used
 }
 
-void AnophelesModel::initAvailability(size_t species, const vector<NhhParams>& nhhs, int populationSize) {
+void AnophelesModel::initAvailability(size_t species, const vector<NhhParams>& nhhs, int populationSize,
+                                      PerHostParams& per_host) {
     // A: Host seeking
     // Proportion of host-seeking parous mosquitoes (those who have laid eggs)
     // which laid eggs that day:
@@ -224,7 +227,7 @@ void AnophelesModel::initAvailability(size_t species, const vector<NhhParams>& n
     }
 
     // -----  Calculate availability rate of hosts (α_i) and non-human population data  -----
-    PerHostAnophParams::setEntoAvailabilityFactor(species, (P_A1 / populationSize) * availFactor);
+    per_host.set_ento_availability_factor(species, (P_A1 / populationSize) * availFactor);
 
     initAvail = (P_A1 / populationSize) * availFactor;
 
@@ -340,14 +343,14 @@ void AnophelesModel::init2(int nHumans, double meanPopAvail, double sum_avail, d
     vectors::scale(forcedS_v, initSvFromEIR);
 
     N_v.resize(N_v_length, numeric_limits<double>::quiet_NaN());
-    O_v_i.resize(N_v_length * Genotypes::count(), 0.0);
-    O_v_l.resize(N_v_length * Genotypes::count(), numeric_limits<double>::quiet_NaN());
-    S_v_i.resize(N_v_length * Genotypes::count(), 0.0);
-    S_v_l.resize(N_v_length * Genotypes::count(), numeric_limits<double>::quiet_NaN());
+    O_v_i.resize(N_v_length * genotypes->count(), 0.0);
+    O_v_l.resize(N_v_length * genotypes->count(), numeric_limits<double>::quiet_NaN());
+    S_v_i.resize(N_v_length * genotypes->count(), 0.0);
+    S_v_l.resize(N_v_length * genotypes->count(), numeric_limits<double>::quiet_NaN());
     P_A.resize(N_v_length, numeric_limits<double>::quiet_NaN());
     P_df.resize(N_v_length, numeric_limits<double>::quiet_NaN());
-    P_dif_i.resize(N_v_length * Genotypes::count(), 0.0);
-    P_dif_l.resize(N_v_length * Genotypes::count(), 0.0);
+    P_dif_i.resize(N_v_length * genotypes->count(), 0.0);
+    P_dif_l.resize(N_v_length * genotypes->count(), 0.0);
     P_dff.resize(N_v_length, numeric_limits<double>::quiet_NaN());
     P_Amu.resize(N_v_length, numeric_limits<double>::quiet_NaN());
     P_A1.resize(N_v_length, numeric_limits<double>::quiet_NaN());
@@ -363,9 +366,9 @@ void AnophelesModel::init2(int nHumans, double meanPopAvail, double sum_avail, d
         P_df[t] = tsP_df;
         P_dff[t] = tsP_dff;
         N_v[t] = forcedS_v[t] * initNvFromSv;
-        for (size_t genotype = 0; genotype < Genotypes::count(); ++genotype) {
-            S_v_l[t * Genotypes::count() + genotype] = forcedS_v[t] * Genotypes::initial_freq(genotype);
-            O_v_l[t * Genotypes::count() + genotype] = S_v_l[t * Genotypes::count() + genotype] * initOvFromSv;
+        for (size_t genotype = 0; genotype < genotypes->count(); ++genotype) {
+            S_v_l[t * genotypes->count() + genotype] = forcedS_v[t] * genotypes->initial_freq(genotype);
+            O_v_l[t * genotypes->count() + genotype] = S_v_l[t * genotypes->count() + genotype] * initOvFromSv;
         }
     }
 
@@ -438,7 +441,7 @@ void AnophelesModel::deployVectorTrap(LocalRng& rng, size_t species, size_t inst
     assert(instance < trapParams.size());
     TrapData data;
     data.instance = instance;
-    const PerHostAnophParams& anophParams = PerHostAnophParams::get(species);
+    const PerHostAnophParams& anophParams = per_host_params->get(species);
     const double adultAvail = anophParams.entoAvailability->mean() * anophParams.entoAvailabilityFactor;
     data.initialAvail = popSize * adultAvail * trapParams[instance].relAvail;
     data.availHet = trapParams[instance].availDecay->hetSample(rng);
@@ -636,8 +639,8 @@ void AnophelesModel::advancePeriod(double sum_avail, double sigma_df, vector<dou
     vectors::scale(sigma_dif_l, alphaE);
 
     // Summed per day:
-    partialEIR_i.assign(WithinHost::Genotypes::count(), 0.0);
-    partialEIR_l.assign(WithinHost::Genotypes::count(), 0.0);
+    partialEIR_i.assign(genotypes->count(), 0.0);
+    partialEIR_l.assign(genotypes->count(), 0.0);
 
     resetTSStats();
 
@@ -682,7 +685,7 @@ void AnophelesModel::update(SimTime d0, double tsP_A, double tsP_Amu, double tsP
     P_df[t1] = tsP_df;
     P_dff[t1] = tsP_dff;
 
-    const size_t n = Genotypes::count();
+    const size_t n = genotypes->count();
 
     for (size_t i = 0; i < n; ++i) {
         P_dif_i[t1 * n + i] = tsP_dif_i[i];
@@ -828,7 +831,7 @@ void AnophelesModel::changeEIRIntervention(const scnXml::NonVector& nonVectorDat
 }
 
 void AnophelesModel::uninfectVectors() {
-    for (size_t i = 0; i < N_v_length * Genotypes::count(); i++) {
+    for (size_t i = 0; i < N_v_length * genotypes->count(); i++) {
         O_v_i[i] = 0.0;
         O_v_l[i] = 0.0;
         S_v_i[i] = 0.0;
@@ -848,25 +851,25 @@ double sum1(const std::vector<double>& arr, int end, int N_v_length) {
     return val / Sim::one_ts();
 }
 
-double sum2(const std::vector<double>& arr, int end, int N_v_length) {
+double sum2(const std::vector<double>& arr, int end, int N_v_length, size_t n_genotypes) {
     double val = 0.0;
     // Last time step ended at sim::now(). Values are stored per day, and for
     // the last time step values at sim::now() and four previos were set.
     for (int d1 = end - Sim::one_ts(); d1 < end; d1++) {
         int i1 = util::mod_nn(d1, N_v_length);
-        for (size_t g = 0; g < Genotypes::count(); ++g) {
-            val += arr[i1 * Genotypes::count() + g]; //.at(i1, g);
+        for (size_t g = 0; g < n_genotypes; ++g) {
+            val += arr[i1 * n_genotypes + g]; //.at(i1, g);
         }
     }
     return val / Sim::one_ts();
 }
 
-double sum3(const std::vector<double>& arr, size_t g, int end, int N_v_length) {
+double sum3(const std::vector<double>& arr, size_t g, int end, int N_v_length, size_t n_genotypes) {
     double val = 0.0;
     // Last time step ended at sim::now(). Values are stored per day, and for
     // the last time step values at sim::now() and four previos were set.
     for (int d1 = end - Sim::one_ts(); d1 < end; d1++) {
-        val += arr[util::mod_nn(d1, N_v_length) * Genotypes::count() + g]; // .at(mod_nn(d1, N_v_length), g);
+        val += arr[util::mod_nn(d1, N_v_length) * n_genotypes + g]; // .at(mod_nn(d1, N_v_length), g);
     }
     return val / Sim::one_ts();
 }
@@ -882,13 +885,13 @@ double AnophelesModel::getLastVecStat(VecStat vs) const {
     case PDF:
         return sum1(P_df, end, N_v_length);
     case PDIF:
-        return sum2(P_dif_i, end, N_v_length) + sum2(P_dif_l, end, N_v_length);
+        return sum2(P_dif_i, end, N_v_length, genotypes->count()) + sum2(P_dif_l, end, N_v_length, genotypes->count());
     case NV:
         return sum1(N_v, end, N_v_length);
     case OV:
-        return sum2(O_v_i, end, N_v_length) + sum2(O_v_l, end, N_v_length);
+        return sum2(O_v_i, end, N_v_length, genotypes->count()) + sum2(O_v_l, end, N_v_length, genotypes->count());
     case SV:
-        return sum2(S_v_i, end, N_v_length) + sum2(S_v_l, end, N_v_length);
+        return sum2(S_v_i, end, N_v_length, genotypes->count()) + sum2(S_v_l, end, N_v_length, genotypes->count());
     case PAmu:
         return sum1(P_Amu, end, N_v_length);
     case PA1:
@@ -907,10 +910,14 @@ void AnophelesModel::summarize(size_t species) const {
     int end = Sim::now() + 1 + N_v_length;
     mon::recordStat(mon::measure("Vector_Nv0"), getLastN_v0(), species);
     mon::recordStat(mon::measure("Vector_Nv"), sum1(N_v, end, N_v_length), species);
-    for (size_t g = 0; g < Genotypes::count(); ++g) {
-        mon::recordStat(mon::measure("Vector_Ov"), sum3(O_v_i, g, end, N_v_length) + sum3(O_v_l, g, end, N_v_length),
+    for (size_t g = 0; g < genotypes->count(); ++g) {
+        mon::recordStat(mon::measure("Vector_Ov"),
+                        sum3(O_v_i, g, end, N_v_length, genotypes->count()) +
+                            sum3(O_v_l, g, end, N_v_length, genotypes->count()),
                         species, g);
-        mon::recordStat(mon::measure("Vector_Sv"), sum3(S_v_i, g, end, N_v_length) + sum3(S_v_l, g, end, N_v_length),
+        mon::recordStat(mon::measure("Vector_Sv"),
+                        sum3(S_v_i, g, end, N_v_length, genotypes->count()) +
+                            sum3(S_v_l, g, end, N_v_length, genotypes->count()),
                         species, g);
     }
 }

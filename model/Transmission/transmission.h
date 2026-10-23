@@ -48,7 +48,7 @@ inline SimulationMode readMode(const string& str) {
         throw util::xml_scenario_error(string("mode attribute invalid: ").append(str));
 }
 
-inline NonVectorModel* createNonVectorModel(const scnXml::Entomology& entoData) {
+inline NonVectorModel* createNonVectorModel(const scnXml::Entomology& entoData, size_t n_genotypes, SimTime adult_age) {
     const scnXml::NonVector& nonVectorData = entoData.getNonVector().get();
 
     int interventionMode = readMode(entoData.getMode());
@@ -57,7 +57,8 @@ inline NonVectorModel* createNonVectorModel(const scnXml::Entomology& entoData) 
     vector<double> initialisationEIR;
     initialisationEIR.assign(Sim::steps_per_year(), 0.0);
 
-    return new NonVectorModel(initialisationEIR, interventionMode, entoData, nonVectorData, eipDuration);
+    return new NonVectorModel(initialisationEIR, interventionMode, entoData, nonVectorData, eipDuration, n_genotypes,
+                              adult_age);
 }
 
 inline bool anophelesCompare(const scnXml::AnophelesParams& a1, const scnXml::AnophelesParams& a2) {
@@ -66,7 +67,8 @@ inline bool anophelesCompare(const scnXml::AnophelesParams& a1, const scnXml::An
 
 inline Anopheles::AnophelesModel* createAnophelesModel(size_t i, const scnXml::AnophelesParams& anoph,
                                                        vector<double>& initialisationEIR, int populationSize,
-                                                       int interventionMode) {
+                                                       int interventionMode, PerHostParams& per_host_params,
+                                                       const WithinHost::GenotypeRegistry& genotypes) {
     Anopheles::AnophelesModel* anophModel;
 
     if (util::ModelOptions::option(util::VectorLifeCycleModel)) {
@@ -284,8 +286,8 @@ inline Anopheles::AnophelesModel* createAnophelesModel(size_t i, const scnXml::A
     // Initial guess of the proportion of mosquitoes which are infected, o: O_v(t) = o*N_v(t). Only used as a starting value.
     double propInfected = 0.078;
 
-    anophModel->initialise(i, mosqParams);
-    anophModel->initAvailability(i, nhhs, populationSize);
+    anophModel->initialise(i, mosqParams, per_host_params, genotypes);
+    anophModel->initAvailability(i, nhhs, populationSize, per_host_params);
     anophModel->initEIR(initEIR365, FSCoeffic, EIRRotateAngle, propInfectious, propInfected);
 
     for (SimTime i = Sim::zero(); i < Sim::one_year(); i = i + Sim::one_day())
@@ -294,7 +296,9 @@ inline Anopheles::AnophelesModel* createAnophelesModel(size_t i, const scnXml::A
     return anophModel;
 }
 
-inline VectorModel* createVectorModel(const scnXml::Entomology& entoData, int populationSize) {
+inline VectorModel* createVectorModel(const scnXml::Entomology& entoData, int populationSize,
+                                      PerHostParams& per_host_params, util::MasterRng& transmission_rng,
+                                      const WithinHost::GenotypeRegistry& genotypes) {
     const scnXml::Vector& vectorData = entoData.getVector().get();
     scnXml::Vector::AnophelesSequence anophelesList = vectorData.getAnopheles();
 
@@ -318,10 +322,10 @@ inline VectorModel* createVectorModel(const scnXml::Entomology& entoData, int po
     for (size_t i = 0; i < numSpecies; ++i) {
         auto anoph = anophelesList[i];
 
-        PerHostAnophParams::init(anoph.getMosq());
+        per_host_params.add_species(anoph.getMosq());
 
-        Anopheles::AnophelesModel* anophModel =
-            createAnophelesModel(i, anoph, initialisationEIR, populationSize, interventionMode);
+        Anopheles::AnophelesModel* anophModel = createAnophelesModel(i, anoph, initialisationEIR, populationSize,
+                                                                     interventionMode, per_host_params, genotypes);
         std::unique_ptr<Anopheles::EmergenceRateEstimator> estimator;
         if (util::ModelOptions::option(util::UseExactNv0Solver))
             estimator = std::make_unique<Anopheles::EmergenceRateSolver>(*anophModel, populationSize);
@@ -341,18 +345,21 @@ inline VectorModel* createVectorModel(const scnXml::Entomology& entoData, int po
     }
 
     return new VectorModel(initialisationEIR, interventionMode, std::move(species), std::move(emergenceRateEstimators),
-                           speciesIndex, populationSize);
+                           speciesIndex, populationSize, transmission_rng, genotypes.count(),
+                           per_host_params.adult_age());
 }
 
 ///@brief Creation, destruction and checkpointing
 //@{
 /// Creates a derived class
-inline TransmissionModel* createTransmissionModel(const scnXml::Entomology& entoData, int populationSize) {
+inline TransmissionModel* createTransmissionModel(const scnXml::Entomology& entoData, int populationSize,
+                                                  PerHostParams& per_host_params, util::MasterRng& transmission_rng,
+                                                  const WithinHost::GenotypeRegistry& genotypes) {
     // Entomology contains either a list of at least one anopheles or a list of at
     // least one EIRDaily.
     TransmissionModel* model;
     if (entoData.getVector().present())
-        model = createVectorModel(entoData, populationSize);
+        model = createVectorModel(entoData, populationSize, per_host_params, transmission_rng, genotypes);
     else {
         if (!entoData.getNonVector().present()) // should be a validation error, but anyway...
             throw util::xml_scenario_error("Neither vector nor non-vector data present in the XML!");
@@ -360,7 +367,7 @@ inline TransmissionModel* createTransmissionModel(const scnXml::Entomology& ento
             util::ModelOptions::option(util::VectorSimpleMpdModel))
             throw util::xml_scenario_error(
                 "VECTOR_*_MODEL is only compatible with the vector model (and non-vector data is present).");
-        model = createNonVectorModel(entoData);
+        model = createNonVectorModel(entoData, genotypes.count(), per_host_params.adult_age());
     }
 
     if (entoData.getScaledAnnualEIR().present()) {

@@ -93,7 +93,7 @@ Simulation::Simulation(std::unique_ptr<scnXml::Scenario> scenario, util::Command
     mon::initReporting(*scenario_xml); // Reporting init depends on diagnostics and monitoring
 
     // Init models used by humans
-    Transmission::PerHost::init(scenario_xml->getModel().getHuman().getAvailabilityToMosquitoes());
+    per_host_params = Transmission::PerHostParams(scenario_xml->getModel().getHuman().getAvailabilityToMosquitoes());
     Host::InfectionIncidenceModel::init(parameters);
     within_host_model = WithinHost::WithinHostModel(parameters, model_options, command_line, genotypes, *scenario_xml);
     clinical = Clinical::ClinicalParams(parameters, model_options, command_line, *scenario_xml);
@@ -112,7 +112,8 @@ Simulation::Simulation(std::unique_ptr<scnXml::Scenario> scenario, util::Command
 
     population_model = std::make_unique<Population>(pop_size);
     transmission_model = std::unique_ptr<Transmission::TransmissionModel>(
-        Transmission::createTransmissionModel(scenario_xml->getEntomology(), static_cast<int>(pop_size)));
+        Transmission::createTransmissionModel(scenario_xml->getEntomology(), static_cast<int>(pop_size),
+                                              per_host_params, master_rngs.transmission, genotypes));
 
     registerContinousPopulationCallbacks();
 
@@ -165,7 +166,7 @@ void Simulation::resume(const std::string& checkpoint_file) {
                     end_time, est_end_time, *population_model, *transmission_model);
 
     /** Calculate ento availability percentiles **/
-    Transmission::PerHostAnophParams::calcAvailabilityPercentiles();
+    per_host_params.calc_availability_percentiles();
 }
 
 void Simulation::start_new(const CheckpointOptions& checkpointing) {
@@ -174,7 +175,7 @@ void Simulation::start_new(const CheckpointOptions& checkpointing) {
     transmission_model->init2(population_model->humans);
 
     /** Calculate ento availability percentiles **/
-    Transmission::PerHostAnophParams::calcAvailabilityPercentiles();
+    per_host_params.calc_availability_percentiles();
 
     /** Warm-up phase: 
      * Run the simulation using the equilibrium inoculation rates over one

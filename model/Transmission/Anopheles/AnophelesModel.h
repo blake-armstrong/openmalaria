@@ -34,6 +34,9 @@
 #include <limits>
 
 namespace OM {
+namespace WithinHost {
+class GenotypeRegistry;
+}
 namespace Transmission {
 namespace Anopheles {
 using std::numeric_limits;
@@ -203,7 +206,8 @@ public:
      * @param nonHumanHostPopulations Size of each non-human population
      * @param populationSize Size of human population (assumed constant)
      */
-    void initialise(size_t species, MosquitoParams mosqParams);
+    void initialise(size_t species, MosquitoParams mosqParams, const PerHostParams& per_host,
+                    const WithinHost::GenotypeRegistry& genotype_registry);
 
     ///@brief Initialisation helper functions
     //@{
@@ -218,7 +222,7 @@ public:
      * @param nonHumanHostPopulations Size of each non-human population
      * @param populationSize Size of the human population (assumed constant)
      */
-    void initAvailability(size_t species, const vector<NhhParams>& nhhs, int populationSize);
+    void initAvailability(size_t species, const vector<NhhParams>& nhhs, int populationSize, PerHostParams& per_host);
 
     void initEIR(const vector<double>& initEIR365, vector<double> FSCoefficInit, double EIRRotateAngleInit,
                  double propInfectious, double propInfected);
@@ -628,6 +632,9 @@ public:
 
     /** Description of intervention killing effects on emerging pupae */
     vector<util::SimpleDecayingValue> emergenceReduction;
+
+    const PerHostParams* per_host_params = nullptr;
+    const WithinHost::GenotypeRegistry* genotypes = nullptr;
 };
 
 }

@@ -116,14 +116,13 @@ class TransmissionModel {
 protected:
     /// Reads all entomological parameters from the input datafile.
     /// @param entoData input configuration for model
-    /// @param nGenotypes number of genotypes transmission model is using
-    TransmissionModel(vector<double> initialisationEIR, int interventionMode, size_t nGenotypes)
-        : initialisationEIR(std::move(initialisationEIR)), simulationMode(forcedEIR),
+    /// @param n_genotypes number of genotypes transmission model is using
+    TransmissionModel(vector<double> initialisationEIR, int interventionMode, size_t n_genotypes, SimTime adult_age)
+        : n_genotypes(n_genotypes), initialisationEIR(std::move(initialisationEIR)), simulationMode(forcedEIR),
           interventionMode(interventionMode),
           laggedKappa(Sim::steps_per_year(), 0.0), // if using non-vector model, it will resize this
           annualEIR(0.0), _annualAverageKappa(numeric_limits<double>::signaling_NaN()), _sumAnnualKappa(0.0),
-          tsAdultEIR(0.0), surveyInputEIR(0.0), surveySimulatedEIR(0.0), adultAge(PerHost::adultAge()),
-          numTransmittingHumans(0) {
+          tsAdultEIR(0.0), surveyInputEIR(0.0), surveySimulatedEIR(0.0), adultAge(adult_age), numTransmittingHumans(0) {
         // Set VACCINE_GENOTYPE option
         opt_vaccine_genotype = util::ModelOptions::option(util::VaccineGenotype);
 
@@ -253,8 +252,8 @@ public:
                 human.perHostTransmission.relativeAvailabilityHetAge(Sim::in_years(human.age(Sim::ts1())));
             sumWeight += avail;
 
-            vector<double> probTransGenotype_i(WithinHost::Genotypes::count());
-            vector<double> probTransGenotype_l(WithinHost::Genotypes::count());
+            vector<double> probTransGenotype_i(num_genotypes());
+            vector<double> probTransGenotype_l(num_genotypes());
             const double pTransmit =
                 human.withinHostModel->prob_transmission_to_mosquito(probTransGenotype_i, probTransGenotype_l);
 
@@ -265,7 +264,7 @@ public:
             if (opt_vaccine_genotype == false)
                 riskTrans = avail * pTransmit * human.vaccine.getFactor(interventions::Vaccine::TBV);
             else {
-                for (size_t g = 0; g < WithinHost::Genotypes::count(); ++g)
+                for (size_t g = 0; g < num_genotypes(); ++g)
                     riskTrans += (probTransGenotype_i[g] + probTransGenotype_l[g]) *
                                  human.vaccine.getFactor(interventions::Vaccine::TBV, g);
                 riskTrans *= avail;
@@ -383,6 +382,12 @@ private:
         stream << '\t' << laggedKappa[Sim::modulo_steps(Sim::now(), laggedKappa.size())];
     }
     void ctsCbNumTransmittingHumans(ostream& stream) { stream << '\t' << numTransmittingHumans; }
+
+protected:
+    size_t num_genotypes() const { return n_genotypes; }
+
+private:
+    size_t n_genotypes;
 
 public:
     /** Entomological inoculation rate for adults during the

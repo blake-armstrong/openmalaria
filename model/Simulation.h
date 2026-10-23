@@ -98,6 +98,8 @@ private:
     Clinical::InfantMortality infant_mortality;
     InfantMortalityBinding infant_mortality_binding{infant_mortality};
     Host::NeonatalMortality neonatal_mortality;
+    Transmission::PerHostParams per_host_params;
+    PerHostParamsBinding per_host_params_binding{per_host_params};
     std::unique_ptr<scnXml::Scenario> scenario_xml;
     std::unique_ptr<Population> population_model;
     std::unique_ptr<Transmission::TransmissionModel> transmission_model;

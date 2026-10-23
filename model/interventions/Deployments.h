@@ -222,7 +222,7 @@ public:
             const SimTime age = human.age(Sim::now());
             if (age >= minAge && age < maxAge) {
                 double availability = 0.0;
-                for (size_t i = 0; i < Transmission::PerHostAnophParams::numSpecies(); ++i)
+                for (size_t i = 0; i < bridge::per_host_params().num_species(); ++i)
                     availability += human.perHostTransmission.anophEntoAvailability[i];
 
                 double probability = coverage;
@@ -235,10 +235,10 @@ public:
                         const double alpha = ((1.0 - beta_mean) / beta_var - 1.0 / beta_mean) * (beta_mean * beta_mean);
                         const double beta = alpha * (1.0 / beta_mean - 1.0);
 
-                        if (Transmission::PerHostAnophParams::numSpecies() > 1)
+                        if (bridge::per_host_params().num_species() > 1)
                             throw std::runtime_error("only supports one mosquito species");
 
-                        const double ux = Transmission::PerHostAnophParams::get(0).entoAvailability->cdf(
+                        const double ux = bridge::per_host_params().get(0).entoAvailability->cdf(
                             human.perHostTransmission.anophEntoAvailabilityRaw[0]);
                         if (ux < 1) {
                             double xx = gsl_cdf_ugaussian_Pinv(ux); // Unit interval to Normal
@@ -280,8 +280,8 @@ public:
                     }
                 }
 
-                if (availability >= Transmission::PerHostAnophParams::getEntoAvailabilityPercentile(minAvailability) &&
-                    availability <= Transmission::PerHostAnophParams::getEntoAvailabilityPercentile(maxAvailability)) {
+                if (availability >= bridge::per_host_params().ento_availability_percentile(minAvailability) &&
+                    availability <= bridge::per_host_params().ento_availability_percentile(maxAvailability)) {
                     if (subPop == ComponentId::wholePop() || (human.isInSubPop(subPop) != complement)) {
                         if (human.intervention_rng.bernoulli(probability)) {
                             deployToHuman(human, mon::Deploy::TIMED);
@@ -333,10 +333,10 @@ public:
             SimTime age = human.age(Sim::now());
             if (age >= minAge && age < maxAge) {
                 double availability = 0.0;
-                for (size_t i = 0; i < Transmission::PerHostAnophParams::numSpecies(); ++i)
+                for (size_t i = 0; i < bridge::per_host_params().num_species(); ++i)
                     availability += human.perHostTransmission.anophEntoAvailability[i];
-                if (availability >= Transmission::PerHostAnophParams::getEntoAvailabilityPercentile(minAvailability) &&
-                    availability <= Transmission::PerHostAnophParams::getEntoAvailabilityPercentile(maxAvailability)) {
+                if (availability >= bridge::per_host_params().ento_availability_percentile(minAvailability) &&
+                    availability <= bridge::per_host_params().ento_availability_percentile(maxAvailability)) {
                     if (subPop == ComponentId::wholePop() || (human.isInSubPop(subPop) != complement)) {
                         total += 1;
                         if (!human.isInSubPop(cumCovInd))
@@ -538,9 +538,9 @@ public:
                                                    " already deployed during non human hosts deployment");
 
                 const NhhParamsInterv& p = nhhParams[anophModel->mosq.name];
-                const double adultAvail = Transmission::PerHostAnophParams::get(i).entoAvailability->mean();
-                const double avail_i = Transmission::PerHostAnophParams::get(i).entoAvailabilityFactor * popSize *
-                                       adultAvail * p.mosqRelativeAvailabilityHuman;
+                const double adultAvail = bridge::per_host_params().get(i).entoAvailability->mean();
+                const double avail_i = bridge::per_host_params().get(i).entoAvailabilityFactor * popSize * adultAvail *
+                                       p.mosqRelativeAvailabilityHuman;
                 Transmission::Anopheles::Nhh nhh;
 
                 nhh.avail_i = avail_i;
@@ -622,11 +622,11 @@ public:
             return false;
         } else if (deployAge == age) {
             double availability = 0.0;
-            for (size_t i = 0; i < Transmission::PerHostAnophParams::numSpecies(); ++i)
+            for (size_t i = 0; i < bridge::per_host_params().num_species(); ++i)
                 availability += human.perHostTransmission.anophEntoAvailabilityRaw[i];
 
-            if (availability >= Transmission::PerHostAnophParams::getEntoAvailabilityPercentile(minAvailability) &&
-                availability <= Transmission::PerHostAnophParams::getEntoAvailabilityPercentile(maxAvailability)) {
+            if (availability >= bridge::per_host_params().ento_availability_percentile(minAvailability) &&
+                availability <= bridge::per_host_params().ento_availability_percentile(maxAvailability)) {
                 auto now = Sim::interv_date();
                 if (begin <= now && now < end &&
                     (subPop == ComponentId::wholePop() || (human.isInSubPop(subPop) != complement)) &&

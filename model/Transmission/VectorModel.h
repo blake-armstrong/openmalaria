@@ -49,7 +49,8 @@ public:
     VectorModel(vector<double> initEIR, int interventionMode,
                 vector<std::unique_ptr<Anopheles::AnophelesModel>> speciesList,
                 vector<std::unique_ptr<Anopheles::EmergenceRateEstimator>> emergenceRateEstimatorsList,
-                map<string, size_t> speciesIndexList, int populationSize);
+                map<string, size_t> speciesIndexList, int populationSize, util::MasterRng& transmission_rng,
+                size_t n_genotypes, SimTime adult_age);
 
     ~VectorModel() override;
 

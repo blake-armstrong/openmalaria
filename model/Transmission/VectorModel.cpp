@@ -23,7 +23,6 @@
 #include "Transmission/VectorModel.h"
 #include "Population.h"
 #include "Host/WithinHost/WHInterface.h"
-#include "Host/WithinHost/Genotypes.h"
 #include "mon/Continuous.h"
 #include "util/vectors.h"
 #include "util/ModelOptions.h"
@@ -164,11 +163,11 @@ const string& reverseLookup(const map<string, size_t>& m, size_t i) {
 VectorModel::VectorModel(vector<double> initEIR, int interventionMode,
                          vector<std::unique_ptr<Anopheles::AnophelesModel>> speciesList,
                          vector<std::unique_ptr<Anopheles::EmergenceRateEstimator>> emergenceRateEstimatorsList,
-                         map<string, size_t> speciesIndexList, int populationSize)
-    : TransmissionModel(std::move(initEIR), interventionMode, WithinHost::Genotypes::count()),
-      m_rng(bridge::master_rngs().transmission), initIterations(0), quinquennial_kappa(5 * Sim::steps_per_year(), 0.0),
-      species(std::move(speciesList)), emergenceRateEstimators(std::move(emergenceRateEstimatorsList)),
-      speciesIndex(std::move(speciesIndexList)) {
+                         map<string, size_t> speciesIndexList, int populationSize, util::MasterRng& transmission_rng,
+                         size_t n_genotypes, SimTime adult_age)
+    : TransmissionModel(std::move(initEIR), interventionMode, n_genotypes, adult_age), m_rng(transmission_rng),
+      initIterations(0), quinquennial_kappa(5 * Sim::steps_per_year(), 0.0), species(std::move(speciesList)),
+      emergenceRateEstimators(std::move(emergenceRateEstimatorsList)), speciesIndex(std::move(speciesIndexList)) {
     // set VACCINE_GENOTYPE option
     opt_vaccine_genotype = util::ModelOptions::option(util::VaccineGenotype);
 
@@ -393,8 +392,8 @@ void VectorModel::calculateEIR(Host::Human& human, double ageYears, vector<doubl
         }
     } else {
         assert(simulationMode == dynamicEIR);
-        EIR_i.assign(WithinHost::Genotypes::count(), 0.0);
-        EIR_l.assign(WithinHost::Genotypes::count(), 0.0);
+        EIR_i.assign(num_genotypes(), 0.0);
+        EIR_l.assign(num_genotypes(), 0.0);
         const double ageFactor = host.relativeAvailabilityAge(ageYears);
         for (size_t i = 0; i < speciesIndex.size(); ++i) {
             const vector<double>& partialEIR_i = species[i]->getPartialEIRImported();
@@ -423,19 +422,18 @@ void VectorModel::calculateEIR(Host::Human& human, double ageYears, vector<doubl
 
 // Every Global::interval days:
 void VectorModel::vectorUpdate(const vector<Host::Human>& population) {
-    const size_t nGenotypes = WithinHost::Genotypes::count();
     std::vector<double> probTransmission_i, probTransmission_l;
     std::vector<double> sum_avail(speciesIndex.size());
     std::vector<double> sigma_df(speciesIndex.size());
     std::vector<double> sigma_dff(speciesIndex.size());
-    std::vector<std::vector<double>> sigma_dif_i(speciesIndex.size(), std::vector<double>(nGenotypes)),
-        sigma_dif_l(speciesIndex.size(), std::vector<double>(nGenotypes));
+    std::vector<std::vector<double>> sigma_dif_i(speciesIndex.size(), std::vector<double>(num_genotypes())),
+        sigma_dif_l(speciesIndex.size(), std::vector<double>(num_genotypes()));
     for (const Host::Human& human : population) {
         const OM::Transmission::PerHost& host = human.perHostTransmission;
         WithinHost::WHInterface& whm = *human.withinHostModel;
 
-        probTransmission_i.assign(nGenotypes, 0.0);
-        probTransmission_l.assign(nGenotypes, 0.0);
+        probTransmission_i.assign(num_genotypes(), 0.0);
+        probTransmission_l.assign(num_genotypes(), 0.0);
         whm.prob_transmission_to_mosquito(probTransmission_i, probTransmission_l);
 
         for (size_t s = 0; s < speciesIndex.size(); ++s) {
@@ -446,7 +444,7 @@ void VectorModel::vectorUpdate(const vector<Host::Human>& population) {
             sum_avail[s] += avail;
             const double df = avail * host.probMosqBiting(s) * host.probMosqResting(s);
             sigma_df[s] += df;
-            for (size_t g = 0; g < nGenotypes; ++g) {
+            for (size_t g = 0; g < num_genotypes(); ++g) {
                 const double tbvFac =
                     human.vaccine.getFactor(interventions::Vaccine::TBV, opt_vaccine_genotype ? g : 0);
                 sigma_dif_i[s][g] += df * probTransmission_i[g] * tbvFac;

@@ -233,6 +233,8 @@ WithinHost::GenotypeRegistry genotypes;
 GenotypesBinding genotypes_binding{genotypes};
 WithinHost::DiagnosticRegistry diagnostics;
 DiagnosticsBinding diagnostics_binding{diagnostics};
+Transmission::PerHostParams per_host_params;
+PerHostParamsBinding per_host_params_binding{per_host_params};
 // NOLINTEND(cppcoreguidelines-avoid-non-const-global-variables,bugprone-throwing-static-initialization)
 }
 
