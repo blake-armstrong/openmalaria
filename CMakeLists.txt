@@ -46,6 +46,10 @@ if (CMAKE_CXX_COMPILER_ID MATCHES "Intel")
   set (CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -fp-model strict")
 endif (CMAKE_CXX_COMPILER_ID MATCHES "Intel")
 
+if (CMAKE_CXX_COMPILER_ID MATCHES "GNU|Clang")
+  set (CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -ffp-contract=off")
+endif ()
+
 # Statically link libgcc; isn't going to work when other C++ libraries are dynamically linked
 if ("${CMAKE_CXX_COMPILER_ID}" MATCHES "GNU")
   option (OM_COVERAGE "Produce coverage into binary.")
