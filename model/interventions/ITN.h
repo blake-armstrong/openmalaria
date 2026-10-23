@@ -107,7 +107,7 @@ public:
          * the relative availability is always in the range (0,1] — that is,
          * the deterrent can never be perfect, but can have zero effect. */
     void init_two_stage(const scnXml::TwoStageDeterrency& elt, double max_insecticide, double hole_index_max,
-                        bool hole_index_max_present = false);
+                        bool hole_index_max_present);
 
     /** Calculate effect. Range of output is any value ≥ 0.
          * 

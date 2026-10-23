@@ -413,7 +413,7 @@ void factors::RelativeAttractiveness::init_two_stage(const scnXml::TwoStageDeter
                            "ITN.description.anophelesParams.twoStageDeterrency.attacking", true);
     } else {
         assert(elt.getAttackingLogit().present());
-        if (hole_index_max == 0.0) {
+        if (!hole_index_max_present) {
             throw util::xml_scenario_error(
                 "ITN.description.anophelesParams: holeIndexMax required when using logit attacking deterrency");
         }
@@ -535,7 +535,7 @@ void ITNComponent::ITNAnopheles::init(const scnXml::ITNDescription::AnophelesPar
                                         "ITN.description.anophelesParams.preprandialKillingFactor", false);
     } else {
         assert(elt.getPreprandialKillingEffectLogit().present());
-        if (hole_index_max == 0.0) {
+        if (!hole_index_max_present) {
             throw util::xml_scenario_error(
                 "ITN.description.anophelesParams: holeIndexMax required when using logit killing effect");
         }
@@ -546,7 +546,7 @@ void ITNComponent::ITNAnopheles::init(const scnXml::ITNDescription::AnophelesPar
                                          "ITN.description.anophelesParams.postprandialKillingFactor", false);
     } else {
         assert(elt.getPostprandialKillingEffectLogit().present());
-        if (hole_index_max == 0.0) {
+        if (!hole_index_max_present) {
             throw util::xml_scenario_error(
                 "ITN.description.anophelesParams: holeIndexMax required when using logit killing effect");
         }
@@ -556,7 +556,7 @@ void ITNComponent::ITNAnopheles::init(const scnXml::ITNDescription::AnophelesPar
         rel_fecundity_effect.init(elt.getFecundityReduction().get(), max_insecticide,
                                   "ITN.description.anophelesParams.fecundityReduction", false);
     } else if (elt.getFecundityReductionLogit().present()) {
-        if (hole_index_max == 0.0) {
+        if (!hole_index_max_present) {
             throw util::xml_scenario_error(
                 "ITN.description.anophelesParams: holeIndexMax required when using logit fecundity effect");
         }
