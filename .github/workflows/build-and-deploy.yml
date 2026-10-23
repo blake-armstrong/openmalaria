@@ -64,6 +64,9 @@ jobs:
         with:
           python-version: '3.12'
 
+      - name: Find setup-python's interpreter before build.sh's /usr/bin
+        run: echo "CMAKE_PROGRAM_PATH=$pythonLocation/bin" >> "$GITHUB_ENV"
+
       - name: Install - Ubuntu
         if: startsWith(matrix.os,'ubuntu')
         run: |
