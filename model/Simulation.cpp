@@ -113,7 +113,9 @@ Simulation::Simulation(std::unique_ptr<scnXml::Scenario> scenario, util::Command
     const size_t pop_size = scenario_xml->getDemography().getPopSize();
 
     population_model = std::make_unique<Population>(
-        pop_size, age_structure, Host::HumanParams{&per_host_params, &infection_incidence}, master_rngs.population);
+        pop_size, age_structure,
+        Host::HumanParams{.per_host = &per_host_params, .infection_incidence = &infection_incidence},
+        master_rngs.population);
     transmission_model =
         Transmission::create_transmission_model(scenario_xml->getEntomology(), static_cast<int>(pop_size),
                                                 per_host_params, master_rngs.transmission, genotypes);

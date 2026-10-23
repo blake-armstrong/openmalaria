@@ -62,11 +62,11 @@ void Population::createInitialHumans() {
     int cumulativePop = 0;
     for (size_t iage_prev = age_structure->max_steps_per_life(), iage = iage_prev - 1; iage_prev > 0;
          iage_prev = iage, iage -= 1) {
-        int targetPop = age_structure->target_cum_pop(iage, size);
-        while (cumulativePop < targetPop) {
+        const int target_pop = age_structure->target_cum_pop(iage, static_cast<int>(size));
+        while (cumulativePop < target_pop) {
             SimTime dob = Sim::zero() - Sim::from_ts(iage);
             util::streamValidate(dob);
-            humans.push_back(Host::Human(dob, human_params, *rng));
+            humans.emplace_back(dob, human_params, *rng);
             ++cumulativePop;
         }
     }
@@ -87,8 +87,9 @@ void Population::update() {
         // if (Actual number of people so far > target population size for this age)
         // "outmigrate" some to maintain population shape
         //NOTE: better to use age(sim::ts0())? Possibly, but the difference will not be very significant.
-        // Also see targetPop = ... comment above
-        bool outmigrate = cumPop >= age_structure->target_cum_pop(Sim::in_steps(it->age(Sim::ts1())), size);
+        // Also see target_pop = ... comment above
+        bool outmigrate =
+            cumPop >= age_structure->target_cum_pop(Sim::in_steps(it->age(Sim::ts1())), static_cast<int>(size));
 
         if (isDead || outmigrate) {
             it = humans.erase(it);
@@ -98,11 +99,11 @@ void Population::update() {
         ++it;
     } // end of per-human updates
 
-    // increase population size to targetPop
+    // increase population size to target_pop
     recentBirths += (size - cumPop);
     while (cumPop < (int)size) {
         // humans born at end of this time step = beginning of next, hence ts1
-        humans.push_back(Host::Human(Sim::ts1(), human_params, *rng));
+        humans.emplace_back(Sim::ts1(), human_params, *rng);
         ++cumPop;
     }
 }
@@ -112,7 +113,7 @@ void Population::checkpoint(istream& stream) {
     recentBirths & stream;
 
     for (size_t i = 0; i < size && !stream.eof(); ++i) {
-        humans.push_back(Host::Human(Sim::zero(), human_params, *rng));
+        humans.emplace_back(Sim::zero(), human_params, *rng);
         humans.back().checkpoint(stream);
     }
     if (humans.size() != size)

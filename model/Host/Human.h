@@ -56,8 +56,8 @@ class Human {
 public:
     /** Initialise all variables of a human datatype.
     * 
-    * @param dateOfBirth date of birth (usually start of next time step) */
-    Human(SimTime dateOfBirth, const HumanParams& params, util::MasterRng& rng);
+    * @param date_of_birth date of birth (usually start of next time step) */
+    Human(SimTime date_of_birth, const HumanParams& params, util::MasterRng& rng);
 
     /// Allow move construction
     Human(Human&&) = default;

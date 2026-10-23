@@ -453,9 +453,11 @@ public:
 
     static unique_ptr<Host::Human> createHuman(SimTime dateOfBirth) {
         static util::MasterRngs master_rngs(0);
-        return unique_ptr<Host::Human>(new Host::Human(
-            dateOfBirth, Host::HumanParams{&unittest_options::per_host_params, &unittest_options::infection_incidence},
-            master_rngs.population));
+        return std::make_unique<Host::Human>(
+            dateOfBirth,
+            Host::HumanParams{.per_host = &unittest_options::per_host_params,
+                              .infection_incidence = &unittest_options::infection_incidence},
+            master_rngs.population);
     }
     // Set the WithinHost model used by the human, and return a pointer to it. Do not delete this!
     static WithinHost::WHInterface* setHumanWH(Host::Human& human, unique_ptr<WithinHost::WHInterface> wh) {

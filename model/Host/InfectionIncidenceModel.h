@@ -156,7 +156,7 @@ protected:
 
     double susceptibility();
 
-    const InfectionIncidenceParams* params;
+    const InfectionIncidenceParams& params() const { return *incidence_params; }
 
     /** Probability of infection (cumulative or reset to zero in massTreatment).
    *
@@ -166,6 +166,9 @@ protected:
 
     //!Number of infective bites since birth
     double cumulative_eir_a{0.0}; //TODO(memory opt): not needed by NegBinomMAII and LogNormalMAII
+
+private:
+    const InfectionIncidenceParams* incidence_params;
 };
 
 //TODO(optimisation): none of these add data members, so should we be using

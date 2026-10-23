@@ -106,11 +106,11 @@ HumanHet hetSample(util::LocalRng& rng) {
     return het;
 }
 
-Human::Human(SimTime dateOfBirth, const HumanParams& params, util::MasterRng& rng)
+Human::Human(SimTime date_of_birth, const HumanParams& params, util::MasterRng& rng)
     : infIncidence(params.infection_incidence->create()), host_rng(rng), clinical_rng(rng), intervention_rng(rng),
-      monitoring_rng(rng), dateOfBirth(dateOfBirth) {
-    // Initial humans are created at time 0 and may have dateOfBirth in past. Otherwise dateOfBirth must be now.
-    assert(dateOfBirth == Sim::now_or_ts1() || (Sim::now() == Sim::zero() && dateOfBirth < Sim::now()));
+      monitoring_rng(rng), dateOfBirth(date_of_birth) {
+    // Initial humans are created at time 0 and may have date_of_birth in past. Otherwise date_of_birth must be now.
+    assert(date_of_birth == Sim::now_or_ts1() || (Sim::now() == Sim::zero() && date_of_birth < Sim::now()));
 
     HumanHet het = hetSample(host_rng);
     withinHostModel = WithinHost::WHInterface::create_within_host_model(host_rng, het.comorbidityFactor);

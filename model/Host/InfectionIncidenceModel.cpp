@@ -96,7 +96,7 @@ std::unique_ptr<InfectionIncidenceModel> InfectionIncidenceParams::create() cons
     return std::make_unique<InfectionIncidenceModel>(*this);
 }
 
-InfectionIncidenceModel::InfectionIncidenceModel(const InfectionIncidenceParams& params) : params(&params) {}
+InfectionIncidenceModel::InfectionIncidenceModel(const InfectionIncidenceParams& params) : incidence_params(&params) {}
 
 // -----  non-static methods  -----
 
@@ -105,7 +105,7 @@ double InfectionIncidenceModel::get_availability_factor(LocalRng& rng, double ba
 }
 double NegBinomMAII::get_availability_factor(LocalRng& rng, double base_availability) {
     // Gamma sample with k=BaselineAvailabilityShapeParam; mean is baseAvailability
-    return rng.gamma(params->baseline_avail_shape_param, base_availability / params->baseline_avail_shape_param);
+    return rng.gamma(params().baseline_avail_shape_param, base_availability / params().baseline_avail_shape_param);
 }
 double LogNormalMAII::get_availability_factor(LocalRng& rng, double base_availability) {
     // given BaselineAvailabilityShapeParam = sqrt (log (1 + variance/mean²))
@@ -114,7 +114,7 @@ double LogNormalMAII::get_availability_factor(LocalRng& rng, double base_availab
         // NOTE: shouldn't the normal_mean parameter be adjusted when baseAvailability != 1.0?
         throw TRACED_EXCEPTION_DEFAULT("LogNormalMAII::getAvailabilityFactor");
     }
-    return rng.log_normal(log(base_availability) - params->baseline_avail_offset, params->baseline_avail_shape_param);
+    return rng.log_normal(log(base_availability) - params().baseline_avail_offset, params().baseline_avail_shape_param);
 }
 
 void InfectionIncidenceModel::summarize(const Host::Human& human) {
@@ -125,30 +125,30 @@ double InfectionIncidenceModel::get_model_expected_infections(LocalRng& rng, dou
                                                               const Transmission::PerHost& ph_trans) {
     // First two lines are availability adjustment: S_1(i,t) from AJTMH 75 (suppl 2) p12 eqn. (5)
     // Note that NegBinomMAII and LogNormalMAII supercede this model; see below
-    return (params->s_inf + (1 - params->s_inf) / (1 + effective_eir / Sim::one_ts() * params->e_star_inv)) *
+    return (params().s_inf + (1 - params().s_inf) / (1 + effective_eir / Sim::one_ts() * params().e_star_inv)) *
            susceptibility() * effective_eir;
 }
 double HeterogeneityWorkaroundII::get_model_expected_infections(LocalRng& rng, double effective_eir,
                                                                 const Transmission::PerHost& ph_trans) {
-    return (params->s_inf +
-            (1 - params->s_inf) /
-                (1 + effective_eir / (Sim::one_ts() * ph_trans.relative_availability_het) * params->e_star_inv)) *
+    return (params().s_inf +
+            (1 - params().s_inf) /
+                (1 + effective_eir / (Sim::one_ts() * ph_trans.relative_availability_het) * params().e_star_inv)) *
            susceptibility() * effective_eir;
 }
 double NegBinomMAII::get_model_expected_infections(LocalRng& rng, double effective_eir, const Transmission::PerHost&) {
     // Documentation: http://www.plosmedicine.org/article/fetchSingleRepresentation.action?uri=info:doi/10.1371/journal.pmed.1001157.s009
-    return rng.gamma(params->inf_rate_shape_param, effective_eir * susceptibility() / params->inf_rate_shape_param);
+    return rng.gamma(params().inf_rate_shape_param, effective_eir * susceptibility() / params().inf_rate_shape_param);
 }
 double LogNormalMAII::get_model_expected_infections(LocalRng& rng, double effective_eir, const Transmission::PerHost&) {
     // Documentation: http://www.plosmedicine.org/article/fetchSingleRepresentation.action?uri=info:doi/10.1371/journal.pmed.1001157.s009
     if (effective_eir < 1e-10)
         return 0.0;
-    const double meanlog = log(effective_eir * susceptibility()) - params->inf_rate_offset;
-    return rng.log_normal(meanlog, params->inf_rate_shape_param);
+    const double meanlog = log(effective_eir * susceptibility()) - params().inf_rate_offset;
+    return rng.log_normal(meanlog, params().inf_rate_shape_param);
 }
 
 double InfectionIncidenceModel::susceptibility() {
-    if (params->no_pre_erythrocytic) {
+    if (params().no_pre_erythrocytic) {
         //! The average proportion of bites from sporozoite positive mosquitoes resulting in infection.
         /*! 
     This is computed as 0.19 (the value S from a neg bin mass action model fitted 
@@ -159,8 +159,8 @@ double InfectionIncidenceModel::susceptibility() {
         return 0.702;
     } else {
         // S_2(i,t) from AJTMH 75 (suppl 2) p12 eqn. (7)
-        return params->s_imm +
-               (1.0 - params->s_imm) / (1.0 + pow(cumulative_eir_a * params->x_star_p_inv, params->gamma_p));
+        return params().s_imm +
+               (1.0 - params().s_imm) / (1.0 + pow(cumulative_eir_a * params().x_star_p_inv, params().gamma_p));
     }
 }
 
@@ -176,7 +176,7 @@ double InfectionIncidenceModel::expected_num_new_infections(OM::Host::Human& hum
 
     // Only to be consistent with old simulation runs when set to false
     // Setting this option to true will only affect reporting
-    if (params->vaccine_genotype == false)
+    if (params().vaccine_genotype == false)
         //Introduce the effect of vaccination. Note that this does not affect cumEIR.
         expected_num_infections *= human.vaccine.getFactor(interventions::Vaccine::PEV);
 
