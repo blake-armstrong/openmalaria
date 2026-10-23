@@ -288,6 +288,23 @@ public:
         TS_ASSERT(rejected);
     }
 
+    void test_multiple_reports_a_screening_by_any_child() {
+        scnXml::DTMultiple with_diagnostic;
+        with_diagnostic.getDiagnostic().push_back(scnXml::DTDiagnostic(no_action(), no_action(), "microscopy"));
+        scnXml::DecisionTree screening;
+        screening.setMultiple(with_diagnostic);
+
+        scnXml::DTMultiple without_diagnostic;
+        without_diagnostic.getTreatSimple().push_back(scnXml::DTTreatSimple("0t", "1t"));
+        scnXml::DecisionTree treatment;
+        treatment.setMultiple(without_diagnostic);
+
+        whm->totalDensity = 0.0;
+        Clinical::DecisionTreeLibrary library = make_library();
+        TS_ASSERT(library.create(screening, true).exec(*hd).screened);
+        TS_ASSERT(!library.create(treatment, true).exec(*hd).screened);
+    }
+
 private:
     static Clinical::DecisionTreeLibrary make_library() {
         return {unittest_options::diagnostics, UnittestUtil::pk_pd_params(), Sim::from_ts(5)};

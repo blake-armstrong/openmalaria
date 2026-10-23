@@ -74,6 +74,7 @@ protected:
         for (auto it : children) {
             const CMDTOut r2 = it->exec(host_data);
             result.treated = result.treated || r2.treated;
+            result.screened = result.screened || r2.screened;
         }
         return result;
     }
