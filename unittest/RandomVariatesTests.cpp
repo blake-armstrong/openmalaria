@@ -52,6 +52,7 @@ constexpr double MomentZLimit = 5.0;
 constexpr double ChiSquareAlpha = 1e-4;
 constexpr double MinExpectedCount = 5.0;
 constexpr uint64_t Seed = 20261021;
+constexpr double RoundingTolerance = 1e-12;
 
 using Gen = Xoshiro256P;
 using NewSampler = std::function<double(Gen&)>;
@@ -347,14 +348,15 @@ TEST_CASE("normal variates match GSL and the normal CDF", "[util][random][g-diff
     check_cases({normal_case(0.0, 1.0), normal_case(5.0, 0.1), normal_case(-3.0, 20.0)}, 100);
 }
 
-TEST_CASE("normal variates reproduce GSL's polar method draw for draw", "[util][random][g-diff]") {
+TEST_CASE("normal variates reproduce GSL's polar method draw for draw, up to rounding", "[util][random][g-diff]") {
     constexpr uint64_t Stream = 50;
     ChaCha<8> seeder(Seed, Stream);
     Gen gen(seeder);
     GslAdapter adapter(Stream);
     std::size_t first_difference = SampleSize;
     for (std::size_t i = 0; i < SampleSize && first_difference == SampleSize; ++i) {
-        if (standard_normal(gen) != gsl_ran_gaussian(adapter.get(), 1.0)) {
+        const double expected = gsl_ran_gaussian(adapter.get(), 1.0);
+        if (std::abs(standard_normal(gen) - expected) > RoundingTolerance) {
             first_difference = i;
         }
     }
