@@ -37,6 +37,7 @@
 #include <iostream>
 #include <map>
 #include <ranges>
+#include <utility>
 
 namespace OM::mon {
 
@@ -175,7 +176,7 @@ SimTime read_survey_dates(const scnXml::Monitoring& monitoring) {
     runtime.n_surveys = 0;
     for (const auto& [date, reporting] : surveys) {
         const size_t num = reporting ? runtime.n_surveys++ : NotUsed;
-        runtime.survey_dates.push_back({date, num});
+        runtime.survey_dates.push_back({.date = date, .num = num});
     }
     if (runtime.survey_dates.empty()) {
         throw util::xml_scenario_error("Scenario defines no surveys; at least one is required.");
@@ -213,18 +214,19 @@ void init_cohorts(const scnXml::Monitoring& monitoring) {
 
     const scnXml::Cohorts mon_cohorts = monitoring.getCohorts().get();
     uint32_t next_id = 0;
-    for (const auto& it : mon_cohorts.getSubPop()) {
-        const interventions::ComponentId comp_id = bridge::intervention_manager().get_component_id(it.getId());
+    for (const auto& sub_pop : mon_cohorts.getSubPop()) {
+        const interventions::ComponentId comp_id = bridge::intervention_manager().get_component_id(sub_pop.getId());
         const bool inserted = runtime.cohort_sub_pop_ids.insert(std::make_pair(comp_id, next_id)).second;
         if (!inserted) {
             throw util::xml_scenario_error(std::string("cohort specification uses sub-population \"")
-                                               .append(it.getId())
+                                               .append(sub_pop.getId())
                                                .append("\" more than once"));
         }
-        const auto number = it.getNumber();
-        if (number < 1 || number > MaxCohortNumber || !std::has_single_bit(static_cast<uint32_t>(number))) {
+        const auto number = sub_pop.getNumber();
+        if (number < 1 || std::cmp_greater(number, MaxCohortNumber) ||
+            !std::has_single_bit(static_cast<uint32_t>(number))) {
             throw util::xml_scenario_error(std::string("cohort specification assigns sub-population \"")
-                                               .append(it.getId())
+                                               .append(sub_pop.getId())
                                                .append("\" a number which is not a power of 2 between 1 and ")
                                                .append(std::to_string(MaxCohortNumber)));
         }

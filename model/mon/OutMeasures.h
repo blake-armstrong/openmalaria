@@ -23,6 +23,7 @@
 #ifndef H_OM_MON_OUT_MEASURES
 #define H_OM_MON_OUT_MEASURES
 
+#include <array>
 #include <cstdint>
 #include <limits>
 #include <string_view>
@@ -35,7 +36,7 @@ inline constexpr Measure InvalidMeasure = std::numeric_limits<Measure>::max() - 
 enum Dim : uint8_t { None = 0, Age = 1 << 0, Cohort = 1 << 1, Species = 1 << 2, Genotype = 1 << 3, Drug = 1 << 4 };
 
 struct OutMeasure {
-    const char* name = nullptr; // defs[] only
+    const char* name = nullptr; // Defs only
     int out_id = -1;
     bool is_double = false;
     uint8_t dims = Dim::None;
@@ -43,7 +44,7 @@ struct OutMeasure {
 };
 
 // Output IDs are stable: append new measures and never reuse gaps.
-inline constexpr OutMeasure Defs[] = {
+inline constexpr auto Defs = std::to_array<OutMeasure>({
     {"nHost", 0, false, Dim::Age | Dim::Cohort},
     /** The number of human hosts with an infection (patent or not) at the time
         * the survey is taken. */
@@ -317,7 +318,7 @@ inline constexpr OutMeasure Defs[] = {
     {"expectedSevereWithoutComorbidities", 82, true, Dim::Age | Dim::Cohort},
     // Number of treatments for non-malaria infections. Units: treatments (whole courses)
     {"nNMFTreatments", -1, false, Dim::Age | Dim::Cohort},
-};
+});
 
 inline bool is_obsolete_measure(std::string_view name) {
     return name == "contrib" || name == "nIPTDoses" || name == "innoculationsPerDayOfYear" ||
@@ -326,7 +327,7 @@ inline bool is_obsolete_measure(std::string_view name) {
            name == "nAddedToCohort" || name == "nRemovedFromCohort" || name == "nAntibioticTreatments";
 }
 
-inline constexpr Measure MeasureCount = sizeof(Defs) / sizeof(Defs[0]);
+inline constexpr auto MeasureCount = static_cast<Measure>(Defs.size());
 
 consteval Measure measure(std::string_view measure_name) {
     for (Measure i = 0; i < MeasureCount; ++i) {
@@ -350,25 +351,25 @@ inline OutMeasure find_out_measure(std::string_view name) {
 }
 
 inline bool is_valid_condition(Measure measure) {
-    static constexpr Measure Invalid[] = {mon::measure("nSevere"),
-                                          mon::measure("nSevereWithoutComorbidities"),
-                                          mon::measure("nUncomp"),
-                                          mon::measure("nDirDeaths"),
-                                          mon::measure("nHospitalDeaths"),
-                                          mon::measure("Clinical_FirstDayDeaths"),
-                                          mon::measure("Clinical_HospitalFirstDayDeaths"),
-                                          mon::measure("nSeq"),
-                                          mon::measure("nHospitalSeqs"),
-                                          mon::measure("nHospitalRecovs"),
-                                          mon::measure("nNMFever"),
-                                          mon::measure("nNmfDeaths"),
-                                          mon::measure("nSubPopRemovalFirstEvent"),
-                                          mon::measure("innoculationsPerAgeGroup"),
-                                          mon::measure("innoculationsPerVector"),
-                                          mon::measure("inputEIR"),
-                                          mon::measure("simulatedEIR"),
-                                          AllCauseImr};
-    for (Measure invalid_measure : Invalid) {
+    static constexpr std::array Invalid = {mon::measure("nSevere"),
+                                           mon::measure("nSevereWithoutComorbidities"),
+                                           mon::measure("nUncomp"),
+                                           mon::measure("nDirDeaths"),
+                                           mon::measure("nHospitalDeaths"),
+                                           mon::measure("Clinical_FirstDayDeaths"),
+                                           mon::measure("Clinical_HospitalFirstDayDeaths"),
+                                           mon::measure("nSeq"),
+                                           mon::measure("nHospitalSeqs"),
+                                           mon::measure("nHospitalRecovs"),
+                                           mon::measure("nNMFever"),
+                                           mon::measure("nNmfDeaths"),
+                                           mon::measure("nSubPopRemovalFirstEvent"),
+                                           mon::measure("innoculationsPerAgeGroup"),
+                                           mon::measure("innoculationsPerVector"),
+                                           mon::measure("inputEIR"),
+                                           mon::measure("simulatedEIR"),
+                                           AllCauseImr};
+    for (const Measure invalid_measure : Invalid) {
         if (measure == invalid_measure)
             return false;
     }

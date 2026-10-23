@@ -29,6 +29,7 @@
 #include "schema/monitoring.h"
 
 #include <algorithm>
+#include <array>
 #include <bit>
 #include <cmath>
 #include <fstream>
@@ -55,7 +56,7 @@ uint32_t cohort_set_output_id(uint32_t cohort_set) {
     return out_num;
 }
 
-template <typename T> void writeBinaryValue(ostream& stream, const T& value) {
+template <typename T> void write_binary_value(ostream& stream, const T& value) {
     stream.write(reinterpret_cast<const char*>(&value), sizeof(value));
 }
 
@@ -178,10 +179,11 @@ void write_measure(ostream& stream, Writer write_row, size_t survey, const inter
             for (size_t species = 0; species < store.n_species; ++species) {
                 for (size_t genotype = 0; genotype < store.n_genotypes; ++genotype) {
                     for (size_t drug = 0; drug < store.n_drugs; ++drug) {
-                        const int col2 = by_species
-                                             ? species + 1 + 1000000 * genotype
-                                             : age_group + age_group_add + 1000 * cohort_set_output_id(cohort_set) +
-                                                   1000000 * (by_drug ? drug + 1 : genotype);
+                        const int col2 = static_cast<int>(
+                            by_species ? species + 1 + 1000000 * genotype
+                                       : age_group + age_group_add +
+                                             static_cast<size_t>(1000 * cohort_set_output_id(cohort_set)) +
+                                             1000000 * (by_drug ? drug + 1 : genotype));
                         const size_t index = survey_start + store.index(age_group, cohort_set, species, genotype, drug);
                         const double value =
                             std::visit([index](const auto& reports) { return static_cast<double>(reports[index]); },
@@ -194,10 +196,10 @@ void write_measure(ostream& stream, Writer write_row, size_t survey, const inter
     }
 }
 
-enum class ValueType { All, Integer, Double };
+enum class ValueType : std::uint8_t { All, Integer, Double };
 
-template <class Writer> void writeRows(ostream& stream, Writer write_row, ValueType type = ValueType::All) {
-    MonitoringState& runtime = bridge::monitoring();
+template <class Writer> void write_rows(ostream& stream, Writer write_row, ValueType type = ValueType::All) {
+    const MonitoringState& runtime = bridge::monitoring();
     for (size_t survey = 0; survey < runtime.n_surveys; ++survey) {
         for (const internal::MeasureStore& store : runtime.stores) {
             if (store.output.out_id < 0 || (type == ValueType::Integer && store.output.is_double) ||
@@ -212,7 +214,7 @@ template <class Writer> void writeRows(ostream& stream, Writer write_row, ValueT
 }
 
 uint64_t count_rows(bool is_double) {
-    MonitoringState& runtime = bridge::monitoring();
+    const MonitoringState& runtime = bridge::monitoring();
     uint64_t count = is_double && runtime.report_imr >= 0 ? 1 : 0;
     for (const internal::MeasureStore& store : runtime.stores) {
         if (store.output.out_id < 0 || store.output.is_double != is_double)
@@ -228,21 +230,21 @@ void write_binary(ostream& stream) {
     static_assert(sizeof(double) == 8 && std::numeric_limits<double>::is_iec559, "output.bin needs IEEE-754 doubles");
     static_assert(std::numeric_limits<int>::digits <= std::numeric_limits<int32_t>::digits,
                   "integer monitoring values must fit in int32_t");
-    const char magic[8] = {'O', 'M', 'O', 'U', 'T', 'B', 'I', 'N'};
+    constexpr std::array<char, 8> Magic = {'O', 'M', 'O', 'U', 'T', 'B', 'I', 'N'};
     const uint32_t version = 2;
     const uint64_t integer_rows = count_rows(false);
     const uint64_t double_rows = count_rows(true);
-    stream.write(magic, sizeof(magic));
-    writeBinaryValue(stream, version);
-    writeBinaryValue(stream, integer_rows);
-    writeBinaryValue(stream, double_rows);
+    stream.write(Magic.data(), Magic.size());
+    write_binary_value(stream, version);
+    write_binary_value(stream, integer_rows);
+    write_binary_value(stream, double_rows);
 
     auto write_id_column = [&](auto select) {
-        for (ValueType type : {ValueType::Integer, ValueType::Double}) {
-            writeRows(
+        for (const ValueType type : {ValueType::Integer, ValueType::Double}) {
+            write_rows(
                 stream,
                 [&](ostream& output, int survey, int column, int measure, double, bool) {
-                    writeBinaryValue<int32_t>(output, select(survey, column, measure));
+                    write_binary_value<int32_t>(output, select(survey, column, measure));
                 },
                 type);
         }
@@ -250,19 +252,19 @@ void write_binary(ostream& stream) {
     write_id_column([](int survey, int, int) { return survey; });
     write_id_column([](int, int column, int) { return column; });
     write_id_column([](int, int, int measure) { return measure; });
-    writeRows(
+    write_rows(
         stream,
         [](ostream& output, int, int, int, double value, bool) {
             assert(std::trunc(value) == value);
-            writeBinaryValue<int32_t>(output, static_cast<int32_t>(value));
+            write_binary_value<int32_t>(output, static_cast<int32_t>(value));
         },
         ValueType::Integer);
-    writeRows(
-        stream, [](ostream& output, int, int, int, double value, bool) { writeBinaryValue<double>(output, value); },
+    write_rows(
+        stream, [](ostream& output, int, int, int, double value, bool) { write_binary_value<double>(output, value); },
         ValueType::Double);
 }
 
-void write_text(ostream& stream) { writeRows(stream, write_text_row); }
+void write_text(ostream& stream) { write_rows(stream, write_text_row); }
 
 template <class Stream, class Writer> void write_output(const string& filename, ios::openmode mode, Writer writer) {
     Stream stream(filename.c_str(), mode);
@@ -299,7 +301,7 @@ size_t setup_condition(const string& measure_name, double min_value, double max_
     }
     internal::ensure_condition_store(om);
 
-    runtime.conditions.push_back({initial_state, om.measure, min_value, max_value});
+    runtime.conditions.push_back({.value = initial_state, .measure = om.measure, .min = min_value, .max = max_value});
     return runtime.conditions.size() - 1;
 }
 
@@ -315,7 +317,7 @@ static void record_value(Measure measure, size_t survey, size_t age, uint32_t co
         return;
     MonitoringState& runtime = bridge::monitoring();
     assert(measure < runtime.stores_by_measure.size());
-    for (size_t idx : runtime.stores_by_measure[measure]) {
+    for (const size_t idx : runtime.stores_by_measure[measure]) {
         internal::MeasureStore& store = runtime.stores[idx];
         if (out_id != 0 && store.output.out_id != out_id)
             continue;
@@ -349,12 +351,12 @@ void record_event(Measure measure, const Host::Human& human, double val, int out
     record_value(measure, event_survey_number(), human.monitoringAgeGroup, human.getCohortSet(), 0, 0, 0, val, out_id);
 }
 
-void record_deploy(Measure timed_measure, Measure cts_measure, const Host::Human& human, deploy::Method method,
+void record_deploy(Measure timed_measure, Measure cts_measure, const Host::Human& human, DeployMethod method,
                    double val) {
-    assert(method == deploy::TIMED || method == deploy::CTS || method == deploy::TREAT);
-    const Measure selected = method == deploy::TIMED ? timed_measure
-                             : method == deploy::CTS ? cts_measure
-                                                     : ::OM::mon::measure("nTreatDeployments");
+    assert(method == DeployMethod::Timed || method == DeployMethod::Cts || method == DeployMethod::Treat);
+    const Measure selected = method == DeployMethod::Timed ? timed_measure
+                             : method == DeployMethod::Cts ? cts_measure
+                                                           : ::OM::mon::measure("nTreatDeployments");
     record_event(selected, human, val);
 }
 
@@ -399,7 +401,7 @@ void conclude_survey() {
 }
 
 void write_survey_data() {
-    string filename = util::CommandLine::output_name();
+    const string filename = util::CommandLine::output_name();
     const bool binary = util::CommandLine::output_format() == util::CommandLine::OutputFormat::Bin;
     const auto writer = binary ? write_binary : write_text;
     const ios::openmode mode = ios::out | ios::binary;

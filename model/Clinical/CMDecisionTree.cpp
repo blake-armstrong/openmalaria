@@ -573,7 +573,8 @@ protected:
     }
 
     CMDTOut exec(CMHostData host_data) const override {
-        deploy(host_data.human, mon::deploy::TREAT, interventions::VaccineLimits(/*default initialise: no limits*/));
+        deploy(host_data.human, mon::DeployMethod::Treat,
+               interventions::VaccineLimits(/*default initialise: no limits*/));
 
         //NOTE: it's not intuitively obvious what value should be returned here
         // in the case of intervention deployment. This at least means that

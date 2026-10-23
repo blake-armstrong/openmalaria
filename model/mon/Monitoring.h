@@ -45,9 +45,7 @@ namespace mon {
 
 inline constexpr size_t NotUsed = std::numeric_limits<size_t>::max();
 
-namespace deploy {
-enum Method { TIMED, CTS, TREAT };
-}
+enum class DeployMethod : std::uint8_t { Timed, Cts, Treat };
 
 namespace internal {
 
@@ -159,7 +157,7 @@ void record_stat(Measure measure, const Host::Human& human, double val = 1.0, si
                  size_t drug = 0);
 void record_event(Measure measure, size_t survey, size_t age, uint32_t cohort);
 void record_event(Measure measure, const Host::Human& human, double val = 1.0, int out_id = 0);
-void record_deploy(Measure timed_measure, Measure cts_measure, const Host::Human& human, deploy::Method method,
+void record_deploy(Measure timed_measure, Measure cts_measure, const Host::Human& human, DeployMethod method,
                    double val = 1.0);
 inline bool is_used(Measure measure) {
     assert(measure < MeasureCount);

@@ -110,14 +110,16 @@ void Continuous::checkpoint(istream& stream) {
 
 void Continuous::register_callback(const string& opt_name, const string& titles, const function<void(ostream&)>& f) {
     assert(registered.count(opt_name) == 0); // name clash/registered twice?
-    function<void(const Population&, ostream&)> wrapped = [f](const Population&, ostream& ostream) { f(ostream); };
+    const function<void(const Population&, ostream&)> wrapped = [f](const Population&, ostream& ostream) {
+        f(ostream);
+    };
     registered[opt_name] = {titles, wrapped};
 }
 
 void Continuous::register_callback(const string& opt_name, const string& titles,
                                    const function<void(const vector<Host::Human>&, ostream&)>& f) {
     assert(registered.count(opt_name) == 0); // name clash/registered twice?
-    function<void(const Population&, ostream&)> wrapped = [f](const Population& p, ostream& ostream) {
+    const function<void(const Population&, ostream&)> wrapped = [f](const Population& p, ostream& ostream) {
         f(p.humans, ostream);
     };
     registered[opt_name] = {titles, wrapped};

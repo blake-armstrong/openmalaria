@@ -60,7 +60,7 @@ IRSComponent::IRSComponent(ComponentId id, const scnXml::IRSDescription& elt,
     checker.checkNoneMissed();
 }
 
-void IRSComponent::deploy(Host::Human& human, mon::deploy::Method method, VaccineLimits) const {
+void IRSComponent::deploy(Host::Human& human, mon::DeployMethod method, VaccineLimits) const {
     human.perHostTransmission.deploy_component(human.intervention_rng, *this);
     mon::record_deploy(mon::measure("nMassIRS"), mon::measure("nCtsIRS"), human, method);
 }

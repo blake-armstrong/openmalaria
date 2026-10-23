@@ -183,7 +183,7 @@ void WHFalciparum::treatment(Host::Human& human, TreatmentId treat_id) {
     treat_simple(human, treat.liver_effect(), treat.blood_effect());
 
     // triggered intervention deployments:
-    treat.deploy(human, mon::deploy::TREAT, interventions::VaccineLimits(/*default initialise: no limits*/));
+    treat.deploy(human, mon::DeployMethod::Treat, interventions::VaccineLimits(/*default initialise: no limits*/));
 }
 bool WHFalciparum::treat_simple(Host::Human& human, SimTime time_liver, SimTime time_blood) {
     if (time_liver != Sim::zero()) {
