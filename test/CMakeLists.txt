@@ -140,3 +140,19 @@ if (OM_UV_EXECUTABLE)
 else ()
     message (STATUS "uv not found: stats_tool_generate_reference (needs numpy through uv) is not registered")
 endif ()
+
+add_executable (openMalaria-two-sims two_sims.cpp)
+target_link_libraries (openMalaria-two-sims
+  model
+  schema
+  contrib
+  ${GSL_LIBRARIES}
+  ${XERCESC_LIBRARIES}
+  ${Z_LIBRARIES}
+  ${PTHREAD_LIBRARIES}
+  ${OM_STD_LIBS}
+)
+set_target_properties (openMalaria-two-sims PROPERTIES RUNTIME_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR})
+add_test (NAME two_sims COMMAND ${PYTHON_EXECUTABLE} ${CMAKE_CURRENT_SOURCE_DIR}/two_sims.py
+    $<TARGET_FILE:openMalaria-two-sims> NoInterv 1 TriggeredMSAT TriggeredMSAT 9 1 SimpleMPDTest)
+set_tests_properties (two_sims PROPERTIES LABELS two-sims DISABLED TRUE)
