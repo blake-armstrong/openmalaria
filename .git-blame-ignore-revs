@@ -72,3 +72,5 @@ a0e9a7379d517745b79136922ccd221dedbf9653
 f4c2f44cf5068cf817b80f29d94da6adc74e6bb9
 # D7b: rename model/Host/InfectionIncidenceModel and model/PopulationAgeStructure identifiers (util/style.sh rename)
 6ac27849dcf69496ed8a1ed776e08401ae15dcf6
+# D7b: model/Host/InfectionIncidenceModel and model/PopulationAgeStructure safe modernize fix-its (util/style.sh modernize)
+13d177cc8214c7b056c28076d7bfcc66178f7726
