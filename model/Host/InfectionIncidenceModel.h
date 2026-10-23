@@ -27,6 +27,7 @@
 #include "Transmission/PerHost.h"
 #include "util/random.h"
 
+#include <cstdint>
 #include <memory>
 
 namespace OM {
@@ -42,7 +43,7 @@ using util::LocalRng;
 
 class InfectionIncidenceParams {
 public:
-    enum class Kind { Default, HeterogeneityWorkaround, NegativeBinomial, LogNormal };
+    enum class Kind : std::uint8_t { Default, HeterogeneityWorkaround, NegativeBinomial, LogNormal };
 
     InfectionIncidenceParams() = default;
     InfectionIncidenceParams(const Parameters& parameters, const util::ModelOptionFlags& model_options);

@@ -51,9 +51,8 @@ struct DemographyFit {
 };
 
 double w_calc_rss(const gsl_vector* v, void* params) {
-    double x = NAN, y = NAN;
-    x = gsl_vector_get(v, 0);
-    y = gsl_vector_get(v, 1);
+    const double x = gsl_vector_get(v, 0);
+    const double y = gsl_vector_get(v, 1);
 
     return static_cast<DemographyFit*>(params)->set_demo_parameters(x, y);
 }
@@ -79,8 +78,8 @@ void minimize_calc_rss(DemographyFit& fit, double param1, double param2) {
         if (gsl_multimin_fminimizer_iterate(minimizer))
             throw TRACED_EXCEPTION("gsl_multimin_fminimizer_iterate failed", util::Error::GSL);
 
-        double size = gsl_multimin_fminimizer_size(minimizer);
-        int status = gsl_multimin_test_size(size, 1e-2);
+        const double size = gsl_multimin_fminimizer_size(minimizer);
+        const int status = gsl_multimin_test_size(size, 1e-2);
         if (status == GSL_SUCCESS)
             break;
     }
@@ -101,7 +100,7 @@ DemographyFit::DemographyFit(const scnXml::Demography& demography) {
     double sumperc = 0.0;
     const scnXml::DemogAgeGroup::GroupSequence& group = demography.getAgeGroup().getGroup();
 
-    size_t ngroups = group.size() + 1;
+    const size_t ngroups = group.size() + 1;
     age_group_bounds.resize(ngroups + 1, 0);
     age_group_percent.resize(ngroups, 0);
 
@@ -124,30 +123,30 @@ DemographyFit::DemographyFit(const scnXml::Demography& demography) {
     int maxcal = 500000;
     int npar = 2;
     int iw = 3; */
-    double p1 = 0.371626412;
-    double p2 = 0.841209593;
+    const double p1 = 0.371626412;
+    const double p2 = 0.841209593;
     // returns "double rss":
     minimize_calc_rss(*this, p1, p2);
 }
 
 double DemographyFit::set_demo_parameters(double param1, double param2) {
     const double imr = 0.1;
-    double m_inf = -log(1 - imr);
+    const double m_inf = -log(1 - imr);
 
     mu1 = exp(param1) / 100;
     alpha1 = exp(param2) / 100;
     alpha0 = 4.0;
     mu0 = (m_inf - mu1 * (exp(alpha1 * 0.5) - 1) * alpha0) / (alpha1 * (1 - exp(-alpha0 * 0.5)));
 
-    size_t ngroups = age_group_percent.size();
+    const size_t ngroups = age_group_percent.size();
     double sumpred = 0.0;
     vector<double> m(ngroups, 0);
     vector<double> pred(ngroups, 0);
 
     for (size_t i = 0; i < ngroups - 1; i++) {
-        double midpt = (age_group_bounds[i + 1] + age_group_bounds[i]) * 0.5;
-        double m1 = mu0 * (1.0 - exp(-alpha0 * midpt)) / alpha0;
-        double m2 = mu1 * (exp(alpha1 * midpt) - 1.0) / alpha1;
+        const double midpt = (age_group_bounds[i + 1] + age_group_bounds[i]) * 0.5;
+        const double m1 = mu0 * (1.0 - exp(-alpha0 * midpt)) / alpha0;
+        const double m2 = mu1 * (exp(alpha1 * midpt) - 1.0) / alpha1;
         m[i] = m1 + m2;
         pred[i] = (age_group_bounds[i + 1] - age_group_bounds[i]) * exp(-Rho * midpt - m[i]);
         sumpred += pred[i];
@@ -155,16 +154,16 @@ double DemographyFit::set_demo_parameters(double param1, double param2) {
     for (size_t i = 0; i < ngroups - 1; i++) {
         pred[i] = pred[i] / sumpred * 100.0;
     }
-    double l_inf = exp(-Rho * 0.5 - m[1]);
-    double m_nn = -log(1.0 - 0.4 * (1 - exp(-m[1])));
-    double l1 = 1.0 / 12.0 * exp(-Rho / 24.0 - m_nn);
-    double perc_inf = age_group_percent[0] + age_group_percent[1];
+    const double l_inf = exp(-Rho * 0.5 - m[1]);
+    const double m_nn = -log(1.0 - 0.4 * (1 - exp(-m[1])));
+    const double l1 = 1.0 / 12.0 * exp(-Rho / 24.0 - m_nn);
+    const double perc_inf = age_group_percent[0] + age_group_percent[1];
     age_group_percent[0] = perc_inf * l1 / l_inf;
     age_group_percent[1] = perc_inf - age_group_percent[0];
 
     double result = 0.0;
     for (size_t i = 0; i < ngroups - 1; i++) {
-        double residual = log(pred[i]) - log(age_group_percent[i]);
+        const double residual = log(pred[i]) - log(age_group_percent[i]);
         result += residual * residual;
     }
     return result;
@@ -173,18 +172,18 @@ double DemographyFit::set_demo_parameters(double param1, double param2) {
 void DemographyFit::calc_cum_age_prop(vector<double>& cum_age_prop) const {
     cum_age_prop[0] = 0.0;
     for (size_t j = 1; j < cum_age_prop.size(); ++j) {
-        SimTime age = Sim::from_ts(cum_age_prop.size() - j - 1);
-        double age_years = Sim::in_years(age);
-        double m1s = (mu0 * (1.0 - exp(-alpha0 * age_years)) / alpha0);
-        double m2s = (mu1 * (exp(alpha1 * age_years) - 1.0) / alpha1);
-        double ms = m1s + m2s;
+        const SimTime age = Sim::from_ts(static_cast<int>(cum_age_prop.size() - j - 1));
+        const double age_years = Sim::in_years(age);
+        const double m1s = (mu0 * (1.0 - exp(-alpha0 * age_years)) / alpha0);
+        const double m2s = (mu1 * (exp(alpha1 * age_years) - 1.0) / alpha1);
+        const double ms = m1s + m2s;
         double predperc = exp(-Rho * age_years - ms);
         if (age >= Sim::max_human_age()) {
             predperc = 0.0;
         }
         cum_age_prop[j] = cum_age_prop[j - 1] + predperc;
     }
-    double total_cum_pc = cum_age_prop[cum_age_prop.size() - 1];
+    const double total_cum_pc = cum_age_prop[cum_age_prop.size() - 1];
     for (size_t j = 1; j < cum_age_prop.size(); ++j) {
         //Scale using the total cumAgeProp
         cum_age_prop[j] = cum_age_prop[j] / total_cum_pc;
@@ -202,8 +201,8 @@ AgeStructure::AgeStructure(const scnXml::Demography& demography) {
 }
 
 int AgeStructure::target_cum_pop(size_t age_steps, int target_pop) const {
-    size_t index = cum_age_prop.size() - 1 - age_steps;
-    return (int)floor(cum_age_prop[index] * target_pop + 0.5);
+    const size_t index = cum_age_prop.size() - 1 - age_steps;
+    return static_cast<int>(floor(cum_age_prop[index] * target_pop + 0.5));
 }
 
 }

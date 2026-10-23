@@ -31,6 +31,7 @@
 
 #include <stdexcept>
 #include <cmath>
+#include <format>
 
 namespace OM::Host {
 using namespace OM::util;
@@ -43,10 +44,8 @@ InfectionIncidenceParams::InfectionIncidenceParams(const Parameters& parameters,
       e_star_inv(1.0 / parameters[Parameter::EStar]), x_star_p_inv(1.0 / parameters[Parameter::XStarP]),
       no_pre_erythrocytic(model_options.option(util::NoPreErythrocytic)),
       vaccine_genotype(model_options.option(util::VaccineGenotype)) {
-
     //! constant defining the constraint for the Gamma shape parameters
     /// Used for the case where availability is assumed gamma distributed
-    double r_square_gamma = NAN;
     /*
     //! Expected number of inoculations
     /// Product of measured EIR, susceptibility and length of time Global::interval
@@ -55,7 +54,7 @@ InfectionIncidenceParams::InfectionIncidenceParams(const Parameters& parameters,
     r_square_Gamma=(totalInfectionrateVariance**2-gsi*BaselineAvailabilityMean)/(gsi*BaselineAvailabilityMean)**2
     r_square_Gamma must be greater than zero, so r_square_LogNormal is also. 
     */
-    r_square_gamma = 0.649; //such that r_square_LogNormal =0.5
+    const double r_square_gamma = 0.649; //such that r_square_LogNormal =0.5
 
     if (model_options.option(util::NegativeBinomialMassAction)) {
         kind = Kind::NegativeBinomial;
@@ -66,7 +65,7 @@ InfectionIncidenceParams::InfectionIncidenceParams(const Parameters& parameters,
 
         //! constant defining the constraint for the log Normal variance
         /// Used for the case where availability is assumed log Normally distributed
-        double r_square_log_normal = log(1.0 + r_square_gamma);
+        const double r_square_log_normal = log(1.0 + r_square_gamma);
 
         inf_rate_shape_param = sqrt(r_square_log_normal - 1.86 * pow(baseline_avail_shape_param, 2));
         inf_rate_shape_param = std::max(inf_rate_shape_param, 0.0);
@@ -144,7 +143,7 @@ double LogNormalMAII::get_model_expected_infections(LocalRng& rng, double effect
     // Documentation: http://www.plosmedicine.org/article/fetchSingleRepresentation.action?uri=info:doi/10.1371/journal.pmed.1001157.s009
     if (effective_eir < 1e-10)
         return 0.0;
-    double meanlog = log(effective_eir * susceptibility()) - params->inf_rate_offset;
+    const double meanlog = log(effective_eir * susceptibility()) - params->inf_rate_offset;
     return rng.log_normal(meanlog, params->inf_rate_shape_param);
 }
 
@@ -168,9 +167,8 @@ double InfectionIncidenceModel::susceptibility() {
 double InfectionIncidenceModel::expected_num_new_infections(OM::Host::Human& human, double effective_eir) {
     // error check (should be OK if kappa is checked, for nonVector model):
     if (!(std::isfinite)(effective_eir)) {
-        ostringstream out;
-        out << "effectiveEIR is not finite: " << effective_eir << endl;
-        throw TRACED_EXCEPTION(out.str(), util::Error::EffectiveEIR);
+        throw TRACED_EXCEPTION(std::format("effectiveEIR is not finite: {:g}\n", effective_eir),
+                               util::Error::EffectiveEIR);
     }
 
     double expected_num_infections =
