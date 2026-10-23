@@ -41,7 +41,7 @@ See `PLAN.md` for the session protocol, chunks and gates. Append one log entry p
 | D6c | done | 38f78eda, a7c68da3, 9e34f002, 6e9038b9, 9cf1ff5a, bb46b13d, c78608b6, 0eb65ebb, (this log entry); F68/F71/F72 fixes ee622593, 5ec95acf, 942a1306, 137ce408, (their log entry) |
 | D7 | done | 3de6a425, 31d61953, 8e9e674f, 8b583553, 529d46cf, 5d117152, f4c2f44c, e1f80857, acec99a5, d5761b35, e18142b8, (this log entry); F73 tests 2e3ff85e, 3409b9e9, (their log entry) |
 | D7b | done | f844263a, 99a752ec, 6ac27849, 4eaa9225, e1c53c02, 13d177cc, 804c0268, 9f0a66fe, 2a18091d, b38f88e7, (this log entry) |
-| D8 | done | da06b67a, 12449692, 2cee6da6, 0ed86df8, 118b811e, da9bfd0f, 7bdf5f73, 9f5e01f4, e894fa4f, 9e31e86b, (this log entry) |
+| D8 | done | da06b67a, 12449692, 2cee6da6, 0ed86df8, 118b811e, da9bfd0f, 7bdf5f73, 9f5e01f4, e894fa4f, 9e31e86b, (this log entry); F79 fix 0b7567cf, 8d9a79a6, 0f28d92a, (its log entry) |
 | D9 | todo | |
 | E1 | todo | |
 | E2 | todo | |
@@ -1400,4 +1400,20 @@ The user asked to double-check F73 and, if it held, to add a test with the fix, 
   - H3: a checkpoint round-trip test with deployed interventions (F78).
   - E: F79; `TimedChangeHSDeployment` and `TimedChangeEIRDeployment` still hold `scnXml` clones (E1, E2).
   - Sweep before F0: `Human`, `Population` and `mon/` are not renamed or modernised; D8 touched a few of their lines.
+- Next: D9.
+
+### D8 follow-up: F79 fixed, with a test (2026-10-23, after D8)
+The user asked for F79 to be fixed (and agreed that F78's round-trip test belongs in H3). The base for the A/B runs and G-perf is the D8 base 49e756fb (`../om-bench-base`), so the A/B shows the fix's change and nothing else.
+- Commits:
+  - 0b7567cf: `util/ab_scenarios.py`, three LifeNet2 variants (the only ctest scenario with logit ITN effects) in group `interventions`: holeIndexMax removed (`itn_logit_no_hole_index_max`, the "required" error, which must stay), 1e-300 (`itn_hole_index_max_tiny`, runs) and 0 (`itn_hole_index_max_zero`, rejected as missing on the base build). Base against base first.
+  - 8d9a79a6: **fix.** The four "holeIndexMax required when using logit …" checks test `hole_index_max_present` instead of `hole_index_max == 0.0`. `init_two_stage` already took the flag and never read it; its default argument is dropped (the one caller passes it).
+  - 0f28d92a: scenario test ITNHoleIndexMaxZero (LifeNet2 with holeIndexMax 0), in `OM_BOXTEST_NAMES`. New files only, expected output from the fixed build (Release and Debug identical). Without the fix it fails: the run stops with the error.
+- Why 0 is valid: the logit models use `min(log(holeIndex + 1), log(holeIndexMax + 1))`, so 0 caps the hole term at 0 and holes have no effect; nothing divides by the value. Check: LifeNet2 with holeIndexMax 0 on the fixed build gives byte-identical `output.txt` to LifeNet2 with 1e-300 on the base build (and on the fixed build), and differs from plain LifeNet2. Rerun: `util/ab_scenarios.py` group `interventions` runs the 0 and 1e-300 variants; compare their candidate outputs with `--keep`.
+- Gates:
+  - G-exact / G-unit: 62/62 (strict) on Release and Debug with the new scenario; no existing expected file moves.
+  - A/B (base 49e756fb): 1 of 248 variants differs, `interventions/itn_hole_index_max_zero` (exit 69 with the error before, runs after).
+  - G-stat: `ctest -L statistical -j4` at 0f28d92a: 53 passed, 9 disabled (the new scenario has no reference).
+  - G-style: `util/style.sh check HEAD` clean before the fix commit.
+  - G-perf: `util/bench.sh -n 7 --compare ../om-bench-base/build-rework`, candidate 0f28d92a: median per-pair ratio 1.0002 (+0.02%), spreads 6.3% (candidate).
+- Findings: F79 moved to FINDINGS § Closed.
 - Next: D9.
