@@ -45,7 +45,7 @@ See `PLAN.md` for the session protocol, chunks and gates. Append one log entry p
 | D9 | split | D9a–D9f |
 | D9a | done | 95266baa, a5f91dd1, 2560b4a4, 442d4c81, 39a676fc, 05f577dc, 8313fa51, 5255cf06, 7dddb242, 1d5dcf74, (this log entry) |
 | D9b | split | D9b1, D9b2 |
-| D9b1 | todo | |
+| D9b1 | done | 428b10a9, 6191be63, e691b2a5, fa502292, d099a440, 8a0f1831, (this log entry) |
 | D9b2 | todo | |
 | D9c | todo | |
 | D9d | todo | |
@@ -1462,3 +1462,27 @@ D9 (monitoring state into `Simulation`, remove every bridge, G-two-sims) is far 
 
 ### Plan amendment: D9b split (2026-10-23, at the start of D9b)
 An inventory at 09eb5134 put D9b at about 35 files of non-mechanical change. The object bridges (`InterventionManager`, `ClinicalParams`, `WithinHostModel`) interlock: `Human` reaches all three, and the health-system setup (`ClinicalParams::set_health_system` → `ImmediateOutcomes`/`DecisionTree5Day` → `WHInterface::add_treatment` → `TreatmentRegistry` → `TriggeredDeployments`, which takes `bridge::intervention_manager()`) needs the within-host model and the manager together. The flag bridges are independent of them: `ModelOptions::option` (20 reads in 8 files), the `CommandLine` statics (15 reads in 9 files) and `bridge::infant_mortality()` (one read, in the survey writer). UnitParse's three `DeprecationWarnings` reads (32 callers in 11 files) and `AgeGroupInterpolation::outputSamples`' `SampleInterpolations` read the clock too, so D9e has to thread a context through their callers anyway. Split: D9b1 (flags and infant mortality), D9b2 (object bridges, with the rename and modernisation of `Human` and `Population`); the two clock-reading `CommandLine` users and the removal of the CommandLine bridge move to D9e. Rows in PLAN.md.
+
+### D9b1: model options, command-line reads and infant mortality → passed in (done, 2026-10-23)
+- Base: 09eb5134 (D9a done). The G-perf and A/B base worktree `../om-bench-base` was moved to 09eb5134 and rebuilt.
+- Commits:
+  - 428b10a9: the plan amendment above.
+  - 6191be63: `util/ab_scenarios.py`, three variants in group `interventions` that put one component into scenarioVivax, which no ctest scenario does: a BSV vaccine (`vivax_bsv`, the "cannot be used with vivax model" error), `treatSimple` with the durations the vivax model supports (`vivax_treat_simple`, runs) and with a liver-stage duration (`vivax_treat_simple_liver`, its error). Base against base: 0 of 41.
+  - e691b2a5: **logic, model options.** `Host::HumanParams` holds the `ModelOptionFlags`, and `het_sample` reads its seven options from them in the old order; `PerHostAnophParams` and `PerHostParams::add_species` take them; `create_transmission_model` takes them and passes them to the vector and Anopheles factories (life cycle, SimpleMPD, exact Nv0 solver), and `VACCINE_GENOTYPE` as a bool to the `TransmissionModel`, `NonVectorModel` and `VectorModel` constructors; `InterventionManager::init` takes them and passes them to `VaccineComponent` and `TreatSimpleComponent`. `util::ModelOptions`, `bridge::model_options` and `ModelOptionsBinding` went; the unit tests' humans get the test options.
+  - fa502292: **logic, command line and infant mortality.** `--print-EIR` through the transmission factories (a bool into `AnophelesModel::init_eir`); `--print-interventions` and `--verbose` through `InterventionManager::init` (`verbose` a member); `--print-survey-times` through `Clock::init` into `read_survey_dates`; the ctsout name into `Continuous::init`; output name, format and compression into `write_survey_data`, which also takes the `InfantMortality` and passes it through `write_text`/`write_binary` to `write_rows`, where `all_cause()` is read as before. CommandLine's `output_name`, `output_format`, `ctsout_name` and `lookup_resource` statics, `bridge::infant_mortality` and `InfantMortalityBinding` went. `CommandLine::option` and its bridge remain for UnitParse and AgeGroupInterpolation (D9e).
+  - d099a440: G-style on lines the chunk changed: `hetSample` → `het_sample`; NOLINT on `Monitoring.h`'s forward declaration of namespace `Clinical`, as in `ClinicalParams.h`.
+  - 8a0f1831: FINDINGS F42 note; PLAN.md D9b1 row as built; README's bridge list (also adds `Genotypes.h` and `Diagnostic.h`, missing since D4d) and A/B row.
+- Gates:
+  - G-exact / G-unit / G-two-sims: 63/63 (62 strict scenarios and unit suites, plus `two_sims`) on `build-rework/` (Release) and `build-debug/` (Debug) after each C++ commit.
+  - G-stat: `ctest -L statistical -j4` at d099a440: 53 passed, 9 disabled (no reference), as after D9a.
+  - G-style: `util/style.sh check 09eb5134` clean at d099a440 (two items before it, fixed in that commit).
+  - G-perf: `util/bench.sh -n 7 --compare ../om-bench-base/build-rework`, candidate d099a440, load ~2.7 at the start: median per-pair ratio 0.9913 (−0.87%), spreads 1.4% (base) / 0.5%.
+  - A/B (`util/ab_scenarios.py <base> <candidate>`, base 09eb5134): 0 of 275 variants (all eleven groups) differ after each logic commit and after the G-style commit. Existing variants cover the moved reads: `--print-EIR` (vector and non-vector), `VECTOR_LIFE_CYCLE_MODEL`, SimpleMPD with non-vector data, the mass-action / availability-distribution error, the heterogeneity options, `--print-interventions`, `--verbose`, `--print-survey-times`, `--ctsout`, binary and compressed output (MonitoringAll reports the IMR).
+  - Planted bugs (then reverted): `het_sample` reading `ComorbHet` in place of `TransHet` → `host/het_workaround_trans_het` differs; `verbose` never set → `interventions/verbose_monitoring_all` differs; the survey-time print skipped → `monitoring/print_survey_times` and `survey_repeat_unreported_last` differ; the binary writer given a fresh `InfantMortality` → `monitoring/output_binary` differs.
+- Findings: F42 note only; nothing new.
+- Surprises: none in the code. The pre-commit clang-format hook reformatted each logic commit's long argument lists, so each was staged twice (whitespace only).
+- Follow-ups:
+  - D9b2: the object bridges (`InterventionManager`, `ClinicalParams`, `WithinHostModel` with `mutable_within_host_model`, and `WHVivax::set_hs_parameters`' `bridge::command_line()`), and the rename and modernisation of `Human` and `Population`.
+  - D9e: UnitParse's three `DeprecationWarnings` reads and `AgeGroupInterpolation::outputSamples`' `SampleInterpolations` read, then `CommandLine::option`, its bridge and `CommandLineBinding`.
+  - The commented-out penalisation code in `WHFalciparum.cpp` still names `util::ModelOptions::option`, which no longer exists; it is a comment and was left.
+- Next: D9b2.
