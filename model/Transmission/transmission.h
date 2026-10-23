@@ -30,11 +30,11 @@
 #include "Transmission/Anopheles/EmergenceRateEstimator.h"
 #include "util/ModelOptions.h"
 
+#include <algorithm>
 #include <memory>
 #include <vector>
 
-namespace OM {
-namespace Transmission {
+namespace OM::Transmission {
 using namespace OM::util;
 
 inline SimulationMode read_mode(const string& str) {
@@ -70,7 +70,7 @@ inline Anopheles::AnophelesModel* create_anopheles_model(size_t i, const scnXml:
                                                          vector<double>& initialisation_eir, int population_size,
                                                          int intervention_mode, PerHostParams& per_host_params,
                                                          const WithinHost::GenotypeRegistry& genotypes) {
-    Anopheles::AnophelesModel* anoph_model;
+    Anopheles::AnophelesModel* anoph_model = nullptr;
 
     if (util::ModelOptions::option(util::VectorLifeCycleModel)) {
         throw util::xml_scenario_error("VECTOR_LIFE_CYCLE_MODEL not yet "
@@ -125,9 +125,9 @@ inline Anopheles::AnophelesModel* create_anopheles_model(size_t i, const scnXml:
         fs_coeffic.reserve(2 * xml_coeffic.size() + 1);
 
         fs_coeffic.push_back(0.0); // value doesn't matter; EIR will be scaled
-        for (auto it = xml_coeffic.begin(); it != xml_coeffic.end(); ++it) {
-            fs_coeffic.push_back(it->getA());
-            fs_coeffic.push_back(it->getB());
+        for (const auto& it : xml_coeffic) {
+            fs_coeffic.push_back(it.getA());
+            fs_coeffic.push_back(it.getB());
         }
 
         eir_rotate_angle = 0;
@@ -318,10 +318,10 @@ inline VectorModel* create_vector_model(const scnXml::Entomology& ento_data, int
         throw util::xml_scenario_error("Can't use Vector model without data for at least one anopheles species!");
 
     // Sort Anopheles by Decreasing EIR
-    sort(anopheles_list.begin(), anopheles_list.end(), anopheles_compare);
+    std::ranges::sort(anopheles_list, anopheles_compare);
 
     for (size_t i = 0; i < num_species; ++i) {
-        auto anoph = anopheles_list[i];
+        const auto& anoph = anopheles_list[i];
 
         per_host_params.add_species(anoph.getMosq());
 
@@ -358,7 +358,7 @@ inline TransmissionModel* create_transmission_model(const scnXml::Entomology& en
                                                     const WithinHost::GenotypeRegistry& genotypes) {
     // Entomology contains either a list of at least one anopheles or a list of at
     // least one EIRDaily.
-    TransmissionModel* model;
+    TransmissionModel* model = nullptr;
     if (ento_data.getVector().present())
         model = create_vector_model(ento_data, population_size, per_host_params, transmission_rng, genotypes);
     else {
@@ -384,7 +384,6 @@ inline TransmissionModel* create_transmission_model(const scnXml::Entomology& en
 
     return model;
 }
-} // namespace Transmission
-} // namespace OM
+} // namespace OM::Transmission
 
 #endif

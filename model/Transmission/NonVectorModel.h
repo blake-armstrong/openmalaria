@@ -32,8 +32,7 @@ namespace scnXml {
 class NonVector;
 }
 
-namespace OM {
-namespace Transmission {
+namespace OM::Transmission {
 
 //! Base transmission model, as used in Phase A
 class NonVectorModel : public TransmissionModel {
@@ -75,18 +74,18 @@ public:
         initial_kappa.assign(Sim::in_steps(Sim::from_years_i(n_years_warmup_data)), 0.0);
     }
 
-    virtual ~NonVectorModel() {}
+    ~NonVectorModel() override = default;
 
-    virtual void init2(const vector<Host::Human>& population) {
+    void init2(const vector<Host::Human>& population) override {
         simulation_mode = ForcedEir;
     } // no set-up needed; just indicate we're ready to roll
 
-    virtual void scale_eir(double factor) {
+    void scale_eir(double factor) override {
         util::vectors::scale(initialisation_eir, factor);
         annual_eir = util::vectors::sum(initialisation_eir);
     }
 
-    virtual SimTime init_iterate() {
+    SimTime init_iterate() override {
         simulation_mode = intervention_mode;
         if (simulation_mode != DynamicEir) {
             return Sim::zero();
@@ -100,17 +99,17 @@ public:
         }
         double factor = static_cast<double>(Sim::steps_per_year()) / static_cast<double>(initial_kappa.size());
         initial_kappa.resize(Sim::steps_per_year());
-        for (size_t i = 0; i < initial_kappa.size(); ++i) {
-            initial_kappa[i] *= factor;
+        for (double& i : initial_kappa) {
+            i *= factor;
             // error check:
-            if (!(initial_kappa[i] > 0.0)) // if not positive
+            if (!(i > 0.0)) // if not positive
                 throw TRACED_EXCEPTION("initialKappa is invalid", util::Error::InitialKappa);
         }
 
         return Sim::zero(); // nothing to do
     }
 
-    virtual void change_eir_intervention(const scnXml::NonVector& non_vector_data) {
+    void change_eir_intervention(const scnXml::NonVector& non_vector_data) override {
         // Note: requires sim::intervTime() >= sim::zero(), but this can only be
         // called in intervention period anyway.
         simulation_mode = TransientEirKnown;
@@ -148,14 +147,14 @@ public:
         annual_eir = numeric_limits<double>::quiet_NaN();
     }
 
-    virtual void uninfect_vectors() {
+    void uninfect_vectors() override {
         if (simulation_mode != DynamicEir)
             cerr << "Warning: uninfectVectors is not efficacious with forced EIR" << endl;
         // reset history of human infectivity, which scales dynamic EIR:
         lagged_kappa.assign(lagged_kappa.size(), 0.0);
     }
 
-    virtual double update_kappa(const vector<Host::Human>& population) {
+    double update_kappa(const vector<Host::Human>& population) override {
         double current_kappa = TransmissionModel::update_kappa(population);
         if (simulation_mode == ForcedEir) {
             initial_kappa[Sim::modulo_steps(Sim::ts1(), initial_kappa.size())] = current_kappa;
@@ -163,8 +162,8 @@ public:
         return current_kappa;
     }
 
-    virtual void calculate_eir(Host::Human& human, double age_years, vector<double>& genotype_eir_i,
-                               vector<double>& genotype_eir_l) const {
+    void calculate_eir(Host::Human& human, double age_years, vector<double>& genotype_eir_i,
+                       vector<double>& genotype_eir_l) const override {
         genotype_eir_i.resize(1);
         genotype_eir_l.resize(1); // no support for per-genotype tracking in this model (possible, but we're lazy)
         // where the full model, with estimates of human mosquito transmission is in use, use this:
@@ -204,14 +203,14 @@ public:
     }
 
 private:
-    virtual void checkpoint(istream& stream) {
+    void checkpoint(istream& stream) override {
         TransmissionModel::checkpoint(stream);
         n_spore & stream;
         intervention_eir & stream;
         initial_kappa & stream;
     }
 
-    virtual void checkpoint(ostream& stream) {
+    void checkpoint(ostream& stream) override {
         TransmissionModel::checkpoint(stream);
         n_spore & stream;
         intervention_eir & stream;
@@ -256,6 +255,6 @@ private:
      * for the current infectiousness during updates. */
     vector<double> initial_kappa;
 };
-} // namespace Transmission
-} // namespace OM
+} // namespace OM::Transmission
+
 #endif

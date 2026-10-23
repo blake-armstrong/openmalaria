@@ -19,10 +19,10 @@
 
 /* Entomology model coordinator: Nakul Chitnis. */
 
-#include <stdio.h>
-#include <stdlib.h>
-#include <string.h>
-#include <math.h>
+#include <cstdio>
+#include <cstdlib>
+#include <cstring>
+#include <cmath>
 #include <gsl/gsl_matrix.h>
 #include <gsl/gsl_vector.h>
 #include <gsl/gsl_linalg.h>
@@ -308,8 +308,8 @@ double calc_init_mosq_emerge_rate(
     const std::vector<double>& p_ci,              // $P_{C_i}$: mosqProbFindRestSite (length n)
     const std::vector<double>& p_di,              // $P_{D_i}$: mosqProbResting (length n)
     const std::vector<double>& p_ei,              // $P_{E_i}$: mosqProbOvipositing -- assumed not affected by nhh
-    const std::vector<double> kvi_init,           // Kvi (size n * thetap)
-    const std::vector<double> sv_init             // Sv (length n)
+    const std::vector<double>& kvi_init,          // Kvi (size n * thetap)
+    const std::vector<double>& sv_init            // Sv (length n)
 ) {
     /* Note that from here on we use the notation from "A Mathematical Model for the
 	 * Dynamics of Malaria in Mosquitoes Feeding on a Heterogeneous Host Population",
@@ -863,7 +863,7 @@ void calc_inv1minus_a(gsl_matrix* inv1_a, gsl_matrix* a, int n) {
     gsl_matrix_set_identity(b); // B = I.
     gsl_matrix_sub(b, a);       // B = I-A.
 
-    int signum;
+    int signum = 0;
     // Calculate LU decomposition of (I-A).
     gsl_linalg_LU_decomp(b, p, &signum);
 

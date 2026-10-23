@@ -25,9 +25,7 @@
 
 #include "Transmission/Anopheles/AnophelesModel.h"
 
-namespace OM {
-namespace Transmission {
-namespace Anopheles {
+namespace OM::Transmission::Anopheles {
 
 class SimpleMPDAnophelesModel : public AnophelesModel {
 public:
@@ -54,8 +52,8 @@ public:
      *
      * Can only usefully run its calculations when not checkpointing, due to
      * population not being the same when loaded from a checkpoint. */
-    virtual void init2(int n_humans, double mean_pop_avail, double sum_avail, double sigma_f, double sigma_df,
-                       double sigma_dff) {
+    void init2(int n_humans, double mean_pop_avail, double sum_avail, double sigma_f, double sigma_df,
+               double sigma_dff) override {
         AnophelesModel::init2(n_humans, mean_pop_avail, sum_avail, sigma_f, sigma_df, sigma_dff);
 
         // Recompute tsp_dff locally
@@ -84,7 +82,7 @@ public:
         }
     }
 
-    virtual void scale(double factor) {
+    void scale(double factor) override {
         AnophelesModel::scale(factor);
         vectors::scale(n_ovipositing_delayed, factor);
     }
@@ -93,7 +91,7 @@ public:
      * so, make necessary changes.
      *
      * @returns false if another iteration is needed. */
-    virtual bool init_iterate() {
+    bool init_iterate() override {
         bool fitted = AnophelesModel::init_iterate();
 
         int y1 = Sim::one_year(), y2 = Sim::from_years_i(2), y3 = Sim::from_years_i(3), y4 = Sim::from_years_i(4),
@@ -116,8 +114,8 @@ public:
     }
     //@}
 
-    virtual double get_emergence_rate(const SimTime& d0, const std::vector<double>& mosq_emerge_rate,
-                                      double n_ovipositing) {
+    double get_emergence_rate(const SimTime& d0, const std::vector<double>& mosq_emerge_rate,
+                              double n_ovipositing) override {
         // // Get emergence at start of step:
         // SimTime dYear1 = mod_nn(d0, sim::oneYear());
         // // Simple model: fixed emergence scaled by larviciding
@@ -147,7 +145,7 @@ public:
 
     ///@brief Interventions and reporting
     //@{
-    virtual double get_res_availability() const {
+    double get_res_availability() const override {
         // TODO: why offset by one time step? This is effectively getting the resources available on the last time step
         // TODO: only have to add one year because of offset
         SimTime start = Sim::now() - Sim::one_ts() + Sim::one_year();
@@ -159,10 +157,10 @@ public:
         return total / Sim::one_ts();
     }
 
-    virtual double get_res_requirements() const { return numeric_limits<double>::quiet_NaN(); }
+    double get_res_requirements() const override { return numeric_limits<double>::quiet_NaN(); }
 
-    virtual void checkpoint(istream& stream) { (*this) & stream; }
-    virtual void checkpoint(ostream& stream) { (*this) & stream; }
+    void checkpoint(istream& stream) override { (*this) & stream; }
+    void checkpoint(ostream& stream) override { (*this) & stream; }
 
 private:
     template <class S> void operator&(S& stream) {
@@ -219,7 +217,6 @@ private:
     std::vector<double> n_ovipositing_delayed;
 };
 
-} // namespace Anopheles
-} // namespace Transmission
-} // namespace OM
+} // namespace OM::Transmission::Anopheles
+
 #endif

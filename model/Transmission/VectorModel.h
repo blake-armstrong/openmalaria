@@ -117,7 +117,7 @@ public:
     ///
     /// Special cases: 0 during initial one-human-lifespan warmup, <0 after
     /// initialisation.
-    int init_iterations;
+    int init_iterations{0};
 
     double mean_avail = 1.0;
 

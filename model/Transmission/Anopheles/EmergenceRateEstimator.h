@@ -37,9 +37,7 @@
 #include <limits>
 #include <numbers>
 
-namespace OM {
-namespace Transmission {
-namespace Anopheles {
+namespace OM::Transmission::Anopheles {
 using std::numeric_limits;
 using namespace OM::util;
 
@@ -94,9 +92,9 @@ public:
 
 class EmergenceRateAdaptiveFitter final : public EmergenceRateEstimator {
 public:
-    EmergenceRateAdaptiveFitter(AnophelesModel& m) : scale_factor(1.0), rotated(false), scaled(false) {
+    EmergenceRateAdaptiveFitter(AnophelesModel& m)
+        : shift_angle(m.eir_rotate_angle - (m.mosq.eip_duration + 10) / 365. * 2. * M_PI) {
         // usually around 20 days; no real analysis for effect of changing EIPDuration or mosqRestDuration
-        shift_angle = m.eir_rotate_angle - (m.mosq.eip_duration + 10) / 365. * 2. * M_PI;
     }
 
     bool estimate(AnophelesModel& m, const std::vector<double>& lagged_kappa, double mean_avail) override {
@@ -156,8 +154,8 @@ public:
     }
 
 private:
-    double scale_factor, shift_angle;
-    bool rotated, scaled;
+    double scale_factor{1.0}, shift_angle;
+    bool rotated{false}, scaled{false};
 };
 
 class EmergenceRateSolver final : public EmergenceRateEstimator {
@@ -247,6 +245,5 @@ private:
 };
 
 }
-}
-}
+
 #endif

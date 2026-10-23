@@ -37,8 +37,8 @@ namespace OM {
 namespace WithinHost {
 class GenotypeRegistry;
 }
-namespace Transmission {
-namespace Anopheles {
+
+namespace Transmission::Anopheles {
 using std::numeric_limits;
 using namespace OM::util;
 
@@ -76,34 +76,34 @@ enum VecStat { PA, PAmu, PA1, PAh, PDF, PDIF, NV, OV, SV };
 
 struct MosquitoParams {
     // Proportion of host-seeking parous mosquitoes (those who have laid eggs) which laid eggs that day:
-    double laid_eggs_same_day_proportion;
+    double laid_eggs_same_day_proportion{};
     // Probability that the mosquito survives the feeding cycle.
     // Note: Pf = M, the parous rate (prop mosqs which have laid eggs):
-    double survival_feeding_cycle_probability;
-    double human_blood_index; // χ (chi)
+    double survival_feeding_cycle_probability{};
+    double human_blood_index{}; // χ (chi)
     // Cycle probabilities, when biting a human:
     // B: Host encountered
-    double prob_biting;
+    double prob_biting{};
     // C: Fed
-    double prob_find_rest_site;
+    double prob_find_rest_site{};
     // D: Resting
-    double prob_resting;
+    double prob_resting{};
     // E: Laying eggs (ovipositing)
-    double prob_ovipositing;
+    double prob_ovipositing{};
 
     /** Duration of host-seeking per day; the maximum fraction of a day that a
      * mosquito would spend seeking (θ_d). */
-    double seeking_duration;
+    double seeking_duration{};
 
     /** Probability of a mosquito successfully laying eggs given that it has
      * rested (P_E).
      *
      * Currently assumed constant, although NC's non-autonomous model provides
      * an alternative. */
-    double prob_mosq_survival_ovipositing;
+    double prob_mosq_survival_ovipositing{};
 
     /** If less than this many mosquitoes remain infected, transmission is interrupted. */
-    double min_infected_threshold;
+    double min_infected_threshold{};
 
     /** @brief Probabilities and rates associated with life-cycle model
      * 
@@ -116,7 +116,7 @@ struct MosquitoParams {
      * Death rate of mosquitoes while host-seeking (μ_vA).
      *
      * Unit: animals/day. */
-    double seeking_death_rate;
+    double seeking_death_rate{};
 
     /** Duration parameters for mosquito/parasite life-cycle
      * 
@@ -142,20 +142,20 @@ struct MosquitoParams {
 };
 
 struct NhhParams {
-    double mosq_relative_ento_availability;
-    double mosq_prob_biting;
-    double mosq_prob_find_rest_site;
-    double mosq_prob_resting;
-    double host_fecundity_factor;
+    double mosq_relative_ento_availability{};
+    double mosq_prob_biting{};
+    double mosq_prob_find_rest_site{};
+    double mosq_prob_resting{};
+    double host_fecundity_factor{};
     string name;
 };
 
 struct Nhh {
-    double avail_i;
-    double p_b_i;
-    double p_c_i;
-    double p_d_i;
-    double rel_fecundity;
+    double avail_i{};
+    double p_b_i{};
+    double p_c_i{};
+    double p_d_i{};
+    double rel_fecundity{};
     SimTime expiry = Sim::never();
 };
 
@@ -168,8 +168,8 @@ struct TrapParams {
 };
 
 struct TrapData {
-    size_t instance;                     // index in trapParams
-    double initial_avail;                // initial availability (avail per trap * num traps)
+    size_t instance{};                   // index in trapParams
+    double initial_avail{};              // initial availability (avail per trap * num traps)
     unique_ptr<DecayFunction> avail_het; // parameter for decay of availability
     SimTime deploy_time = Sim::never();  // deploy time (for decay function)
     SimTime expiry = Sim::never();       // date at which this intervention should be deleted
@@ -184,9 +184,7 @@ public:
           nhh_sigma_dff(numeric_limits<double>::signaling_NaN()),
           // EmergenceModel
           eir_rotate_angle(numeric_limits<double>::quiet_NaN()), init_nv_from_sv(numeric_limits<double>::quiet_NaN()),
-          init_ov_from_sv(numeric_limits<double>::quiet_NaN()), init_nv0_from_sv(numeric_limits<double>::quiet_NaN()),
-          // MosqTransmission
-          n_v_length(0), time_step_n_v0(0.0) {
+          init_ov_from_sv(numeric_limits<double>::quiet_NaN()), init_nv0_from_sv(numeric_limits<double>::quiet_NaN()) {
         forced_s_v.resize(Sim::one_year());
         quinquennial_s_v.resize(Sim::from_years_i(5), 0.0);
         mosq_emerge_rate.resize(Sim::one_year(), 0.0);
@@ -436,7 +434,7 @@ public:
     std::vector<double> partial_init_eir;
 
     /** The initialisation availDivisor: (1 - P_A[t]) / (sum_{h in hosts} α_h[t] + μ_vA */
-    double init_avail;
+    double init_avail{};
 
     /** init EIR.
     *
@@ -489,7 +487,7 @@ public:
 
     /** Used to estimate S_v from EIR during initialization 
      * Should be checkpointed. */
-    double init_sv_from_eir;
+    double init_sv_from_eir{};
 
     /** Conversion factor from forcedS_v to (initial values of) O_v (ρ_O / ρ_S).
      * Should be checkpointed. */
@@ -532,7 +530,7 @@ public:
      * θ_s + τ - 1 days back, plus current day.
      *
      * Set by initialise; no need to checkpoint. */
-    int n_v_length;
+    int n_v_length{0};
 
     // -----  variable model state  -----
 
@@ -608,7 +606,7 @@ public:
     //@}
 
     /** Variables tracking data to be reported. */
-    double time_step_n_v0;
+    double time_step_n_v0{0.0};
 
     /** Active Non-Human hosts instances in the simulation. */
     map<string, Nhh> nhh_instances;
@@ -643,6 +641,6 @@ public:
 };
 
 }
-}
+
 }
 #endif

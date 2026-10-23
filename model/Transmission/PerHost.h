@@ -133,7 +133,7 @@ private:
  */
 class PerHostInterventionData {
 public:
-    virtual ~PerHostInterventionData() {}
+    virtual ~PerHostInterventionData() = default;
 
     /** Deploy an intervention. */
     virtual void redeploy(LocalRng& rng, const HumanVectorInterventionComponent& params) = 0;
@@ -184,7 +184,7 @@ protected:
 /** A base class for human vector intervention parameters. */
 class HumanVectorInterventionComponent : public interventions::HumanInterventionComponent {
 public:
-    virtual ~HumanVectorInterventionComponent() {}
+    ~HumanVectorInterventionComponent() override = default;
 
     /** Create a new object to store human-specific details of deployment. */
     virtual unique_ptr<PerHostInterventionData> make_human_part(LocalRng&) const = 0;
@@ -306,7 +306,7 @@ public:
     //@}
 
     // Determines whether human is outside transmission
-    bool outside_transmission;
+    bool outside_transmission{false};
 
     // Heterogeneity factor in availability; this is already multiplied into the
     // entoAvailability param stored in HostMosquitoInteraction.

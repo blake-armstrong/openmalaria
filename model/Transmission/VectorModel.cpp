@@ -35,8 +35,7 @@
 #include <cmath>
 #include <set>
 
-namespace OM {
-namespace Transmission {
+namespace OM::Transmission {
 using namespace OM::util;
 using Anopheles::AnophelesModel;
 using Anopheles::SimpleMPDAnophelesModel;
@@ -153,9 +152,9 @@ void VectorModel::cts_cb_res_requirements(ostream& stream) {
 }
 
 const string& reverse_lookup(const map<string, size_t>& m, size_t i) {
-    for (auto it = m.begin(); it != m.end(); ++it) {
-        if (it->second == i)
-            return it->first;
+    for (const auto& it : m) {
+        if (it.second == i)
+            return it.first;
     }
     throw TRACED_EXCEPTION_DEFAULT("reverseLookup: key not found"); // shouldn't ever happen
 }
@@ -166,11 +165,11 @@ VectorModel::VectorModel(vector<double> init_eir, int intervention_mode,
                          map<string, size_t> species_index_list, int population_size, util::MasterRng& transmission_rng,
                          size_t n_genotypes, SimTime adult_age)
     : TransmissionModel(std::move(init_eir), intervention_mode, n_genotypes, adult_age), rng(transmission_rng),
-      init_iterations(0), quinquennial_kappa(5 * Sim::steps_per_year(), 0.0), species(std::move(species_list)),
+      quinquennial_kappa(5 * Sim::steps_per_year(), 0.0), species(std::move(species_list)),
       emergence_rate_estimators(std::move(emergence_rate_estimators_list)),
-      species_index(std::move(species_index_list)) {
+      species_index(std::move(species_index_list)),
+      opt_vaccine_genotype(util::ModelOptions::option(util::VaccineGenotype)) {
     // set VACCINE_GENOTYPE option
-    opt_vaccine_genotype = util::ModelOptions::option(util::VaccineGenotype);
 
     // Calculate total annual EIR
     annual_eir = vectors::sum(initialisation_eir);
@@ -228,7 +227,7 @@ VectorModel::VectorModel(vector<double> init_eir, int intervention_mode,
                                       std::bind(&VectorModel::cts_cb_res_requirements, this, _1));
 }
 
-VectorModel::~VectorModel() {}
+VectorModel::~VectorModel() = default;
 
 void VectorModel::init2(const vector<Host::Human>& population) {
     double sum_relative_availability = 0.0;
@@ -468,8 +467,8 @@ void VectorModel::deploy_vector_pop_interv(size_t instance) {
     if (intervention_mode != DynamicEir) {
         throw xml_scenario_error(VecModeErr);
     }
-    for (auto it = species.begin(); it != species.end(); ++it) {
-        (*it)->deploy_vector_pop_interv(rng, instance);
+    for (auto& specie : species) {
+        specie->deploy_vector_pop_interv(rng, instance);
     }
 }
 void VectorModel::deploy_vector_trap(size_t instance, double number, SimTime lifespan) {
@@ -524,5 +523,4 @@ void VectorModel::checkpoint(ostream& stream) {
         s->checkpoint(stream);
 }
 
-} // namespace Transmission
-} // namespace OM
+} // namespace OM::Transmission

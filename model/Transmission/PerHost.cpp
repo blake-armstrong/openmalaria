@@ -21,13 +21,14 @@
  */
 
 #include "Transmission/PerHost.h"
+
+#include <algorithm>
 #include "Transmission/VectorModel.h"
 #include "interventions/InterventionManager.h"
 #include "util/errors.h"
 #include "util/checkpoint.h"
 
-namespace OM {
-namespace Transmission {
+namespace OM::Transmission {
 using namespace OM::util;
 
 PerHostAnophParams::PerHostAnophParams(const scnXml::Mosq& mosq) {
@@ -69,7 +70,7 @@ void PerHostParams::calc_availability_percentiles() {
     }
 
     // Sort samples
-    sort(samples.begin(), samples.end());
+    std::ranges::sort(samples);
 
     ento_availability_percentiles.resize(100);
 
@@ -91,7 +92,7 @@ double PerHostParams::ento_availability_percentile(int p) const {
 
 // -----  PerHost non-static -----
 
-PerHost::PerHost() : outside_transmission(false), relative_availability_het(numeric_limits<double>::signaling_NaN()) {}
+PerHost::PerHost() : relative_availability_het(numeric_limits<double>::signaling_NaN()) {}
 
 void PerHost::initialise(const PerHostParams& per_host_params, LocalRng& rng, double availability_factor) {
     params = &per_host_params;
@@ -114,18 +115,18 @@ void PerHost::initialise(const PerHostParams& per_host_params, LocalRng& rng, do
 }
 
 void PerHost::update(Host::Human& human) {
-    for (auto iter = active_components.begin(); iter != active_components.end(); ++iter) {
-        (*iter)->update(human);
+    for (auto& active_component : active_components) {
+        active_component->update(human);
     }
 }
 
 void PerHost::deploy_component(LocalRng& rng, const HumanVectorInterventionComponent& params) {
     // This adds per-host per-intervention details to the host's data set.
     // This data is never removed since it can contain per-host heterogeneity samples.
-    for (auto iter = active_components.begin(); iter != active_components.end(); ++iter) {
-        if ((*iter)->id() == params.id()) {
+    for (auto& active_component : active_components) {
+        if (active_component->id() == params.id()) {
             // already have a deployment for that description; just update it
-            (*iter)->redeploy(rng, params);
+            active_component->redeploy(rng, params);
             return;
         }
     }
@@ -140,38 +141,38 @@ void PerHost::deploy_component(LocalRng& rng, const HumanVectorInterventionCompo
 // an if() when interventions aren't present.
 double PerHost::ento_availability_het_vec_itv(size_t species) const {
     double alpha_i = anoph_ento_availability[species];
-    for (auto iter = active_components.begin(); iter != active_components.end(); ++iter) {
-        alpha_i *= (*iter)->relative_attractiveness(species);
+    for (const auto& active_component : active_components) {
+        alpha_i *= active_component->relative_attractiveness(species);
     }
     return alpha_i;
 }
 double PerHost::prob_mosq_biting(size_t species) const {
     double p_b_i = anoph_prob_mosq_biting[species];
-    for (auto iter = active_components.begin(); iter != active_components.end(); ++iter) {
-        p_b_i *= (*iter)->preprandial_survival_factor(species);
+    for (const auto& active_component : active_components) {
+        p_b_i *= active_component->preprandial_survival_factor(species);
     }
     return p_b_i;
 }
 double PerHost::prob_mosq_resting(size_t species) const {
     double p_rest = anoph_prob_mosq_resting[species];
-    for (auto iter = active_components.begin(); iter != active_components.end(); ++iter) {
-        p_rest *= (*iter)->postprandial_survival_factor(species);
+    for (const auto& active_component : active_components) {
+        p_rest *= active_component->postprandial_survival_factor(species);
     }
     return p_rest;
 }
 
 double PerHost::rel_mosq_fecundity(size_t species) const {
     double rel_fecundity = 1.0;
-    for (auto iter = active_components.begin(); iter != active_components.end(); ++iter) {
-        rel_fecundity *= (*iter)->rel_fecundity(species);
+    for (const auto& active_component : active_components) {
+        rel_fecundity *= active_component->rel_fecundity(species);
     }
     return rel_fecundity;
 }
 
 bool PerHost::has_active_interv(interventions::Component::Type type) const {
-    for (auto iter = active_components.begin(); iter != active_components.end(); ++iter) {
-        if ((*iter)->is_deployed()) {
-            if (interventions::InterventionManager::getComponent((*iter)->id()).componentType() == type)
+    for (const auto& active_component : active_components) {
+        if (active_component->is_deployed()) {
+            if (interventions::InterventionManager::getComponent(active_component->id()).componentType() == type)
                 return true;
         }
     }
@@ -180,12 +181,12 @@ bool PerHost::has_active_interv(interventions::Component::Type type) const {
 
 void PerHost::checkpoint_intervs(ostream& stream) {
     active_components.size() & stream;
-    for (auto iter = active_components.begin(); iter != active_components.end(); ++iter) {
-        *iter& stream;
+    for (auto& active_component : active_components) {
+        active_component & stream;
     }
 }
 void PerHost::checkpoint_intervs(istream& stream) {
-    size_t l;
+    size_t l = 0;
     l & stream;
     validateListSize(l);
     active_components.clear();
@@ -196,7 +197,7 @@ void PerHost::checkpoint_intervs(istream& stream) {
                 interventions::InterventionManager::getComponent(id); // may throw
             const HumanVectorInterventionComponent* params =
                 dynamic_cast<const HumanVectorInterventionComponent*>(&gen_params);
-            if (params == 0)
+            if (params == nullptr)
                 throw util::base_exception(""); // see catch block below
             active_components.push_back(params->make_human_part(stream, id));
         } catch (util::base_exception& e) {
@@ -206,5 +207,4 @@ void PerHost::checkpoint_intervs(istream& stream) {
     }
 }
 
-}
 }

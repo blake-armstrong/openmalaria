@@ -45,8 +45,8 @@ double calc_init_mosq_emerge_rate(
     const std::vector<double>& p_ci,              // $P_{C_i}$: mosqProbFindRestSite (length n)
     const std::vector<double>& p_di,              // $P_{D_i}$: mosqProbResting (length n)
     const std::vector<double>& p_ei,              // $P_{E_i}$: mosqProbOvipositing -- assumed not affected by nhh
-    const std::vector<double> kvi_init,           // Kvi (size n * thetap)
-    const std::vector<double> sv_init             // Sv (length n)
+    const std::vector<double>& kvi_init,          // Kvi (size n * thetap)
+    const std::vector<double>& sv_init            // Sv (length n)
 );
 
 void calc_upsilon(std::vector<gsl_matrix*>& upsilon, double& pa, double& p_ai, int thetap, int eta, int mt, int tau,

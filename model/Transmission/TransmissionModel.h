@@ -118,14 +118,11 @@ protected:
     /// @param entoData input configuration for model
     /// @param n_genotypes number of genotypes transmission model is using
     TransmissionModel(vector<double> initialisation_eir, int intervention_mode, size_t n_genotypes, SimTime adult_age)
-        : n_genotypes(n_genotypes), initialisation_eir(std::move(initialisation_eir)), simulation_mode(ForcedEir),
-          intervention_mode(intervention_mode),
-          lagged_kappa(Sim::steps_per_year(), 0.0), // if using non-vector model, it will resize this
-          annual_eir(0.0), annual_average_kappa(numeric_limits<double>::signaling_NaN()), sum_annual_kappa(0.0),
-          ts_adult_eir(0.0), survey_input_eir(0.0), survey_simulated_eir(0.0), adult_age(adult_age),
-          num_transmitting_humans(0) {
+        : n_genotypes(n_genotypes), initialisation_eir(std::move(initialisation_eir)),
+          intervention_mode(intervention_mode), lagged_kappa(Sim::steps_per_year(), 0.0),
+          annual_average_kappa(numeric_limits<double>::signaling_NaN()), adult_age(adult_age),
+          opt_vaccine_genotype(util::ModelOptions::option(util::VaccineGenotype)) {
         // Set VACCINE_GENOTYPE option
-        opt_vaccine_genotype = util::ModelOptions::option(util::VaccineGenotype);
 
         mon::Continuous::registerCallback("input EIR", "\tinput EIR",
                                           std::bind(&TransmissionModel::cts_cb_input_eir, this, _1));
@@ -139,7 +136,7 @@ protected:
 
 public:
     //! Deallocate memory for TransmissionModel parameters and clean up
-    virtual ~TransmissionModel() {}
+    virtual ~TransmissionModel() = default;
 
     /** Extra initialisation when not loading from a checkpoint, requiring
      * information from the human population structure. */
@@ -410,7 +407,7 @@ public:
     vector<double> initialisation_eir;
 
     /** The type of EIR calculation. Checkpointed. */
-    int simulation_mode;
+    int simulation_mode{ForcedEir};
     /** New simulation mode during intervention period. Not checkpointed. */
     int intervention_mode;
 
@@ -428,7 +425,7 @@ public:
     /** Total annual infectious bites per adult.
      *
      * Checkpointed. */
-    double annual_eir;
+    double annual_eir{0.0};
 
 private:
     /*! annAvgKappa is the overall proportion of mosquitoes that get infected
@@ -441,18 +438,18 @@ private:
     /*! Used to calculate annAvgKappa.
      *
      * Checkpointed. */
-    double sum_annual_kappa;
+    double sum_annual_kappa{0.0};
 
     /// Adult-only EIR over the last update
-    double ts_adult_eir, ts_adult_eir_i, ts_adult_eir_l;
+    double ts_adult_eir{0.0}, ts_adult_eir_i{}, ts_adult_eir_l{};
 
     /** Per-time-step input EIR summed over inter-survey period.
      * Units: infectious bites/adult/inter-survey period. */
-    double survey_input_eir, survey_input_eir_i, survey_input_eir_l;
+    double survey_input_eir{0.0}, survey_input_eir_i{}, survey_input_eir_l{};
 
     /** Per-time-step simulated EIR summed over inter-survey period.
      * Units: infectious bites/adult/inter-survey period. */
-    double survey_simulated_eir, survey_simulated_eir_i, survey_simulated_eir_l;
+    double survey_simulated_eir{0.0}, survey_simulated_eir_i{}, survey_simulated_eir_l{};
 
     /** Time of last survey. */
     SimTime last_survey_time = Sim::never();
@@ -461,7 +458,7 @@ private:
     SimTime adult_age = Sim::never();
 
     /// For "num transmitting humans" cts output.
-    int num_transmitting_humans;
+    int num_transmitting_humans{0};
 
     // Reporting data. Doesn't need checkpointing due to reset every time-step.
     // accumulator for time step EIR of adults

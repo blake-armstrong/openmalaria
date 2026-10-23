@@ -32,8 +32,9 @@
 #include "util/StreamValidator.h"
 
 #include <cmath>
+#include <utility>
 
-#include <stdio.h>
+#include <cstdio>
 #include <gsl/gsl_errno.h>
 #include <gsl/gsl_math.h>
 #include <gsl/gsl_roots.h>
@@ -122,16 +123,14 @@ auto gsl_root_solver_method = gsl_root_fsolver_bisection;
 // auto gsl_root_solver_method = gsl_root_fsolver_falsepos;
 #endif
 
-namespace OM {
-namespace Transmission {
-namespace Anopheles {
+namespace OM::Transmission::Anopheles {
 using namespace OM::util;
 
 // -----  Initialisation of model, done before human warmup  ------
 
 void AnophelesModel::initialise(size_t species, MosquitoParams mosq_params, const PerHostParams& per_host,
                                 const WithinHost::GenotypeRegistry& genotype_registry) {
-    mosq = mosq_params;
+    mosq = std::move(mosq_params);
     per_host_params = &per_host;
     genotypes = &genotype_registry;
 
@@ -286,7 +285,7 @@ mosquito surviving biting, finding a resting site, resting and ovipositing.");
  */
 void AnophelesModel::init_eir(const vector<double>& init_eir365, vector<double> fs_coeffic_init,
                               double eir_rotate_angle_init, double prop_infectious, double prop_infected) {
-    fs_coeffic = fs_coeffic_init;
+    fs_coeffic = std::move(fs_coeffic_init);
     eir_rotate_angle = eir_rotate_angle_init;
     species_eir = init_eir365;
 
@@ -509,47 +508,47 @@ void AnophelesModel::advance_period(double sum_avail, double sigma_df, vector<do
 
     map<string, Nhh> current_nhh = nhh_instances;
 
-    for (auto it = reduce_nhh_availability.begin(); it != reduce_nhh_availability.end(); ++it) {
-        for (const auto& decay : it->second) {
-            if (current_nhh.count(it->first) != 0) // Check that the non-human hosts still exist
-                current_nhh[it->first].avail_i *= 1.0 - decay.current_value(Sim::ts0());
+    for (auto& it : reduce_nhh_availability) {
+        for (const auto& decay : it.second) {
+            if (current_nhh.count(it.first) != 0) // Check that the non-human hosts still exist
+                current_nhh[it.first].avail_i *= 1.0 - decay.current_value(Sim::ts0());
         }
     }
 
-    for (auto it = reduce_p_b_i.begin(); it != reduce_p_b_i.end(); ++it) {
-        for (const auto& decay : it->second) {
-            if (current_nhh.count(it->first) != 0) // Check that the non-human hosts still exist
-                current_nhh[it->first].p_b_i *= 1.0 - decay.current_value(Sim::ts0());
+    for (auto& it : reduce_p_b_i) {
+        for (const auto& decay : it.second) {
+            if (current_nhh.count(it.first) != 0) // Check that the non-human hosts still exist
+                current_nhh[it.first].p_b_i *= 1.0 - decay.current_value(Sim::ts0());
         }
     }
 
-    for (auto it = reduce_p_c_i.begin(); it != reduce_p_c_i.end(); ++it) {
-        for (const auto& decay : it->second) {
-            if (current_nhh.count(it->first) != 0) // Check that the non-human hosts still exist
-                current_nhh[it->first].p_c_i *= 1.0 - decay.current_value(Sim::ts0());
+    for (auto& it : reduce_p_c_i) {
+        for (const auto& decay : it.second) {
+            if (current_nhh.count(it.first) != 0) // Check that the non-human hosts still exist
+                current_nhh[it.first].p_c_i *= 1.0 - decay.current_value(Sim::ts0());
         }
     }
 
-    for (auto it = reduce_p_d_i.begin(); it != reduce_p_d_i.end(); ++it) {
-        for (const auto& decay : it->second) {
-            if (current_nhh.count(it->first) != 0) // Check that the non-human hosts still exist
-                current_nhh[it->first].p_d_i *= 1.0 - decay.current_value(Sim::ts0());
+    for (auto& it : reduce_p_d_i) {
+        for (const auto& decay : it.second) {
+            if (current_nhh.count(it.first) != 0) // Check that the non-human hosts still exist
+                current_nhh[it.first].p_d_i *= 1.0 - decay.current_value(Sim::ts0());
         }
     }
 
-    for (auto it = reduce_fecundity.begin(); it != reduce_fecundity.end(); ++it) {
-        for (const auto& decay : it->second) {
-            if (current_nhh.count(it->first) != 0) // Check that the non-human hosts still exist
-                current_nhh[it->first].rel_fecundity *= 1.0 - decay.current_value(Sim::ts0());
+    for (auto& it : reduce_fecundity) {
+        for (const auto& decay : it.second) {
+            if (current_nhh.count(it.first) != 0) // Check that the non-human hosts still exist
+                current_nhh[it.first].rel_fecundity *= 1.0 - decay.current_value(Sim::ts0());
         }
     }
 
-    for (auto it = current_nhh.begin(); it != current_nhh.end(); ++it) {
-        modified_nhh_avail += it->second.avail_i;
+    for (auto& it : current_nhh) {
+        modified_nhh_avail += it.second.avail_i;
         const double df =
-            it->second.avail_i * it->second.p_b_i * it->second.p_c_i * it->second.p_d_i; // term in P_df series
+            it.second.avail_i * it.second.p_b_i * it.second.p_c_i * it.second.p_d_i; // term in P_df series
         modified_nhh_sigma_df += df;
-        modified_nhh_sigma_dff += df * it->second.rel_fecundity;
+        modified_nhh_sigma_dff += df * it.second.rel_fecundity;
     }
 
     leave_rate += modified_nhh_avail;
@@ -580,10 +579,10 @@ void AnophelesModel::advance_period(double sum_avail, double sigma_df, vector<do
             "VectorPop: the cumulative probability of death wile seeking is greater than 1 during the simulation");
 
     if (p_death_seeking > 0.0) {
-        int status;
+        int status = 0;
         int iter = 0, max_iter = 20;
 
-        double x0, a_t = 0.5; // guess
+        double x0 = NAN, a_t = 0.5; // guess
 
         struct QuadraticParams params = {sum_avail, modified_nhh_avail, mu_v_interv, mosq.seeking_duration,
                                          p_death_seeking};
@@ -664,8 +663,8 @@ void AnophelesModel::update(SimTime d0, double ts_p_a, double ts_p_amu, double t
                             bool is_dynamic, vector<double>& partial_eir_i, vector<double>& partial_eir_l,
                             double eir_factor) {
     double intervention_survival = 1.0;
-    for (size_t i = 0; i < emergence_reduction.size(); ++i)
-        intervention_survival *= 1.0 - emergence_reduction[i].current_value(Sim::ts0());
+    for (const auto& i : emergence_reduction)
+        intervention_survival *= 1.0 - i.current_value(Sim::ts0());
 
     int d1 = d0 + 1; //sim::oneDay(); // end of step
 
@@ -923,6 +922,4 @@ void AnophelesModel::summarize(size_t species) const {
     }
 }
 
-} // namespace Anopheles
-} // namespace Transmission
-} // namespace OM
+} // namespace OM::Transmission::Anopheles
