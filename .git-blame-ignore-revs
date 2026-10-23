@@ -80,3 +80,5 @@ f4c2f44cf5068cf817b80f29d94da6adc74e6bb9
 da9bfd0f261418c2537985d5dbf949977f53ef07
 # D9a: rename model/mon identifiers (util/style.sh rename)
 442d4c81de0434dcfc922c9d78b1badccf93208e
+# D9a: model/mon safe modernize fix-its (util/style.sh modernize)
+05f577dc1267d82e1936ef74f6debb512408132e
