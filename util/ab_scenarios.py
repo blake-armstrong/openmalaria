@@ -386,6 +386,17 @@ def gvi_in_non_vector(s):
     j = m.index("</component>", i) + len("</component>")
     return rep(s, '<component id="TBV">', m[i:j] + '<component id="TBV">')
 
+TMSAT = "scenarioTriggeredMSAT.xml"
+CTS_MA = '<continuous duringInit="false" period="30t">'
+COHORT_MA = '<subPop id="monitoringCohort" number="1"/>'
+NHOST = '<option name="nHost" value="true"/>'
+
+
+def survey_repeat_unreported_last(s):
+    s = rep(s, "<surveyTime>365t</surveyTime>", '<surveyTime repeatStep="73t" repeatEnd="1000t">365t</surveyTime>')
+    return rep(s, "<surveyTime>1825t</surveyTime>", '<surveyTime reported="false">1825t</surveyTime>')
+
+
 V = "scenarioVivax.xml"
 G = "scenarioGenotypes.xml"
 M = "scenarioMSAT_HRP2.xml"
@@ -704,6 +715,43 @@ GROUPS = {
                 lambda s: rep(s, '<holeIndexMax value="145200"/>', '<holeIndexMax value="1e-300"/>')),
         Variant("itn_hole_index_max_zero", "scenarioLifeNet2.xml",
                 lambda s: rep(s, '<holeIndexMax value="145200"/>', '<holeIndexMax value="0"/>')),
+    ],
+    "monitoring": [
+        Variant("cts_during_init_checkpoint", "scenarioSimpleMPDTest.xml", args=["--checkpoint"], runs=2),
+        Variant("cts_during_init_true", MA, lambda s: rep(s, CTS_MA, '<continuous duringInit="true" period="30t">')),
+        Variant("cts_unknown_option", MA, lambda s: rep(s, CTS_MA, CTS_MA + '<option name="nosuch" value="true"/>')),
+        Variant("cts_vector_option_non_vector", "scenario1.xml",
+                lambda s: rep(s, '<continuous period="5d">', '<continuous period="5d"><option name="N_v0" value="true"/>')),
+        Variant("cts_period_zero", MA, lambda s: rep(s, CTS_MA, '<continuous duringInit="false" period="0t">')),
+        Variant("cts_ctsout_name", MA, args=["--ctsout", "ctsout-other.txt"]),
+        Variant("print_survey_times", MA, args=["--print-survey-times"]),
+        Variant("survey_repeat_unreported_last", MA, survey_repeat_unreported_last, ["--print-survey-times"]),
+        Variant("survey_repeat_without_end", MA,
+                lambda s: rep(s, "<surveyTime>365t</surveyTime>", '<surveyTime repeatStep="73t">365t</surveyTime>')),
+        Variant("survey_repeat_step_zero", MA,
+                lambda s: rep(s, "<surveyTime>365t</surveyTime>",
+                              '<surveyTime repeatStep="0t" repeatEnd="1000t">365t</surveyTime>')),
+        Variant("survey_bad_date", MA, lambda s: rep(s, "<surveyTime>365t</surveyTime>", "<surveyTime>abc</surveyTime>")),
+        Variant("survey_unknown_option", MA, lambda s: rep(s, NHOST, NHOST + '<option name="nosuch" value="true"/>')),
+        Variant("survey_obsolete_option", MA, lambda s: rep(s, NHOST, NHOST + '<option name="contrib" value="true"/>')),
+        Variant("survey_duplicate_output_number", MA,
+                lambda s: rep(s, NHOST, '<option name="nHost" value="true" outputNumber="1"/>')),
+        Variant("survey_by_species_unsupported", MA,
+                lambda s: rep(s, NHOST, '<option name="nHost" value="true" bySpecies="true"/>')),
+        Variant("output_binary", MA, args=["--output-format", "bin"]),
+        Variant("output_compressed", MA, args=["--compress-output"]),
+        Variant("cohorts_two_checkpoint", MA, lambda s: rep(s, COHORT_MA, COHORT_MA + '<subPop id="ITN" number="2"/>'),
+                ["--checkpoint"], runs=2),
+        Variant("cohort_sub_pop_twice", MA,
+                lambda s: rep(s, COHORT_MA, COHORT_MA + '<subPop id="monitoringCohort" number="2"/>')),
+        Variant("cohort_number_not_power_of_2", MA,
+                lambda s: rep(s, COHORT_MA, '<subPop id="monitoringCohort" number="3"/>')),
+        Variant("conditions_checkpoint", TMSAT, args=["--checkpoint"], runs=2),
+        Variant("condition_unreported_measure", TMSAT,
+                lambda s: rep(s, '<option name="nTreatments1" value="true"/>',
+                              '<option name="nTreatments1" value="false"/>')),
+        Variant("condition_unknown_measure", TMSAT, lambda s: rep(s, 'measure="nTreatments1"', 'measure="nosuch"')),
+        Variant("condition_invalid_measure", TMSAT, lambda s: rep(s, 'measure="nTreatments1"', 'measure="nUncomp"')),
     ],
     "falciparum-init": [
         Variant("molineaux_no_weight", "scenarioMolineaux.xml", lambda s: drop_element(s, "<weight ", "</weight>")),
