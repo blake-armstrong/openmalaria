@@ -39,7 +39,7 @@ See `PLAN.md` for the session protocol, chunks and gates. Append one log entry p
 | D6a | done | 1b084b2e, 910bf9a9, 3be68cb7, c38704fb, 225947ca, 4ed41e45, aa825247, f7849271, c2e8281b, f4b0cfd2, c5dc1e95, 25082ee3, 44666fc1, 0d84e89f, (this log entry) |
 | D6b | done | 66fdf1e1, 38a88580, a0e9a737, 18a6f0c2, f1831c6f, 227daa2f, d4e7b71c, 51663e3e, 9011466e, (this log entry); F59/F60 fixes e169341c, 75700eda, 41c35aa4, f8f0896b, (their log entry) |
 | D6c | done | 38f78eda, a7c68da3, 9e34f002, 6e9038b9, 9cf1ff5a, bb46b13d, c78608b6, 0eb65ebb, (this log entry); F68/F71/F72 fixes ee622593, 5ec95acf, 942a1306, 137ce408, (their log entry) |
-| D7 | done | 3de6a425, 31d61953, 8e9e674f, 8b583553, 529d46cf, 5d117152, f4c2f44c, e1f80857, acec99a5, d5761b35, e18142b8, (this log entry) |
+| D7 | done | 3de6a425, 31d61953, 8e9e674f, 8b583553, 529d46cf, 5d117152, f4c2f44c, e1f80857, acec99a5, d5761b35, e18142b8, (this log entry); F73 tests 2e3ff85e, 3409b9e9, (their log entry) |
 | D7b | todo | |
 | D8 | todo | |
 | D9 | todo | |
@@ -1307,5 +1307,24 @@ The user asked for the three behaviour-changing D6c findings to be fixed. Each f
 - Follow-ups:
   - D7b: `Human` uses `bridge::per_host_params()` and `bridge::master_rngs()`; `InfectionIncidenceModel` and `AgeStructure`.
   - D8: the intervention deployments (`Deployments.h`) use `bridge::per_host_params()`; GVI, IRS and ITN were touched only by the rename (`component_id`).
-  - F73: moving the copula scenarios' deployment into the run changes their expected outputs; ask the user.
+  - F73: moving the copula scenarios' deployment into the run changes their expected outputs; ask the user. **Done after the log entry as new scenarios, at the user's request; see the next entry.**
+- Next: D7b.
+
+### D7 follow-up: F73 checked, and scenario tests that run the Gaussian copula (2026-10-23, after D7)
+The user asked to double-check F73 and, if it held, to add a test with the fix, compare it with the original, check that the change makes sense, and add it as a test the refactor must pass.
+- Check: F73 holds, more strongly than first written. The deployment (`time="2030-01-01" repeatStep="3y" repeatEnd="2020-01-01"`) creates no deployment time at all: `InterventionManager`'s expansion is `while (date < end)`, and 2030 is after 2020. Each original scenario's output is byte-identical to the same scenario with the `<deployment>` deleted, and to its expected file; the deploy line has been this way since upstream added the copula (bc128719, #406).
+- Commits:
+  - 2e3ff85e: scenarioGaussianCopulaGammaDeployed and scenarioGaussianCopulaLognormalDeployed (new files; the originals untouched): deployment at 2005-01-01, five rounds to 2017, `nMassGVI` monitored. In `OM_BOXTEST_NAMES` (checkpoint stop and resume). Expected outputs from the D7 base d8c583e9 (`../om-bench-base`); the D7 head's Release and Debug builds give the same bytes. The covered count is 232 and 236 over five rounds.
+  - 3409b9e9: `util/copula_check.py`, the plausibility check below, rerunnable from the repo.
+- Comparison with the original and plausibility (`util/copula_check.py build-rework/openMalaria GaussianCopulaGammaDeployed GaussianCopulaLognormalDeployed`, seeds 2001–2020, four variants: no deployment, the scenario as is (copula, correlation 1), the copula at correlation 0, plain coverage 0.5):
+  - before the first deployment, every variant's output equals the no-deployment output for every seed, i.e. the original scenario's behaviour;
+  - covered per round: 48.9, 49.2, 50.3 (Gamma) and 49.3, 50.6, 50.6 (Lognormal) of 100, matching coverage 0.5;
+  - after 2005, against no deployment: simulated EIR −96%, infections −77%, uncomplicated episodes −80% with the copula at correlation 1 (Lognormal −96%, −80%, −84%); plain coverage −75%, −39%, −41% (−82%, −51%, −53%); copula at correlation 0 −65%, −29%, −29% (−77%, −38%, −38%);
+  - this is what the method should do: at correlation 1 a human's probability of receiving the GVI is the Beta(1/3, 1/3) quantile of their availability rank, so the GVI goes to the most-bitten people and protects more than random coverage of the same size; at correlation 0 each human's copula sample is drawn once and kept, so the same people are covered every round, which is less effective than plain coverage, which redraws each round.
+- Gates:
+  - G-exact / G-unit: 61/61 (strict) on `build-rework/` (Release) and `build-debug/` (Debug).
+  - Planted bugs (then reverted): the correlation ignored (`yy = 0.0 * xx + …`) and the copula reading `anoph_ento_availability[0]` (after the availability factor) instead of the raw sample: both new tests fail, the two original copula tests pass.
+  - G-stat: the new scenarios' `stat_` tests are disabled (no reference), as for the other scenarios added since S5.
+  - No model code changed, so G-style and G-perf do not apply.
+- Findings: F73 moved to § Closed with the corrected description and the evidence. New: F75 (the copula's per-human sample is keyed by the sub-population, not the component, so whole-population copula deployments of different components share it; not changed).
 - Next: D7b.
