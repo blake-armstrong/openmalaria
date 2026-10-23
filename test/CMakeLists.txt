@@ -57,6 +57,7 @@ set (OM_BOXTEST_NAMES
   BSV
   TBV
   DecisionTree5DayDielmo
+  DecisionTreeLibrary
   HetVecDailyEIR
   AvailabilityFilter
   GaussianCopulaGamma
