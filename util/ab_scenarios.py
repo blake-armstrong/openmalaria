@@ -223,6 +223,65 @@ def severe_mda(s):
                '<deploy coverage="1" time="1484" repeatStep="1t" repeatEnd="1849t"/>')
 
 
+DIELMO = "scenarioDecisionTree5DayDielmo.xml"
+REPORT_80 = '<report outputNumber="80"/>'
+DIELMO_TREAT = '<treatSimple durationLiver="0" durationBlood="1t"/>'
+NO_TREATMENT = "<noTreatment/>"
+
+
+def branches(name, attrs, positive, negative):
+    return f"<{name} {attrs}><positive>{positive}</positive><negative>{negative}</negative></{name}>"
+
+
+def age_switch(*groups):
+    return "<age>" + "".join(f'<age lb="{lb}">{tree}</age>' for lb, tree in groups) + "</age>"
+
+
+def report_outputs(*numbers):
+    options = "".join(f'<option name="nCMDTReport" outputNumber="{n}" value="true"/>' for n in numbers)
+    return lambda s: rep(s, "<SurveyOptions>", "<SurveyOptions>" + options)
+
+
+def dielmo_extra(tree, *numbers):
+    return lambda s: report_outputs(*numbers)(rep(s, REPORT_80, REPORT_80 + tree))
+
+
+def dielmo_rare_outcome(tree):
+    def transform(s):
+        i = s.index('<outcome p="0.128">')
+        j = s.index(NO_TREATMENT, i)
+        return s[:j] + tree + s[j + len(NO_TREATMENT):]
+    return transform
+
+
+def uncomplicated_pair(first, second):
+    return dielmo_extra("".join(branches("uncomplicated", f'memory="{m}"', '<report outputNumber="90"/>', NO_TREATMENT)
+                                for m in (first, second)), 90)
+
+
+def cohort_pair(first, second):
+    def transform(s):
+        pair = "".join(branches("cohort", f'component="{c}"', '<report outputNumber="90"/>', NO_TREATMENT)
+                       for c in (first, second))
+        s = rep(report_outputs(90)(s), "<caseType>", "<multiple>" + pair + "<caseType>")
+        return rep_first(s, "</caseType>", "</caseType></multiple>")
+    return transform
+
+
+def wrap_cohort(component):
+    def transform(s):
+        s = rep(s, "<caseType>", f'<cohort component="{component}"><positive>{NO_TREATMENT}</positive><negative><caseType>')
+        return rep_first(s, "</caseType>", "</caseType></negative></cohort>")
+    return transform
+
+
+def wrap_es_complicated(before, after):
+    def transform(s):
+        s = rep(s, "<complicated>", "<complicated>" + before)
+        return rep(s, "</complicated>", after + "</complicated>")
+    return transform
+
+
 DAILY_PR_TWO_DAYS = "<dailyPrImmUCTS>0.2</dailyPrImmUCTS><dailyPrImmUCTS>0.8</dailyPrImmUCTS>"
 CLINICAL_READ_ORDER = (17, 19, 38, 33)
 
@@ -409,6 +468,54 @@ GROUPS = {
     ] + [
         Variant(f"es_no_params_{m}_{n}", ES, lambda s, m=m, n=n: drop_parameter(drop_parameter(s, m), n))
         for m, n in zip(CLINICAL_READ_ORDER, CLINICAL_READ_ORDER[1:])
+    ],
+    "decision-trees": [
+        Variant("dielmo_plain", DIELMO),
+        Variant("dielmo_checkpoint", DIELMO, args=["--checkpoint"], runs=2),
+        Variant("infection_origin", "scenarioInfectionOrigin.xml",
+                lambda s: rep_first(s, '<treatSimple durationLiver="0" durationBlood="1t"/>',
+                                    "<infectionOrigin><imported><noTreatment/></imported><introduced>"
+                                    '<treatSimple durationLiver="0" durationBlood="1t"/></introduced><indigenous>'
+                                    '<treatSimple durationLiver="0" durationBlood="1t"/></indigenous></infectionOrigin>')),
+        Variant("age", DIELMO, dielmo_extra(age_switch((0, '<report outputNumber="81"/>'),
+                                                       (5, '<report outputNumber="82"/>')), 81, 82)),
+        Variant("age_first_bound", DIELMO, dielmo_extra(age_switch((1, NO_TREATMENT), (5, NO_TREATMENT)))),
+        Variant("age_order", DIELMO, dielmo_extra(age_switch((0, NO_TREATMENT), (5, NO_TREATMENT), (5, NO_TREATMENT)))),
+        Variant("cohort", "scenarioCohort.xml", wrap_cohort("cohort")),
+        Variant("cohort_unknown_component", "scenarioCohort.xml", wrap_cohort("nope")),
+        Variant("es_severe", ES, wrap_es_complicated(f"<severe><positive>{NO_TREATMENT}</positive><negative>",
+                                                     "</negative></severe>")),
+        Variant("es_case_type_under_severe", ES, wrap_es_complicated(
+            "<severe><positive><caseType><firstLine>", f"</firstLine><secondLine>{NO_TREATMENT}</secondLine></caseType>"
+                                                       f"</positive><negative>{NO_TREATMENT}</negative></severe>")),
+        Variant("es_case_type_complicated", ES, wrap_es_complicated(
+            "<caseType><firstLine>", f"</firstLine><secondLine>{NO_TREATMENT}</secondLine></caseType>")),
+        Variant("case_type_intervention", DIELMO, dielmo_extra(
+            f"<caseType><firstLine>{NO_TREATMENT}</firstLine><secondLine>{NO_TREATMENT}</secondLine></caseType>")),
+        Variant("random_sum", DIELMO, lambda s: rep(s, '<outcome p="0.128">', '<outcome p="0.028">')),
+        Variant("unknown_diagnostic", DIELMO, lambda s: rep(s, '<diagnostic diagnostic="standard">',
+                                                           '<diagnostic diagnostic="nope">')),
+        Variant("unknown_diagnostic_and_random_sum", DIELMO, lambda s: rep(
+            rep(s, '<outcome p="0.128">', '<outcome p="0.028">'), '<diagnostic diagnostic="standard">',
+            '<diagnostic diagnostic="nope">')),
+        Variant("unknown_diagnostic_and_bad_child", DIELMO, lambda s: rep(
+            rep(s, '<report outputNumber="3"/>', '<random><outcome p="0.5"><noTreatment/></outcome></random>'),
+            '<diagnostic diagnostic="standard">', '<diagnostic diagnostic="nope">')),
+        Variant("age_order_and_bad_child", DIELMO, dielmo_extra(age_switch(
+            (0, NO_TREATMENT), (5, '<random><outcome p="0.5"><noTreatment/></outcome></random>'), (5, NO_TREATMENT)))),
+        Variant("treat_simple_negative", DIELMO, lambda s: rep(s, DIELMO_TREAT, DIELMO_TREAT.replace('"1t"', '"-2t"'))),
+        Variant("treat_simple_format", DIELMO, lambda s: rep(s, DIELMO_TREAT, DIELMO_TREAT.replace('"1t"', '"abc"'))),
+        Variant("dedupe_uncomplicated_memory_0_1", DIELMO, uncomplicated_pair("0t", "1t")),
+        Variant("dedupe_uncomplicated_memory_0_0", DIELMO, uncomplicated_pair("0t", "0t")),
+        Variant("dedupe_uncomplicated_memory_1_1", DIELMO, uncomplicated_pair("1t", "1t")),
+        Variant("dedupe_treat_simple_blood_1_5", DIELMO,
+                dielmo_rare_outcome(DIELMO_TREAT.replace('"1t"', '"5t"'))),
+        Variant("dedupe_treat_simple_blood_5_5", DIELMO, lambda s: dielmo_rare_outcome(
+            DIELMO_TREAT.replace('"1t"', '"5t"'))(rep(s, DIELMO_TREAT, DIELMO_TREAT.replace('"1t"', '"5t"')))),
+        Variant("dedupe_treat_simple_blood_1_1", DIELMO, dielmo_rare_outcome(DIELMO_TREAT)),
+        Variant("dedupe_cohort_cohort_mda", "scenarioCohort.xml", cohort_pair("cohort", "MDA")),
+        Variant("dedupe_cohort_cohort_cohort", "scenarioCohort.xml", cohort_pair("cohort", "cohort")),
+        Variant("dedupe_cohort_mda_mda", "scenarioCohort.xml", cohort_pair("MDA", "MDA")),
     ],
     "falciparum-init": [
         Variant("molineaux_no_weight", "scenarioMolineaux.xml", lambda s: drop_element(s, "<weight ", "</weight>")),
