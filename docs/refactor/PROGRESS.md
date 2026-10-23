@@ -39,7 +39,7 @@ See `PLAN.md` for the session protocol, chunks and gates. Append one log entry p
 | D6a | done | 1b084b2e, 910bf9a9, 3be68cb7, c38704fb, 225947ca, 4ed41e45, aa825247, f7849271, c2e8281b, f4b0cfd2, c5dc1e95, 25082ee3, 44666fc1, 0d84e89f, (this log entry) |
 | D6b | done | 66fdf1e1, 38a88580, a0e9a737, 18a6f0c2, f1831c6f, 227daa2f, d4e7b71c, 51663e3e, 9011466e, (this log entry); F59/F60 fixes e169341c, 75700eda, 41c35aa4, f8f0896b, (their log entry) |
 | D6c | done | 38f78eda, a7c68da3, 9e34f002, 6e9038b9, 9cf1ff5a, bb46b13d, c78608b6, 0eb65ebb, (this log entry); F68/F71/F72 fixes ee622593, 5ec95acf, 942a1306, 137ce408, (their log entry) |
-| D7 | todo | |
+| D7 | done | 3de6a425, 31d61953, 8e9e674f, 8b583553, 529d46cf, 5d117152, f4c2f44c, e1f80857, acec99a5, d5761b35, e18142b8, (this log entry) |
 | D7b | todo | |
 | D8 | todo | |
 | D9 | todo | |
@@ -453,6 +453,7 @@ See `PLAN.md` for the session protocol, chunks and gates. Append one log entry p
   | `model/Host/WithinHost/`: `Genotypes`, `Diagnostic`, `Treatments` | 85edc7ef (D4d) | e67dbef9 + 760980b6 (D4d) |
   | `model/Host/WithinHost/Pathogenesis` | c38704fb + 225947ca's hand rename (D6a) | c2e8281b + c5dc1e95 (D6a) |
   | `model/Clinical/` (not `CMDecisionTree`, D6c) and `model/Host/NeonatalMortality` | a0e9a737 + 18a6f0c2's hand rename (D6b) | 227daa2f + 51663e3e (D6b) |
+  | `model/Transmission` (not the uncompiled AnophelesModel and MosqLifeCycle suites, F9) | 8b583553 + 529d46cf's hand rename (D7) | f4c2f44c + acec99a5 (D7) |
 
   Rows from D4a on were added in D4d; the D4 entries had recorded the commits only in their logs.
 
@@ -1271,3 +1272,40 @@ The user asked for the three behaviour-changing D6c findings to be fixed. Each f
 
 ### Plan amendment: D7b (2026-10-23, at the start of D7)
 - Two global families are in no D chunk: `InfectionIncidenceModel`'s file globals and `ctsNewInfections` counter (`model/Host`, the human side of transmission), and `AgeStructure`'s statics (`model/PopulationAgeStructure`). The user chose to keep D7 to its row (`model/Transmission`: `PerHost`'s statics, plus the follow-ups injecting the transmission RNG and the genotype count) and to add D7b for the two families, with `Human` taking the population RNG by injection (D2's follow-up). Row in PLAN.md § Stage D; § Recommended order row 12 notes it.
+
+### D7: transmission statics → `PerHostParams` owned by `Simulation` (done, 2026-10-23)
+- Base: d8c583e9 (D6c's fixes). The G-perf and A/B base worktree `../om-bench-base` was moved to d8c583e9 and rebuilt.
+- Scope: the user kept D7 to its plan row and added D7b for the two global families no chunk owned (amendment above, 3de6a425). `model/Transmission` had only three statics: `PerHost::relAvailAge`, `PerHostAnophParams::params` and `PerHostAnophParams::entoAvailabilityPercentiles`. The transmission model itself has been a `Simulation` member since C1.
+- Commits:
+  - 3de6a425: PLAN.md D7b row and § Recommended order note; the amendment entry above.
+  - 31d61953: `util/ab_scenarios.py` group `transmission` (14 variants, below), run base against base first.
+  - 8e9e674f: **logic.**
+    - `Transmission::PerHostParams` (`PerHost.h`) holds the age availability interpolator, the per-species `PerHostAnophParams` and the availability percentiles. Its constructor is the old `PerHost::init`; `add_species`, `num_species`, `get`, `set_ento_availability_factor`, `calc_availability_percentiles` (same body and `MasterRng(0, 0)`), `ento_availability_percentile` (same error) and `adult_age` replace the static functions.
+    - A `Simulation` member with a `PerHostParamsBinding`, declared before the population and the transmission model (both point into it), assigned where `PerHost::init` ran; the percentiles are computed at the same points of `start_new` and `resume`.
+    - `create_transmission_model` takes it, the transmission master RNG and the `GenotypeRegistry`. Each species' parameters are added at the same point of the factory loop, before its `AnophelesModel` is built, so every read and error keeps its order. `AnophelesModel::init_availability` sets the availability factor through the reference it is given; each `AnophelesModel` keeps a pointer to the `PerHostParams` (not to its element: the list grows during the loop) for `deploy_vector_trap`, and one to the genotype registry.
+    - Each `PerHost` holds a pointer, set by `initialise`. **Bridge:** `bridge::per_host_params()` for `Human` (D7b) and the intervention deployments (`Deployments.h`, D8), removed in D9.
+    - Follow-ups done: `VectorModel` seeds its RNG from the injected transmission stream (D2b), and the genotype count comes from the registry (D4d). `TransmissionModel`'s constructor already took a count that it ignored; it now stores it (`num_genotypes()`). `NonVectorModel` passed 1 there while its `update_kappa` used `Genotypes::count()`; it now passes the registry's count, i.e. the value it used before.
+    - The adult age of the non-vector model is now evaluated before the factory's first read instead of in the base constructor; only an interpolator never set can throw there, which init rules out.
+    - Checkpoint format unchanged: the pointers are not checkpointed and the percentiles are recomputed on resume, as before. Unit tests bind a default `PerHostParams`.
+  - 8b583553 + 529d46cf: **rename**, 668 by the tool (202 parameter, 178 variable, 127 member, 77 method, 35 local constant, 24 function, 8 macro, 4 constant parameter, 4 enum constant, 3 constant member, 2 type alias, 1 global constant, 1 struct, 1 protected and 1 public member). Maps: seven acronyms the case conversion split (`initEIR365=init_eir365`, `EIRdaily=eir_daily`, `transientEIRknown=TransientEirKnown`, `SvfromEIR=sv_from_eir`, `SvfromEIR_view=sv_from_eir_view`, `xmlSeqNNHs=xml_seq_nnhs`, `valaverageEIR=val_average_eir`) and four collisions: `fsCoeffic=xml_coeffic` (a local next to `FSCoeffic`), `EIR_i=genotype_eir_i` and `EIR_l=genotype_eir_l` (`calculate_eir`'s outputs against the locals `eir_i`/`eir_l` of its inner loop, V1's follow-up), `m_id=component_id` (`PerHostInterventionData` has a method `id()`). Skip: `checkpointIntervs` (two overloads called from a template, no fix-it). The hand commit renames it and the `#else` branch of `USE_DERIVATIVE`, which the file defines (checked by compiling a copy without the define). Both in `.git-blame-ignore-revs` (5d117152). The uncompiled `AnophelesModelSuite` and `MosqLifeCycleSuite` (F9) keep the old names.
+  - f4c2f44c + e1f80857: **modernise, tool:** 19 `loop-convert`, 19 `use-override`, 14 `use-default-member-init`, 8 `concat-nested-namespaces`, 6 `init-variables`, 6 `pro-type-member-init`, 5 `deprecated-headers`, 5 `use-equals-default`, 4 `unnecessary-value-param`, 3 `prefer-member-initializer`, 2 `use-ranges`, 1 `use-nullptr`, 1 `unnecessary-copy-initialization`. Checked in the dry run: no converted loop changes its container; the member-initializer moves contain no throwing read (F58).
+  - acec99a5: **modernise, hand:** the four factories return `unique_ptr`; `AnophelesModel` gets a virtual destructor (F74) and `TrapParams` the rule of zero; 19 `std::bind` callbacks → lambdas; `init_vector_trap` by `const&`; `VecModeErr` `constexpr`; `misc-const-correctness` (west const); `static_cast`s and explicit narrowing casts; designated initializers. Left: CalcNvO's GSL code (M5), the index narrowings into `mod_nn`/`modulo_steps` (int helpers), the GSL root-solver globals and `USE_DERIVATIVE` (M6), `SimulationMode` (checkpointed, H3) and `VecStat` (ctsout only, G), `ostringstream` titles (G), `endl` (F14), public data.
+  - d5761b35: G-style on lines the chunk changed: `AnophelesModel.h` includes `Genotypes.h` instead of forward-declaring into the shared namespace `WithinHost`; one local in `Deployments.h`.
+  - e18142b8: FINDINGS F73, F74; PLAN.md D7 row as built; README's bridge list and A/B row.
+- Gates:
+  - G-exact / G-unit: 59/59 (strict) on `build-rework/` (Release) and `build-debug/` (Debug) after each C++ commit. ctest reaches vector (one to three species, simple-MPD, exact Nv0 solver, traps, availability filter) and non-vector models, `scaledAnnualEIR`, genotypes in both modes, all with checkpoint stop and resume.
+  - G-stat: `ctest -L statistical -j4` at d5761b35: 53 passed, 6 disabled (no reference), as after D6c's fixes.
+  - G-style: `util/style.sh check d8c583e9` clean at d5761b35. Rename: format half clean, second dry run `nothing to rename` after the hand rename, token check passed, `check 8b583553^` clean. Modernise tool commit: format half clean, second dry run applies nothing (only the two no-fix-it items, done by hand), `check f4c2f44c^` clean.
+  - G-perf: `util/bench.sh -n 7 --compare ../om-bench-base/build-rework`, candidate d5761b35, load ~6.9 at the start: median per-pair ratio 1.0151 (+1.51%), spreads 8.0% / 5.1%. The benchmark is a vector scenario, so it covers the per-human availability lookups that now go through a pointer.
+  - A/B (`util/ab_scenarios.py <base> <candidate>`, base d8c583e9): 0 of 191 variants (all eight groups) differ after the logic commit and again after the hand commit. The group `transmission` covers: checkpoint bytes of AvailabilityFilter (three species); `--print-EIR` stdout, vector and non-vector; the `VECTOR_LIFE_CYCLE_MODEL` error, and `VECTOR_SIMPLE_MPD_MODEL` with non-vector data; `PerHostAnophParams`' availability error in the first and the second species and together with the life-cycle error (read order); an availability percentile above 100; the Gaussian copula deployment moved into the run (outputs differ from the plain scenario, F73), with `--checkpoint`, and with two species (its error).
+  - Planted bugs (then reverted): a species' parameters read only after its `AnophelesModel` → `transmission/mass_action_het_and_life_cycle` differs; the percentiles not computed on resume → ctest AvailabilityFilter fails and `vector_checkpoint`, `copula_deployed_checkpoint` differ.
+- Findings: F73 (the copula ctest scenarios never deploy), F74 (closed: `SimpleMPDAnophelesModel` deleted through a base pointer without a virtual destructor).
+- Surprises:
+  - The two copula ctest scenarios end before their only deployment, so the copula code had no test until the A/B variants.
+  - `VECTOR_LIFE_CYCLE_MODEL` is only an error ("not yet implemented"); no scenario can use it.
+  - `TransmissionModel` took a genotype count and ignored it; the non-vector model's "1" there had no effect.
+- Follow-ups:
+  - D7b: `Human` uses `bridge::per_host_params()` and `bridge::master_rngs()`; `InfectionIncidenceModel` and `AgeStructure`.
+  - D8: the intervention deployments (`Deployments.h`) use `bridge::per_host_params()`; GVI, IRS and ITN were touched only by the rename (`component_id`).
+  - F73: moving the copula scenarios' deployment into the run changes their expected outputs; ask the user.
+- Next: D7b.
