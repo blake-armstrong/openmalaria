@@ -38,13 +38,13 @@ namespace OM::interventions {
 using namespace OM::util;
 
 VaccineComponent::VaccineComponent(ComponentId component, const scnXml::VaccineDescription& vd, vaccines::Types type,
-                                   bool report_deployments)
+                                   bool report_deployments, const util::ModelOptionFlags& options)
     : HumanInterventionComponent(component), type(type), decay_func(DecayFunction::makeObject(vd.getDecay(), "decay")),
       efficacy_b(vd.getEfficacyB().getValue()), report_deployments(report_deployments) {
-    if (type == vaccines::BSV && ModelOptions::option(util::VivaxSimpleModel))
+    if (type == vaccines::BSV && options.option(util::VivaxSimpleModel))
         throw util::unimplemented_exception("blood stage vaccines (BSV) cannot be used with vivax model");
 
-    opt_vaccine_genotype = util::ModelOptions::option(util::VaccineGenotype);
+    opt_vaccine_genotype = options.option(util::VaccineGenotype);
 
     const scnXml::VaccineDescription::InitialEfficacySequence& ies = vd.getInitialEfficacy();
     const scnXml::VaccineDescription::PhenotypeSequence& ps = vd.getPhenotype();

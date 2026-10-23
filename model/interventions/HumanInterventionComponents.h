@@ -236,7 +236,8 @@ private:
 /// Simple treatment: no PK/PD, just remove parasites
 class TreatSimpleComponent : public HumanInterventionComponent {
 public:
-    TreatSimpleComponent(ComponentId id, const scnXml::DTTreatSimple& elt) : HumanInterventionComponent(id) {
+    TreatSimpleComponent(ComponentId id, const scnXml::DTTreatSimple& elt, const util::ModelOptionFlags& options)
+        : HumanInterventionComponent(id) {
         //NOTE: this code is currently identical to that in CMDTTreatSimple
         try {
             SimTime dur_l = UnitParse::readShortDuration(elt.getDurationLiver(), UnitParse::NONE),
@@ -245,7 +246,7 @@ public:
             if (dur_l < neg1 || dur_b < neg1) {
                 throw util::xml_scenario_error("treatSimple: cannot have durationBlood or durationLiver less than -1");
             }
-            if (util::ModelOptions::option(util::VivaxSimpleModel)) {
+            if (options.option(util::VivaxSimpleModel)) {
                 if (dur_l != Sim::zero() || dur_b != neg1)
                     throw util::unimplemented_exception(
                         "vivax model only supports timestepsLiver=0, timestepsBlood=-1");

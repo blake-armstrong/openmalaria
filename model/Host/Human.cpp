@@ -51,34 +51,34 @@ struct HumanHet {
     HumanHet() : comorbidityFactor(1.0), treatmentSeekingFactor(1.0), availabilityFactor(1.0) {}
 };
 
-HumanHet hetSample(util::LocalRng& rng) {
+HumanHet hetSample(util::LocalRng& rng, const util::ModelOptionFlags& options) {
     HumanHet het;
-    if (util::ModelOptions::option(util::TransHet)) {
+    if (options.option(util::TransHet)) {
         het.availabilityFactor = 0.2;
         if (rng.bernoulli(0.5)) {
             het.availabilityFactor = 1.8;
         }
     }
-    if (util::ModelOptions::option(util::ComorbHet)) {
+    if (options.option(util::ComorbHet)) {
         het.comorbidityFactor = 0.2;
         if (rng.bernoulli(0.5)) {
             het.comorbidityFactor = 1.8;
         }
     }
-    if (util::ModelOptions::option(util::TreatHet)) {
+    if (options.option(util::TreatHet)) {
         het.treatmentSeekingFactor = 0.2;
         if (rng.bernoulli(0.5)) {
             het.treatmentSeekingFactor = 1.8;
         }
     }
-    if (util::ModelOptions::option(util::TransTreatHet)) {
+    if (options.option(util::TransTreatHet)) {
         het.treatmentSeekingFactor = 0.2;
         het.availabilityFactor = 1.8;
         if (rng.bernoulli(0.5)) {
             het.treatmentSeekingFactor = 1.8;
             het.availabilityFactor = 0.2;
         }
-    } else if (util::ModelOptions::option(util::ComorbTreatHet)) {
+    } else if (options.option(util::ComorbTreatHet)) {
         if (rng.bernoulli(0.5)) {
             het.comorbidityFactor = 1.8;
             het.treatmentSeekingFactor = 0.2;
@@ -86,14 +86,14 @@ HumanHet hetSample(util::LocalRng& rng) {
             het.comorbidityFactor = 0.2;
             het.treatmentSeekingFactor = 1.8;
         }
-    } else if (util::ModelOptions::option(util::ComorbTransHet)) {
+    } else if (options.option(util::ComorbTransHet)) {
         het.availabilityFactor = 1.8;
         het.comorbidityFactor = 1.8;
         if (rng.bernoulli(0.5)) {
             het.availabilityFactor = 0.2;
             het.comorbidityFactor = 0.2;
         }
-    } else if (util::ModelOptions::option(util::TripleHet)) {
+    } else if (options.option(util::TripleHet)) {
         het.availabilityFactor = 1.8;
         het.comorbidityFactor = 1.8;
         het.treatmentSeekingFactor = 0.2;
@@ -112,7 +112,7 @@ Human::Human(SimTime date_of_birth, const HumanParams& params, util::MasterRng& 
     // Initial humans are created at time 0 and may have date_of_birth in past. Otherwise date_of_birth must be now.
     assert(date_of_birth == Sim::now_or_ts1() || (Sim::now() == Sim::zero() && date_of_birth < Sim::now()));
 
-    HumanHet het = hetSample(host_rng);
+    HumanHet het = hetSample(host_rng, *params.options);
     withinHostModel = WithinHost::WHInterface::create_within_host_model(host_rng, het.comorbidityFactor);
     double ii_factor = infIncidence->get_availability_factor(host_rng, 1.0);
     perHostTransmission.initialise(*params.per_host, host_rng, het.availabilityFactor * ii_factor);

@@ -163,12 +163,11 @@ VectorModel::VectorModel(vector<double> init_eir, int intervention_mode,
                          vector<std::unique_ptr<Anopheles::AnophelesModel>> species_list,
                          vector<std::unique_ptr<Anopheles::EmergenceRateEstimator>> emergence_rate_estimators_list,
                          map<string, size_t> species_index_list, int population_size, util::MasterRng& transmission_rng,
-                         size_t n_genotypes, SimTime adult_age, mon::Continuous& continuous)
-    : TransmissionModel(std::move(init_eir), intervention_mode, n_genotypes, adult_age, continuous),
+                         size_t n_genotypes, SimTime adult_age, bool vaccine_genotype, mon::Continuous& continuous)
+    : TransmissionModel(std::move(init_eir), intervention_mode, n_genotypes, adult_age, vaccine_genotype, continuous),
       rng(transmission_rng), quinquennial_kappa(5 * Sim::steps_per_year(), 0.0), species(std::move(species_list)),
       emergence_rate_estimators(std::move(emergence_rate_estimators_list)),
-      species_index(std::move(species_index_list)),
-      opt_vaccine_genotype(util::ModelOptions::option(util::VaccineGenotype)) {
+      species_index(std::move(species_index_list)), opt_vaccine_genotype(vaccine_genotype) {
     // set VACCINE_GENOTYPE option
 
     // Calculate total annual EIR

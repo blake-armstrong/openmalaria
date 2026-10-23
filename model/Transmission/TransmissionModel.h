@@ -116,11 +116,11 @@ protected:
     /// @param entoData input configuration for model
     /// @param n_genotypes number of genotypes transmission model is using
     TransmissionModel(vector<double> initialisation_eir, int intervention_mode, size_t n_genotypes, SimTime adult_age,
-                      mon::Continuous& continuous)
+                      bool vaccine_genotype, mon::Continuous& continuous)
         : n_genotypes(n_genotypes), initialisation_eir(std::move(initialisation_eir)),
           intervention_mode(intervention_mode), lagged_kappa(Sim::steps_per_year(), 0.0),
           annual_average_kappa(numeric_limits<double>::signaling_NaN()), adult_age(adult_age),
-          opt_vaccine_genotype(util::ModelOptions::option(util::VaccineGenotype)) {
+          opt_vaccine_genotype(vaccine_genotype) {
         // Set VACCINE_GENOTYPE option
 
         continuous.register_callback("input EIR", "\tinput EIR", [this](ostream& stream) { cts_cb_input_eir(stream); });

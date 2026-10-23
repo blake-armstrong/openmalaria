@@ -27,6 +27,7 @@
 #include "interventions/Interfaces.h"
 #include "util/AgeGroupInterpolation.h"
 #include "util/DecayFunction.h"
+#include "util/ModelOptions.h"
 #include "util/checkpoint_containers.h"
 
 #include "util/random.h"
@@ -48,7 +49,7 @@ class HumanVectorInterventionComponent;
  * Parameters are read from XML, and the availability rate is adjusted. */
 class PerHostAnophParams {
 public:
-    PerHostAnophParams(const scnXml::Mosq& mosq);
+    PerHostAnophParams(const scnXml::Mosq& mosq, const util::ModelOptionFlags& options);
 
     PerHostAnophParams(PerHostAnophParams&&) noexcept = default;
     PerHostAnophParams& operator=(PerHostAnophParams&&) noexcept = default;
@@ -86,7 +87,9 @@ public:
     PerHostParams() = default;
     explicit PerHostParams(const scnXml::AgeGroupValues& availability_to_mosquitoes);
 
-    void add_species(const scnXml::Mosq& mosq) { species.emplace_back(mosq); }
+    void add_species(const scnXml::Mosq& mosq, const util::ModelOptionFlags& options) {
+        species.emplace_back(mosq, options);
+    }
 
     /// Get the number of vector species
     size_t num_species() const { return species.size(); }

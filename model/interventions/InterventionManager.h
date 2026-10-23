@@ -70,7 +70,7 @@ public:
     void init(const scnXml::Interventions& interv_elt, Transmission::TransmissionModel& transmission,
               const Transmission::PerHostParams& per_host_params, const WithinHost::DiagnosticRegistry& diagnostics,
               const pk_pd::PkPdParams& pk_pd, Clinical::ClinicalParams& clinical,
-              Clinical::DecisionTreeLibrary& decision_trees);
+              Clinical::DecisionTreeLibrary& decision_trees, const util::ModelOptionFlags& options);
 
     /// Checkpointing
     template <class S> void checkpoint(S& stream) {

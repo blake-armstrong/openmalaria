@@ -40,6 +40,9 @@ class WHInterface;
 namespace Transmission {
 class TransmissionModel;
 }
+namespace util {
+class ModelOptionFlags;
+}
 
 namespace Host {
 class NeonatalMortality;
@@ -47,6 +50,7 @@ class NeonatalMortality;
 struct HumanParams {
     const Transmission::PerHostParams* per_host = nullptr;
     const InfectionIncidenceParams* infection_incidence = nullptr;
+    const util::ModelOptionFlags* options = nullptr;
 };
 
 /** Interface to all sub-models storing data per-human individual.

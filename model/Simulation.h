@@ -90,7 +90,6 @@ private:
     ClockBinding clock_binding{clock};
     util::MasterRngs master_rngs;
     util::ModelOptionFlags model_options;
-    ModelOptionsBinding model_options_binding{model_options};
     Parameters parameters;
     WithinHost::GenotypeRegistry genotypes;
     GenotypesBinding genotypes_binding{genotypes};

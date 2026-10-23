@@ -27,7 +27,6 @@
 #include "util/ModelNameProvider.h"
 #include <schema/scenario.h>
 #include <bitset>
-#include <cassert>
 #include <optional>
 
 class UnittestUtil;
@@ -331,45 +330,6 @@ private:
     std::bitset<NumOptions> options;
 
     friend class ::UnittestUtil; // Note: class is in base namespace
-};
-}
-
-namespace bridge {
-
-// NOLINTNEXTLINE(cppcoreguidelines-avoid-non-const-global-variables)
-inline const util::ModelOptionFlags* current_model_options = nullptr;
-
-inline const util::ModelOptionFlags& model_options() {
-    assert(current_model_options != nullptr);
-    return *current_model_options;
-}
-
-}
-
-class ModelOptionsBinding {
-public:
-    explicit ModelOptionsBinding(const util::ModelOptionFlags& options) : previous(bridge::current_model_options) {
-        bridge::current_model_options = &options;
-    }
-    ModelOptionsBinding(const ModelOptionsBinding&) = delete;
-    ModelOptionsBinding& operator=(const ModelOptionsBinding&) = delete;
-    ModelOptionsBinding(ModelOptionsBinding&&) = delete;
-    ModelOptionsBinding& operator=(ModelOptionsBinding&&) = delete;
-    ~ModelOptionsBinding() { bridge::current_model_options = previous; }
-
-private:
-    const util::ModelOptionFlags* previous;
-};
-
-namespace util {
-class ModelOptions {
-public:
-    /** Return true if given option (from OptionCodes) is active.
-         * 
-         * Performance note: calling this a few times (e.g. during init) is
-         * fine, but code needing a value repeatedly should cache it locally.
-         */
-    static bool option(OptionCodes code) { return bridge::model_options().option(code); }
 };
 }
 }

@@ -110,20 +110,21 @@ Simulation::Simulation(std::unique_ptr<scnXml::Scenario> scenario, util::Command
     // Note: PerHost dependency can be postponed; it is only used to set adultAge
     const size_t pop_size = scenario_xml->getDemography().getPopSize();
 
-    population_model = std::make_unique<Population>(
-        pop_size, age_structure,
-        Host::HumanParams{.per_host = &per_host_params, .infection_incidence = &infection_incidence},
-        master_rngs.population);
-    transmission_model =
-        Transmission::create_transmission_model(scenario_xml->getEntomology(), static_cast<int>(pop_size),
-                                                per_host_params, master_rngs.transmission, genotypes, continuous);
+    population_model = std::make_unique<Population>(pop_size, age_structure,
+                                                    Host::HumanParams{.per_host = &per_host_params,
+                                                                      .infection_incidence = &infection_incidence,
+                                                                      .options = &model_options},
+                                                    master_rngs.population);
+    transmission_model = Transmission::create_transmission_model(
+        scenario_xml->getEntomology(), static_cast<int>(pop_size), per_host_params, master_rngs.transmission, genotypes,
+        model_options, continuous);
 
     register_continuous_population_callbacks(continuous);
 
     // Depends on transmission model (for species indexes):
     // MDA1D may depend on health system (too complex to verify)
     intervention_manager.init(scenario_xml->getInterventions(), *transmission_model, per_host_params, diagnostics,
-                              within_host_model.common.pk_pd, clinical, decision_trees);
+                              within_host_model.common.pk_pd, clinical, decision_trees, model_options);
     clinical.set_health_system(scenario_xml->getHealthSystem(),
                                decision_trees);       // Depends on interventions, PK/PD (from humanPop)
     mon::init_cohorts(scenario_xml->getMonitoring()); // Depends on interventions

@@ -51,7 +51,8 @@ InterventionManager::~InterventionManager() = default;
 void InterventionManager::init(const scnXml::Interventions& interv_elt, Transmission::TransmissionModel& transmission,
                                const Transmission::PerHostParams& per_host_params,
                                const WithinHost::DiagnosticRegistry& diagnostics, const pk_pd::PkPdParams& pk_pd,
-                               Clinical::ClinicalParams& clinical, Clinical::DecisionTreeLibrary& decision_trees) {
+                               Clinical::ClinicalParams& clinical, Clinical::DecisionTreeLibrary& decision_trees,
+                               const util::ModelOptionFlags& options) {
     next_timed = 0;
 
     if (interv_elt.getChangeHS().present()) {
@@ -132,7 +133,7 @@ void InterventionManager::init(const scnXml::Interventions& interv_elt, Transmis
             if (component.getScreen().present()) {
                 hi_component = std::make_unique<ScreenComponent>(id, component.getScreen().get(), *this, diagnostics);
             } else if (component.getTreatSimple().present()) {
-                hi_component = std::make_unique<TreatSimpleComponent>(id, component.getTreatSimple().get());
+                hi_component = std::make_unique<TreatSimpleComponent>(id, component.getTreatSimple().get(), options);
             } else if (component.getTreatPKPD().present()) {
                 hi_component = std::make_unique<TreatPKPDComponent>(id, component.getTreatPKPD().get(), pk_pd);
             } else if (component.getDecisionTree().present()) {
@@ -140,13 +141,13 @@ void InterventionManager::init(const scnXml::Interventions& interv_elt, Transmis
                     std::make_unique<DecisionTreeComponent>(id, component.getDecisionTree().get(), decision_trees);
             } else if (component.getPEV().present()) {
                 hi_component = std::make_unique<VaccineComponent>(id, component.getPEV().get(), vaccines::PEV,
-                                                                  std::exchange(first_vaccine, false));
+                                                                  std::exchange(first_vaccine, false), options);
             } else if (component.getBSV().present()) {
                 hi_component = std::make_unique<VaccineComponent>(id, component.getBSV().get(), vaccines::BSV,
-                                                                  std::exchange(first_vaccine, false));
+                                                                  std::exchange(first_vaccine, false), options);
             } else if (component.getTBV().present()) {
                 hi_component = std::make_unique<VaccineComponent>(id, component.getTBV().get(), vaccines::TBV,
-                                                                  std::exchange(first_vaccine, false));
+                                                                  std::exchange(first_vaccine, false), options);
             } else if (component.getITN().present()) {
                 hi_component = std::make_unique<ITNComponent>(id, component.getITN().get(), species_index_map);
             } else if (component.getIRS().present()) {

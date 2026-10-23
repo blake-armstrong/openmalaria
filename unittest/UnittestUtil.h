@@ -50,8 +50,6 @@
 using namespace OM;
 using namespace WithinHost;
 
-using ::OM::util::ModelOptions;
-
 namespace xml_helpers {
 /// Construct a helper for setting PK parameters (1-compartment model)
 ///@param Vd Volume of distribution (l/kg)
@@ -228,7 +226,6 @@ CommandLineBinding command_line_binding{command_line};
 mon::MonitoringState monitoring;
 MonitoringBinding monitoring_binding{monitoring};
 util::ModelOptionFlags model_options;
-ModelOptionsBinding model_options_binding{model_options};
 WithinHost::WithinHostModel within_host_model;
 WithinHostModelBinding within_host_model_binding{within_host_model};
 Clinical::ClinicalParams clinical;
@@ -461,7 +458,8 @@ public:
         return std::make_unique<Host::Human>(
             dateOfBirth,
             Host::HumanParams{.per_host = &unittest_options::per_host_params,
-                              .infection_incidence = &unittest_options::infection_incidence},
+                              .infection_incidence = &unittest_options::infection_incidence,
+                              .options = &unittest_options::model_options},
             master_rngs.population);
     }
     // Set the WithinHost model used by the human, and return a pointer to it. Do not delete this!

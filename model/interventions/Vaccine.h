@@ -25,6 +25,7 @@
 
 #include "interventions/HumanComponents.h"
 #include "schema/interventions.h"
+#include "util/ModelOptions.h"
 
 namespace OM {
 namespace Host {
@@ -44,7 +45,7 @@ using util::LocalRng;
 class VaccineComponent : public HumanInterventionComponent {
 public:
     VaccineComponent(ComponentId id, const scnXml::VaccineDescription& seq, vaccines::Types type,
-                     bool report_deployments);
+                     bool report_deployments, const util::ModelOptionFlags& options);
 
     void deploy(Host::Human& human, mon::DeployMethod method, VaccineLimits vacc_limits) const override;
 

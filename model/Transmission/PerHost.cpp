@@ -31,10 +31,10 @@
 namespace OM::Transmission {
 using namespace OM::util;
 
-PerHostAnophParams::PerHostAnophParams(const scnXml::Mosq& mosq) {
+PerHostAnophParams::PerHostAnophParams(const scnXml::Mosq& mosq, const util::ModelOptionFlags& options) {
     if (mosq.getAvailability().getDistr() != "const" &&
-        (util::ModelOptions::option(NegativeBinomialMassAction) || util::ModelOptions::option(LognormalMassAction) ||
-         util::ModelOptions::option(ComorbTransHet)))
+        (options.option(NegativeBinomialMassAction) || options.option(LognormalMassAction) ||
+         options.option(ComorbTransHet)))
         throw util::xml_scenario_error(
             "PerHostAnophParams::PerHostAnophParams(): ModelOptions NEGATIVE_BINOMIAL_MASS_ACTION, "
             "LOGNORMAL_MASS_ACTION, COMORB_TRANS_HET are not compatible with ento-availability heterogeneity "
