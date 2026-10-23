@@ -128,7 +128,7 @@ void Human::addToCohort(ComponentId id, SimTime duration) {
 
 void Human::removeFromCohort(interventions::ComponentId id) { subPopExp.erase(id); }
 
-void Human::removeFirstEvent(interventions::SubPopRemove::RemoveAtCode code) {
+void Human::removeFirstEvent(interventions::sub_pop_remove::RemoveAtCode code) {
     const vector<ComponentId>& removeAtList = bridge::intervention_manager().remove_at_ids(code);
     for (auto it = removeAtList.begin(), end = removeAtList.end(); it != end; ++it) {
         auto expIt = subPopExp.find(*it);
@@ -215,7 +215,7 @@ void summarize(Human& human, bool surveyOnlyNewEp) {
 
     if (patent && mon::isReported()) {
         // this should happen after all other reporting!
-        human.removeFirstEvent(interventions::SubPopRemove::ON_FIRST_INFECTION);
+        human.removeFirstEvent(interventions::sub_pop_remove::OnFirstInfection);
     }
 }
 

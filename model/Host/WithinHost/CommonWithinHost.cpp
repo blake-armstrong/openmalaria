@@ -142,7 +142,7 @@ void CommonWithinHost::update(Host::Human& human, LocalRng& rng, int& n_new_infs
 
         // If opt_vaccine_genotype is true the infection is discarded with probability 1-vaccineFactor
         if (opt_vaccine_genotype) {
-            const double vaccine_factor = human.vaccine.getFactor(interventions::Vaccine::PEV, genotype);
+            const double vaccine_factor = human.vaccine.get_factor(interventions::vaccines::PEV, genotype);
             if (vaccine_factor == 1.0 || human.host_rng.bernoulli(vaccine_factor))
                 infections.emplace_back(new_infection(rng, genotype, InfectionOrigin::Introduced));
             else
@@ -160,7 +160,7 @@ void CommonWithinHost::update(Host::Human& human, LocalRng& rng, int& n_new_infs
 
         // If opt_vaccine_genotype is true the infection is discarded with probability 1-vaccineFactor
         if (opt_vaccine_genotype) {
-            const double vaccine_factor = human.vaccine.getFactor(interventions::Vaccine::PEV, genotype);
+            const double vaccine_factor = human.vaccine.get_factor(interventions::vaccines::PEV, genotype);
             if (vaccine_factor == 1.0 || human.host_rng.bernoulli(vaccine_factor))
                 infections.emplace_back(new_infection(rng, genotype, InfectionOrigin::Indigenous));
             else
@@ -198,8 +198,8 @@ void CommonWithinHost::update(Host::Human& human, LocalRng& rng, int& n_new_infs
             if (!expires) { /* no expiry due to simple treatment model; do update */
                 const double drug_factor = pkpd_model.get_drug_factor(rng, inf->get(), body_mass);
                 const double imm_factor = immunity_survival_factor(age_in_years, (*inf)->cumulative_exposure_j());
-                const double bsv_factor =
-                    human.vaccine.getFactor(interventions::Vaccine::BSV, opt_vaccine_genotype ? (*inf)->genotype() : 0);
+                const double bsv_factor = human.vaccine.get_factor(interventions::vaccines::BSV,
+                                                                   opt_vaccine_genotype ? (*inf)->genotype() : 0);
                 const double survival_factor = bsv_factor * innate_imm_surv_fact * imm_factor * drug_factor;
                 // update, may result in termination of infection:
                 expires = (*inf)->update(rng, survival_factor, now, body_mass);

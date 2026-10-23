@@ -115,7 +115,7 @@ void DescriptiveWithinHostModel::update(Host::Human& human, LocalRng& rng, int& 
 
         // If opt_vaccine_genotype is true the infection is discarded with probability 1-vaccineFactor
         if (opt_vaccine_genotype) {
-            const double vaccine_factor = human.vaccine.getFactor(interventions::Vaccine::PEV, genotype);
+            const double vaccine_factor = human.vaccine.get_factor(interventions::vaccines::PEV, genotype);
             if (vaccine_factor == 1.0 || human.host_rng.bernoulli(vaccine_factor))
                 infections.push_back(new_infection(rng, genotype, InfectionOrigin::Introduced));
         } else if (opt_vaccine_genotype == false)
@@ -130,7 +130,7 @@ void DescriptiveWithinHostModel::update(Host::Human& human, LocalRng& rng, int& 
 
         // If opt_vaccine_genotype is true the infection is discarded with probability 1-vaccineFactor
         if (opt_vaccine_genotype) {
-            const double vaccine_factor = human.vaccine.getFactor(interventions::Vaccine::PEV, genotype);
+            const double vaccine_factor = human.vaccine.get_factor(interventions::vaccines::PEV, genotype);
             if (vaccine_factor == 1.0 || human.host_rng.bernoulli(vaccine_factor))
                 infections.push_back(new_infection(rng, genotype, InfectionOrigin::Indigenous));
         } else if (opt_vaccine_genotype == false)
@@ -167,7 +167,7 @@ void DescriptiveWithinHostModel::update(Host::Human& human, LocalRng& rng, int& 
         double inf_step_max_dens = time_step_max_density;
         const double imm_surv_fact = immunity_survival_factor(age_in_years, (*inf)->cumulative_exposure_j());
         const double bsv_factor =
-            human.vaccine.getFactor(interventions::Vaccine::BSV, opt_vaccine_genotype ? (*inf)->genotype() : 0);
+            human.vaccine.get_factor(interventions::vaccines::BSV, opt_vaccine_genotype ? (*inf)->genotype() : 0);
 
         (*inf)->determine_densities(rng, cumulative_h, inf_step_max_dens, imm_surv_fact, innate_imm_surv_fact,
                                     bsv_factor);

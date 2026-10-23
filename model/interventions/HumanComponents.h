@@ -20,8 +20,8 @@
  * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301, USA.
  */
 
-#ifndef Hmod_interventions_HumanComponents
-#define Hmod_interventions_HumanComponents
+#ifndef HMOD_INTERVENTIONS_HUMAN_COMPONENTS
+#define HMOD_INTERVENTIONS_HUMAN_COMPONENTS
 
 #include "Global.h"
 #include "interventions/Interfaces.h"
@@ -38,7 +38,7 @@ using util::LocalRng;
 
 // ———  sub-population removal  ———
 
-namespace SubPopRemove {
+namespace sub_pop_remove {
 /** Identifiers for types of sub-population removal option, followed by NUM
      * in last place (as a counter).
      * 
@@ -51,12 +51,12 @@ namespace SubPopRemove {
      * ON_FIRST_TREATMENT: remove humans from some sub-populations when
      * assigning each course of treatment.
      */
-enum RemoveAtCode { ON_FIRST_BOUT, ON_FIRST_INFECTION, ON_FIRST_TREATMENT, NUM };
+enum RemoveAtCode { OnFirstBout, OnFirstInfection, OnFirstTreatment, NUM };
 }
 
 // ———  vaccines  ———
 
-namespace Vaccine {
+namespace vaccines {
 enum Types { PEV, BSV, TBV, NumVaccineTypes };
 }
 
@@ -69,9 +69,9 @@ public:
     /// Checkpointing
     template <class S> void operator&(S& stream) {
         component & stream;
-        numDosesAdministered & stream;
-        timeLastDeployment & stream;
-        perGenotypeInitialEfficacy & stream;
+        num_doses_administered & stream;
+        time_last_deployment & stream;
+        per_genotype_initial_efficacy & stream;
         checkpointHet(stream);
     }
 
@@ -85,12 +85,12 @@ private:
      * If an individual misses one EPI (continuous) vaccine dose, it's
      * intentional that they also miss following EPI doses (unless a timed mass
      * vaccination reintroduces them to the EPI schedule). */
-    uint32_t numDosesAdministered;
+    uint32_t num_doses_administered;
     /// Time of last vaccination with this vaccine type
-    SimTime timeLastDeployment = Sim::never();
+    SimTime time_last_deployment = Sim::never();
     /// Efficacy at last deployment (undecayed)
-    vector<double> perGenotypeInitialEfficacy;
-    unique_ptr<util::DecayFunction> hetSample;
+    vector<double> per_genotype_initial_efficacy;
+    unique_ptr<util::DecayFunction> het_sample;
     const VaccineComponent* params = nullptr;
 
     void checkpointHet(ostream& stream);
@@ -105,12 +105,13 @@ public:
     PerHumanVaccine() {}
 
     /** Get one minus the efficacy of the vaccine (1 for no effect, 0 for full effect). */
-    double getFactor(Vaccine::Types type, uint32_t genotype = 0) const;
+    double get_factor(vaccines::Types type, uint32_t genotype = 0) const;
 
     /** Vaccinate unless the passed VaccineLimits specify not to.
      * 
      * @returns true when the vaccine is administered */
-    bool possiblyVaccinate(Host::Human& human, const VaccineComponent& params, interventions::VaccineLimits vaccLimits);
+    bool possibly_vaccinate(Host::Human& human, const VaccineComponent& params,
+                            interventions::VaccineLimits vacc_limits);
 
 #if 0
     /// Hack for R_0 experiment: make current human the infection source

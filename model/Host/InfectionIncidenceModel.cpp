@@ -178,7 +178,7 @@ double InfectionIncidenceModel::expected_num_new_infections(OM::Host::Human& hum
     // Setting this option to true will only affect reporting
     if (params().vaccine_genotype == false)
         //Introduce the effect of vaccination. Note that this does not affect cumEIR.
-        expected_num_infections *= human.vaccine.getFactor(interventions::Vaccine::PEV);
+        expected_num_infections *= human.vaccine.get_factor(interventions::vaccines::PEV);
 
     //Update pre-erythrocytic immunity
     cumulative_eir_a += effective_eir;

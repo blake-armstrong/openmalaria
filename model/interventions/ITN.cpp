@@ -34,30 +34,30 @@ namespace interventions {
 
 // —————  utility classes (internal use only)  —————
 
-void factors::SurvivalFactor::init(const scnXml::ITNKillingEffect& elt, double maxInsecticide, const char* eltName,
-                                   bool isDeterrent) {
-    useLogitEqns = false;
-    a.BF = elt.getBaseFactor();
-    a.HF = elt.getHoleFactor();
-    a.PF = elt.getInsecticideFactor();
+void factors::SurvivalFactor::init(const scnXml::ITNKillingEffect& elt, double max_insecticide, const char* elt_name,
+                                   bool is_deterrent) {
+    use_logit_eqns = false;
+    a.bf = elt.getBaseFactor();
+    a.hf = elt.getHoleFactor();
+    a.pf = elt.getInsecticideFactor();
     a.IF = elt.getInteractionFactor();
-    a.holeScaling = elt.getHoleScalingFactor();
-    a.insecticideScaling = elt.getInsecticideScalingFactor();
-    a.invBaseSurvival = 1.0 / (1.0 - a.BF);
-    if (!(a.BF >= 0.0 && a.BF < 1.0)) {
+    a.hole_scaling = elt.getHoleScalingFactor();
+    a.insecticide_scaling = elt.getInsecticideScalingFactor();
+    a.inv_base_survival = 1.0 / (1.0 - a.bf);
+    if (!(a.bf >= 0.0 && a.bf < 1.0)) {
         ostringstream msg;
-        msg << eltName << ": expected baseFactor to be in range [0,1]";
+        msg << elt_name << ": expected baseFactor to be in range [0,1]";
         throw util::xml_scenario_error(msg.str());
     }
-    if (!(a.holeScaling >= 0.0 && a.insecticideScaling >= 0.0)) {
+    if (!(a.hole_scaling >= 0.0 && a.insecticide_scaling >= 0.0)) {
         ostringstream msg;
-        msg << eltName << ": expected scaling factors to be non-negative";
+        msg << elt_name << ": expected scaling factors to be non-negative";
         throw util::xml_scenario_error(msg.str());
     }
     // see below
-    double pmax = 1.0 - exp(-maxInsecticide * a.insecticideScaling);
+    double pmax = 1.0 - exp(-max_insecticide * a.insecticide_scaling);
 
-    if (isDeterrent) {
+    if (is_deterrent) {
         // Note: the following argument is a modification of the one below
         // (when !isDeterrent). The original may make more sense.
         /* We want K ≥ 0 where K is the killing factor:
@@ -114,14 +114,14 @@ void factors::SurvivalFactor::init(const scnXml::ITNKillingEffect& elt, double m
     impose a maximum value on the initial insecticide content, Pmax, such that
     the probability of sampling a value from our parameterise normal
     distribution greater than Pmax is 0.001. */
-        if (!(a.BF + a.HF >= 0.0 && a.BF + a.PF * pmax >= 0.0 && a.BF + a.HF + (a.PF + a.IF) * pmax >= 0.0)) {
+        if (!(a.bf + a.hf >= 0.0 && a.bf + a.pf * pmax >= 0.0 && a.bf + a.hf + (a.pf + a.IF) * pmax >= 0.0)) {
             ostringstream msg;
-            msg << eltName << ": bounds not met:";
-            if (!(a.BF + a.HF >= 0.0))
+            msg << elt_name << ": bounds not met:";
+            if (!(a.bf + a.hf >= 0.0))
                 msg << " baseFactor+holeFactor≥0";
-            if (!(a.BF + a.PF * pmax >= 0.0))
+            if (!(a.bf + a.pf * pmax >= 0.0))
                 msg << " baseFactor+" << pmax << "×insecticideFactor≥0";
-            if (!(a.PF + a.HF + (a.PF + a.IF) * pmax >= 0.0))
+            if (!(a.pf + a.hf + (a.pf + a.IF) * pmax >= 0.0))
                 msg << " baseFactor+holeFactor+" << pmax << "×(insecticideFactor+interactionFactor)≥0";
             throw util::xml_scenario_error(msg.str());
         }
@@ -191,117 +191,117 @@ void factors::SurvivalFactor::init(const scnXml::ITNKillingEffect& elt, double m
     impose a maximum value on the initial insecticide content, Pmax, such that
     the probability of sampling a value from our parameterise normal
     distribution greater than Pmax is 0.001. */
-        if (!(a.BF + a.HF <= 1.0 && a.HF >= 0.0 && a.BF + a.PF * pmax <= 1.0 && a.PF >= 0.0 &&
-              a.BF + a.HF + (a.PF + a.IF) * pmax <= 1.0 && a.HF + (a.PF + a.IF) * pmax >= 0.0)) {
+        if (!(a.bf + a.hf <= 1.0 && a.hf >= 0.0 && a.bf + a.pf * pmax <= 1.0 && a.pf >= 0.0 &&
+              a.bf + a.hf + (a.pf + a.IF) * pmax <= 1.0 && a.hf + (a.pf + a.IF) * pmax >= 0.0)) {
             ostringstream msg;
-            msg << eltName << ": bounds not met:";
-            if (!(a.BF + a.HF <= 1.0))
+            msg << elt_name << ": bounds not met:";
+            if (!(a.bf + a.hf <= 1.0))
                 msg << " baseFactor+holeFactor≤1";
-            if (!(a.HF >= 0.0))
+            if (!(a.hf >= 0.0))
                 msg << " holeFactor≥0";
-            if (!(a.BF + a.PF * pmax <= 1.0))
+            if (!(a.bf + a.pf * pmax <= 1.0))
                 msg << " baseFactor+" << pmax << "×insecticideFactor≤1";
-            if (!(a.PF >= 0.0))
+            if (!(a.pf >= 0.0))
                 msg << " insecticideFactor≥0"; // if this fails, we know pmax>0 (since it is in any case non-negative) — well, or an NaN
-            if (!(a.PF + a.HF + (a.PF + a.IF) * pmax <= 1.0))
+            if (!(a.pf + a.hf + (a.pf + a.IF) * pmax <= 1.0))
                 msg << " baseFactor+holeFactor+" << pmax << "×(insecticideFactor+interactionFactor)≤1";
-            if (!(a.HF + (a.PF + a.IF) * pmax >= 0.0))
+            if (!(a.hf + (a.pf + a.IF) * pmax >= 0.0))
                 msg << " holeFactor+" << pmax << "×(insecticideFactor+interactionFactor)≥0";
             throw util::xml_scenario_error(msg.str());
         }
     }
 }
 
-void factors::SurvivalFactor::initLogit(const scnXml::ITNEffectLogit& elt, double holeIndexMax, bool isDeterrent) {
-    useLogitEqns = true;
-    b.BF = elt.getBaseFactor();
-    b.HF = elt.getHoleFactor();
-    b.PF = elt.getInsecticideFactor();
+void factors::SurvivalFactor::init_logit(const scnXml::ITNEffectLogit& elt, double hole_index_max, bool is_deterrent) {
+    use_logit_eqns = true;
+    b.bf = elt.getBaseFactor();
+    b.hf = elt.getHoleFactor();
+    b.pf = elt.getInsecticideFactor();
     b.IF = elt.getInteractionFactor();
-    b.hMax = log(holeIndexMax + 1.0);
-    const double x = exp(b.BF + b.HF * b.hMax);
-    if (isDeterrent) {
+    b.h_max = log(hole_index_max + 1.0);
+    const double x = exp(b.bf + b.hf * b.h_max);
+    if (is_deterrent) {
         // pAtt0 =x/(x+1); this is 1/pAtt0:
-        b.invBaseEffect = (x + 1.0) / x;
+        b.inv_base_effect = (x + 1.0) / x;
     } else {
         // K0 = x/(x+1), so 1/(1-K0) = x+1:
-        b.invBaseEffect = x + 1.0;
+        b.inv_base_effect = x + 1.0;
 
         // We expect K >= K0 and deduce these "advisory limits":
-        if (b.PF < 0.0 || b.PF + b.IF * b.hMax < 0.0) {
+        if (b.pf < 0.0 || b.pf + b.IF * b.h_max < 0.0) {
             cerr << "ITN.description.anophelesParams.*KillingEffectLogit: expected"
-                 << "\n(insecticide) P >= 0, found P = " << b.PF
-                 << "\n(interaction) P+I*log(holeIndexMax+1) >= 0, found " << b.PF + b.IF * b.hMax << endl;
+                 << "\n(insecticide) P >= 0, found P = " << b.pf
+                 << "\n(interaction) P+I*log(holeIndexMax+1) >= 0, found " << b.pf + b.IF * b.h_max << endl;
         }
     }
 }
 
 void factors::SurvivalFactor::init1() {
-    useLogitEqns = false;
-    a.invBaseSurvival = 1.0;
-    a.BF = 0.0;
-    a.HF = 0.0;
-    a.PF = 0.0;
+    use_logit_eqns = false;
+    a.inv_base_survival = 1.0;
+    a.bf = 0.0;
+    a.hf = 0.0;
+    a.pf = 0.0;
     a.IF = 0.0;
-    a.insecticideScaling = 0.0;
-    a.holeScaling = 0.0;
+    a.insecticide_scaling = 0.0;
+    a.hole_scaling = 0.0;
 }
 
-double factors::SurvivalFactor::rel_pAtt(double holeIndex, double insecticideContent) const {
-    if (!useLogitEqns) {
-        const double holeComponent = exp(-holeIndex * a.holeScaling);
-        const double insecticideComponent = 1.0 - exp(-insecticideContent * a.insecticideScaling);
-        const double pAtt =
-            a.BF + a.HF * holeComponent + a.PF * insecticideComponent + a.IF * holeComponent * insecticideComponent;
-        assert(pAtt >= 0.0);
-        return pAtt / a.BF;
+double factors::SurvivalFactor::rel_p_att(double hole_index, double insecticide_content) const {
+    if (!use_logit_eqns) {
+        const double hole_component = exp(-hole_index * a.hole_scaling);
+        const double insecticide_component = 1.0 - exp(-insecticide_content * a.insecticide_scaling);
+        const double p_att =
+            a.bf + a.hf * hole_component + a.pf * insecticide_component + a.IF * hole_component * insecticide_component;
+        assert(p_att >= 0.0);
+        return p_att / a.bf;
     } else {
-        const double holeComponent = min(log(holeIndex + 1.0), b.hMax);
-        const double insecticideComponent = log(insecticideContent + 1.0);
-        const double x = exp(b.BF + b.HF * holeComponent + b.PF * insecticideComponent +
-                             b.IF * holeComponent * insecticideComponent);
-        const double pAtt = x / (x + 1.0);
+        const double hole_component = min(log(hole_index + 1.0), b.h_max);
+        const double insecticide_component = log(insecticide_content + 1.0);
+        const double x = exp(b.bf + b.hf * hole_component + b.pf * insecticide_component +
+                             b.IF * hole_component * insecticide_component);
+        const double p_att = x / (x + 1.0);
 
         // By construction, this is non-negative:
-        return pAtt * b.invBaseEffect;
+        return p_att * b.inv_base_effect;
     }
 }
 
-double factors::SurvivalFactor::survivalFactor(double holeIndex, double insecticideContent) const {
-    if (!useLogitEqns) {
-        double holeComponent = exp(-holeIndex * a.holeScaling);
-        double insecticideComponent = 1.0 - exp(-insecticideContent * a.insecticideScaling);
-        double killingEffect =
-            a.BF + a.HF * holeComponent + a.PF * insecticideComponent + a.IF * holeComponent * insecticideComponent;
+double factors::SurvivalFactor::survival_factor(double hole_index, double insecticide_content) const {
+    if (!use_logit_eqns) {
+        double hole_component = exp(-hole_index * a.hole_scaling);
+        double insecticide_component = 1.0 - exp(-insecticide_content * a.insecticide_scaling);
+        double killing_effect =
+            a.bf + a.hf * hole_component + a.pf * insecticide_component + a.IF * hole_component * insecticide_component;
 
-        double survivalFactor = (1.0 - killingEffect) * a.invBaseSurvival;
-        assert(killingEffect <= 1.0);
+        double survival_factor = (1.0 - killing_effect) * a.inv_base_survival;
+        assert(killing_effect <= 1.0);
         // survivalFactor might be out of bounds due to precision error, see #49
-        if (survivalFactor < 0.0)
+        if (survival_factor < 0.0)
             return 0.0;
-        else if (survivalFactor > 1.0)
+        else if (survival_factor > 1.0)
             return 1.0;
-        return survivalFactor;
+        return survival_factor;
     } else {
-        const double holeComponent = min(log(holeIndex + 1.0), b.hMax);
-        const double insecticideComponent = log(insecticideContent + 1.0);
-        const double x = exp(b.BF + b.HF * holeComponent + b.PF * insecticideComponent +
-                             b.IF * holeComponent * insecticideComponent);
+        const double hole_component = min(log(hole_index + 1.0), b.h_max);
+        const double insecticide_component = log(insecticide_content + 1.0);
+        const double x = exp(b.bf + b.hf * hole_component + b.pf * insecticide_component +
+                             b.IF * hole_component * insecticide_component);
         // K = x/(x+1), so (1-K) = 1/(x+1):
         const double surv = 1.0 / (x + 1.0);
 
-        return surv * b.invBaseEffect;
+        return surv * b.inv_base_effect;
     }
 }
 
-void factors::RelativeAttractiveness::initSingleStage(const scnXml::ITNDeterrency& elt, double maxInsecticide) {
-    model = SINGLE_STAGE;
-    double HF = elt.getHoleFactor();
-    double PF = elt.getInsecticideFactor();
+void factors::RelativeAttractiveness::init_single_stage(const scnXml::ITNDeterrency& elt, double max_insecticide) {
+    model = SingleStage;
+    double hf = elt.getHoleFactor();
+    double pf = elt.getInsecticideFactor();
     double IF = elt.getInteractionFactor();
-    a.holeScaling = elt.getHoleScalingFactor();
-    a.insecticideScaling = elt.getInsecticideScalingFactor();
-    if (!(a.holeScaling >= 0.0 && a.insecticideScaling >= 0.0)) {
+    a.hole_scaling = elt.getHoleScalingFactor();
+    a.insecticide_scaling = elt.getInsecticideScalingFactor();
+    if (!(a.hole_scaling >= 0.0 && a.insecticide_scaling >= 0.0)) {
         throw util::xml_scenario_error(
             "ITN.description.anophelesParams.deterrency: expected scaling factors to be non-negative");
     }
@@ -336,38 +336,38 @@ void factors::RelativeAttractiveness::initSingleStage(const scnXml::ITNDeterrenc
      * Weaker limits would not be sufficient, as with the argument for the
      * limits of killing effect arguments below. */
     // Print out a warning if nets may increase transmission.
-    double pmax = 1.0 - exp(-maxInsecticide * a.insecticideScaling);
-    if (!(HF > 0.0 && PF > 0.0 && IF > 0.0 && HF <= 1.0 && PF <= 1.0 && HF * pow(PF * IF, pmax) <= 1.0)) {
+    double pmax = 1.0 - exp(-max_insecticide * a.insecticide_scaling);
+    if (!(hf > 0.0 && pf > 0.0 && IF > 0.0 && hf <= 1.0 && pf <= 1.0 && hf * pow(pf * IF, pmax) <= 1.0)) {
         cerr << "Note: since the following bounds are not met, the ITN could make humans more\n";
         cerr << "attractive to mosquitoes than they would be without a net.\n";
         cerr << "ITN.description.anophelesParams.deterrency: bounds not met:\n";
-        if (!(HF > 0.0))
+        if (!(hf > 0.0))
             cerr << "  holeFactor>0\n";
-        if (!(PF > 0.0))
+        if (!(pf > 0.0))
             cerr << "  insecticideFactor>0\n";
         if (!(IF > 0.0))
             cerr << "  interactionFactor>0\n";
-        if (!(HF <= 1.0))
+        if (!(hf <= 1.0))
             cerr << "  holeFactor≤1\n";
-        if (!(PF <= 1.0))
+        if (!(pf <= 1.0))
             cerr << "  insecticideFactor≤1\n";
-        if (!(HF * pow(PF * IF, pmax) <= 1.0))
+        if (!(hf * pow(pf * IF, pmax) <= 1.0))
             cerr << "  holeFactor×(insecticideFactor×interactionFactor)^" << pmax << "≤1\n";
         cerr.flush();
     }
-    a.lHF = log(HF);
-    a.lPF = log(PF);
-    a.lIF = log(IF);
+    a.l_hf = log(hf);
+    a.l_pf = log(pf);
+    a.l_if = log(IF);
 }
 
-void factors::RelativeAttractiveness::initTwoStage(const scnXml::TwoStageDeterrency& elt, double maxInsecticide,
-                                                   double holeIndexMax, bool holeIndexMaxPresent) {
-    b.lPFEntering = numeric_limits<double>::quiet_NaN();
+void factors::RelativeAttractiveness::init_two_stage(const scnXml::TwoStageDeterrency& elt, double max_insecticide,
+                                                     double hole_index_max, bool hole_index_max_present) {
+    b.l_pf_entering = numeric_limits<double>::quiet_NaN();
     if (elt.getEntering().present()) {
-        model = TWO_STAGE;
-        const double PF = elt.getEntering().get().getInsecticideFactor();
-        b.insecticideScalingEntering = elt.getEntering().get().getInsecticideScalingFactor();
-        if (!(PF > 0.0)) {
+        model = TwoStage;
+        const double pf = elt.getEntering().get().getInsecticideFactor();
+        b.insecticide_scaling_entering = elt.getEntering().get().getInsecticideScalingFactor();
+        if (!(pf > 0.0)) {
             // we take the log of PF, so it must be positive
             ostringstream msg;
             msg << "ITN.description.anophelesParams.twoStageDeterrency.entering: insecticideFactor must be positive "
@@ -388,53 +388,53 @@ void factors::RelativeAttractiveness::initTwoStage(const scnXml::TwoStageDeterre
         *  p=1−exp(-insecticideContent*insecticideScalingFactor).
         * We therefore just need PF ≤ 1. */
         // Print out a warning if ITNs may increase transmission.
-        if (!(PF <= 1.0)) {
+        if (!(pf <= 1.0)) {
             cerr << "Note: since the following bounds are not met, the IRS could make humans more\n";
             cerr << "attractive to mosquitoes than they would be without IRS.\n";
             cerr << "IRS.description.anophelesParams.deterrency: bounds not met:\n";
             cerr << "  0<insecticideFactor≤1\n";
             cerr.flush();
         }
-        b.lPFEntering = log(PF);
+        b.l_pf_entering = log(pf);
     } else {
         assert(elt.getEnteringLogit().present());
-        model = TWO_STAGE_LOGIT;
-        c.entBaseFactor = elt.getEnteringLogit().get().getBaseFactor();
-        c.entInsecticideFactor = elt.getEnteringLogit().get().getInsecticideFactor();
-        if (c.entInsecticideFactor > 0.0) {
+        model = TwoStageLogit;
+        c.ent_base_factor = elt.getEnteringLogit().get().getBaseFactor();
+        c.ent_insecticide_factor = elt.getEnteringLogit().get().getInsecticideFactor();
+        if (c.ent_insecticide_factor > 0.0) {
             cerr << "ITN.description.anophelesParams.twoStageDeterrency.enteringLogit: \n"
                  << "insecticideFactor should be negative to for nets to reduce chance of entering." << endl;
         }
         // pre-calculate for efficieny:
-        c.pEnt0Inv = (exp(c.entBaseFactor) + 1.0) / exp(c.entBaseFactor);
+        c.p_ent0_inv = (exp(c.ent_base_factor) + 1.0) / exp(c.ent_base_factor);
     }
 
     // Note: b.pAttacking and c.pAttacking overlap, so we can use either:
     if (elt.getAttacking().present()) {
-        b.pAttacking.init(elt.getAttacking().get(), maxInsecticide,
-                          "ITN.description.anophelesParams.twoStageDeterrency.attacking", true);
+        b.p_attacking.init(elt.getAttacking().get(), max_insecticide,
+                           "ITN.description.anophelesParams.twoStageDeterrency.attacking", true);
     } else {
         assert(elt.getAttackingLogit().present());
-        if (!holeIndexMax) {
+        if (!hole_index_max) {
             throw util::xml_scenario_error(
                 "ITN.description.anophelesParams: holeIndexMax required when using logit attacking deterrency");
         }
-        b.pAttacking.initLogit(elt.getAttackingLogit().get(), holeIndexMax, true);
+        b.p_attacking.init_logit(elt.getAttackingLogit().get(), hole_index_max, true);
     }
 }
 
-double factors::RelativeAttractiveness::relativeAttractiveness(double holeIndex, double insecticideContent) const {
-    if (model == SINGLE_STAGE) {
-        double holeComponent = exp(-holeIndex * a.holeScaling);
-        double insecticideComponent = 1.0 - exp(-insecticideContent * a.insecticideScaling);
-        double relAvail =
-            exp(a.lHF * holeComponent + a.lPF * insecticideComponent + a.lIF * holeComponent * insecticideComponent);
-        assert(relAvail >= 0.0);
-        return relAvail;
+double factors::RelativeAttractiveness::relative_attractiveness(double hole_index, double insecticide_content) const {
+    if (model == SingleStage) {
+        double hole_component = exp(-hole_index * a.hole_scaling);
+        double insecticide_component = 1.0 - exp(-insecticide_content * a.insecticide_scaling);
+        double rel_avail = exp(a.l_hf * hole_component + a.l_pf * insecticide_component +
+                               a.l_if * hole_component * insecticide_component);
+        assert(rel_avail >= 0.0);
+        return rel_avail;
     }
 
     double factor = numeric_limits<double>::quiet_NaN();
-    if (model == TWO_STAGE) {
+    if (model == TwoStage) {
         // This is essentially a combination of the relative attractiveness as used
         // by IRS and a killing factor.
 
@@ -443,49 +443,49 @@ double factors::RelativeAttractiveness::relativeAttractiveness(double holeIndex,
         // the logarithm of PF):
         // pEnt = 1 - PFEntering × insecticideComponent
 
-        const double insecticideComponent = 1.0 - exp(-insecticideContent * b.insecticideScalingEntering);
-        const double pEnt = exp(b.lPFEntering * insecticideComponent);
+        const double insecticide_component = 1.0 - exp(-insecticide_content * b.insecticide_scaling_entering);
+        const double p_ent = exp(b.l_pf_entering * insecticide_component);
         // In this model, effect with 0 insectice, pEnt0 = exp(0) = 1, hence we don't need to
         // divide by a denominator like in the logit model:
-        factor = pEnt;
+        factor = p_ent;
     } else {
-        assert(model == TWO_STAGE_LOGIT);
-        const double p = log(insecticideContent + 1.0);
+        assert(model == TwoStageLogit);
+        const double p = log(insecticide_content + 1.0);
         // We directly take the exponential (this is exp(logit.pEnt0):
-        const double q = exp(c.entBaseFactor + c.entInsecticideFactor * p);
-        const double pEnt = q / (q + 1.0);
-        factor = pEnt * c.pEnt0Inv;
+        const double q = exp(c.ent_base_factor + c.ent_insecticide_factor * p);
+        const double p_ent = q / (q + 1.0);
+        factor = p_ent * c.p_ent0_inv;
     }
     assert(factor >= 0.0);
 
     // Note: b.pAttacking and c.pAttacking overlap, so we can use either:
-    const double rel_pAtt = b.pAttacking.rel_pAtt(holeIndex, insecticideContent);
-    return factor * rel_pAtt;
+    const double rel_p_att = b.p_attacking.rel_p_att(hole_index, insecticide_content);
+    return factor * rel_p_att;
 }
 
 // —————  main, public classes  —————
 
 ITNComponent::ITNComponent(ComponentId id, const scnXml::ITNDescription& elt,
                            const map<string, size_t>& species_name_map)
-    : Transmission::HumanVectorInterventionComponent(id), ripFactor(numeric_limits<double>::signaling_NaN()) {
-    initialInsecticide.setParams(elt.getInitialInsecticide());
-    const double maxProp = 0.999; //NOTE: this could be exposed in XML, but probably doesn't need to be
-    maxInsecticide = R::qnorm5(maxProp, initialInsecticide.getMu(), initialInsecticide.getSigma(), true, false);
-    holeRate = util::createSampler(elt.getHoleRate()); // per year
-    holeRate->scaleMean(Sim::years_per_step());        // convert to per step
-    ripRate = util::createSampler(elt.getRipRate());
-    ripRate->scaleMean(Sim::years_per_step());
-    ripFactor = elt.getRipFactor().getValue();
-    insecticideDecay = DecayFunction::makeObject(elt.getInsecticideDecay(), "ITNDescription.insecticideDecay");
-    attritionOfNets = DecayFunction::makeObject(elt.getAttritionOfNets(), "ITNDescription.attritionOfNets");
+    : Transmission::HumanVectorInterventionComponent(id), rip_factor(numeric_limits<double>::signaling_NaN()) {
+    initial_insecticide.setParams(elt.getInitialInsecticide());
+    const double max_prop = 0.999; //NOTE: this could be exposed in XML, but probably doesn't need to be
+    max_insecticide = R::qnorm5(max_prop, initial_insecticide.getMu(), initial_insecticide.getSigma(), true, false);
+    hole_rate = util::createSampler(elt.getHoleRate()); // per year
+    hole_rate->scaleMean(Sim::years_per_step());        // convert to per step
+    rip_rate = util::createSampler(elt.getRipRate());
+    rip_rate->scaleMean(Sim::years_per_step());
+    rip_factor = elt.getRipFactor().getValue();
+    insecticide_decay = DecayFunction::makeObject(elt.getInsecticideDecay(), "ITNDescription.insecticideDecay");
+    attrition_of_nets = DecayFunction::makeObject(elt.getAttritionOfNets(), "ITNDescription.attritionOfNets");
     // assume usage modifier is 100% if none is specified
-    double propUse;
+    double prop_use;
     if (elt.getUsage().present()) {
-        propUse = elt.getUsage().get().getValue();
+        prop_use = elt.getUsage().get().getValue();
     } else {
-        propUse = 1.0;
+        prop_use = 1.0;
     }
-    if (!(propUse >= 0.0 && propUse <= 1.0)) {
+    if (!(prop_use >= 0.0 && prop_use <= 1.0)) {
         throw util::xml_scenario_error("ITN.description.proportionUse: must be within range [0,1]");
     }
 
@@ -494,7 +494,7 @@ ITNComponent::ITNComponent(ComponentId id, const scnXml::ITNDescription& elt,
     species.resize(species_name_map.size());
     util::SpeciesIndexChecker checker("ITN", species_name_map);
     for (AP::const_iterator it = ap.begin(); it != ap.end(); ++it) {
-        species[checker.getIndex(it->getMosquito())].init(*it, propUse, maxInsecticide);
+        species[checker.getIndex(it->getMosquito())].init(*it, prop_use, max_insecticide);
     }
     checker.checkNoneMissed();
 }
@@ -504,7 +504,7 @@ void ITNComponent::deploy(Host::Human& human, mon::Deploy::Method method, Vaccin
     mon::recordDeploy(mon::measure("nMassITNs"), mon::measure("nEPI_ITNs"), human, method);
 }
 
-Component::Type ITNComponent::componentType() const { return Component::ITN; }
+component_types::Type ITNComponent::component_type() const { return component_types::ITN; }
 
 void ITNComponent::print_details(std::ostream& out) const { out << id().id << "\tITN"; }
 
@@ -515,177 +515,177 @@ unique_ptr<PerHostInterventionData> ITNComponent::make_human_part(istream& strea
     return unique_ptr<PerHostInterventionData>(new HumanITN(stream, id, *this));
 }
 
-void ITNComponent::ITNAnopheles::init(const scnXml::ITNDescription::AnophelesParamsType& elt, double proportionUse,
-                                      double maxInsecticide) {
-    bool holeIndexMaxPresent = false;
+void ITNComponent::ITNAnopheles::init(const scnXml::ITNDescription::AnophelesParamsType& elt, double proportion_use,
+                                      double max_insecticide) {
+    bool hole_index_max_present = false;
 
-    double holeIndexMax = 0.0;
+    double hole_index_max = 0.0;
     if (elt.getHoleIndexMax().present()) {
-        holeIndexMax = elt.getHoleIndexMax().get().getValue();
-        holeIndexMaxPresent = true;
+        hole_index_max = elt.getHoleIndexMax().get().getValue();
+        hole_index_max_present = true;
     }
 
     if (elt.getDeterrency().present()) {
-        relAttractiveness.initSingleStage(elt.getDeterrency().get(), maxInsecticide);
+        rel_attractiveness.init_single_stage(elt.getDeterrency().get(), max_insecticide);
     } else {
         assert(elt.getTwoStageDeterrency().present());
-        relAttractiveness.initTwoStage(elt.getTwoStageDeterrency().get(), maxInsecticide, holeIndexMax,
-                                       holeIndexMaxPresent);
+        rel_attractiveness.init_two_stage(elt.getTwoStageDeterrency().get(), max_insecticide, hole_index_max,
+                                          hole_index_max_present);
     }
     if (elt.getPreprandialKillingEffect().present()) {
-        preprandialKillingEffect.init(elt.getPreprandialKillingEffect().get(), maxInsecticide,
-                                      "ITN.description.anophelesParams.preprandialKillingFactor", false);
+        preprandial_killing_effect.init(elt.getPreprandialKillingEffect().get(), max_insecticide,
+                                        "ITN.description.anophelesParams.preprandialKillingFactor", false);
     } else {
         assert(elt.getPreprandialKillingEffectLogit().present());
-        if (!holeIndexMax) {
+        if (!hole_index_max) {
             throw util::xml_scenario_error(
                 "ITN.description.anophelesParams: holeIndexMax required when using logit killing effect");
         }
-        preprandialKillingEffect.initLogit(elt.getPreprandialKillingEffectLogit().get(), holeIndexMax, false);
+        preprandial_killing_effect.init_logit(elt.getPreprandialKillingEffectLogit().get(), hole_index_max, false);
     }
     if (elt.getPostprandialKillingEffect().present()) {
-        postprandialKillingEffect.init(elt.getPostprandialKillingEffect().get(), maxInsecticide,
-                                       "ITN.description.anophelesParams.postprandialKillingFactor", false);
+        postprandial_killing_effect.init(elt.getPostprandialKillingEffect().get(), max_insecticide,
+                                         "ITN.description.anophelesParams.postprandialKillingFactor", false);
     } else {
         assert(elt.getPostprandialKillingEffectLogit().present());
-        if (!holeIndexMax) {
+        if (!hole_index_max) {
             throw util::xml_scenario_error(
                 "ITN.description.anophelesParams: holeIndexMax required when using logit killing effect");
         }
-        postprandialKillingEffect.initLogit(elt.getPostprandialKillingEffectLogit().get(), holeIndexMax, false);
+        postprandial_killing_effect.init_logit(elt.getPostprandialKillingEffectLogit().get(), hole_index_max, false);
     }
     if (elt.getFecundityReduction().present()) {
-        relFecundityEffect.init(elt.getFecundityReduction().get(), maxInsecticide,
-                                "ITN.description.anophelesParams.fecundityReduction", false);
+        rel_fecundity_effect.init(elt.getFecundityReduction().get(), max_insecticide,
+                                  "ITN.description.anophelesParams.fecundityReduction", false);
     } else if (elt.getFecundityReductionLogit().present()) {
-        if (!holeIndexMax) {
+        if (!hole_index_max) {
             throw util::xml_scenario_error(
                 "ITN.description.anophelesParams: holeIndexMax required when using logit fecundity effect");
         }
-        relFecundityEffect.initLogit(elt.getFecundityReductionLogit().get(), holeIndexMax, false);
+        rel_fecundity_effect.init_logit(elt.getFecundityReductionLogit().get(), hole_index_max, false);
     } else {
-        relFecundityEffect.init1();
+        rel_fecundity_effect.init1();
     }
     // Nets only affect people while they're using the net. NOTE: we may want
     // to revise this at some point (heterogeneity, seasonal usage patterns).
-    double propActive = elt.getPropActive();
-    if (propActive != 1.0 && propActive != 0.0)
+    double prop_active = elt.getPropActive();
+    if (prop_active != 1.0 && prop_active != 0.0)
         throw util::xml_scenario_error("GVI.description.propActive: must be either 0 or 1");
-    assert(proportionUse >= 0.0 && proportionUse <= 1.0);
-    assert(propActive >= 0.0 && propActive <= 1.0);
-    proportionProtected = proportionUse * propActive;
-    proportionUnprotected = 1.0 - proportionProtected;
+    assert(proportion_use >= 0.0 && proportion_use <= 1.0);
+    assert(prop_active >= 0.0 && prop_active <= 1.0);
+    proportion_protected = proportion_use * prop_active;
+    proportion_unprotected = 1.0 - proportion_protected;
 }
 
 HumanITN::HumanITN(LocalRng& rng, const ITNComponent& params)
-    : PerHostInterventionData(params.id()), nHoles(0), holeIndex(0.0), component(&params) {
+    : PerHostInterventionData(params.id()), n_holes(0), hole_index(0.0), component(&params) {
     // Net rips and insecticide loss are assumed to co-vary dependent on
     // handling of net. They are sampled once per human: human handling is
     // presumed to be the largest cause of variance.
     util::NormalSample x = util::NormalSample::generate(rng);
-    holeRate = params.holeRate->sample(x);
-    ripRate = params.ripRate->sample(x);
-    insecticideDecayHet = params.insecticideDecay->hetSample(x);
+    hole_rate = params.hole_rate->sample(x);
+    rip_rate = params.rip_rate->sample(x);
+    insecticide_decay_het = params.insecticide_decay->hetSample(x);
 
     // Sample per-deployment variables as in redeploy:
-    disposalTime = Sim::now() + params.attritionOfNets->sampleAgeOfDecay(rng);
+    disposal_time = Sim::now() + params.attrition_of_nets->sampleAgeOfDecay(rng);
     // this is sampled independently: initial insecticide content doesn't depend on handling
-    initialInsecticide = params.initialInsecticide.sample(rng);
-    if (initialInsecticide < 0.0)
-        initialInsecticide = 0.0; // avoid negative samples
-    if (initialInsecticide > params.maxInsecticide)
-        initialInsecticide = params.maxInsecticide;
+    initial_insecticide = params.initial_insecticide.sample(rng);
+    if (initial_insecticide < 0.0)
+        initial_insecticide = 0.0; // avoid negative samples
+    if (initial_insecticide > params.max_insecticide)
+        initial_insecticide = params.max_insecticide;
 }
 
 void HumanITN::redeploy(LocalRng& rng, const OM::Transmission::HumanVectorInterventionComponent& params0) {
     const ITNComponent& params = *dynamic_cast<const ITNComponent*>(&params0);
 
     deploy_time = Sim::now_or_ts1();
-    disposalTime = Sim::now_or_ts1() + params.attritionOfNets->sampleAgeOfDecay(rng);
-    nHoles = 0;
-    holeIndex = 0.0;
+    disposal_time = Sim::now_or_ts1() + params.attrition_of_nets->sampleAgeOfDecay(rng);
+    n_holes = 0;
+    hole_index = 0.0;
     // this is sampled independently: initial insecticide content doesn't depend on handling
-    initialInsecticide = params.initialInsecticide.sample(rng);
-    if (initialInsecticide < 0.0)
-        initialInsecticide = 0.0; // avoid negative samples
-    if (initialInsecticide > params.maxInsecticide)
-        initialInsecticide = params.maxInsecticide;
+    initial_insecticide = params.initial_insecticide.sample(rng);
+    if (initial_insecticide < 0.0)
+        initial_insecticide = 0.0; // avoid negative samples
+    if (initial_insecticide > params.max_insecticide)
+        initial_insecticide = params.max_insecticide;
 }
 
 void HumanITN::update(Host::Human& human) {
     const ITNComponent& params = *component;
     if (deploy_time != Sim::never()) {
         // First use is at age 0 relative to ts0()
-        if (Sim::ts0() >= disposalTime) {
+        if (Sim::ts0() >= disposal_time) {
             deploy_time = Sim::never();
             human.removeFromCohort(id());
             return;
         }
 
-        int newHoles = 0;
-        if (holeRate > 0)
-            newHoles = human.intervention_rng.poisson(holeRate);
+        int new_holes = 0;
+        if (hole_rate > 0)
+            new_holes = human.intervention_rng.poisson(hole_rate);
 
-        nHoles += newHoles;
-        holeIndex += newHoles;
+        n_holes += new_holes;
+        hole_index += new_holes;
 
-        double lambda = nHoles * ripRate;
+        double lambda = n_holes * rip_rate;
         if (lambda > 0)
-            holeIndex += params.ripFactor * human.intervention_rng.poisson(lambda);
+            hole_index += params.rip_factor * human.intervention_rng.poisson(lambda);
     }
 }
 
-double HumanITN::relative_attractiveness(size_t speciesIndex) const {
+double HumanITN::relative_attractiveness(size_t species_index) const {
     if (deploy_time == Sim::never())
         return 1.0;
     const ITNComponent& params = *component;
-    const ITNComponent::ITNAnopheles& anoph = params.species[speciesIndex];
-    return anoph.relativeAttractiveness(holeIndex, getInsecticideContent(params));
+    const ITNComponent::ITNAnopheles& anoph = params.species[species_index];
+    return anoph.relative_attractiveness(hole_index, get_insecticide_content(params));
 }
 
-double HumanITN::preprandial_survival_factor(size_t speciesIndex) const {
+double HumanITN::preprandial_survival_factor(size_t species_index) const {
     if (deploy_time == Sim::never())
         return 1.0;
     const ITNComponent& params = *component;
-    const ITNComponent::ITNAnopheles& anoph = params.species[speciesIndex];
-    return anoph.preprandialSurvivalFactor(holeIndex, getInsecticideContent(params));
+    const ITNComponent::ITNAnopheles& anoph = params.species[species_index];
+    return anoph.preprandial_survival_factor(hole_index, get_insecticide_content(params));
 }
 
-double HumanITN::postprandial_survival_factor(size_t speciesIndex) const {
+double HumanITN::postprandial_survival_factor(size_t species_index) const {
     if (deploy_time == Sim::never())
         return 1.0;
     const ITNComponent& params = *component;
-    const ITNComponent::ITNAnopheles& anoph = params.species[speciesIndex];
-    return anoph.postprandialSurvivalFactor(holeIndex, getInsecticideContent(params));
+    const ITNComponent::ITNAnopheles& anoph = params.species[species_index];
+    return anoph.postprandial_survival_factor(hole_index, get_insecticide_content(params));
 }
-double HumanITN::rel_fecundity(size_t speciesIndex) const {
+double HumanITN::rel_fecundity(size_t species_index) const {
     if (deploy_time == Sim::never())
         return 1.0;
     const ITNComponent& params = *component;
-    const ITNComponent::ITNAnopheles& anoph = params.species[speciesIndex];
-    return anoph.relFecundity(holeIndex, getInsecticideContent(params));
+    const ITNComponent::ITNAnopheles& anoph = params.species[species_index];
+    return anoph.rel_fecundity(hole_index, get_insecticide_content(params));
 }
 
 void HumanITN::checkpoint(ostream& stream) {
     deploy_time & stream;
-    disposalTime & stream;
-    nHoles & stream;
-    holeIndex & stream;
-    initialInsecticide & stream;
-    holeRate & stream;
-    ripRate & stream;
-    component->insecticideDecay->checkpointSample(insecticideDecayHet, stream);
+    disposal_time & stream;
+    n_holes & stream;
+    hole_index & stream;
+    initial_insecticide & stream;
+    hole_rate & stream;
+    rip_rate & stream;
+    component->insecticide_decay->checkpointSample(insecticide_decay_het, stream);
 }
 HumanITN::HumanITN(istream& stream, ComponentId id, const ITNComponent& params)
     : PerHostInterventionData(id), component(&params) {
     deploy_time & stream;
-    disposalTime & stream;
-    nHoles & stream;
-    holeIndex & stream;
-    initialInsecticide & stream;
-    holeRate & stream;
-    ripRate & stream;
-    component->insecticideDecay->checkpointSample(insecticideDecayHet, stream);
+    disposal_time & stream;
+    n_holes & stream;
+    hole_index & stream;
+    initial_insecticide & stream;
+    hole_rate & stream;
+    rip_rate & stream;
+    component->insecticide_decay->checkpointSample(insecticide_decay_het, stream);
 }
 
 }

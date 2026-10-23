@@ -290,7 +290,7 @@ public:
      * the given type, where type is one of those interventions deriving the
      * PerHostInterventionData class (in other cases this will always return
      * false). */
-    bool has_active_interv(interventions::Component::Type type) const;
+    bool has_active_interv(interventions::component_types::Type type) const;
 
     /// Checkpointing
     template <class S> void operator&(S& stream) {

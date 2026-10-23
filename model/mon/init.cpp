@@ -211,7 +211,7 @@ void initCohorts(const scnXml::Monitoring& monitoring) {
     const scnXml::Cohorts monCohorts = monitoring.getCohorts().get();
     uint32_t nextId = 0;
     for (auto it = monCohorts.getSubPop().begin(), end = monCohorts.getSubPop().end(); it != end; ++it) {
-        const interventions::ComponentId compId = bridge::intervention_manager().getComponentId(it->getId());
+        const interventions::ComponentId compId = bridge::intervention_manager().get_component_id(it->getId());
         const bool inserted = runtime.cohortSubPopIds.insert(std::make_pair(compId, nextId)).second;
         if (!inserted) {
             throw util::xml_scenario_error(std::string("cohort specification uses sub-population \"")

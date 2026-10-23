@@ -51,8 +51,8 @@ public:
     /// @param eltName  Element name (used in error messages)
     /// @param isDeterrent True when used to describe a deterrency effect, false when used to
     ///     describe a killing effect.
-    void init(const scnXml::ITNKillingEffect& elt, double maxInsecticide, const char* eltName,
-              bool attractivenessConstraints);
+    void init(const scnXml::ITNKillingEffect& elt, double max_insecticide, const char* elt_name,
+              bool attractiveness_constraints);
 
     /// Variant to set paramters for the logit model.
     ///
@@ -60,36 +60,36 @@ public:
     /// @param maxHoleIndex Parameter from parent element in XML
     /// @param isDeterrent True when used to describe a deterrency effect, false when used to
     ///     describe a killing effect.
-    void initLogit(const scnXml::ITNEffectLogit& elt, double maxHoleIndex, bool isDeterrent);
+    void init_logit(const scnXml::ITNEffectLogit& elt, double max_hole_index, bool is_deterrent);
 
     /// Initialise the model to always return no effect (factor 1).
     void init1();
 
     /** Part of survival factor, used by new ITN deterrency model. */
-    double rel_pAtt(double holeIndex, double insecticideContent) const;
+    double rel_p_att(double hole_index, double insecticide_content) const;
     /** Calculate additional survival factor imposed by nets on pre-/post-
         * prandial killing. Should be bounded to [0,1] and tend to 1 as the
         * net ages. */
-    double survivalFactor(double holeIndex, double insecticideContent) const;
+    double survival_factor(double hole_index, double insecticide_content) const;
 
 private:
     union {
         struct {
-            double BF, HF, PF, IF; // base, hole, insecticide and interaction factors
-            double holeScaling, insecticideScaling;
-            double invBaseSurvival; // stored for performance only; ≥1
+            double bf, hf, pf, IF; // base, hole, insecticide and interaction factors
+            double hole_scaling, insecticide_scaling;
+            double inv_base_survival; // stored for performance only; ≥1
         } a;
         struct {
-            double BF, HF, PF, IF;
-            double hMax;
-            double invBaseEffect; // 1 over base effect
+            double bf, hf, pf, IF;
+            double h_max;
+            double inv_base_effect; // 1 over base effect
         } b;
     };
-    bool useLogitEqns;
+    bool use_logit_eqns;
 };
 
 class RelativeAttractiveness {
-    enum DeterrencyModel { NO_MODEL, SINGLE_STAGE, TWO_STAGE, TWO_STAGE_LOGIT };
+    enum DeterrencyModel { NoModel, SingleStage, TwoStage, TwoStageLogit };
 
 public:
     RelativeAttractiveness() : model(0) {}
@@ -99,39 +99,39 @@ public:
          * It is checked that input parameters lie in a range such that
          * the relative availability is always in the range (0,1] — that is,
          * the deterrent can never be perfect, but can have zero effect. */
-    void initSingleStage(const scnXml::ITNDeterrency& elt, double maxInsecticide);
+    void init_single_stage(const scnXml::ITNDeterrency& elt, double max_insecticide);
 
     /** Set parameters for two-stage deterrency model.
          * 
          * It is checked that input parameters lie in a range such that
          * the relative availability is always in the range (0,1] — that is,
          * the deterrent can never be perfect, but can have zero effect. */
-    void initTwoStage(const scnXml::TwoStageDeterrency& elt, double maxInsecticide, double holeIndexMax,
-                      bool holeIndexMaxPresent = false);
+    void init_two_stage(const scnXml::TwoStageDeterrency& elt, double max_insecticide, double hole_index_max,
+                        bool hole_index_max_present = false);
 
     /** Calculate effect. Range of output is any value ≥ 0.
          * 
          * 0 implies a fully effective deterrent, 0.5 a 50% effective
          * deterrent, 1 has no effect, >1 attracts extra mosquitoes. */
-    double relativeAttractiveness(double holeIndex, double insecticideContent) const;
+    double relative_attractiveness(double hole_index, double insecticide_content) const;
 
 private:
     union {
         struct {
-            double lHF, lPF, lIF; // logs of hole, insecticide and interaction factors
-            double holeScaling, insecticideScaling;
+            double l_hf, l_pf, l_if; // logs of hole, insecticide and interaction factors
+            double hole_scaling, insecticide_scaling;
         } a;
         struct {
-            double lPFEntering; // log of insecticide factor
-            double insecticideScalingEntering;
-            double _pad;
-            SurvivalFactor pAttacking;
+            double l_pf_entering; // log of insecticide factor
+            double insecticide_scaling_entering;
+            double pad;
+            SurvivalFactor p_attacking;
         } b;
         struct {
-            double entBaseFactor;
-            double entInsecticideFactor;
-            double pEnt0Inv;
-            SurvivalFactor pAttacking;
+            double ent_base_factor;
+            double ent_insecticide_factor;
+            double p_ent0_inv;
+            SurvivalFactor p_attacking;
         } c;
     };
     int model;
@@ -146,7 +146,7 @@ public:
 
     virtual void deploy(Host::Human& human, mon::Deploy::Method method, VaccineLimits) const;
 
-    virtual Component::Type componentType() const;
+    virtual component_types::Type component_type() const;
 
     virtual void print_details(std::ostream& out) const;
 
@@ -158,51 +158,52 @@ private:
     class ITNAnopheles {
     public:
         ITNAnopheles()
-            : proportionProtected(numeric_limits<double>::signaling_NaN()),
-              proportionUnprotected(numeric_limits<double>::signaling_NaN()) {}
-        void init(const scnXml::ITNDescription::AnophelesParamsType& elt, double proportionUse, double maxInsecticide);
+            : proportion_protected(numeric_limits<double>::signaling_NaN()),
+              proportion_unprotected(numeric_limits<double>::signaling_NaN()) {}
+        void init(const scnXml::ITNDescription::AnophelesParamsType& elt, double proportion_use,
+                  double max_insecticide);
 
         /// Get deterrency. See ComponentParams::effect for a more detailed description.
         /// Range: ≥0 where 0=fullly deter, 1=no effect, >1 = attract
-        inline double relativeAttractiveness(double holeIndex, double insecticideContent) const {
-            return byProtection(relAttractiveness.relativeAttractiveness(holeIndex, insecticideContent));
+        inline double relative_attractiveness(double hole_index, double insecticide_content) const {
+            return by_protection(rel_attractiveness.relative_attractiveness(hole_index, insecticide_content));
         }
         /// Get killing effect on mosquitoes before feeding.
         /// See ComponentParams::effect for a more detailed description.
-        inline double preprandialSurvivalFactor(double holeIndex, double insecticideContent) const {
-            return byProtection(preprandialKillingEffect.survivalFactor(holeIndex, insecticideContent));
+        inline double preprandial_survival_factor(double hole_index, double insecticide_content) const {
+            return by_protection(preprandial_killing_effect.survival_factor(hole_index, insecticide_content));
         }
         /// Get killing effect on mosquitoes after they've eaten.
         /// See ComponentParams::effect for a more detailed description.
-        inline double postprandialSurvivalFactor(double holeIndex, double insecticideContent) const {
-            return byProtection(postprandialKillingEffect.survivalFactor(holeIndex, insecticideContent));
+        inline double postprandial_survival_factor(double hole_index, double insecticide_content) const {
+            return by_protection(postprandial_killing_effect.survival_factor(hole_index, insecticide_content));
         }
         /// Get mosquito fecundity multiplier
-        inline double relFecundity(double holeIndex, double insecticideContent) const {
-            return byProtection(relFecundityEffect.survivalFactor(holeIndex, insecticideContent));
+        inline double rel_fecundity(double hole_index, double insecticide_content) const {
+            return by_protection(rel_fecundity_effect.survival_factor(hole_index, insecticide_content));
         }
 
         /// Return x*proportionProtected + proportionUnprotected
-        inline double byProtection(double x) const { return x * proportionProtected + proportionUnprotected; }
+        inline double by_protection(double x) const { return x * proportion_protected + proportion_unprotected; }
 
     private:
-        double proportionProtected;
-        double proportionUnprotected;
-        factors::RelativeAttractiveness relAttractiveness;
-        factors::SurvivalFactor preprandialKillingEffect;
-        factors::SurvivalFactor postprandialKillingEffect;
-        factors::SurvivalFactor relFecundityEffect;
+        double proportion_protected;
+        double proportion_unprotected;
+        factors::RelativeAttractiveness rel_attractiveness;
+        factors::SurvivalFactor preprandial_killing_effect;
+        factors::SurvivalFactor postprandial_killing_effect;
+        factors::SurvivalFactor rel_fecundity_effect;
 
         friend class HumanITN;
     };
 
-    NormalSampler initialInsecticide;
-    unique_ptr<LognormalSampler> holeRate; // holes per step
-    unique_ptr<LognormalSampler> ripRate;  // rips per hole per step
-    double maxInsecticide;                 // maximum initial insecticide
-    double ripFactor;                      // factor expressing how significant rips are in comparison to holes
-    unique_ptr<DecayFunction> insecticideDecay;
-    unique_ptr<DecayFunction> attritionOfNets;
+    NormalSampler initial_insecticide;
+    unique_ptr<LognormalSampler> hole_rate; // holes per step
+    unique_ptr<LognormalSampler> rip_rate;  // rips per hole per step
+    double max_insecticide;                 // maximum initial insecticide
+    double rip_factor;                      // factor expressing how significant rips are in comparison to holes
+    unique_ptr<DecayFunction> insecticide_decay;
+    unique_ptr<DecayFunction> attrition_of_nets;
     vector<ITNAnopheles> species; // vector specific params
 
     friend class HumanITN;
@@ -219,41 +220,41 @@ public:
 
     virtual void redeploy(LocalRng& rng, const Transmission::HumanVectorInterventionComponent& params);
 
-    inline double getHoleIndex() const { return holeIndex; }
-    inline double getInsecticideContent(const ITNComponent& params) const {
+    inline double get_hole_index() const { return hole_index; }
+    inline double get_insecticide_content(const ITNComponent& params) const {
         SimTime age = Sim::now_or_ts1() - deploy_time; // implies age 1 TS on first use
-        double effectSurvival = insecticideDecayHet->eval(age);
-        return initialInsecticide * effectSurvival;
+        double effect_survival = insecticide_decay_het->eval(age);
+        return initial_insecticide * effect_survival;
     }
 
     /// Call once per time step to update holes
     virtual void update(Host::Human& human);
 
     /// Get deterrency. See ComponentParams::effect for a more detailed description.
-    virtual double relative_attractiveness(size_t speciesIndex) const;
+    virtual double relative_attractiveness(size_t species_index) const;
     /// Get killing effect on mosquitoes before they've eaten.
     /// See ComponentParams::effect for a more detailed description.
-    virtual double preprandial_survival_factor(size_t speciesIndex) const;
+    virtual double preprandial_survival_factor(size_t species_index) const;
     /// Get killing effect on mosquitoes after they've eaten.
     /// See ComponentParams::effect for a more detailed description.
-    virtual double postprandial_survival_factor(size_t speciesIndex) const;
+    virtual double postprandial_survival_factor(size_t species_index) const;
     /// Get the mosquito fecundity multiplier (1 for no effect).
-    virtual double rel_fecundity(size_t speciesIndex) const;
+    virtual double rel_fecundity(size_t species_index) const;
 
 protected:
     virtual void checkpoint(ostream& stream);
 
 private:
     // these parameters express the current state of the net:
-    SimTime disposalTime = Sim::never(); // time at which net will be disposed of (if it's not already been replaced)
-    int nHoles;                          // total number of holes
-    double holeIndex;                    // a measure of both the number and size of holes
-    double initialInsecticide;           // units: mg/m²
+    SimTime disposal_time = Sim::never(); // time at which net will be disposed of (if it's not already been replaced)
+    int n_holes;                          // total number of holes
+    double hole_index;                    // a measure of both the number and size of holes
+    double initial_insecticide;           // units: mg/m²
 
     // these parameters are sampled from log-normal per net, but thereafter constant:
-    double holeRate; // rate at which new holes are created (holes/time-step)
-    double ripRate;  // rate at which holes are enlarged (rips/hole/time-step)
-    unique_ptr<DecayFunction> insecticideDecayHet;
+    double hole_rate; // rate at which new holes are created (holes/time-step)
+    double rip_rate;  // rate at which holes are enlarged (rips/hole/time-step)
+    unique_ptr<DecayFunction> insecticide_decay_het;
     const ITNComponent* component;
 };
 

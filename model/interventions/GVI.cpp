@@ -36,13 +36,13 @@ GVIComponent::GVIComponent(ComponentId id, const scnXml::GVIDescription& elt,
     : Transmission::HumanVectorInterventionComponent(id) {
     decay = DecayFunction::makeObject(elt.getDecay(), "interventions.human.vector.decay");
     // assume usage modifier is 100% if none is specified
-    double propUse;
+    double prop_use;
     if (elt.getUsage().present()) {
-        propUse = elt.getUsage().get().getValue();
+        prop_use = elt.getUsage().get().getValue();
     } else {
-        propUse = 1.0;
+        prop_use = 1.0;
     }
-    if (!(propUse >= 0.0 && propUse <= 1.0)) {
+    if (!(prop_use >= 0.0 && prop_use <= 1.0)) {
         throw util::xml_scenario_error("GVI.description.usage: must be within range [0,1]");
     }
 
@@ -51,7 +51,7 @@ GVIComponent::GVIComponent(ComponentId id, const scnXml::GVIDescription& elt,
     species.resize(species_name_map.size());
     util::SpeciesIndexChecker checker("GVI intervention", species_name_map);
     for (AP::const_iterator it = ap.begin(); it != ap.end(); ++it) {
-        species[checker.getIndex(it->getMosquito())].init(*it, propUse);
+        species[checker.getIndex(it->getMosquito())].init(*it, prop_use);
     }
     checker.checkNoneMissed();
 }
@@ -61,7 +61,7 @@ void GVIComponent::deploy(Host::Human& human, mon::Deploy::Method method, Vaccin
     mon::recordDeploy(mon::measure("nMassGVI"), mon::measure("nCtsGVI"), human, method);
 }
 
-Component::Type GVIComponent::componentType() const { return Component::GVI; }
+component_types::Type GVIComponent::component_type() const { return component_types::GVI; }
 
 void GVIComponent::print_details(std::ostream& out) const { out << id().id << "\tGVI"; }
 
@@ -72,23 +72,23 @@ unique_ptr<PerHostInterventionData> GVIComponent::make_human_part(istream& strea
     return unique_ptr<PerHostInterventionData>(new HumanGVI(stream, id, *this));
 }
 
-void GVIComponent::GVIAnopheles::init(const scnXml::GVIDescription::AnophelesParamsType& elt, double proportionUse) {
+void GVIComponent::GVIAnopheles::init(const scnXml::GVIDescription::AnophelesParamsType& elt, double proportion_use) {
     assert((std::isnan)(deterrency)); // double init
     deterrency = elt.getDeterrency().present() ? elt.getDeterrency().get().getValue() : 0.0;
-    preprandialKilling =
+    preprandial_killing =
         elt.getPreprandialKillingEffect().present() ? elt.getPreprandialKillingEffect().get().getValue() : 0.0;
-    postprandialKilling =
+    postprandial_killing =
         elt.getPostprandialKillingEffect().present() ? elt.getPostprandialKillingEffect().get().getValue() : 0.0;
-    fecundityReduction = elt.getFecundityReduction().present() ? elt.getFecundityReduction().get().getValue() : 0.0;
+    fecundity_reduction = elt.getFecundityReduction().present() ? elt.getFecundityReduction().get().getValue() : 0.0;
     // Simpler version of ITN usage/action:
-    double propActive = elt.getPropActive();
-    if (propActive != 1.0 && propActive != 0.0)
+    double prop_active = elt.getPropActive();
+    if (prop_active != 1.0 && prop_active != 0.0)
         throw util::xml_scenario_error("GVI.description.propActive: must be either 0 or 1");
 
-    assert(proportionUse >= 0.0 && proportionUse <= 1.0);
-    assert(propActive >= 0.0 && propActive <= 1.0);
-    proportionProtected = proportionUse * propActive;
-    proportionUnprotected = 1.0 - proportionProtected;
+    assert(proportion_use >= 0.0 && proportion_use <= 1.0);
+    assert(prop_active >= 0.0 && prop_active <= 1.0);
+    proportion_protected = proportion_use * prop_active;
+    proportion_unprotected = 1.0 - proportion_protected;
 }
 
 // ———  per-human data  ———
@@ -96,7 +96,7 @@ HumanGVI::HumanGVI(LocalRng& rng, const GVIComponent& params)
     : PerHostInterventionData(params.id()), component(&params) {
     // Varience factor of decay is sampled once per human: human is assumed
     // to account for most variance.
-    decayHet = params.decay->hetSample(rng);
+    decay_het = params.decay->hetSample(rng);
 }
 
 void HumanGVI::redeploy(LocalRng& rng, const Transmission::HumanVectorInterventionComponent&) {
@@ -105,41 +105,41 @@ void HumanGVI::redeploy(LocalRng& rng, const Transmission::HumanVectorInterventi
 
 void HumanGVI::update(Host::Human& human) {}
 
-double HumanGVI::relative_attractiveness(size_t speciesIndex) const {
+double HumanGVI::relative_attractiveness(size_t species_index) const {
     const GVIComponent& params = *component;
-    const GVIComponent::GVIAnopheles& anoph = params.species[speciesIndex];
-    double effect = (1.0 - anoph.deterrency * getEffectSurvival(params));
-    return anoph.byProtection(effect);
+    const GVIComponent::GVIAnopheles& anoph = params.species[species_index];
+    double effect = (1.0 - anoph.deterrency * get_effect_survival(params));
+    return anoph.by_protection(effect);
 }
 
-double HumanGVI::preprandial_survival_factor(size_t speciesIndex) const {
+double HumanGVI::preprandial_survival_factor(size_t species_index) const {
     const GVIComponent& params = *component;
-    const GVIComponent::GVIAnopheles& anoph = params.species[speciesIndex];
-    double effect = (1.0 - anoph.preprandialKilling * getEffectSurvival(params));
-    return anoph.byProtection(effect);
+    const GVIComponent::GVIAnopheles& anoph = params.species[species_index];
+    double effect = (1.0 - anoph.preprandial_killing * get_effect_survival(params));
+    return anoph.by_protection(effect);
 }
 
-double HumanGVI::postprandial_survival_factor(size_t speciesIndex) const {
+double HumanGVI::postprandial_survival_factor(size_t species_index) const {
     const GVIComponent& params = *component;
-    const GVIComponent::GVIAnopheles& anoph = params.species[speciesIndex];
-    double effect = (1.0 - anoph.postprandialKilling * getEffectSurvival(params));
-    return anoph.byProtection(effect);
+    const GVIComponent::GVIAnopheles& anoph = params.species[species_index];
+    double effect = (1.0 - anoph.postprandial_killing * get_effect_survival(params));
+    return anoph.by_protection(effect);
 }
-double HumanGVI::rel_fecundity(size_t speciesIndex) const {
+double HumanGVI::rel_fecundity(size_t species_index) const {
     const GVIComponent& params = *component;
-    const GVIComponent::GVIAnopheles& anoph = params.species[speciesIndex];
-    double effect = (1.0 - anoph.fecundityReduction * getEffectSurvival(params));
-    return anoph.byProtection(effect);
+    const GVIComponent::GVIAnopheles& anoph = params.species[species_index];
+    double effect = (1.0 - anoph.fecundity_reduction * get_effect_survival(params));
+    return anoph.by_protection(effect);
 }
 
 void HumanGVI::checkpoint(ostream& stream) {
     deploy_time & stream;
-    component->decay->checkpointSample(decayHet, stream);
+    component->decay->checkpointSample(decay_het, stream);
 }
 HumanGVI::HumanGVI(istream& stream, ComponentId id, const GVIComponent& params)
     : PerHostInterventionData(id), component(&params) {
     deploy_time & stream;
-    component->decay->checkpointSample(decayHet, stream);
+    component->decay->checkpointSample(decay_het, stream);
 }
 
 }

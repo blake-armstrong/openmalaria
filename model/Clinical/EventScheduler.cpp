@@ -376,10 +376,10 @@ void ClinicalEventScheduler::do_clinical_update(Human& human, double age_years,
 
     // Remove on first models...
     if (time_last_treatment == Sim::ts0())
-        human.removeFirstEvent(interventions::SubPopRemove::ON_FIRST_TREATMENT);
+        human.removeFirstEvent(interventions::sub_pop_remove::OnFirstTreatment);
 
     if (pg_state & Episode::Sick)
-        human.removeFirstEvent(interventions::SubPopRemove::ON_FIRST_BOUT);
+        human.removeFirstEvent(interventions::sub_pop_remove::OnFirstBout);
 }
 
 void ClinicalEventScheduler::checkpoint(istream& stream) {

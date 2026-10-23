@@ -77,7 +77,7 @@ void checkpoint(istream& stream, const util::CommandLineOptions& command_line, C
         transmission & stream;
         population.checkpoint(stream);
         intervention_manager.checkpoint(stream);
-        intervention_manager.loadFromCheckpoint(population.humans, transmission);
+        intervention_manager.load_from_checkpoint(population.humans, transmission);
 
         // read last, because other loads may use random numbers or expect time
         // to be negative

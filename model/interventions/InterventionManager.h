@@ -67,7 +67,7 @@ public:
     ~InterventionManager();
 
     /** Read XML descriptions. */
-    void init(const scnXml::Interventions& intervElt, Transmission::TransmissionModel& transmission,
+    void init(const scnXml::Interventions& interv_elt, Transmission::TransmissionModel& transmission,
               const Transmission::PerHostParams& per_host_params, const WithinHost::DiagnosticRegistry& diagnostics,
               const pk_pd::PkPdParams& pk_pd, Clinical::ClinicalParams& clinical,
               Clinical::DecisionTreeLibrary& decision_trees);
@@ -77,14 +77,14 @@ public:
         using namespace OM::util::checkpoint;
         // most members are only set from XML,
         // nextTimed varies but is re-set by loadFromCheckpoint
-        importedInfections & stream;
+        imported_infections & stream;
     }
 
     /** Call after loading a checkpoint, passing the intervention-period time.
      * 
      * Serves to replace health-system and EIR where changeHS/changeEIR
      * interventions have been used. */
-    void loadFromCheckpoint(vector<Host::Human>& population, Transmission::TransmissionModel& transmission);
+    void load_from_checkpoint(vector<Host::Human>& population, Transmission::TransmissionModel& transmission);
 
     /** @brief Deploy interventions
      *
@@ -97,38 +97,38 @@ public:
     /** Get a constant reference to a component class with a certain index.
      * 
      * @throws util::base_exception if the index is out-of-range */
-    const HumanInterventionComponent& getComponent(ComponentId id) const {
-        if (id.id >= humanComponents.size())
+    const HumanInterventionComponent& get_component(ComponentId id) const {
+        if (id.id >= human_components.size())
             throw util::base_exception("invalid component id");
-        return *humanComponents[id.id];
+        return *human_components[id.id];
     }
 
     /** Get a numeric ComponentId from the textual identifier used in the XML.
      * 
      * If textId is unknown, an xml_scenario_error is thrown. */
-    ComponentId getComponentId(const std::string& textId) const;
+    ComponentId get_component_id(const std::string& text_id) const;
 
     /** The sub-populations for which the given removal option is enabled. */
-    const vector<ComponentId>& remove_at_ids(SubPopRemove::RemoveAtCode code) const { return removeAtIds[code]; }
+    const vector<ComponentId>& remove_at_ids(sub_pop_remove::RemoveAtCode code) const { return remove_at_lists[code]; }
 
 private:
     // Map of textual identifiers to numeric identifiers for components
-    std::map<std::string, ComponentId> identifierMap;
+    std::map<std::string, ComponentId> identifier_map;
     // All human intervention components, indexed by a number. This list is used
     // during initialisation and thereafter only for memory management.
-    vector<unique_ptr<HumanInterventionComponent>> humanComponents;
+    vector<unique_ptr<HumanInterventionComponent>> human_components;
     // For each RemoveAtCode (excluding NUM), a list of all sub-population
     // identifiers for which the option is enabled.
-    std::array<vector<ComponentId>, SubPopRemove::NUM> removeAtIds;
+    std::array<vector<ComponentId>, sub_pop_remove::NUM> remove_at_lists;
     // Continuous interventions, sorted by deployment age (weakly increasing)
     vector<ContinuousHumanDeployment> continuous;
     // List of all timed interventions. Should be sorted (time weakly increasing).
     vector<unique_ptr<TimedDeployment>> timed;
-    uint32_t nextTimed = 0; // not chcekpointed (see loadFromCheckpoint)
+    uint32_t next_timed = 0; // not chcekpointed (see loadFromCheckpoint)
 
     // imported infections are not really interventions, and handled by a separate class
     // (but are grouped here for convenience and due toassociation in schema)
-    OM::Host::ImportedInfections importedInfections;
+    OM::Host::ImportedInfections imported_infections;
 };
 
 }

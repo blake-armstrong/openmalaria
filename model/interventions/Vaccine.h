@@ -20,8 +20,8 @@
  * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301, USA.
  */
 
-#ifndef Hmod_interventions_Vaccine
-#define Hmod_interventions_Vaccine
+#ifndef HMOD_INTERVENTIONS_VACCINE
+#define HMOD_INTERVENTIONS_VACCINE
 
 #include "interventions/HumanComponents.h"
 #include "schema/interventions.h"
@@ -43,12 +43,12 @@ using util::LocalRng;
  * All parameters (inc. non-static) are only set by initParameters(). */
 class VaccineComponent : public HumanInterventionComponent {
 public:
-    VaccineComponent(ComponentId id, const scnXml::VaccineDescription& seq, Vaccine::Types type,
-                     bool reportDeployments);
+    VaccineComponent(ComponentId id, const scnXml::VaccineDescription& seq, vaccines::Types type,
+                     bool report_deployments);
 
-    void deploy(Host::Human& human, mon::Deploy::Method method, VaccineLimits vaccLimits) const;
+    void deploy(Host::Human& human, mon::Deploy::Method method, VaccineLimits vacc_limits) const;
 
-    virtual Component::Type componentType() const;
+    virtual component_types::Type component_type() const;
 
     virtual void print_details(std::ostream& out) const;
 
@@ -56,20 +56,20 @@ private:
     /** Get the initial efficacy of the vaccine.
      *
      * @param numPrevDoses The number of prior vaccinations of the individual. */
-    double getInitialEfficacy(LocalRng& rng, size_t numPrevDoses, uint32_t genotype) const;
+    double get_initial_efficacy(LocalRng& rng, size_t num_prev_doses, uint32_t genotype) const;
 
     /// Vaccine component type
-    Vaccine::Types type;
+    vaccines::Types type;
 
     /// Function representing decay of effect
-    unique_ptr<util::DecayFunction> decayFunc;
+    unique_ptr<util::DecayFunction> decay_func;
 
     /* Vaccine type specific parameters
      * Initial mean efficacy, definition depends on vaccine type */
-    vector<vector<double>> perGenotypeInitialMeanEfficacy;
+    vector<vector<double>> per_genotype_initial_mean_efficacy;
 
     // Distribution of efficacies among individuals, parameter to sample from beta dist.
-    double efficacyB;
+    double efficacy_b;
 
     // VACCINE_GENOTYPE option
     bool opt_vaccine_genotype = false;
@@ -77,7 +77,7 @@ private:
     //TODO(monitoring):
     /** Until the monitoring system is updated, only one type of vaccination
      * delivery can be reported. This is whichever is first configured. */
-    bool reportDeployments;
+    bool report_deployments;
 
     friend class PerHumanVaccine;
     friend class PerEffectPerHumanVaccine;

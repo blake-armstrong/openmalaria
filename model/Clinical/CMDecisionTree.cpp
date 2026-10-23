@@ -617,7 +617,8 @@ protected:
 
 private:
     CMDTCohort(const std::string& component, const CMDecisionTree& positive, const CMDecisionTree& negative)
-        : component(bridge::intervention_manager().getComponentId(component)), positive(positive), negative(negative) {}
+        : component(bridge::intervention_manager().get_component_id(component)), positive(positive),
+          negative(negative) {}
 
     interventions::ComponentId component;
     const CMDecisionTree& positive;

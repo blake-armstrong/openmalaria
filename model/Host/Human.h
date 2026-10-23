@@ -93,7 +93,7 @@ public:
 
     /** Act on "remove from sub-population on first ..." events.
      * This is only for use during a human update. */
-    void removeFirstEvent(interventions::SubPopRemove::RemoveAtCode code);
+    void removeFirstEvent(interventions::sub_pop_remove::RemoveAtCode code);
 
     /** Remove host from expired cohorts */
     void updateCohortSet();

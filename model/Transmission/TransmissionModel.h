@@ -259,11 +259,11 @@ public:
             // Only to be consistent with old simulation runs when set to false
             // Setting this option to true will only affect reporting
             if (opt_vaccine_genotype == false)
-                risk_trans = avail * p_transmit * human.vaccine.getFactor(interventions::Vaccine::TBV);
+                risk_trans = avail * p_transmit * human.vaccine.get_factor(interventions::vaccines::TBV);
             else {
                 for (size_t g = 0; g < num_genotypes(); ++g)
                     risk_trans += (prob_trans_genotype_i[g] + prob_trans_genotype_l[g]) *
-                                  human.vaccine.getFactor(interventions::Vaccine::TBV, g);
+                                  human.vaccine.get_factor(interventions::vaccines::TBV, g);
                 risk_trans *= avail;
             }
 

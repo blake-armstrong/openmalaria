@@ -42,30 +42,30 @@ class InterventionManager;
 
 /** Enumeration of all available components, in the order that these should be
  * deployed in within a single intervention. */
-namespace Component {
+namespace component_types {
 enum Type {
-    RECRUIT_ONLY,   // selection for a sub-population (without other effects)
-    SCREEN,         // screening, e.g. as part of MSAT
-    TREAT_SIMPLE,   // treatment using the simple model (e.g. for MDA)
-    TREAT_PKPD,     // treatment using the PK/PD model (e.g. MDA)
-    CM_DT,          // execute a "case management" decision tree (e.g. MSAT or more complicated things)
-    PEV,            // pre-erythrocytic vaccine
-    BSV,            // blood-stage vaccine
-    TBV,            // transmission-blocking vaccine
-    IPT,            // intermittent preventative treatment
-    ITN,            // insecticide treated net
-    IRS,            // indoor residual spraying
-    GVI,            // generic vector intervention
-    CLEAR_IMMUNITY, // reset accumulated immunity to zero
+    RecruitOnly,   // selection for a sub-population (without other effects)
+    SCREEN,        // screening, e.g. as part of MSAT
+    TreatSimple,   // treatment using the simple model (e.g. for MDA)
+    TreatPkpd,     // treatment using the PK/PD model (e.g. MDA)
+    CmDt,          // execute a "case management" decision tree (e.g. MSAT or more complicated things)
+    PEV,           // pre-erythrocytic vaccine
+    BSV,           // blood-stage vaccine
+    TBV,           // transmission-blocking vaccine
+    IPT,           // intermittent preventative treatment
+    ITN,           // insecticide treated net
+    IRS,           // indoor residual spraying
+    GVI,           // generic vector intervention
+    ClearImmunity, // reset accumulated immunity to zero
 };
 }
 
 /** Specifies limits on the number of existing doses when deciding whether to
  * vaccinate a human. */
 struct VaccineLimits {
-    VaccineLimits() : minPrevDoses(0), maxCumDoses(numeric_limits<uint32_t>::max()) {}
+    VaccineLimits() : min_prev_doses(0), max_cum_doses(numeric_limits<uint32_t>::max()) {}
     void set(const scnXml::DeploymentBase&);
-    uint32_t minPrevDoses, maxCumDoses;
+    uint32_t min_prev_doses, max_cum_doses;
 };
 
 /** Essentially just an integer, used as a vector index.
@@ -81,7 +81,7 @@ struct ComponentId {
     inline bool operator<(const ComponentId that) const { return id < that.id; }
 
     /// Special value indicating the whole population
-    static ComponentId wholePop() { return ComponentId{numeric_limits<uint32_t>::max()}; }
+    static ComponentId whole_pop() { return ComponentId{numeric_limits<uint32_t>::max()}; }
 
     size_t id;
 };
@@ -104,24 +104,24 @@ public:
      * @param human Individual receiving the intervention
      * @param method Channel of deployment (mass, continuous)
      */
-    virtual void deploy(Host::Human& human, mon::Deploy::Method method, VaccineLimits vaccLimits) const = 0;
+    virtual void deploy(Host::Human& human, mon::Deploy::Method method, VaccineLimits vacc_limits) const = 0;
 
     /** Get the component identifier. */
-    inline ComponentId id() const { return m_id; }
+    inline ComponentId id() const { return component_id; }
 
     /** Get the duration. */
-    inline SimTime duration() const { return m_duration; }
+    inline SimTime duration() const { return cohort_duration; }
 
     /** Returns the appropriate descriptor from the Component::Type enum.
      * 
      * This is only used a small number of times during setup, so doesn't need
      * to be fast. */
-    virtual Component::Type componentType() const = 0;
+    virtual component_types::Type component_type() const = 0;
 
     virtual void print_details(std::ostream& out) const = 0;
 
     // Only for use by InterventionManager:
-    inline void setExpireAfter(SimTime duration) { m_duration = duration; }
+    inline void set_expire_after(SimTime duration) { cohort_duration = duration; }
 
 protected:
     /** Construct (from a derived class).
@@ -130,15 +130,15 @@ protected:
      *  deployment as well as to match human-specific components to general
      *  parameters (i.e. objects of the class extending this one).
      */
-    explicit HumanInterventionComponent(ComponentId id) : m_id(id) {}
+    explicit HumanInterventionComponent(ComponentId id) : component_id(id) {}
 
 private:
     /** Don't copy (this may be possible but shouldn't be needed). */
     HumanInterventionComponent(const HumanInterventionComponent&) = delete;
     HumanInterventionComponent& operator=(const HumanInterventionComponent&) = delete;
 
-    ComponentId m_id;
-    SimTime m_duration = Sim::never();
+    ComponentId component_id;
+    SimTime cohort_duration = Sim::never();
 };
 
 /** A description of a human intervention (as a list of components). */
@@ -150,20 +150,20 @@ public:
 
     /** Create from a list of XML elements: list of intervention components
      * with unconditional deployment (for triggered deployments). **/
-    HumanIntervention(const xsd::cxx::tree::sequence<scnXml::Component>& componentList,
+    HumanIntervention(const xsd::cxx::tree::sequence<scnXml::Component>& component_list,
                       const InterventionManager& manager);
     /** Create from a list of XML elements: list of intervention components
      * and list of conditions of deployment. **/
-    HumanIntervention(const xsd::cxx::tree::sequence<scnXml::Component>& componentList,
-                      const xsd::cxx::tree::sequence<scnXml::Condition>& conditionList,
+    HumanIntervention(const xsd::cxx::tree::sequence<scnXml::Component>& component_list,
+                      const xsd::cxx::tree::sequence<scnXml::Condition>& condition_list,
                       const InterventionManager& manager);
     /** Create from a list of XML elements: list of intervention components
      * with unconditional deployment (for triggered deployments). **/
-    HumanIntervention(const xsd::cxx::tree::sequence<scnXml::DTDeploy>& componentList,
+    HumanIntervention(const xsd::cxx::tree::sequence<scnXml::DTDeploy>& component_list,
                       const InterventionManager& manager);
 
     /** Deploy all components to a pre-selected human. */
-    void deploy(Host::Human& human, mon::Deploy::Method method, VaccineLimits vaccLimits) const;
+    void deploy(Host::Human& human, mon::Deploy::Method method, VaccineLimits vacc_limits) const;
 
     void print_details(std::ostream& out) const;
 
@@ -180,16 +180,16 @@ class TriggeredDeployments {
 public:
     TriggeredDeployments(const scnXml::TriggeredDeployments& elt, const InterventionManager& manager);
 
-    void deploy(Host::Human& human, mon::Deploy::Method method, VaccineLimits vaccLimits) const;
+    void deploy(Host::Human& human, mon::Deploy::Method method, VaccineLimits vacc_limits) const;
 
 private:
     struct SubList : protected HumanIntervention {
         SubList(const scnXml::TriggeredDeployments::DeployType& elt, const InterventionManager& manager);
 
-        void deploy(Host::Human& human, mon::Deploy::Method method, VaccineLimits vaccLimits) const;
+        void deploy(Host::Human& human, mon::Deploy::Method method, VaccineLimits vacc_limits) const;
 
         // Deployment restrictions:
-        SimTime minAge, maxAge;
+        SimTime min_age, max_age;
         double coverage;
     };
 

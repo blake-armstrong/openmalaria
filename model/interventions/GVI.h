@@ -48,7 +48,7 @@ public:
 
     void deploy(Host::Human& human, mon::Deploy::Method method, VaccineLimits) const;
 
-    virtual Component::Type componentType() const;
+    virtual component_types::Type component_type() const;
 
     virtual void print_details(std::ostream& out) const;
 
@@ -60,23 +60,23 @@ private:
     class GVIAnopheles {
     public:
         GVIAnopheles()
-            : proportionProtected(numeric_limits<double>::signaling_NaN()),
-              proportionUnprotected(numeric_limits<double>::signaling_NaN()),
+            : proportion_protected(numeric_limits<double>::signaling_NaN()),
+              proportion_unprotected(numeric_limits<double>::signaling_NaN()),
               deterrency(numeric_limits<double>::signaling_NaN()),
-              preprandialKilling(numeric_limits<double>::signaling_NaN()),
-              postprandialKilling(numeric_limits<double>::signaling_NaN()),
-              fecundityReduction(numeric_limits<double>::signaling_NaN()) {}
-        void init(const scnXml::GVIDescription::AnophelesParamsType& elt, double proportionUse);
+              preprandial_killing(numeric_limits<double>::signaling_NaN()),
+              postprandial_killing(numeric_limits<double>::signaling_NaN()),
+              fecundity_reduction(numeric_limits<double>::signaling_NaN()) {}
+        void init(const scnXml::GVIDescription::AnophelesParamsType& elt, double proportion_use);
 
         /// Return x*proportionProtected + proportionUnprotected
-        inline double byProtection(double x) const { return x * proportionProtected + proportionUnprotected; }
+        inline double by_protection(double x) const { return x * proportion_protected + proportion_unprotected; }
 
-        double proportionProtected;
-        double proportionUnprotected;
+        double proportion_protected;
+        double proportion_unprotected;
         double deterrency;
-        double preprandialKilling;
-        double postprandialKilling;
-        double fecundityReduction;
+        double preprandial_killing;
+        double postprandial_killing;
+        double fecundity_reduction;
 
         friend class HumanGVI;
     };
@@ -100,30 +100,30 @@ public:
     virtual void redeploy(LocalRng& rng, const Transmission::HumanVectorInterventionComponent&);
 
     /** This is the survival factor of the effect. */
-    inline double getEffectSurvival(const GVIComponent& params) const {
+    inline double get_effect_survival(const GVIComponent& params) const {
         SimTime age = Sim::now_or_ts1() - deploy_time; // implies age 1 TS on first use
-        return decayHet->eval(age);
+        return decay_het->eval(age);
     }
 
     virtual void update(Host::Human& human);
 
     /// Get deterrency. See ComponentParams::effect for a more detailed description.
-    virtual double relative_attractiveness(size_t speciesIndex) const;
+    virtual double relative_attractiveness(size_t species_index) const;
     /// Get killing effect on mosquitoes before they've eaten.
     /// See ComponentParams::effect for a more detailed description.
-    virtual double preprandial_survival_factor(size_t speciesIndex) const;
+    virtual double preprandial_survival_factor(size_t species_index) const;
     /// Get killing effect on mosquitoes after they've eaten.
     /// See ComponentParams::effect for a more detailed description.
-    virtual double postprandial_survival_factor(size_t speciesIndex) const;
+    virtual double postprandial_survival_factor(size_t species_index) const;
     /// Get the mosquito fecundity multiplier (1 for no effect).
-    virtual double rel_fecundity(size_t speciesIndex) const;
+    virtual double rel_fecundity(size_t species_index) const;
 
 protected:
     virtual void checkpoint(ostream& stream);
 
 private:
     // this parameter is sampled on first deployment, but never resampled for the same human:
-    unique_ptr<DecayFunction> decayHet;
+    unique_ptr<DecayFunction> decay_het;
     const GVIComponent* component;
 };
 
