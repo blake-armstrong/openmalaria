@@ -286,6 +286,9 @@ DAILY_PR_TWO_DAYS = "<dailyPrImmUCTS>0.2</dailyPrImmUCTS><dailyPrImmUCTS>0.8</da
 CLINICAL_READ_ORDER = (17, 19, 38, 33)
 
 
+INCIDENCE_READ_ORDER = (16, 5, 1, 3, 2, 4)
+
+
 AF = "scenarioAvailabilityFilter.xml"
 COPULA = "scenarioGaussianCopulaGamma.xml"
 
@@ -557,6 +560,25 @@ GROUPS = {
         Variant("copula_deployed_checkpoint", COPULA, copula_in_run, ["--checkpoint"], runs=2),
         Variant("copula_deployed_two_species", COPULA, lambda s: second_species(copula_in_run(s))),
         Variant("copula_two_species_not_deployed", COPULA, second_species),
+    ],
+    "host": [
+        *(Variant(f"het_workaround_{o.lower()}", "scenario5.xml", model_option(o))
+          for o in ("TRANS_HET", "COMORB_TRANS_HET", "TRANS_TREAT_HET")),
+        Variant("lognormal_bad_param_16", "scenarioNoInterv.xml",
+                lambda s: rep(s, 'number="16" value="0.05"', 'number="16" value="1.0"')),
+        Variant("lognormal_new_infections_checkpoint", "scenarioNoInterv.xml", args=["--checkpoint"], runs=2),
+        Variant("neg_bin_param_16_small", "scenario5.xml", model_option("NEGATIVE_BINOMIAL_MASS_ACTION")),
+        Variant("neg_bin_checkpoint", "scenario5.xml",
+                lambda s: rep(model_option("NEGATIVE_BINOMIAL_MASS_ACTION")(s), 'number="16" value="0.05"',
+                              'number="16" value="2"'), ["--checkpoint"], runs=2),
+        *(Variant(f"incidence_no_param_{n}", "scenario5.xml", lambda s, n=n: drop_parameter(s, n))
+          for n in INCIDENCE_READ_ORDER),
+        *(Variant(f"incidence_no_params_{m}_{n}", "scenario5.xml",
+                  lambda s, m=m, n=n: drop_parameter(drop_parameter(s, m), n))
+          for m, n in zip(INCIDENCE_READ_ORDER, INCIDENCE_READ_ORDER[1:])),
+        Variant("demography_altered", "scenario5.xml",
+                lambda s: rep(s, '<group poppercent="3.474714994" upperbound="1"/>',
+                              '<group poppercent="6" upperbound="1"/>')),
     ],
     "falciparum-init": [
         Variant("molineaux_no_weight", "scenarioMolineaux.xml", lambda s: drop_element(s, "<weight ", "</weight>")),
