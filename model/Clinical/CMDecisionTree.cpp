@@ -224,7 +224,8 @@ protected:
         const auto* p = dynamic_cast<const CMDTUncomplicated*>(&that);
         if (p == nullptr)
             return false; // different type of node
-        // if( diagnostic != p->diagnostic ) return false;
+        if (memory != p->memory)
+            return false;
         if (positive != p->positive)
             return false;
         if (negative != p->negative)
@@ -528,15 +529,7 @@ protected:
         const auto* p = dynamic_cast<const CMDTTreatSimple*>(&that);
         if (p == nullptr)
             return false; // different type of node
-        if (time_liver.size() != p->time_liver.size())
-            return false;
-        if (time_blood.size() != p->time_blood.size())
-            return false;
-        for (auto it1 = time_liver.begin(), it2 = p->time_liver.begin(); it1 != time_liver.end(); ++it1, ++it2) {
-            if (*it1 != *it2)
-                return false;
-        }
-        return true; // no tests failed; must be the same
+        return time_liver == p->time_liver && time_blood == p->time_blood;
     }
 
     CMDTOut exec(CMHostData host_data) const override {
@@ -598,7 +591,8 @@ protected:
         const auto* p = dynamic_cast<const CMDTCohort*>(&that);
         if (p == nullptr)
             return false; // different type of node
-        // if( diagnostic != p->diagnostic ) return false;
+        if (!(component == p->component))
+            return false;
         if (positive != p->positive)
             return false;
         if (negative != p->negative)

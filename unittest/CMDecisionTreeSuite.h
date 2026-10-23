@@ -257,7 +257,47 @@ public:
         TS_ASSERT_DELTA(runAndGetMgPrescribed(dt2, 99), 35, 1e-8);
     }
 
+    void test_library_keeps_uncomplicated_nodes_with_different_memory() {
+        Clinical::DecisionTreeLibrary library = make_library();
+        TS_ASSERT_EQUALS(&library.create(uncomplicated("1t"), true), &library.create(uncomplicated("1t"), true));
+        TS_ASSERT_DIFFERS(&library.create(uncomplicated("0t"), true), &library.create(uncomplicated("1t"), true));
+    }
+
+    void test_library_keeps_treat_simple_nodes_with_different_durations() {
+        Clinical::DecisionTreeLibrary library = make_library();
+        TS_ASSERT_EQUALS(&library.create(treat_simple("0t", "1t"), true),
+                         &library.create(treat_simple("0t", "1t"), true));
+        TS_ASSERT_DIFFERS(&library.create(treat_simple("1t", "1t"), true),
+                          &library.create(treat_simple("0t", "1t"), true));
+        TS_ASSERT_DIFFERS(&library.create(treat_simple("0t", "5t"), true),
+                          &library.create(treat_simple("0t", "1t"), true));
+    }
+
 private:
+    static Clinical::DecisionTreeLibrary make_library() {
+        return {unittest_options::diagnostics, UnittestUtil::pk_pd_params(), Sim::from_ts(5)};
+    }
+
+    static scnXml::DecisionTree no_action() {
+        scnXml::DecisionTree tree;
+        tree.setNoTreatment(scnXml::DTNoTreatment());
+        return tree;
+    }
+
+    static scnXml::DecisionTree uncomplicated(const std::string& memory) {
+        scnXml::DTUncomplicated node(no_action(), no_action());
+        node.setMemory(memory);
+        scnXml::DecisionTree tree;
+        tree.setUncomplicated(node);
+        return tree;
+    }
+
+    static scnXml::DecisionTree treat_simple(const std::string& liver, const std::string& blood) {
+        scnXml::DecisionTree tree;
+        tree.getTreatSimple().push_back(scnXml::DTTreatSimple(liver, blood));
+        return tree;
+    }
+
     unique_ptr<Host::Human> human;
     WHMock* whm;
     unique_ptr<CMHostData> hd;
