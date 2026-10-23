@@ -232,6 +232,7 @@ Added after D6b at the user's request (2026-10-22). Every push of `throwaway_ai_
   6. Record each cause and fix in FINDINGS (close F61–F64 or leave them open with the user's decision).
 - **Done when:** every job of C/C++ CI and Style passes on a pushed commit of `throwaway_ai_rework`, or the jobs that still fail are failing only by a decision the user took (e.g. a dropped job) and are recorded so.
 - **Gates:** G-exact, G-unit, G-style locally; G-stat if test tooling changes; the CI jobs themselves.
+- *As built (2026-10-23):* the user dropped ubuntu-22.04 (F63) and chose `-ffp-contract=off` for GCC and Clang (F62: FMA contraction, not libm, was the cause; LifeNet1/2 regenerated), keeping CI's tolerant binary-mode check. The workflow also needed `CMAKE_PROGRAM_PATH`, because `build.sh` puts `/usr/bin` first on PATH (F67).
 
 ## Stage P: Performance baseline
 

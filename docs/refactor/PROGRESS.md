@@ -13,7 +13,7 @@ See `PLAN.md` for the session protocol, chunks and gates. Append one log entry p
 | B3 | done | 1b9b22f6, 06642bf8, 5efb309c, 1d56c288, db529f37, 5dc5baab, b3685dfe, (this log entry) |
 | B4 | done | 57afa057, e7074755, cae5d3b5, f82cb9a5, ee7e0471, (this log entry) |
 | B5 | done | 16851d20, 65710e16, dcae0a40, 6b870e04, 658cf62b, ab06df46, 8ca36c75, (this log entry) |
-| B6 | todo | |
+| B6 | done | 89fd11f7, b4f516a1, 523adf7b, fd5a52bd, d29f4df8, b3bf778f, 32f8a5ce, 773f2154, (this log entry) |
 | P1 | done | f29d38e3, 81a14090, b0309128, 6bfcf8c0, 4b803c7f, (this log entry) |
 | S1 | done | b372c2f6, (this log entry) |
 | S2 | done | 841b2a9f, 720c0f09, 3c40c24b, (this log entry) |
@@ -1170,3 +1170,35 @@ The user asked for both D6b findings to be fixed, each in its own commit, with n
 - The user asked for fixing CI to be added to the plan: every push of the branch fails CI. The user had read the failures as GitHub Pages failing to deploy; the Pages workflow in fact passes on this branch. What fails (C/C++ CI 39557798562 and Style 39557798559, at 4db10096): the macOS jobs' statistical tests (F61), the Linux jobs' LifeNet1/2 and EffectiveDrug outputs (F62), the ubuntu-22.04 job's configure (F63) and the Style job (F64).
 - B6 added to PLAN.md (Stage B) and to § Recommended order as row 11b, so it is the next chunk, before D6c.
 
+### B6: Make CI pass (2026-10-23)
+Base 7d115055. The user approved, at the start, pushing `throwaway_ai_rework` and a scratch `b6-diag` branch as often as B6 needed, and dropping the ubuntu-22.04 job. Midway, after the diagnosis, the user chose `-ffp-contract=off` with LifeNet1/2's `test/expected/` regenerated, and to keep CI's tolerant binary-mode scenario check.
+- Baseline: pushed 7d115055. C/C++ CI 39879165107 and Style 39879164982 failed exactly as F61–F64 described at 4db10096: macOS 52 of 110 (statistical), ubuntu-24.04 LifeNet1/2, ubuntu-24.04-arm EffectiveDrug and LifeNet1/2, ubuntu-22.04 configure, and Style's one slicing warning (now at `LSTMDrugType.cpp:339`). No new failure came from D5–D6b.
+- Commits:
+  - 89fd11f7 (F61): `test/CMakeLists.txt` registers `stat_*`, `statfull_*` and `stats_tool_check_scenario` only with Python ≥ 3.10, and otherwise prints which version it found. The build workflow gains `actions/setup-python@v7.0.0` (3.12). Checked by configuring with `/usr/bin/python3` (3.9.6): 1 statistical test is registered (the `uv` one). With the default Python, 58 are registered, as in `build-rework`. `stats_tool_generate_reference` is left ungated, since it runs through `uv` with its own Python (deviation from the plan's "skip `stats_tool_*`").
+  - b4f516a1 (F63): ubuntu-22.04 removed from the matrix (user's choice). It also lacks `<format>` (GCC 11).
+  - 523adf7b (F64): `string(static_cast<const string&>(name.get()))`. `util/ci-style.sh origin/main` was clean locally before and after; only CI's xsdcxx 4.0 headers trigger the check.
+  - fd5a52bd: the Catch2 test comparing `standard_normal` with `gsl_ran_gaussian` allows an absolute 1e-12 (was `!=`). Under `-ffp-contract=off`, against Homebrew's GSL, draw 87938 of 200000 differs by 1.3e-14 (r2 near 1), and the streams stay in step.
+  - d29f4df8 (F62): `-ffp-contract=off` for GCC and Clang in `CMakeLists.txt`, next to the Intel `-fp-model strict`. G-exact fails for LifeNet1/2 only, until the next commit.
+  - b3bf778f: `test/expected/outputLifeNet{1,2}.txt` regenerated (user approved). Only measure 36 moves, in the last printed digit (13 and 18 rows). The files are byte-identical to the b6-diag outputs of macos-15 and ubuntu-24.04-arm with contraction off.
+  - 32f8a5ce: FINDINGS F65, F66.
+  - 773f2154 (F61): the workflow sets `CMAKE_PROGRAM_PATH` to setup-python's `bin`. Run 39881602220 at 32f8a5ce passed every job, but the macOS jobs ran only 58 tests: `build.sh` exports `PATH=/usr/bin:$PATH` (F67), so CMake still found Python 3.9 and the new check skipped the statistical tests. Checked locally with `PATH=/usr/bin:$PATH CMAKE_PROGRAM_PATH=/opt/homebrew/bin`.
+- Diagnosis of F62:
+  - Local macOS build with `-ffp-contract=off`, strict: 54 of 56 scenarios byte-identical, LifeNet1/2 differ, with exactly the sums the Linux x86-64 CI job had printed.
+  - b6-diag run 39879605135, a workflow on the scratch branch only: {macos-15, ubuntu-24.04, ubuntu-24.04-arm} × {default, `-ffp-contract=off`}, `run.py -C`, outputs uploaded. Contraction off: macOS = arm64 byte for byte, and x86-64 differs only in printing `-nan` for `nan` (ModelNameModelOptionOverrides output, SimpleMPDTest ctsout; F65). Default flags: arm64 GCC differs from macOS in EffectiveDrug and LifeNet1/2, and x86-64 equals its own contraction-off build. All builds use `-std=gnu++20` (no `CMAKE_CXX_EXTENSIONS OFF`), so GCC's default is `fast`.
+  - The branch and its worktree were deleted at the end.
+- Gates:
+  - G-exact / G-unit: `build-rework` (strict) at b3bf778f: 58 of 58.
+  - G-stat: `ctest -L statistical -j 4`: 53 passed, 5 disabled (no reference), as before.
+  - G-style: `util/style.sh check 7d115055` clean.
+  - G-perf: candidate b3bf778f against 523adf7b (`../om-bench-base`, same flags but without `-ffp-contract=off`): median per-pair ratio 1.0183 (+1.83%), spreads 9.3% / 7.3%, load ~5.3 at the start.
+  - CI: at 773f2154, C/C++ CI 39882681731 (macos-14, macos-15, ubuntu-24.04, ubuntu-24.04-arm: 110 of 110 tests each) and Style 39882681637 pass. GitHub Pages also passes.
+- Findings: F61–F64 moved to § Closed. New: F65 (NaN in expected outputs; the printed sign depends on the platform), F66 (`scenario12a` has an expected output but no test), F67 (`build.sh` puts `/usr/bin` first on PATH).
+- Surprises:
+  - FMA, not libm, explained every cross-platform difference.
+  - Building only `--target openMalaria` leaves out `scenario_current.xsd` (known; it bit the first local run and the first diag push, 934c20ec, cancelled).
+  - Every CI job had stayed green after the stats tests went out of macOS, so the gate's message is the only signal. Check the macOS test count (110) when changing the workflow.
+- Follow-ups:
+  - F65: if CI should ever compare strictly, the output writers must print NaN one way.
+  - F67: making `build.sh`'s PATH export Cygwin-only would change tool choice for users; ask first.
+  - G-style can still pass locally and fail in CI on generated XSD types (F64's note).
+- Next: D6c.
