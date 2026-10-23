@@ -72,7 +72,7 @@ struct CMDTOut {
  *****************************************************************************/
 class CMDecisionTree {
 public:
-    virtual ~CMDecisionTree() {}
+    virtual ~CMDecisionTree() = default;
 
     /** Test for equivalence in two decision trees. Nodes are equivalent if
      * they have the same type, same deployments and treatments, and their
