@@ -45,7 +45,7 @@ public:
 
         vector<int> n_days(Sim::steps_per_year(), 0);
         // The minimum EIR allowed in the array. The product of the average EIR and a constant.
-        double min_eir = min_eir_mult * average_eir(non_vector_data);
+        const double min_eir = min_eir_mult * average_eir(non_vector_data);
 
         const scnXml::NonVector::EIRDailySequence& daily = non_vector_data.getEIRDaily();
         if (daily.size() < static_cast<size_t>(Sim::one_year()))
@@ -53,7 +53,7 @@ public:
 
         for (SimTime mpcday = Sim::zero(), end_day = Sim::from_days(daily.size()); mpcday < end_day;
              mpcday = mpcday + Sim::one_day()) {
-            double eir_daily = std::max(static_cast<double>(daily[mpcday]), min_eir);
+            const double eir_daily = std::max(static_cast<double>(daily[mpcday]), min_eir);
 
             // Index 0 of initialisationEIR refers to the EIR affecting the
             // first day(s) of the year. Correspondingly, the first 1 or 5 values
@@ -97,7 +97,7 @@ public:
         for (size_t i = Sim::steps_per_year(); i < initial_kappa.size(); ++i) {
             initial_kappa[mod_nn(i, Sim::steps_per_year())] += initial_kappa[i];
         }
-        double factor = static_cast<double>(Sim::steps_per_year()) / static_cast<double>(initial_kappa.size());
+        const double factor = static_cast<double>(Sim::steps_per_year()) / static_cast<double>(initial_kappa.size());
         initial_kappa.resize(Sim::steps_per_year());
         for (double& i : initial_kappa) {
             i *= factor;
@@ -127,10 +127,10 @@ public:
             throw util::xml_scenario_error("Insufficient intervention phase EIR values provided");
         }
         // The minimum EIR allowed in the array. The product of the average EIR and a constant.
-        double min_eir = min_eir_mult * average_eir(non_vector_data);
+        const double min_eir = min_eir_mult * average_eir(non_vector_data);
         for (SimTime mpcday = Sim::zero(), end_day = Sim::from_days(daily.size()); mpcday < end_day;
              mpcday = mpcday + Sim::one_day()) {
-            double eir_daily = std::max(static_cast<double>(daily[mpcday]), min_eir);
+            const double eir_daily = std::max(static_cast<double>(daily[mpcday]), min_eir);
 
             // istep is the time period to which the day is assigned.
             size_t istep = Sim::in_steps(mpcday);
@@ -155,7 +155,7 @@ public:
     }
 
     double update_kappa(const vector<Host::Human>& population) override {
-        double current_kappa = TransmissionModel::update_kappa(population);
+        const double current_kappa = TransmissionModel::update_kappa(population);
         if (simulation_mode == ForcedEir) {
             initial_kappa[Sim::modulo_steps(Sim::ts1(), initial_kappa.size())] = current_kappa;
         }

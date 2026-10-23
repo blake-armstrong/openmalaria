@@ -39,7 +39,7 @@
 #include <cmath>
 
 constexpr int modp(int i, int n) noexcept {
-    int r = i % n;
+    const int r = i % n;
     return (r < 0) ? r + n : r;
 }
 
@@ -160,7 +160,7 @@ static void calc_sv_diff(gsl_vector* sv_diff, const gsl_vector* sv_from_eir, con
 }
 
 static int calc_sv_diff_rf(const gsl_vector* x, void* p, gsl_vector* f) {
-    struct SvDiffParams* params = static_cast<struct SvDiffParams*>(p);
+    const auto* params = static_cast<const SvDiffParams*>(p);
 
     gsl_vector* nv0 = gsl_vector_calloc(params->thetap);
     gsl_vector_memcpy(nv0, x);
@@ -371,8 +371,8 @@ double calc_init_mosq_emerge_rate(
 
     // Parameters that help to describe the order of the system.
     // It is the maximum number of time steps we go back for $N_v$ and $O_v$.
-    int mt = thetas + tau - 1;
-    int eta = 2 * mt + tau; // $\eta$: The order of the system.
+    const int mt = thetas + tau - 1;
+    const int eta = 2 * mt + tau; // $\eta$: The order of the system.
 
     // $X_{\theta_p}$.
     // The product of all the evolution matrices.
@@ -415,7 +415,7 @@ double calc_init_mosq_emerge_rate(
     func_x(xtp, upsilon, thetap, 0, eta);
 
     // We should now find the spectral radius of Xtp and show that it's less than 1.
-    double sr_xtp = calc_spectral_radius(xtp, eta);
+    const double sr_xtp = calc_spectral_radius(xtp, eta);
 
     // If the spectral radius of Xtp is greater than or equal to 1, then
     // we are not guaranteed the existence of a unique globally asymptotically
@@ -434,7 +434,7 @@ double calc_init_mosq_emerge_rate(
 
     // Uncomment the linear solver below to use it instead of root-finding.
     // Root-finding is the default method.
-    int st = solve_nv0_rootfind(nv0, sv_from_eir, upsilon, inv1_xtp, eta, mt, thetap);
+    const int st = solve_nv0_rootfind(nv0, sv_from_eir, upsilon, inv1_xtp, eta, mt, thetap);
     //int st = solve_Nv0_linear(Nv0, SvfromEIR, Upsilon, inv1Xtp, eta, mt, thetap);
     (void)st;
 
@@ -825,13 +825,13 @@ double calc_spectral_radius(gsl_matrix* a, int n) {
 
     // Calculate the absolute values of the eigenvalues.
     for (int i = 0; i < n; i++) {
-        gsl_complex ztemp = gsl_vector_complex_get(eval, i);
-        double temp = gsl_complex_abs(ztemp);
+        const gsl_complex ztemp = gsl_vector_complex_get(eval, i);
+        const double temp = gsl_complex_abs(ztemp);
         gsl_vector_set(abseval, i, temp);
     }
 
     // Find the largest eigenvalue.
-    double sr = gsl_vector_max(abseval); // sprectral radius
+    const double sr = gsl_vector_max(abseval); // sprectral radius
 
     // Free memory.
     gsl_matrix_free(b);

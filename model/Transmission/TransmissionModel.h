@@ -45,8 +45,6 @@
 #include <cfloat>
 #include <gsl/gsl_vector.h>
 
-using namespace std::placeholders;
-
 namespace OM {
 class Summary;
 class Population;
@@ -60,11 +58,11 @@ inline double average_eir(const scnXml::NonVector& non_vector_data) {
     double val_average_eir = 0.0;
     size_t i = 0;
     for (const scnXml::NonVector::EIRDailySequence& daily = non_vector_data.getEIRDaily(); i < daily.size(); ++i) {
-        val_average_eir += (double)daily[i];
+        val_average_eir += static_cast<double>(daily[i]);
     }
     if (i == 0)
         throw util::xml_scenario_error("no EIRDaily values given"); // pedantic check
-    return val_average_eir / i;
+    return val_average_eir / static_cast<double>(i);
 }
 
 inline double average_eir(const scnXml::DailyValues& vector_data) {
@@ -72,11 +70,11 @@ inline double average_eir(const scnXml::DailyValues& vector_data) {
     double val_average_eir = 0.0;
     size_t i = 0;
     for (const scnXml::DailyValues::ValueSequence& daily = vector_data.getValue(); i < daily.size(); ++i) {
-        val_average_eir += (double)daily[i];
+        val_average_eir += static_cast<double>(daily[i]);
     }
     if (i == 0)
         throw util::xml_scenario_error("no daily values given"); // pedantic check
-    return val_average_eir / i;
+    return val_average_eir / static_cast<double>(i);
 }
 
 /** Variable describing current simulation mode. */
@@ -125,13 +123,13 @@ protected:
         // Set VACCINE_GENOTYPE option
 
         mon::Continuous::registerCallback("input EIR", "\tinput EIR",
-                                          std::bind(&TransmissionModel::cts_cb_input_eir, this, _1));
+                                          [this](ostream& stream) { cts_cb_input_eir(stream); });
         mon::Continuous::registerCallback("simulated EIR", "\tsimulated EIR",
-                                          std::bind(&TransmissionModel::cts_cb_simulated_eir, this, _1));
+                                          [this](ostream& stream) { cts_cb_simulated_eir(stream); });
         mon::Continuous::registerCallback("human infectiousness", "\thuman infectiousness",
-                                          std::bind(&TransmissionModel::cts_cb_kappa, this, _1));
+                                          [this](ostream& stream) { cts_cb_kappa(stream); });
         mon::Continuous::registerCallback("num transmitting humans", "\tnum transmitting humans",
-                                          std::bind(&TransmissionModel::cts_cb_num_transmitting_humans, this, _1));
+                                          [this](ostream& stream) { cts_cb_num_transmitting_humans(stream); });
     }
 
 public:
@@ -156,7 +154,7 @@ public:
         if (!mon::isReported())
             return; // cannot use counters below when not reporting
 
-        double duration = Sim::in_steps(Sim::now() - last_survey_time);
+        const double duration = Sim::in_steps(Sim::now() - last_survey_time);
         if (duration > 0.0) {
             mon::recordStat(mon::measure("inputEIR"), survey_input_eir / duration);
             mon::recordStat(mon::measure("simulatedEIR"), survey_simulated_eir / duration);
@@ -218,10 +216,10 @@ public:
          * availability. */
         calculate_eir(human, age_years, genotype_eir_i, genotype_eir_l);
 
-        double sum_eir_i = util::vectors::sum(genotype_eir_i);
-        double sum_eir_l = util::vectors::sum(genotype_eir_l);
+        const double sum_eir_i = util::vectors::sum(genotype_eir_i);
+        const double sum_eir_l = util::vectors::sum(genotype_eir_l);
 
-        double all_eir = sum_eir_i + sum_eir_l;
+        const double all_eir = sum_eir_i + sum_eir_l;
         if (age >= adult_age) {
             ts_adult_ento_inocs_i += sum_eir_i;
             ts_adult_ento_inocs_l += sum_eir_l;
@@ -275,9 +273,9 @@ public:
             sum_wt_kappa += risk_trans;
         }
 
-        size_t l_k_mod = Sim::modulo_steps(Sim::ts1(), lagged_kappa.size()); // now
-        if (population.size() == 0) {                                        // this is valid
-            lagged_kappa[l_k_mod] = 0.0;                                     // no humans: no infectiousness
+        const size_t l_k_mod = Sim::modulo_steps(Sim::ts1(), static_cast<int>(lagged_kappa.size())); // now
+        if (population.size() == 0) {                                                                // this is valid
+            lagged_kappa[l_k_mod] = 0.0; // no humans: no infectiousness
         } else {
             if (!(sum_weight > DBL_MIN * 10.0)) { // if approx. eq. 0, negative or an NaN
                 ostringstream msg;
@@ -287,7 +285,7 @@ public:
             lagged_kappa[l_k_mod] = sum_wt_kappa / sum_weight;
         }
 
-        size_t tmod = Sim::modulo_year_steps(Sim::ts0());
+        const size_t tmod = Sim::modulo_year_steps(Sim::ts0());
 
         // Calculate time-weighted average of kappa
         sum_annual_kappa += lagged_kappa[l_k_mod] * initialisation_eir[tmod];
@@ -371,7 +369,7 @@ protected:
 private:
     // The times here should be for the last updated index of arrays:
     void cts_cb_input_eir(ostream& stream) {
-        int prev_step = (Sim::now() - Sim::one_ts()) / Sim::one_ts();
+        const int prev_step = (Sim::now() - Sim::one_ts()) / Sim::one_ts();
         // Note: prevStep may be negative, hence util::mod not mod_nn:
         stream << '\t' << initialisation_eir[util::mod(prev_step, Sim::steps_per_year())];
     }

@@ -45,7 +45,7 @@ inline int argmax(const std::vector<double>& vec) {
     int imax = 0;
     double max = 0.0;
     for (size_t i = 0; i < vec.size(); i++) {
-        double v = vec[i];
+        const double v = vec[i];
         if (v >= max) {
             max = v;
             imax = i;
@@ -103,7 +103,7 @@ public:
             avg_annual_s_v[mod_nn(i, Sim::one_year())] += m.quinquennial_s_v[i] / 5.0;
         }
 
-        double factor = vectors::sum(m.forced_s_v) / vectors::sum(avg_annual_s_v);
+        const double factor = vectors::sum(m.forced_s_v) / vectors::sum(avg_annual_s_v);
 
         // cout << "check: " << vectors::sum(forcedS_v) << " " << vectors::sum(avgAnnualS_v) << endl;
         // cout << "Pre-calced Sv, dynamic Sv:\t"<<sumAnnualForcedS_v<<'\t'<<vectors::sum(annualS_v)<<endl;
@@ -126,14 +126,14 @@ public:
 
         if (fabs(factor - 1.0) > limit) {
             scaled = false;
-            double factor_diff = (scale_factor * factor - scale_factor) * 1.0;
+            const double factor_diff = (scale_factor * factor - scale_factor) * 1.0;
             scale_factor += factor_diff;
         } else
             scaled = true;
 
         constexpr double RotationLimit = 0.2;
 
-        double rotation = find_angle(m.eir_rotate_angle, m.fs_coeffic, avg_annual_s_v);
+        const double rotation = find_angle(m.eir_rotate_angle, m.fs_coeffic, avg_annual_s_v);
         shift_angle += rotation;
         rotated = std::fabs(rotation) <= RotationLimit;
 
@@ -164,19 +164,19 @@ public:
 
     bool estimate(AnophelesModel& m, const std::vector<double>& lagged_kappa, double mean_avail) override {
         std::vector<double>& mosq_emerge_rate_vector = m.mosq_emerge_rate;
-        int thetap = Sim::DaysInYear;
-        int tau = m.mosq.rest_duration;
-        int thetas = m.mosq.eip_duration;
+        const int thetap = Sim::DaysInYear;
+        const int tau = m.mosq.rest_duration;
+        const int thetas = m.mosq.eip_duration;
         std::vector<double> ni{static_cast<double>(population_size)};
         std::vector<double> alphai{m.init_avail * mean_avail};
-        double muv_a = m.mosq.seeking_death_rate;
-        double thetad = m.mosq.seeking_duration;
+        const double muv_a = m.mosq.seeking_death_rate;
+        const double thetad = m.mosq.seeking_duration;
         std::vector<double> p_bi{m.mosq.prob_biting};
         std::vector<double> p_ci{m.mosq.prob_find_rest_site};
         std::vector<double> p_di{m.mosq.prob_resting};
         std::vector<double> p_ei{m.mosq.prob_ovipositing};
-        std::vector<double>& sv_init = m.forced_s_v;
-        std::vector<double> nv_oguess(m.mosq_emerge_rate.begin(), m.mosq_emerge_rate.end());
+        const std::vector<double>& sv_init = m.forced_s_v;
+        const std::vector<double> nv_oguess(m.mosq_emerge_rate.begin(), m.mosq_emerge_rate.end());
 
         // Append active NHH host types (malaria-non-susceptible)
         for (const auto& [name, nhh] : m.nhh_instances) {
@@ -190,8 +190,8 @@ public:
             p_ei.push_back(m.mosq.prob_ovipositing); // Using the same probability for nhh
         }
 
-        int n_host = static_cast<int>(ni.size());
-        int n_mal_host = 1; // only humans are malaria-susceptible here
+        const int n_host = static_cast<int>(ni.size());
+        const int n_mal_host = 1; // only humans are malaria-susceptible here
 
         std::vector<double> human_kappa(thetap, 0.0);
 
@@ -204,7 +204,7 @@ public:
             const double v1 = lagged_kappa[(i + 1) % lagged_kappa.size()];
 
             for (size_t d = start; d < end; ++d) {
-                const double t = double(d - start) / 5.0;
+                const double t = static_cast<double>(d - start) / 5.0;
                 human_kappa[d] = (1.0 - t) * v0 + t * v1;
             }
         }

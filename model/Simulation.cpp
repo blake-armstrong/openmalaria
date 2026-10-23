@@ -111,9 +111,9 @@ Simulation::Simulation(std::unique_ptr<scnXml::Scenario> scenario, util::Command
     const size_t pop_size = scenario_xml->getDemography().getPopSize();
 
     population_model = std::make_unique<Population>(pop_size);
-    transmission_model = std::unique_ptr<Transmission::TransmissionModel>(
+    transmission_model =
         Transmission::create_transmission_model(scenario_xml->getEntomology(), static_cast<int>(pop_size),
-                                                per_host_params, master_rngs.transmission, genotypes));
+                                                per_host_params, master_rngs.transmission, genotypes);
 
     registerContinousPopulationCallbacks();
 

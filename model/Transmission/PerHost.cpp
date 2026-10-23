@@ -51,7 +51,7 @@ PerHostParams::PerHostParams(const scnXml::AgeGroupValues& availability_to_mosqu
 }
 
 void PerHostParams::calc_availability_percentiles() {
-    int n_samples = 100000;
+    const int n_samples = 100000;
     vector<double> samples(n_samples, 0.0);
 
     // Using a different seed to make sure old results will not change
@@ -76,7 +76,7 @@ void PerHostParams::calc_availability_percentiles() {
 
     // Calc percetiles threshold values
     for (int i = 0; i < 100; i++)
-        ento_availability_percentiles[i] = samples[int(i * n_samples / 100)];
+        ento_availability_percentiles[i] = samples[i * n_samples / 100];
     ento_availability_percentiles[0] = 0.0;
 }
 
@@ -191,12 +191,11 @@ void PerHost::checkpoint_intervs(istream& stream) {
     validateListSize(l);
     active_components.clear();
     for (size_t i = 0; i < l; ++i) {
-        interventions::ComponentId id(stream);
+        const interventions::ComponentId id(stream);
         try {
             const interventions::HumanInterventionComponent& gen_params =
                 interventions::InterventionManager::getComponent(id); // may throw
-            const HumanVectorInterventionComponent* params =
-                dynamic_cast<const HumanVectorInterventionComponent*>(&gen_params);
+            const auto* params = dynamic_cast<const HumanVectorInterventionComponent*>(&gen_params);
             if (params == nullptr)
                 throw util::base_exception(""); // see catch block below
             active_components.push_back(params->make_human_part(stream, id));

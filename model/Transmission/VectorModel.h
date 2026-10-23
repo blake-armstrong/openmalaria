@@ -60,8 +60,8 @@ public:
 
     virtual void init_vector_interv(const scnXml::Description::AnophelesSequence& list, size_t instance,
                                     const string& name);
-    virtual void init_vector_trap(const scnXml::VectorTrap::DescriptionSequence list, size_t instance,
-                                  const scnXml::VectorTrap::NameOptional name);
+    virtual void init_vector_trap(const scnXml::VectorTrap::DescriptionSequence& list, size_t instance,
+                                  const scnXml::VectorTrap::NameOptional& name_opt);
 
     void scale_eir(double factor) override;
 

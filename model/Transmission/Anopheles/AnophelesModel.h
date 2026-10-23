@@ -160,11 +160,8 @@ struct Nhh {
 };
 
 struct TrapParams {
-    TrapParams() : rel_avail(numeric_limits<double>::signaling_NaN()) {}
-    TrapParams(TrapParams&& o) : rel_avail(o.rel_avail), avail_decay(std::move(o.avail_decay)) {}
-
-    double rel_avail;                            // Initial availability of a trap relative to an adult
-    unique_ptr<util::DecayFunction> avail_decay; // Decay of availability
+    double rel_avail = numeric_limits<double>::signaling_NaN(); // Initial availability of a trap relative to an adult
+    unique_ptr<util::DecayFunction> avail_decay;                // Decay of availability
 };
 
 struct TrapData {
@@ -190,9 +187,11 @@ public:
         mosq_emerge_rate.resize(Sim::one_year(), 0.0);
     }
 
-    AnophelesModel(const AnophelesModel&) = delete;            //disable copy-constructor
-    AnophelesModel& operator=(const AnophelesModel&) = delete; //disable copy-assignment
-    AnophelesModel(AnophelesModel&&) = default;
+    AnophelesModel(const AnophelesModel&) = delete;
+    AnophelesModel& operator=(const AnophelesModel&) = delete;
+    AnophelesModel(AnophelesModel&&) = delete;
+    AnophelesModel& operator=(AnophelesModel&&) = delete;
+    virtual ~AnophelesModel() = default;
 
     /** Called to initialise variables instead of a constructor. At this point,
      * the size of the human population is known but that population has not
@@ -314,7 +313,7 @@ public:
     virtual double get_emergence_rate(const SimTime& d0, const std::vector<double>& mosq_emerge_rate,
                                       double n_ovipositing) {
         // Get emergence at start of step:
-        SimTime d_year1 = mod_nn(d0, Sim::one_year());
+        const SimTime d_year1 = mod_nn(d0, Sim::one_year());
         // Simple model: fixed emergence scaled by larviciding
         return mosq_emerge_rate[d_year1];
     }

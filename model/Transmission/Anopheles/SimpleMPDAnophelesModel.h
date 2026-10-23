@@ -57,17 +57,17 @@ public:
         AnophelesModel::init2(n_humans, mean_pop_avail, sum_avail, sigma_f, sigma_df, sigma_dff);
 
         // Recompute tsp_dff locally
-        double leave_rate = sum_avail + nhh_avail + mosq.seeking_death_rate;
+        const double leave_rate = sum_avail + nhh_avail + mosq.seeking_death_rate;
         sigma_df += nhh_sigma_df;
         sigma_dff += nhh_sigma_dff;
 
-        double ts_p_a = exp(-leave_rate * mosq.seeking_duration);
-        double avail_divisor = (1.0 - ts_p_a) / leave_rate; // α_d
-        double ts_p_dff = sigma_dff * avail_divisor * mosq.prob_mosq_survival_ovipositing;
+        const double ts_p_a = exp(-leave_rate * mosq.seeking_duration);
+        const double avail_divisor = (1.0 - ts_p_a) / leave_rate; // α_d
+        const double ts_p_dff = sigma_dff * avail_divisor * mosq.prob_mosq_survival_ovipositing;
 
         // Initialise nOvipositingDelayed
-        int y1 = Sim::one_year();
-        int tau = mosq.rest_duration;
+        const int y1 = Sim::one_year();
+        const int tau = mosq.rest_duration;
         for (int t = 0; t < development_duration; t++) {
             n_ovipositing_delayed[util::mod_nn(t + tau, development_duration)] =
                 ts_p_dff * init_nv_from_sv * forced_s_v[t];
@@ -76,8 +76,8 @@ public:
         // Used when calculating invLarvalResources (but not a hard constraint):
         assert(tau + development_duration <= y1);
         for (int t = 0; t < Sim::one_year(); t++) {
-            double yt = f_eggs_laid_by_oviposit * ts_p_dff * init_nv_from_sv *
-                        forced_s_v[util::mod_nn(t + y1 - tau - development_duration, y1)];
+            const double yt = f_eggs_laid_by_oviposit * ts_p_dff * init_nv_from_sv *
+                              forced_s_v[util::mod_nn(t + y1 - tau - development_duration, y1)];
             inv_larval_resources[t] = (prob_preadult_survival * yt - mosq_emerge_rate[t]) / (mosq_emerge_rate[t] * yt);
         }
     }
@@ -92,20 +92,20 @@ public:
      *
      * @returns false if another iteration is needed. */
     bool init_iterate() override {
-        bool fitted = AnophelesModel::init_iterate();
+        const bool fitted = AnophelesModel::init_iterate();
 
         int y1 = Sim::one_year(), y2 = Sim::from_years_i(2), y3 = Sim::from_years_i(3), y4 = Sim::from_years_i(4),
             y5 = Sim::from_years_i(5);
 
-        assert((int)mosq_emerge_rate.size() == y1);
+        assert(static_cast<int>(mosq_emerge_rate.size()) == y1);
 
         for (int t = 0; t < y1; t++) {
-            int ttj = t - development_duration;
+            const int ttj = t - development_duration;
             // b · P_df · avg_N_v(t - θj - τ):
-            double yt = f_eggs_laid_by_oviposit * 0.2 *
-                        (quinquennial_ovipositing[ttj + y1] + quinquennial_ovipositing[ttj + y2] +
-                         quinquennial_ovipositing[ttj + y3] + quinquennial_ovipositing[ttj + y4] +
-                         quinquennial_ovipositing[util::mod_nn(ttj + y5, y5)]);
+            const double yt = f_eggs_laid_by_oviposit * 0.2 *
+                              (quinquennial_ovipositing[ttj + y1] + quinquennial_ovipositing[ttj + y2] +
+                               quinquennial_ovipositing[ttj + y3] + quinquennial_ovipositing[ttj + y4] +
+                               quinquennial_ovipositing[util::mod_nn(ttj + y5, y5)]);
             inv_larval_resources[t] = (prob_preadult_survival * yt - mosq_emerge_rate[t]) / (mosq_emerge_rate[t] * yt);
         }
 
@@ -125,10 +125,11 @@ public:
         // adult population, resources available, and larviciding.
         // See: A Simple Periodically-Forced Difference Equation Model for
         // Mosquito Population Dynamics, N. Chitnis, 2012. TODO: publish & link.
-        int d1 = d0 + 1;
+        const int d1 = d0 + 1;
 
-        double yt = f_eggs_laid_by_oviposit * n_ovipositing_delayed[util::mod_nn(d1, development_duration)];
-        double emergence = prob_preadult_survival * yt / (1.0 + inv_larval_resources[mod_nn(d0, Sim::one_year())] * yt);
+        const double yt = f_eggs_laid_by_oviposit * n_ovipositing_delayed[util::mod_nn(d1, development_duration)];
+        const double emergence =
+            prob_preadult_survival * yt / (1.0 + inv_larval_resources[mod_nn(d0, Sim::one_year())] * yt);
         n_ovipositing_delayed[util::mod_nn(d1, development_duration)] = n_ovipositing;
         quinquennial_ovipositing[util::mod_nn(d1, Sim::from_years_i(5))] = n_ovipositing;
 
@@ -148,10 +149,10 @@ public:
     double get_res_availability() const override {
         // TODO: why offset by one time step? This is effectively getting the resources available on the last time step
         // TODO: only have to add one year because of offset
-        SimTime start = Sim::now() - Sim::one_ts() + Sim::one_year();
+        const SimTime start = Sim::now() - Sim::one_ts() + Sim::one_year();
         double total = 0;
         for (SimTime i = start, end = start + Sim::one_ts(); i < end; i = i + Sim::one_day()) {
-            SimTime d_year1 = mod_nn(i, Sim::one_year());
+            const SimTime d_year1 = mod_nn(i, Sim::one_year());
             total += 1.0 / inv_larval_resources[d_year1];
         }
         return total / Sim::one_ts();

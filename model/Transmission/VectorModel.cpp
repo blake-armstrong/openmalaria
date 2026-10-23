@@ -86,7 +86,7 @@ void VectorModel::cts_cb_alpha(const vector<Host::Human>& population, ostream& s
         for (const Host::Human& human : population) {
             total += human.perHostTransmission.ento_availability_full(i, Sim::in_years(human.age(Sim::now())));
         }
-        stream << '\t' << total / population.size();
+        stream << '\t' << total / static_cast<double>(population.size());
     }
 }
 void VectorModel::cts_cb_p_b(const vector<Host::Human>& population, ostream& stream) {
@@ -95,7 +95,7 @@ void VectorModel::cts_cb_p_b(const vector<Host::Human>& population, ostream& str
         for (const Host::Human& human : population) {
             total += human.perHostTransmission.prob_mosq_biting(i);
         }
-        stream << '\t' << total / population.size();
+        stream << '\t' << total / static_cast<double>(population.size());
     }
 }
 void VectorModel::cts_cb_p_cd(const vector<Host::Human>& population, ostream& stream) {
@@ -104,7 +104,7 @@ void VectorModel::cts_cb_p_cd(const vector<Host::Human>& population, ostream& st
         for (const Host::Human& human : population) {
             total += human.perHostTransmission.prob_mosq_resting(i);
         }
-        stream << '\t' << total / population.size();
+        stream << '\t' << total / static_cast<double>(population.size());
     }
 }
 void VectorModel::cts_net_insecticide_content(const vector<Host::Human>& population, ostream& stream) {
@@ -178,7 +178,7 @@ VectorModel::VectorModel(vector<double> init_eir, int intervention_mode,
     ostringstream cts_nv0, cts_pa, cts_p_amu, cts_p_a1, cts_p_ah, cts_pdf, cts_pdif, cts_nv, cts_ov, cts_sv, cts_alpha,
         cts_pb, cts_pcd, cts_irs_effects, cts_ra, cts_rr;
 
-    size_t num_species = species.size();
+    const size_t num_species = species.size();
 
     // Output in order of species so that (1) we can just iterate through this
     // list when outputting and (2) output is in order specified in XML.
@@ -205,26 +205,32 @@ VectorModel::VectorModel(vector<double> init_eir, int intervention_mode,
         cts_rr << "\tres req(" << name << ")";
     }
 
-    mon::Continuous::registerCallback("N_v0", cts_nv0.str(), std::bind(&VectorModel::cts_cb_n_v0, this, _1));
-    mon::Continuous::registerCallback("P_A", cts_pa.str(), std::bind(&VectorModel::cts_cb_p_a, this, _1));
-    mon::Continuous::registerCallback("P_Amu", cts_p_amu.str(), std::bind(&VectorModel::cts_cb_p_amu, this, _1));
-    mon::Continuous::registerCallback("P_A1", cts_p_a1.str(), std::bind(&VectorModel::cts_cb_p_a1, this, _1));
-    mon::Continuous::registerCallback("P_Ah", cts_p_ah.str(), std::bind(&VectorModel::cts_cb_p_ah, this, _1));
-    mon::Continuous::registerCallback("P_df", cts_pdf.str(), std::bind(&VectorModel::cts_cb_p_df, this, _1));
-    mon::Continuous::registerCallback("P_dif", cts_pdif.str(), std::bind(&VectorModel::cts_cb_p_dif, this, _1));
-    mon::Continuous::registerCallback("N_v", cts_nv.str(), std::bind(&VectorModel::cts_cb_n_v, this, _1));
-    mon::Continuous::registerCallback("O_v", cts_ov.str(), std::bind(&VectorModel::cts_cb_o_v, this, _1));
-    mon::Continuous::registerCallback("S_v", cts_sv.str(), std::bind(&VectorModel::cts_cb_s_v, this, _1));
+    mon::Continuous::registerCallback("N_v0", cts_nv0.str(), [this](ostream& stream) { cts_cb_n_v0(stream); });
+    mon::Continuous::registerCallback("P_A", cts_pa.str(), [this](ostream& stream) { cts_cb_p_a(stream); });
+    mon::Continuous::registerCallback("P_Amu", cts_p_amu.str(), [this](ostream& stream) { cts_cb_p_amu(stream); });
+    mon::Continuous::registerCallback("P_A1", cts_p_a1.str(), [this](ostream& stream) { cts_cb_p_a1(stream); });
+    mon::Continuous::registerCallback("P_Ah", cts_p_ah.str(), [this](ostream& stream) { cts_cb_p_ah(stream); });
+    mon::Continuous::registerCallback("P_df", cts_pdf.str(), [this](ostream& stream) { cts_cb_p_df(stream); });
+    mon::Continuous::registerCallback("P_dif", cts_pdif.str(), [this](ostream& stream) { cts_cb_p_dif(stream); });
+    mon::Continuous::registerCallback("N_v", cts_nv.str(), [this](ostream& stream) { cts_cb_n_v(stream); });
+    mon::Continuous::registerCallback("O_v", cts_ov.str(), [this](ostream& stream) { cts_cb_o_v(stream); });
+    mon::Continuous::registerCallback("S_v", cts_sv.str(), [this](ostream& stream) { cts_cb_s_v(stream); });
 
     // availability to mosquitoes relative to other humans, excluding age factor
-    mon::Continuous::registerCallback("alpha", cts_alpha.str(), std::bind(&VectorModel::cts_cb_alpha, this, _1, _2));
-    mon::Continuous::registerCallback("P_B", cts_pb.str(), std::bind(&VectorModel::cts_cb_p_b, this, _1, _2));
-    mon::Continuous::registerCallback("P_C*P_D", cts_pcd.str(), std::bind(&VectorModel::cts_cb_p_cd, this, _1, _2));
+    mon::Continuous::registerCallback(
+        "alpha", cts_alpha.str(),
+        [this](const vector<Host::Human>& population, ostream& stream) { cts_cb_alpha(population, stream); });
+    mon::Continuous::registerCallback(
+        "P_B", cts_pb.str(),
+        [this](const vector<Host::Human>& population, ostream& stream) { cts_cb_p_b(population, stream); });
+    mon::Continuous::registerCallback(
+        "P_C*P_D", cts_pcd.str(),
+        [this](const vector<Host::Human>& population, ostream& stream) { cts_cb_p_cd(population, stream); });
 
     mon::Continuous::registerCallback("resource availability", cts_ra.str(),
-                                      std::bind(&VectorModel::cts_cb_res_availability, this, _1));
+                                      [this](ostream& stream) { cts_cb_res_availability(stream); });
     mon::Continuous::registerCallback("resource requirements", cts_rr.str(),
-                                      std::bind(&VectorModel::cts_cb_res_requirements, this, _1));
+                                      [this](ostream& stream) { cts_cb_res_requirements(stream); });
 }
 
 VectorModel::~VectorModel() = default;
@@ -235,7 +241,7 @@ void VectorModel::init2(const vector<Host::Human>& population) {
         sum_relative_availability +=
             human.perHostTransmission.relative_availability_age(Sim::in_years(human.age(Sim::now())));
     }
-    int pop_size = population.size();
+    const int pop_size = static_cast<int>(population.size());
     // value should be unimportant when no humans are available, though inf/nan is not acceptable
     if (pop_size > 0) {
         mean_avail = sum_relative_availability / pop_size; // mean-rel-avail
@@ -257,7 +263,7 @@ void VectorModel::init2(const vector<Host::Human>& population) {
             sigma_dff += prod * host.prob_mosq_resting(i) * host.rel_mosq_fecundity(i);
         }
 
-        species[i]->init2(population.size(), mean_avail, sum_avail, sigma_f, sigma_df, sigma_dff);
+        species[i]->init2(static_cast<int>(population.size()), mean_avail, sum_avail, sigma_f, sigma_df, sigma_dff);
     }
     simulation_mode = ForcedEir; // now we should be ready to start
 }
@@ -271,14 +277,14 @@ void VectorModel::init_vector_interv(const scnXml::Description::AnophelesSequenc
     }
     checker.checkNoneMissed();
 }
-void VectorModel::init_vector_trap(const scnXml::VectorTrap::DescriptionSequence list, size_t instance,
-                                   const scnXml::VectorTrap::NameOptional name_opt) {
+void VectorModel::init_vector_trap(const scnXml::VectorTrap::DescriptionSequence& list, size_t instance,
+                                   const scnXml::VectorTrap::NameOptional& name_opt) {
     stringstream name_ss;
     if (name_opt.present())
         name_ss << name_opt.get();
     else
         name_ss << "vector trap intervention " << (instance + 1);
-    string name = name_ss.str();
+    const string name = name_ss.str();
     SpeciesIndexChecker checker(name, species_index);
     for (const scnXml::Description1& anoph : list) {
         const string& mosq = anoph.getMosquito();
@@ -359,8 +365,8 @@ void VectorModel::calculate_eir(Host::Human& human, double age_years, vector<dou
             /* Calculates EIR per individual (hence N_i == 1).
              *
              * See comment in AnophelesModel::advancePeriod for method. */
-            double eir = species[i]->get_intervention_eir() * host.relative_availability_age(age_years) *
-                         host.ento_availability_het_vec_itv(i);
+            const double eir = species[i]->get_intervention_eir() * host.relative_availability_age(age_years) *
+                               host.ento_availability_het_vec_itv(i);
             mon::recordStat(mon::measure("innoculationsPerAgeGroup"), human, eir);
             mon::recordStat(mon::measure("innoculationsPerVector"), human, eir, i);
             // cout << host.availBite(i) << endl;
@@ -382,8 +388,8 @@ void VectorModel::calculate_eir(Host::Human& human, double age_years, vector<dou
             /* Calculates EIR per individual (hence N_i == 1).
              *
              * See comment in AnophelesModel::advancePeriod for method. */
-            double eir = species[i]->get_init_partial_eir() * host.relative_availability_age(age_years) *
-                         host.ento_availability_het_vec_itv(i);
+            const double eir = species[i]->get_init_partial_eir() * host.relative_availability_age(age_years) *
+                               host.ento_availability_het_vec_itv(i);
             mon::recordStat(mon::measure("innoculationsPerAgeGroup"), human, eir);
             mon::recordStat(mon::measure("innoculationsPerVector"), human, eir, i);
             // cout << host.availBite(i) << endl;
@@ -407,10 +413,10 @@ void VectorModel::calculate_eir(Host::Human& human, double age_years, vector<dou
             /* Calculates EIR per individual (hence N_i == 1).
              *
              * See comment in AnophelesModel::advancePeriod for method. */
-            double ento_factor = age_factor * host.avail_bite(i);
+            const double ento_factor = age_factor * host.avail_bite(i);
             for (size_t g = 0; g < genotype_eir_i.size(); ++g) {
-                double eir_i = partial_eir_i[g] * ento_factor;
-                double eir_l = partial_eir_l[g] * ento_factor;
+                const double eir_i = partial_eir_i[g] * ento_factor;
+                const double eir_l = partial_eir_l[g] * ento_factor;
                 mon::recordStat(mon::measure("innoculationsPerAgeGroup"), human, eir_i + eir_l, 0, g);
                 mon::recordStat(mon::measure("innoculationsPerVector"), human, eir_i + eir_l, i, g);
                 genotype_eir_i[g] += eir_i;
@@ -430,7 +436,7 @@ void VectorModel::vector_update(const vector<Host::Human>& population) {
         sigma_dif_l(species_index.size(), std::vector<double>(num_genotypes()));
     for (const Host::Human& human : population) {
         const OM::Transmission::PerHost& host = human.perHostTransmission;
-        WithinHost::WHInterface& whm = *human.withinHostModel;
+        const WithinHost::WHInterface& whm = *human.withinHostModel;
 
         prob_transmission_i.assign(num_genotypes(), 0.0);
         prob_transmission_l.assign(num_genotypes(), 0.0);
@@ -460,8 +466,8 @@ void VectorModel::vector_update(const vector<Host::Human>& population) {
     }
 }
 
-const string VecModeErr = "vector interventions can only be used in "
-                          "dynamic transmission mode (mode=\"dynamic\")";
+constexpr const char* VecModeErr = "vector interventions can only be used in "
+                                   "dynamic transmission mode (mode=\"dynamic\")";
 
 void VectorModel::deploy_vector_pop_interv(size_t instance) {
     if (intervention_mode != DynamicEir) {
