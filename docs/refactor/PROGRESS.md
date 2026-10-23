@@ -42,7 +42,13 @@ See `PLAN.md` for the session protocol, chunks and gates. Append one log entry p
 | D7 | done | 3de6a425, 31d61953, 8e9e674f, 8b583553, 529d46cf, 5d117152, f4c2f44c, e1f80857, acec99a5, d5761b35, e18142b8, (this log entry); F73 tests 2e3ff85e, 3409b9e9, (their log entry) |
 | D7b | done | f844263a, 99a752ec, 6ac27849, 4eaa9225, e1c53c02, 13d177cc, 804c0268, 9f0a66fe, 2a18091d, b38f88e7, (this log entry) |
 | D8 | done | da06b67a, 12449692, 2cee6da6, 0ed86df8, 118b811e, da9bfd0f, 7bdf5f73, 9f5e01f4, e894fa4f, 9e31e86b, (this log entry); F79 fix 0b7567cf, 8d9a79a6, 0f28d92a, (its log entry) |
-| D9 | todo | |
+| D9 | split | D9a–D9f |
+| D9a | done | 95266baa, a5f91dd1, 2560b4a4, 442d4c81, 39a676fc, 05f577dc, 8313fa51, 5255cf06, 7dddb242, 1d5dcf74, (this log entry) |
+| D9b | todo | |
+| D9c | todo | |
+| D9d | todo | |
+| D9e | todo | |
+| D9f | todo | |
 | E1 | todo | |
 | E2 | todo | |
 | E3 | todo | |
@@ -1417,3 +1423,37 @@ The user asked for F79 to be fixed (and agreed that F78's round-trip test belong
   - G-perf: `util/bench.sh -n 7 --compare ../om-bench-base/build-rework`, candidate 0f28d92a: median per-pair ratio 1.0002 (+0.02%), spreads 6.3% (candidate).
 - Findings: F79 moved to FINDINGS § Closed.
 - Next: D9.
+
+### Plan amendment: D9 split (2026-10-23, at the start of D9)
+D9 (monitoring state into `Simulation`, remove every bridge, G-two-sims) is far beyond one session. An inventory at b8c20803: the clock bridge (`Sim::` accessors that read the clock) has 371 call sites in 54 files, many on per-infection hot paths; Genotypes 28 sites in 7 files (`is_hrp2_deficient` per infection per day); the other six bridges about 60 sites in about 30 files; the monitoring record functions about 160 sites in 26 files. Of the remaining process-wide state only `mon::internal::runtime` and `mon::Continuous` break simulations run one after another (F81); the bridges' bindings restore the previous pointer, so they only break simulations alive at the same time. Split, with the user's approval of the plan: D9a (the two monitoring globals, sequential G-two-sims, `model/mon` rename and modernisation), D9b (cold bridges), D9c (Genotypes, Diagnostics), D9d (D9a's monitoring bridge), D9e (clock), D9f (remove the bridge namespace, interleaved G-two-sims). Rows in PLAN.md.
+
+### D9a: monitoring state → `Simulation`, and G-two-sims for simulations run one after another (done, 2026-10-23)
+- Base: b8c20803 (D8's F79 follow-up). The G-perf and A/B base worktree `../om-bench-base` was moved to b8c20803 and rebuilt.
+- Commits:
+  - 95266baa: `util/ab_scenarios.py` group `monitoring` (24 variants, below), base against base first (0 of 24 differ). The first try of the non-vector ctsout variant edited scenario5's intervention `<continuous>` and failed XSD; it uses scenario1's monitoring `<continuous>` instead.
+  - a5f91dd1: **G-two-sims driver**, registered disabled. `test/two_sims.cpp` (target `openMalaria-two-sims`) runs one `Simulation` per group of command-line arguments separated by `--next`, one after another, as `main()` does for one; `test/two_sims.py` byte-compares each one's `output.txt` and `ctsout.txt` with `test/expected/` (a missing ctsout where one is expected fails). ctest `two_sims` (label `two-sims`): NoInterv, 1, TriggeredMSAT, TriggeredMSAT, 9, 1, SimpleMPDTest (vector then non-vector ctsout, a condition scenario twice and then one without its measure, survey counts both ways, duringInit). On the base code (Release): NoInterv then 1, and 1 then 1, segfault in the second run; TriggeredMSAT then 9 stops with "no valid option selected in a switch statement" (exit 83); 9 then TriggeredMSAT and 9 then 5 give different output; TriggeredMSAT twice and 5 then 9 pass (F81).
+  - 2560b4a4: **logic.**
+    - `mon::internal::RuntimeState` and its global → `mon::MonitoringState`, a `Simulation` member with a `MonitoringBinding`, declared before the clock (`Clock::init` → `readSurveyDates` fills it). The free functions keep their signatures and take a local reference from `bridge::monitoring()`; D9d passes it instead. Defaults are the global's, so a new `Simulation` starts as a new process did; conditions no longer accumulate.
+    - `mon::Continuous` (a namespace with six file globals) → a class with the same members and defaults (`streamOffset` 0, as the zero-initialised global), a `Simulation` member declared before the population and the transmission model. Its stream closes with the `Simulation`. Passed where callbacks are registered (`Simulation`'s "new infections", the population callbacks, `TransmissionModel` and `VectorModel` through `create_transmission_model`) and to the checkpoint functions, which call it at its old position: registrations, XML reads and errors keep their order, and the checkpoint format is unchanged. No bridge.
+    - Unit tests bind a default `MonitoringState`. `two_sims` enabled.
+  - 442d4c81 + 39a676fc: **rename**, 152 by the tool (44 parameter, 39 function, 23 member, 18 variable, 13 local constant, 6 constexpr variable, 4 header guards, 4 method, 1 namespace `Deploy`). Maps: `ctsOStream=cts_stream` (the tool gave `cts_o_stream`), `_f=wrapped` (the prefix strip gave `f`, the name of the parameter its lambda captures). Skips: `writeRows`, `writeBinaryValue`, whose calls inside a generic lambda get no fix-it (F82); renamed in the hand commit. Collisions reviewed: namespace `deploy` beside the `deploy()` methods (a name before `::` finds only namespaces and types); `Human`'s own `cohortSet`/`updateCohortSet` keep their names.
+  - 05f577dc + 8313fa51: **modernise, tool:** 9 `unnecessary-value-param`, 5 `concat-nested-namespaces`, 3 `use-ranges`, 2 `loop-convert`. Checked: neither converted loop changes its container; the ranges sort orders by output number, which is unique.
+  - 5255cf06: **modernise, hand:** the two skipped renames and the loop variable `sub_pop`; `deploy::Method` → `enum class DeployMethod : std::uint8_t` at its 34 uses (not checkpointed or from XML); `Defs`, `is_valid_condition`'s list and the output.bin magic → `std::array`; designated initializers for `Condition` and `SurveyDate`; explicit casts for the output column number (same arithmetic, the cohort term still a `uint32_t` product); `std::cmp_greater` for the cohort bound; `ValueType` on `std::uint8_t`; `misc-const-correctness` (west const; not the checkpoint's `stored_size`, which the read instantiation writes). Left: designated initializers for the 90-row `Defs` table (rows read as columns), `Dim` (bit flags), `write_binary_value`'s `reinterpret_cast`, the `SurveyTime` slicing (E), `endl` (F14).
+  - 7dddb242: G-style on lines the chunk changed: `registerContinousPopulationCallbacks` → `register_continuous_population_callbacks` (`Population` is not yet renamed).
+  - 1d5dcf74: FINDINGS F80, F82, F81 closed; PLAN.md D9 split and D9a as built; README's bridge list, G-two-sims row and A/B row.
+- Gates:
+  - G-exact / G-unit: 63/63 (62 strict scenarios and unit suites, plus `two_sims`) on `build-rework/` (Release) and `build-debug/` (Debug) after each C++ commit.
+  - G-two-sims (sequential): `two_sims` passes on Release and Debug from 2560b4a4. Planted bugs (then reverted): `conditions` a static member again → the run stops at scenario 9 (exit 83); the ctsout stream a static member (never closed between simulations) → three ctsout files missing.
+  - G-stat: `ctest -L statistical -j3` at 7dddb242: 53 passed, 9 disabled (no reference), as after D8's F79 follow-up.
+  - G-style: `util/style.sh check b8c20803` clean at 7dddb242. Rename: format half clean, second dry run `nothing to rename` (with the two skips), token check passed, `check 442d4c81^` clean. Modernise tool commit: format half clean, second dry run applies nothing, `check 05f577dc^` clean. The new driver (`test/`, outside the gate's paths) is clang-format and clang-tidy clean.
+  - G-perf: `util/bench.sh -n 7 --compare ../om-bench-base/build-rework`, candidate 1d5dcf74 (same C++ as 7dddb242), load ~1.3 at the start: median per-pair ratio 1.0061 (+0.61%), spreads 2.1% (base) / 1.3%.
+  - A/B (`util/ab_scenarios.py <base> <candidate>`, base b8c20803): 0 of 272 variants (all eleven groups) differ after the logic commit and at 7dddb242; the `monitoring` group also 0 of 24 after the hand commit. The group `monitoring` covers: ctsout with `duringInit` across a checkpoint (SimpleMPDTest) and `duringInit` on (MonitoringAll); a `--ctsout` file name; the continuous-output errors (unknown option, `N_v0` in a non-vector scenario, period 0); `--print-survey-times` plain and with repeated and an unreported last survey (the warning); the survey-time errors (repeatStep without repeatEnd, repeatStep 0, a bad date); the survey-option errors (unknown, obsolete, duplicate output number, an unsupported category); binary and compressed output; two cohorts across a checkpoint and the two cohort errors; TriggeredMSAT's condition across a checkpoint, on an unreported measure (the hidden condition store) and its two errors.
+- Findings: F80 (a condition's value is not checkpointed; cannot matter with today's single checkpoint), F81 (closed: process-wide monitoring state), F82 (the rename tool and calls in generic lambdas).
+- Surprises:
+  - The base code crashed outright with two simulations in one process; the dangling ctsout callbacks were the first failure, before any survey-state difference showed.
+  - `misc-const-correctness` proposed `const` for a variable that one instantiation of a template (the checkpoint read) writes; the build caught it.
+- Follow-ups:
+  - D9b–D9f as split above; D9d also removes D9a's `MonitoringBinding`.
+  - H3: F80 if checkpoints are written later in a run; a G-two-sims case with checkpoint and resume in the same process.
+  - Sweep before F0: `Human` and `Population` are still not renamed or modernised.
+- Next: D9b.
