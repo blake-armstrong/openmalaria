@@ -62,6 +62,8 @@ set (OM_BOXTEST_NAMES
   AvailabilityFilter
   GaussianCopulaGamma
   GaussianCopulaLognormal
+  GaussianCopulaGammaDeployed
+  GaussianCopulaLognormalDeployed
   InfectionOrigin
   ModelNameNoOverrides
   ModelNameParamOverrides
