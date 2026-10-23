@@ -20,8 +20,8 @@
  * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301, USA.
  */
 
-#ifndef Hmod_ESDecisionTree
-#define Hmod_ESDecisionTree
+#ifndef HMOD_CM_DECISION_TREE
+#define HMOD_CM_DECISION_TREE
 
 #include "Host/Human.h"
 #include "Host/WithinHost/Pathogenesis/State.h"
@@ -48,12 +48,12 @@ struct CMHostData {
      * and pathogenesis state pg_state. Note that pg_state is only needed for
      * uncomplicated trees (see DecisionTreeLibrary::create()). */
     CMHostData(Host::Human& h, util::LocalRng& r, double age_years, Episode::State pg_state)
-        : human(h), ageYears(age_years), pgState(pg_state), rng(r) {}
+        : human(h), age_years(age_years), pg_state(pg_state), rng(r) {}
     Host::Human& human;
-    double ageYears; // only cached to save recalculating
-    Episode::State pgState;
+    double age_years; // only cached to save recalculating
+    Episode::State pg_state;
     util::LocalRng& rng; // NOLINT(cppcoreguidelines-avoid-const-or-ref-data-members)
-    inline WHInterface& withinHost() { return *human.withinHostModel; }
+    inline WHInterface& within_host() { return *human.withinHostModel; }
 };
 /** All output data from the decision tree. */
 struct CMDTOut {
@@ -84,7 +84,7 @@ public:
      * 
      * Reporting: use of diagnostics is reported. Treatment is not, but the
      * output may be used to determine whether any treatment took place. */
-    virtual CMDTOut exec(CMHostData hostData) const = 0;
+    virtual CMDTOut exec(CMHostData host_data) const = 0;
 };
 
 class DecisionTreeLibrary {
@@ -101,7 +101,7 @@ public:
      *  xml_scenario_error exception is thrown. CMHostData::pgState is only
      *  used by the "case type" decision, so if isUC is false when creating the
      *  tree, pgState does not need to be set when executing the tree. */
-    const CMDecisionTree& create(const ::scnXml::DecisionTree& node, bool isUC);
+    const CMDecisionTree& create(const ::scnXml::DecisionTree& node, bool is_uc);
 
     const CMDecisionTree& save(CMDecisionTree* decision);
 

@@ -135,10 +135,10 @@ public:
         dt.setCaseType(ct);
 
         using Underlying = std::underlying_type_t<Pathogenesis::State>;
-        hd->pgState = static_cast<Episode::State>(static_cast<Underlying>(Pathogenesis::StateMalaria));
+        hd->pg_state = static_cast<Episode::State>(static_cast<Underlying>(Pathogenesis::StateMalaria));
         TS_ASSERT_EQUALS(propTreatmentsNReps(1, dt), 1);
 
-        hd->pgState =
+        hd->pg_state =
             static_cast<Episode::State>(static_cast<Underlying>(Pathogenesis::StateMalaria) | Episode::SecondCase);
 
         TS_ASSERT_EQUALS(propTreatmentsNReps(1, dt), 0);
@@ -163,7 +163,7 @@ public:
         scnXml::DecisionTree dt_rdt;
         dt_rdt.setDiagnostic(rdt);
 
-        hd->pgState = static_cast<Episode::State>(Pathogenesis::StateMalaria);
+        hd->pg_state = static_cast<Episode::State>(Pathogenesis::StateMalaria);
         const int N = 20000;
         const double LIM = .02;
 
@@ -199,13 +199,13 @@ public:
         scnXml::DecisionTree dt;
         dt.setAge(ageSwitch);
 
-        hd->ageYears = 1;
+        hd->age_years = 1;
         TS_ASSERT_EQUALS(propTreatmentsNReps(1, dt), 1);
-        hd->ageYears = 2.5;
+        hd->age_years = 2.5;
         TS_ASSERT_EQUALS(propTreatmentsNReps(1, dt), 0);
-        hd->ageYears = 50;
+        hd->age_years = 50;
         TS_ASSERT_EQUALS(propTreatmentsNReps(1, dt), 1);
-        hd->ageYears = 1e6; // there is no upper bound, so this should work!
+        hd->age_years = 1e6; // there is no upper bound, so this should work!
         TS_ASSERT_EQUALS(propTreatmentsNReps(1, dt), 1);
     }
 
@@ -231,7 +231,7 @@ public:
     }
 
     double runAndGetMgPrescribed(scnXml::DecisionTree& dt, double age) {
-        hd->ageYears = age;
+        hd->age_years = age;
         UnittestUtil::clearMedicateQueue(whm->pkpd);
         TS_ASSERT_EQUALS(propTreatmentsNReps(1, dt), 1);
         return UnittestUtil::getPrescribedMg(whm->pkpd);

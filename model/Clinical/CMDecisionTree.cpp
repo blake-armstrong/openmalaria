@@ -52,7 +52,7 @@ using std::vector;
  */
 class CMDTMultiple : public CMDecisionTree {
 public:
-    static const CMDecisionTree& create(DecisionTreeLibrary& library, const ::scnXml::DTMultiple& node, bool isUC);
+    static const CMDecisionTree& create(DecisionTreeLibrary& library, const ::scnXml::DTMultiple& node, bool is_uc);
 
 protected:
     virtual bool operator==(const CMDecisionTree& that) const {
@@ -70,10 +70,10 @@ protected:
         return true; // no tests failed; must be the same
     }
 
-    virtual CMDTOut exec(CMHostData hostData) const {
+    virtual CMDTOut exec(CMHostData host_data) const {
         CMDTOut result(false);
         for (auto it = children.begin(), end = children.end(); it != end; ++it) {
-            CMDTOut r2 = (*it)->exec(hostData);
+            CMDTOut r2 = (*it)->exec(host_data);
             result.treated = result.treated || r2.treated;
         }
         return result;
@@ -84,8 +84,8 @@ private:
         //         children.reserve( capacity );
     }
 
-    typedef vector<const CMDecisionTree*> Children_t;
-    Children_t children;
+    typedef vector<const CMDecisionTree*> ChildrenT;
+    ChildrenT children;
 };
 
 // ———  branching nodes  ———
@@ -95,7 +95,7 @@ private:
  */
 class CMDTCaseType : public CMDecisionTree {
 public:
-    static const CMDecisionTree& create(DecisionTreeLibrary& library, const ::scnXml::DTCaseType& node, bool isUC);
+    static const CMDecisionTree& create(DecisionTreeLibrary& library, const ::scnXml::DTCaseType& node, bool is_uc);
 
 protected:
     virtual bool operator==(const CMDecisionTree& that) const {
@@ -104,29 +104,29 @@ protected:
         const CMDTCaseType* p = dynamic_cast<const CMDTCaseType*>(&that);
         if (p == 0)
             return false; // different type of node
-        if (firstLine != p->firstLine)
+        if (first_line != p->first_line)
             return false;
-        if (secondLine != p->secondLine)
+        if (second_line != p->second_line)
             return false;
         return true; // no tests failed; must be the same
     }
 
-    virtual CMDTOut exec(CMHostData hostData) const {
+    virtual CMDTOut exec(CMHostData host_data) const {
         // Uses of this in complicated cases should trigger an exception during initialisation.
-        assert((hostData.pgState & Episode::Sick) && !(hostData.pgState & Episode::Complicated));
+        assert((host_data.pg_state & Episode::Sick) && !(host_data.pg_state & Episode::Complicated));
 
-        if (hostData.pgState & Episode::SecondCase)
-            return secondLine.exec(hostData);
+        if (host_data.pg_state & Episode::SecondCase)
+            return second_line.exec(host_data);
         else
-            return firstLine.exec(hostData);
+            return first_line.exec(host_data);
     }
 
 private:
-    CMDTCaseType(const CMDecisionTree& firstLine, const CMDecisionTree& secondLine)
-        : firstLine(firstLine), secondLine(secondLine) {}
+    CMDTCaseType(const CMDecisionTree& first_line, const CMDecisionTree& second_line)
+        : first_line(first_line), second_line(second_line) {}
 
-    const CMDecisionTree& firstLine;
-    const CMDecisionTree& secondLine;
+    const CMDecisionTree& first_line;
+    const CMDecisionTree& second_line;
 };
 
 /**
@@ -135,7 +135,7 @@ private:
 class CMDTInfectionOrigin : public CMDecisionTree {
 public:
     static const CMDecisionTree& create(DecisionTreeLibrary& library, const ::scnXml::DTInfectionOrigin& node,
-                                        bool isUC);
+                                        bool is_uc);
 
 protected:
     virtual bool operator==(const CMDecisionTree& that) const {
@@ -153,14 +153,14 @@ protected:
         return true; // no tests failed; must be the same
     }
 
-    virtual CMDTOut exec(CMHostData hostData) const {
-        WithinHost::InfectionOrigin InfectionOrigin = hostData.withinHost().infection_origin();
-        if (InfectionOrigin == WithinHost::InfectionOrigin::Imported)
-            return imported.exec(hostData);
-        else if (InfectionOrigin == WithinHost::InfectionOrigin::Introduced)
-            return introduced.exec(hostData);
+    virtual CMDTOut exec(CMHostData host_data) const {
+        WithinHost::InfectionOrigin infection_origin = host_data.within_host().infection_origin();
+        if (infection_origin == WithinHost::InfectionOrigin::Imported)
+            return imported.exec(host_data);
+        else if (infection_origin == WithinHost::InfectionOrigin::Introduced)
+            return introduced.exec(host_data);
         else
-            return indigenous.exec(hostData);
+            return indigenous.exec(host_data);
     }
 
 private:
@@ -176,7 +176,7 @@ private:
  */
 class CMDTDiagnostic : public CMDecisionTree {
 public:
-    static const CMDecisionTree& create(DecisionTreeLibrary& library, const ::scnXml::DTDiagnostic& node, bool isUC);
+    static const CMDecisionTree& create(DecisionTreeLibrary& library, const ::scnXml::DTDiagnostic& node, bool is_uc);
 
 protected:
     virtual bool operator==(const CMDecisionTree& that) const {
@@ -194,13 +194,13 @@ protected:
         return true; // no tests failed; must be the same
     }
 
-    virtual CMDTOut exec(CMHostData hostData) const {
+    virtual CMDTOut exec(CMHostData host_data) const {
         CMDTOut result;
 
-        if (hostData.withinHost().diagnostic_result(hostData.rng, diagnostic))
-            result = positive.exec(hostData);
+        if (host_data.within_host().diagnostic_result(host_data.rng, diagnostic))
+            result = positive.exec(host_data);
         else
-            result = negative.exec(hostData);
+            result = negative.exec(host_data);
         result.screened = true;
 
         return result;
@@ -217,7 +217,8 @@ private:
 
 class CMDTUncomplicated : public CMDecisionTree {
 public:
-    static const CMDecisionTree& create(DecisionTreeLibrary& library, const ::scnXml::DTUncomplicated& node, bool isUC);
+    static const CMDecisionTree& create(DecisionTreeLibrary& library, const ::scnXml::DTUncomplicated& node,
+                                        bool is_uc);
 
 protected:
     virtual bool operator==(const CMDecisionTree& that) const {
@@ -234,17 +235,17 @@ protected:
         return true; // no tests failed; must be the same
     }
 
-    virtual CMDTOut exec(CMHostData hostData) const {
-        const Clinical::Episode& latest = hostData.human.clinicalModel->get_latest_report();
+    virtual CMDTOut exec(CMHostData host_data) const {
+        const Clinical::Episode& latest = host_data.human.clinicalModel->get_latest_report();
 
-        if (((hostData.pgState & Episode::Sick) && !(hostData.pgState & Episode::Complicated)) ||
-            (hostData.pgState & Episode::Malaria)) {
+        if (((host_data.pg_state & Episode::Sick) && !(host_data.pg_state & Episode::Complicated)) ||
+            (host_data.pg_state & Episode::Malaria)) {
             if (latest.time + memory >= Sim::now_or_ts0())
-                return positive.exec(hostData);
+                return positive.exec(host_data);
             else
-                return negative.exec(hostData);
+                return negative.exec(host_data);
         } else
-            return negative.exec(hostData);
+            return negative.exec(host_data);
     }
 
 private:
@@ -263,7 +264,7 @@ private:
 
 class CMDTSevere : public CMDecisionTree {
 public:
-    static const CMDecisionTree& create(DecisionTreeLibrary& library, const ::scnXml::DTSevere& node, bool isUC);
+    static const CMDecisionTree& create(DecisionTreeLibrary& library, const ::scnXml::DTSevere& node, bool is_uc);
 
 protected:
     virtual bool operator==(const CMDecisionTree& that) const {
@@ -280,13 +281,13 @@ protected:
         return true; // no tests failed; must be the same
     }
 
-    virtual CMDTOut exec(CMHostData hostData) const {
+    virtual CMDTOut exec(CMHostData host_data) const {
         CMDTOut result;
 
-        if (hostData.pgState & Episode::Complicated)
-            result = positive.exec(hostData);
+        if (host_data.pg_state & Episode::Complicated)
+            result = positive.exec(host_data);
         else
-            result = negative.exec(hostData);
+            result = negative.exec(host_data);
 
         // result.screened = true;
         return result;
@@ -308,7 +309,7 @@ private:
  */
 class CMDTRandom : public CMDecisionTree {
 public:
-    static const CMDecisionTree& create(DecisionTreeLibrary& library, const ::scnXml::DTRandom& node, bool isUC);
+    static const CMDecisionTree& create(DecisionTreeLibrary& library, const ::scnXml::DTRandom& node, bool is_uc);
 
 protected:
     virtual bool operator==(const CMDecisionTree& that) const {
@@ -328,18 +329,18 @@ protected:
         return true; // no tests failed; must be the same
     }
 
-    virtual CMDTOut exec(CMHostData hostData) const {
-        auto it = branches.upper_bound(hostData.rng.uniform_01());
+    virtual CMDTOut exec(CMHostData host_data) const {
+        auto it = branches.upper_bound(host_data.rng.uniform_01());
         assert(it != branches.end());
-        return it->second->exec(hostData);
+        return it->second->exec(host_data);
     }
 
 private:
     CMDTRandom() {}
 
     // keys are cumulative probabilities; last entry should equal 1
-    typedef map<double, const CMDecisionTree*> Branches_t;
-    Branches_t branches;
+    typedef map<double, const CMDecisionTree*> BranchesT;
+    BranchesT branches;
 };
 
 /**
@@ -347,7 +348,7 @@ private:
  */
 class CMDTAge : public CMDecisionTree {
 public:
-    static const CMDecisionTree& create(DecisionTreeLibrary& library, const ::scnXml::DTAge& node, bool isUC);
+    static const CMDecisionTree& create(DecisionTreeLibrary& library, const ::scnXml::DTAge& node, bool is_uc);
 
 protected:
     virtual bool operator==(const CMDecisionTree& that) const {
@@ -367,20 +368,20 @@ protected:
         return true; // no tests failed; must be the same
     }
 
-    virtual CMDTOut exec(CMHostData hostData) const {
+    virtual CMDTOut exec(CMHostData host_data) const {
         // age is that of human at start of time step (i.e. may be as low as 0)
-        auto it = branches.upper_bound(hostData.ageYears);
+        auto it = branches.upper_bound(host_data.age_years);
         if (it == branches.end())
             throw TRACED_EXCEPTION("bad age-based decision tree switch", util::Error::PkPd);
-        return it->second->exec(hostData);
+        return it->second->exec(host_data);
     }
 
 private:
     CMDTAge() {}
 
     // keys are upper bounds of age categories
-    typedef map<double, const CMDecisionTree*> Branches_t;
-    Branches_t branches;
+    typedef map<double, const CMDecisionTree*> BranchesT;
+    BranchesT branches;
 };
 
 // ———  action nodes  ———
@@ -395,17 +396,17 @@ protected:
         return p != 0; // same type: is equivalent
     }
 
-    virtual CMDTOut exec(CMHostData hostData) const { return CMDTOut(false); }
+    virtual CMDTOut exec(CMHostData host_data) const { return CMDTOut(false); }
 };
 
 class CMDTReport : public CMDecisionTree {
 public:
     CMDTReport(const scnXml::DecisionTree::ReportSequence& seq) {
-        outIds.reserve(seq.size());
-        for (const scnXml::DTReport& reportElt : seq) {
-            outIds.push_back(reportElt.getOutputNumber());
+        out_ids.reserve(seq.size());
+        for (const scnXml::DTReport& report_elt : seq) {
+            out_ids.push_back(report_elt.getOutputNumber());
         }
-        assert(outIds.size() > 0); // CMDTTreatPKPD should not be used in this case
+        assert(out_ids.size() > 0); // CMDTTreatPKPD should not be used in this case
     }
 
 protected:
@@ -415,24 +416,24 @@ protected:
         const CMDTReport* p = dynamic_cast<const CMDTReport*>(&that);
         if (p == 0)
             return false; // different type of node
-        if (outIds.size() != p->outIds.size())
+        if (out_ids.size() != p->out_ids.size())
             return false;
-        for (auto it1 = outIds.begin(), it2 = p->outIds.begin(); it1 != outIds.end(); ++it1, ++it2) {
+        for (auto it1 = out_ids.begin(), it2 = p->out_ids.begin(); it1 != out_ids.end(); ++it1, ++it2) {
             if (*it1 != *it2)
                 return false;
         }
         return true; // no tests failed; must be the same
     }
 
-    virtual CMDTOut exec(CMHostData hostData) const {
-        for (const int outId : outIds) {
-            mon::recordEvent(mon::measure("nCMDTReport"), hostData.human, 1, outId);
+    virtual CMDTOut exec(CMHostData host_data) const {
+        for (const int out_id : out_ids) {
+            mon::recordEvent(mon::measure("nCMDTReport"), host_data.human, 1, out_id);
         }
         return CMDTOut(false);
     }
 
 private:
-    vector<int> outIds;
+    vector<int> out_ids;
 };
 
 /** Report treament without affecting parasites. **/
@@ -445,7 +446,7 @@ protected:
         return p != 0; // same type: is equivalent
     }
 
-    virtual CMDTOut exec(CMHostData hostData) const { return CMDTOut(true /*report treatment*/); }
+    virtual CMDTOut exec(CMHostData host_data) const { return CMDTOut(true /*report treatment*/); }
 };
 
 /**
@@ -455,9 +456,9 @@ class CMDTTreatPKPD : public CMDecisionTree {
 public:
     CMDTTreatPKPD(const pk_pd::CourseRegistry& courses, const scnXml::DecisionTree::TreatPKPDSequence& seq) {
         treatments.reserve(seq.size());
-        for (const scnXml::DTTreatPKPD& treatElt : seq) {
+        for (const scnXml::DTTreatPKPD& treat_elt : seq) {
             treatments.push_back(
-                TreatInfo(courses, treatElt.getSchedule(), treatElt.getDosage(), treatElt.getDelay_h()));
+                TreatInfo(courses, treat_elt.getSchedule(), treat_elt.getDosage(), treat_elt.getDelay_h()));
         }
         assert(treatments.size() > 0); // CMDTTreatPKPD should not be used in this case
     }
@@ -478,9 +479,9 @@ protected:
         return true; // no tests failed; must be the same
     }
 
-    virtual CMDTOut exec(CMHostData hostData) const {
+    virtual CMDTOut exec(CMHostData host_data) const {
         for (const TreatInfo& treatment : treatments) {
-            hostData.withinHost().treat_pk_pd(treatment.schedule, treatment.dosage, hostData.ageYears, 0.0);
+            host_data.within_host().treat_pk_pd(treatment.schedule, treatment.dosage, host_data.age_years, 0.0);
         }
         return CMDTOut(true);
     }
@@ -505,19 +506,19 @@ private:
 class CMDTTreatSimple : public CMDecisionTree {
 public:
     CMDTTreatSimple(const scnXml::DecisionTree::TreatSimpleSequence& elt)
-        : timeLiver(Sim::zero()), timeBlood(Sim::zero()) {
-        for (const auto& treatElt : elt) {
+        : time_liver(Sim::zero()), time_blood(Sim::zero()) {
+        for (const auto& treat_elt : elt) {
             //NOTE: this code is currently identical to that in SimpleTreatComponent
             try {
-                SimTime durL = UnitParse::readShortDuration(treatElt.getDurationLiver(), UnitParse::NONE),
-                        durB = UnitParse::readShortDuration(treatElt.getDurationBlood(), UnitParse::NONE);
+                SimTime dur_l = UnitParse::readShortDuration(treat_elt.getDurationLiver(), UnitParse::NONE),
+                        dur_b = UnitParse::readShortDuration(treat_elt.getDurationBlood(), UnitParse::NONE);
                 SimTime neg1 = -Sim::one_ts();
-                if (durL < neg1 || durB < neg1) {
+                if (dur_l < neg1 || dur_b < neg1) {
                     throw util::xml_scenario_error(
                         "treatSimple: cannot have durationBlood or durationLiver less than -1");
                 }
-                timeLiver.push_back(durL);
-                timeBlood.push_back(durB);
+                time_liver.push_back(dur_l);
+                time_blood.push_back(dur_b);
             } catch (const util::format_error& e) {
                 throw util::xml_scenario_error(string("treatSimple: ").append(e.message()));
             }
@@ -531,27 +532,27 @@ protected:
         const CMDTTreatSimple* p = dynamic_cast<const CMDTTreatSimple*>(&that);
         if (p == 0)
             return false; // different type of node
-        if (timeLiver.size() != p->timeLiver.size())
+        if (time_liver.size() != p->time_liver.size())
             return false;
-        if (timeBlood.size() != p->timeBlood.size())
+        if (time_blood.size() != p->time_blood.size())
             return false;
-        for (auto it1 = timeLiver.begin(), it2 = p->timeLiver.begin(); it1 != timeLiver.end(); ++it1, ++it2) {
+        for (auto it1 = time_liver.begin(), it2 = p->time_liver.begin(); it1 != time_liver.end(); ++it1, ++it2) {
             if (*it1 != *it2)
                 return false;
         }
         return true; // no tests failed; must be the same
     }
 
-    virtual CMDTOut exec(CMHostData hostData) const {
-        bool bsTreatment = false;
-        for (size_t i = 0; i < timeLiver.size(); i++) {
-            bsTreatment = hostData.withinHost().treat_simple(hostData.human, timeLiver[i], timeBlood[i]);
+    virtual CMDTOut exec(CMHostData host_data) const {
+        bool bs_treatment = false;
+        for (size_t i = 0; i < time_liver.size(); i++) {
+            bs_treatment = host_data.within_host().treat_simple(host_data.human, time_liver[i], time_blood[i]);
         }
-        return CMDTOut(bsTreatment);
+        return CMDTOut(bs_treatment);
     }
 
 private:
-    vector<SimTime> timeLiver, timeBlood;
+    vector<SimTime> time_liver, time_blood;
 };
 
 /**
@@ -580,8 +581,8 @@ protected:
         return true; // no tests failed; must be the same
     }
 
-    virtual CMDTOut exec(CMHostData hostData) const {
-        deploy(hostData.human, mon::Deploy::TREAT, interventions::VaccineLimits(/*default initialise: no limits*/));
+    virtual CMDTOut exec(CMHostData host_data) const {
+        deploy(host_data.human, mon::Deploy::TREAT, interventions::VaccineLimits(/*default initialise: no limits*/));
 
         //NOTE: it's not intuitively obvious what value should be returned here
         // in the case of intervention deployment. This at least means that
@@ -592,7 +593,7 @@ protected:
 
 class CMDTCohort : public CMDecisionTree {
 public:
-    static const CMDecisionTree& create(DecisionTreeLibrary& library, const ::scnXml::DTCohort& node, bool isUC);
+    static const CMDecisionTree& create(DecisionTreeLibrary& library, const ::scnXml::DTCohort& node, bool is_uc);
 
 protected:
     virtual bool operator==(const CMDecisionTree& that) const {
@@ -609,14 +610,14 @@ protected:
         return true; // no tests failed; must be the same
     }
 
-    virtual CMDTOut exec(CMHostData hostData) const {
+    virtual CMDTOut exec(CMHostData host_data) const {
         CMDTOut result;
 
         // Rely on the health system memory to not count the same episode twice
-        if (hostData.human.isInSubPop(component))
-            result = positive.exec(hostData);
+        if (host_data.human.isInSubPop(component))
+            result = positive.exec(host_data);
         else
-            result = negative.exec(hostData);
+            result = negative.exec(host_data);
 
         // result.screened = true;
         return result;
@@ -651,26 +652,26 @@ const CMDecisionTree& DecisionTreeLibrary::save(CMDecisionTree* decision) {
     return *decisions.back();
 }
 
-const CMDecisionTree& DecisionTreeLibrary::create(const scnXml::DecisionTree& node, bool isUC) {
+const CMDecisionTree& DecisionTreeLibrary::create(const scnXml::DecisionTree& node, bool is_uc) {
     if (node.getMultiple().present())
-        return CMDTMultiple::create(*this, node.getMultiple().get(), isUC);
+        return CMDTMultiple::create(*this, node.getMultiple().get(), is_uc);
     // branching nodes
     if (node.getCaseType().present())
-        return CMDTCaseType::create(*this, node.getCaseType().get(), isUC);
+        return CMDTCaseType::create(*this, node.getCaseType().get(), is_uc);
     if (node.getInfectionOrigin().present())
-        return CMDTInfectionOrigin::create(*this, node.getInfectionOrigin().get(), isUC);
+        return CMDTInfectionOrigin::create(*this, node.getInfectionOrigin().get(), is_uc);
     if (node.getDiagnostic().present())
-        return CMDTDiagnostic::create(*this, node.getDiagnostic().get(), isUC);
+        return CMDTDiagnostic::create(*this, node.getDiagnostic().get(), is_uc);
     if (node.getUncomplicated().present())
-        return CMDTUncomplicated::create(*this, node.getUncomplicated().get(), isUC);
+        return CMDTUncomplicated::create(*this, node.getUncomplicated().get(), is_uc);
     if (node.getSevere().present())
         return CMDTSevere::create(*this, node.getSevere().get(), true);
     if (node.getRandom().present())
-        return CMDTRandom::create(*this, node.getRandom().get(), isUC);
+        return CMDTRandom::create(*this, node.getRandom().get(), is_uc);
     if (node.getAge().present())
-        return CMDTAge::create(*this, node.getAge().get(), isUC);
+        return CMDTAge::create(*this, node.getAge().get(), is_uc);
     if (node.getCohort().present())
-        return CMDTCohort::create(*this, node.getCohort().get(), isUC);
+        return CMDTCohort::create(*this, node.getCohort().get(), is_uc);
 
     // action nodes
     if (node.getNoTreatment().present())
@@ -688,31 +689,31 @@ const CMDecisionTree& DecisionTreeLibrary::create(const scnXml::DecisionTree& no
     throw xml_scenario_error("unterminated decision tree");
 }
 
-const CMDecisionTree& CMDTMultiple::create(DecisionTreeLibrary& library, const scnXml::DTMultiple& node, bool isUC) {
+const CMDecisionTree& CMDTMultiple::create(DecisionTreeLibrary& library, const scnXml::DTMultiple& node, bool is_uc) {
     CMDTMultiple* self = new CMDTMultiple();
     for (const scnXml::DTCaseType& sn : node.getCaseType()) {
-        self->children.push_back(&CMDTCaseType::create(library, sn, isUC));
+        self->children.push_back(&CMDTCaseType::create(library, sn, is_uc));
     }
     for (const scnXml::DTInfectionOrigin& sn : node.getInfectionOrigin()) {
-        self->children.push_back(&CMDTInfectionOrigin::create(library, sn, isUC));
+        self->children.push_back(&CMDTInfectionOrigin::create(library, sn, is_uc));
     }
     for (const scnXml::DTDiagnostic& sn : node.getDiagnostic()) {
-        self->children.push_back(&CMDTDiagnostic::create(library, sn, isUC));
+        self->children.push_back(&CMDTDiagnostic::create(library, sn, is_uc));
     }
     for (const scnXml::DTUncomplicated& sn : node.getUncomplicated()) {
-        self->children.push_back(&CMDTUncomplicated::create(library, sn, isUC));
+        self->children.push_back(&CMDTUncomplicated::create(library, sn, is_uc));
     }
     for (const scnXml::DTSevere& sn : node.getSevere()) {
-        self->children.push_back(&CMDTSevere::create(library, sn, isUC));
+        self->children.push_back(&CMDTSevere::create(library, sn, is_uc));
     }
     for (const scnXml::DTRandom& sn : node.getRandom()) {
-        self->children.push_back(&CMDTRandom::create(library, sn, isUC));
+        self->children.push_back(&CMDTRandom::create(library, sn, is_uc));
     }
     for (const scnXml::DTAge& sn : node.getAge()) {
-        self->children.push_back(&CMDTAge::create(library, sn, isUC));
+        self->children.push_back(&CMDTAge::create(library, sn, is_uc));
     }
     for (const scnXml::DTCohort& sn : node.getCohort()) {
-        self->children.push_back(&CMDTCohort::create(library, sn, isUC));
+        self->children.push_back(&CMDTCohort::create(library, sn, is_uc));
     }
     if (node.getTreatPKPD().size()) {
         self->children.push_back(&library.save(new CMDTTreatPKPD(library.pk_pd().courses, node.getTreatPKPD())));
@@ -729,52 +730,52 @@ const CMDecisionTree& CMDTMultiple::create(DecisionTreeLibrary& library, const s
     return library.save(self);
 }
 
-const CMDecisionTree& CMDTCaseType::create(DecisionTreeLibrary& library, const scnXml::DTCaseType& node, bool isUC) {
-    if (!isUC) {
+const CMDecisionTree& CMDTCaseType::create(DecisionTreeLibrary& library, const scnXml::DTCaseType& node, bool is_uc) {
+    if (!is_uc) {
         throw util::xml_scenario_error("decision tree: caseType can only be used for uncomplicated cases");
     }
     return library.save(
-        new CMDTCaseType(library.create(node.getFirstLine(), isUC), library.create(node.getSecondLine(), isUC)));
+        new CMDTCaseType(library.create(node.getFirstLine(), is_uc), library.create(node.getSecondLine(), is_uc)));
 }
 
 const CMDecisionTree& CMDTInfectionOrigin::create(DecisionTreeLibrary& library, const scnXml::DTInfectionOrigin& node,
-                                                  bool isUC) {
-    return library.save(new CMDTInfectionOrigin(library.create(node.getImported(), isUC),
-                                                library.create(node.getIntroduced(), isUC),
-                                                library.create(node.getIndigenous(), isUC)));
+                                                  bool is_uc) {
+    return library.save(new CMDTInfectionOrigin(library.create(node.getImported(), is_uc),
+                                                library.create(node.getIntroduced(), is_uc),
+                                                library.create(node.getIndigenous(), is_uc)));
 }
 
 const CMDecisionTree& CMDTDiagnostic::create(DecisionTreeLibrary& library, const scnXml::DTDiagnostic& node,
-                                             bool isUC) {
+                                             bool is_uc) {
     return library.save(new CMDTDiagnostic(library.diagnostics().get(node.getDiagnostic()),
-                                           library.create(node.getPositive(), isUC),
-                                           library.create(node.getNegative(), isUC)));
+                                           library.create(node.getPositive(), is_uc),
+                                           library.create(node.getNegative(), is_uc)));
 }
 
 const CMDecisionTree& CMDTUncomplicated::create(DecisionTreeLibrary& library, const scnXml::DTUncomplicated& node,
-                                                bool isUC) {
+                                                bool is_uc) {
     return library.save(new CMDTUncomplicated(UnitParse::readShortDuration(node.getMemory(), UnitParse::STEPS),
-                                              library.health_system_memory(), library.create(node.getPositive(), isUC),
-                                              library.create(node.getNegative(), isUC)));
+                                              library.health_system_memory(), library.create(node.getPositive(), is_uc),
+                                              library.create(node.getNegative(), is_uc)));
 }
 
-const CMDecisionTree& CMDTSevere::create(DecisionTreeLibrary& library, const scnXml::DTSevere& node, bool isUC) {
+const CMDecisionTree& CMDTSevere::create(DecisionTreeLibrary& library, const scnXml::DTSevere& node, bool is_uc) {
     return library.save(
-        new CMDTSevere(library.create(node.getPositive(), isUC), library.create(node.getNegative(), isUC)));
+        new CMDTSevere(library.create(node.getPositive(), is_uc), library.create(node.getNegative(), is_uc)));
 }
 
-const CMDecisionTree& CMDTCohort::create(DecisionTreeLibrary& library, const scnXml::DTCohort& node, bool isUC) {
-    return library.save(new CMDTCohort(node.getComponent(), library.create(node.getPositive(), isUC),
-                                       library.create(node.getNegative(), isUC)));
+const CMDecisionTree& CMDTCohort::create(DecisionTreeLibrary& library, const scnXml::DTCohort& node, bool is_uc) {
+    return library.save(new CMDTCohort(node.getComponent(), library.create(node.getPositive(), is_uc),
+                                       library.create(node.getNegative(), is_uc)));
 }
 
-const CMDecisionTree& CMDTRandom::create(DecisionTreeLibrary& library, const scnXml::DTRandom& node, bool isUC) {
+const CMDecisionTree& CMDTRandom::create(DecisionTreeLibrary& library, const scnXml::DTRandom& node, bool is_uc) {
     CMDTRandom* result = new CMDTRandom();
 
     double cum_p = 0.0;
     for (const scnXml::Outcome& outcome : node.getOutcome()) {
         cum_p += outcome.getP();
-        result->branches.insert(make_pair(cum_p, &library.create(outcome, isUC)));
+        result->branches.insert(make_pair(cum_p, &library.create(outcome, is_uc)));
     }
 
     // Test cum_p is approx. 1.0 in case the input tree is wrong. We require no
@@ -788,27 +789,27 @@ const CMDecisionTree& CMDTRandom::create(DecisionTreeLibrary& library, const scn
     return library.save(result);
 }
 
-const CMDecisionTree& CMDTAge::create(DecisionTreeLibrary& library, const scnXml::DTAge& node, bool isUC) {
+const CMDecisionTree& CMDTAge::create(DecisionTreeLibrary& library, const scnXml::DTAge& node, bool is_uc) {
     CMDTAge* result = new CMDTAge();
 
-    double lastAge = numeric_limits<double>::quiet_NaN();
-    const CMDecisionTree* lastNode = nullptr;
+    double last_age = numeric_limits<double>::quiet_NaN();
+    const CMDecisionTree* last_node = nullptr;
     for (const scnXml::Age& age : node.getAge()) {
-        if (lastAge != lastAge) {
+        if (last_age != last_age) {
             if (age.getLb() != 0.0)
                 throw util::xml_scenario_error("decision tree age switch must have first lower bound equal 0");
         } else {
-            if (age.getLb() <= lastAge) {
+            if (age.getLb() <= last_age) {
                 throw util::xml_scenario_error("decision tree age switch must list age groups in increasing order");
             }
             double lb = age.getLb();
-            result->branches.insert(make_pair(lb, lastNode));
+            result->branches.insert(make_pair(lb, last_node));
         }
-        lastNode = &library.create(age, isUC);
-        lastAge = age.getLb();
+        last_node = &library.create(age, is_uc);
+        last_age = age.getLb();
     }
-    double noLb = numeric_limits<double>::infinity();
-    result->branches.insert(make_pair(noLb, lastNode));
+    double no_lb = numeric_limits<double>::infinity();
+    result->branches.insert(make_pair(no_lb, last_node));
 
     return library.save(result);
 }

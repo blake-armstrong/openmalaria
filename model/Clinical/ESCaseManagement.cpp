@@ -44,13 +44,13 @@ void EventSchedulerParams::set_health_system(const scnXml::HSEventScheduler& es_
 }
 
 CMDTOut ESCaseManagement::execute(const EventSchedulerParams& params, const CMHostData& host_data) {
-    assert(host_data.pgState & Episode::Sick);
+    assert(host_data.pg_state & Episode::Sick);
     //TODO: should we remove any existing prescriptions?
     //TODO: Note that these trees do both "access" and "case management" decisions.
     //TODO: medicateQueue.clear();
 
     const CMDecisionTree& tree =
-        (host_data.pgState & Episode::Complicated) ? *params.complicated_tree : *params.uncomplicated_tree;
+        (host_data.pg_state & Episode::Complicated) ? *params.complicated_tree : *params.uncomplicated_tree;
     return tree.exec(host_data);
 }
 
