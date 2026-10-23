@@ -336,7 +336,8 @@ LSTMDrugType::LSTMDrugType(size_t index, const scnXml::PKPDDrug& drug_data, Drug
             uint32_t genotype = 0;
             for (const uint32_t phen : genotype_mapping) {
                 const auto& name = pd[phen].getName();
-                const string phenotype_name = name.present() ? string(name.get()) : std::format("no: {}", phen);
+                const string phenotype_name =
+                    name.present() ? string(static_cast<const string&>(name.get())) : std::format("no: {}", phen);
                 cout << "|" << setw(8) << (genotype * 100000) << "|" << setw(14) << phenotype_name << "|"
                      << endl; // NOLINT(performance-avoid-endl)
                 genotype += 1;
