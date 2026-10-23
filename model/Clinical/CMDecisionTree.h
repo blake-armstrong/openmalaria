@@ -103,7 +103,7 @@ public:
      *  tree, pgState does not need to be set when executing the tree. */
     const CMDecisionTree& create(const ::scnXml::DecisionTree& node, bool is_uc);
 
-    const CMDecisionTree& save(CMDecisionTree* decision);
+    const CMDecisionTree& save(std::unique_ptr<CMDecisionTree> decision);
 
     const WithinHost::DiagnosticRegistry& diagnostics() const { return *diagnostic_registry; }
     const pk_pd::PkPdParams& pk_pd() const { return *pk_pd_params; }
