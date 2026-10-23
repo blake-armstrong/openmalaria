@@ -38,7 +38,7 @@ See `PLAN.md` for the session protocol, chunks and gates. Append one log entry p
 | D6 | split | D6a–D6c |
 | D6a | done | 1b084b2e, 910bf9a9, 3be68cb7, c38704fb, 225947ca, 4ed41e45, aa825247, f7849271, c2e8281b, f4b0cfd2, c5dc1e95, 25082ee3, 44666fc1, 0d84e89f, (this log entry) |
 | D6b | done | 66fdf1e1, 38a88580, a0e9a737, 18a6f0c2, f1831c6f, 227daa2f, d4e7b71c, 51663e3e, 9011466e, (this log entry); F59/F60 fixes e169341c, 75700eda, 41c35aa4, f8f0896b, (their log entry) |
-| D6c | todo | |
+| D6c | done | 38f78eda, a7c68da3, 9e34f002, 6e9038b9, 9cf1ff5a, bb46b13d, c78608b6, 0eb65ebb, (this log entry) |
 | D7 | todo | |
 | D8 | todo | |
 | D9 | todo | |
@@ -1202,3 +1202,48 @@ Base 7d115055. The user approved, at the start, pushing `throwaway_ai_rework` an
   - F67: making `build.sh`'s PATH export Cygwin-only would change tool choice for users; ask first.
   - G-style can still pass locally and fail in CI on generated XSD types (F64's note).
 - Next: D6c.
+
+### D6c: decision-tree library → `DecisionTreeLibrary` owned by `Simulation` (done, 2026-10-23)
+- Base: eada1455 (B6 done). The G-perf and A/B base worktree `../om-bench-base` was moved to eada1455 and rebuilt.
+- Commits:
+  - 38f78eda: `util/ab_scenarios.py` group `decision-trees` (28 variants, below), run base against base first.
+  - a7c68da3: **logic.**
+    - `Clinical::DecisionTreeLibrary` (`CMDecisionTree.h`) replaces the file-static `decision_library` and `save_decision`. `create` replaces the static `CMDecisionTree::create`; each node's static `create` takes the library. The dedupe search, the comparisons and the build order are unchanged.
+    - The library holds what the nodes reached through bridges: the `DiagnosticRegistry` (for `CMDTDiagnostic`), the within-host model's `PkPdParams` (for `CMDTTreatPKPD`'s course lookups, the same functions the `LSTMTreatments` facades call) and the health-system memory (for `CMDTUncomplicated`'s check; `ClinicalModel::hs_memory()` went). The memory is read once, in `ClinicalParams`' constructor, and nothing changes it later.
+    - A `Simulation` member declared after the `DiagnosticRegistry` and the within-host model and before `ClinicalParams` (which holds pointers into it), built right after `ClinicalParams`. It reads no XML, so no error moves.
+    - `ClinicalParams::set_health_system` takes the library. `TimedChangeHSDeployment` and `DecisionTreeComponent` (in the static `InterventionManager`) reach it through `bridge::mutable_decision_tree_library()` until D8.
+    - Every node keeps its new-expression with its arguments in the old order, so which error a tree with two bad parts reports is unchanged on each compiler (F70).
+    - `CMDecisionTreeSuite` builds each tree in a library local to `propTreatmentsNReps` (deviation from the plan's suite-wide library). No test relied on a node from an earlier test: no pair of nodes in the suite differs only in a field the dedupe ignores. A suite-wide library would also have kept nodes pointing into a `DiagnosticRegistry` that each `setUp` replaces.
+  - 9e34f002 + 6e9038b9: **rename**, 61 by the tool (38 parameter, 10 variable, 7 member, 3 typedef, 1 macro, 1 method, 1 local constant), over `CMDecisionTree.{h,cpp}`, which D6b left out. Map: `Hmod_ESDecisionTree=HMOD_CM_DECISION_TREE`. Collisions reviewed: the local `InfectionOrigin` (it shadowed the enum type; the method of that name is called through `.`) and `CMHostData`'s `member(param)` initialisers.
+  - 9cf1ff5a + bb46b13d: **modernise, tool:** 30 `use-override`, 15 `use-nullptr`, 3 `use-using`, 3 `use-equals-default`, 1 `concat-nested-namespaces`, 1 `loop-convert` (over `CMDTMultiple`'s children, which its body does not change), 1 `use-emplace`, 1 `unnecessary-value-param`. No `prefer-member-initializer` (no F58 hazard).
+  - c78608b6: **modernise, hand:** `save` takes a `unique_ptr`, which ends F69's leaks. Each node is still built by its new-expression, now owned at once by a `unique_ptr`, rather than by `make_unique`, to keep F70's evaluation order. Also `const auto*` casts, const locals, and `CMDTMultiple() = default`. Left: the nodes' reference members (built once, never assigned; a reference says the child exists) and the dedupe semantics (F68).
+  - 0eb65ebb: FINDINGS F68, F70–F72, F69 (closed), and F53's decision-tree part; PLAN.md D6c row as built; README's bridge list and A/B row.
+- Gates:
+  - G-exact / G-unit: 58/58 (strict) on `build-rework/` (Release) and `build-debug/` (Debug) after each C++ commit. ctest reaches the 5-day and event-scheduler trees, `changeHS` trees (scenario1, ESChangeHS, EffectiveDrug, Molineaux), decision-tree interventions (MSAT, MSAT_HRP2, TriggeredMSAT, MonitoringAll, Dielmo) and the multiple, caseType, diagnostic, uncomplicated, random, noTreatment, report, treatFailure, treatPKPD, treatSimple and deploy nodes, with checkpoint stop and resume.
+  - G-stat: `ctest -L statistical -j4` at c78608b6: 53 passed, 5 disabled (no reference), as after B6.
+  - G-style: `util/style.sh check eada1455` clean at c78608b6. Rename: format half clean, second dry run `nothing to rename`, token check passed, `check 9e34f002^` clean. Modernise tool commit: format half clean, second dry run applies nothing, `check 9cf1ff5a^` clean.
+  - G-perf: `util/bench.sh -n 7 --compare ../om-bench-base/build-rework`, candidate c78608b6, load ~6 at the start: median per-pair ratio 0.9961 (−0.39%), spreads 3.2% / 1.2%. Only tree construction changed; `exec` did not.
+  - A/B (`util/ab_scenarios.py <base> <candidate>`, base eada1455): 0 of 177 variants (all seven groups) differ after the logic commit, and again after the hand commit. The new group `decision-trees` covers what ctest can't:
+    - the infectionOrigin, age-switch and cohort nodes, which no ctest scenario uses, each with a positive control (outputs move against the plain scenario; the age switch's two report numbers count 4629 and 24498)
+    - `<severe>` in an event-scheduler complicated tree, and a `<caseType>` under it (F71)
+    - the build errors: caseType in a complicated tree and in an intervention tree, a random node's sum, the age switch's first bound and order, an unknown diagnostic and cohort component, treatSimple's negative and malformed durations
+    - two errors in one node (F70)
+    - the pairs the dedupe merges (F68)
+    - Dielmo plain and with `--checkpoint`
+  - Planted bugs (then reverted): the infectionOrigin branches swapped → `decision-trees/infection_origin` differs; the `<uncomplicated>` memory check removed → `clinical/dt5_uncomplicated_memory` differs; the check made `>=` → 12 Dielmo-based variants differ. A first plant, `memory > health_system_memory + 1`, moved nothing: it adds one day to a bound of 5-day steps.
+- Findings:
+  - F68: the dedupe merges nodes that differ in an ignored field.
+  - F69: the library leaked nodes; fixed in c78608b6.
+  - F70: the reported error depends on the compiler's argument order.
+  - F71: `<caseType>` under `<severe>` escapes its check and aborts a Debug build.
+  - F72: `<multiple>` drops `screened`, so Dielmo's MSAT records no mass screenings.
+  - F53's decision-tree part is settled.
+- Surprises:
+  - No ctest scenario has an age switch, an infectionOrigin node or a cohort node in a decision tree.
+  - `nCMDTReport` counts only the report numbers the scenario monitors. The first age and dedupe variants reported to unmonitored numbers and so showed nothing; they now add the monitoring options.
+  - F72 reaches three ctest scenarios: Dielmo's MSAT intervention, and ESTS's and ESChangeHS's event-scheduler trees (7 and 14 such `<multiple>` nodes), put a diagnostic inside `<multiple>` (checked by scanning `test/scenario*.xml`).
+- Follow-ups:
+  - D8: `DecisionTreeComponent` and `TimedChangeHSDeployment` use `bridge::mutable_decision_tree_library()`. `CMDTCohort` and `CMDTDeploy` still use the static `InterventionManager` (`getComponentId`, `HumanIntervention`). `LSTMTreatments::find_schedule`/`find_dosages` and `Diagnostics::get` remain for the intervention components.
+  - The uncompiled `ESCaseManagementSuite.h` (F9) still uses `CMHostData`'s old names (`pgState`, `ageYears`) and constructor.
+  - F68, F71 and F72 change outputs or turn scenarios into init errors; they wait for the user.
+- Next: D7.
