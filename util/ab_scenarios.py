@@ -286,6 +286,28 @@ DAILY_PR_TWO_DAYS = "<dailyPrImmUCTS>0.2</dailyPrImmUCTS><dailyPrImmUCTS>0.8</da
 CLINICAL_READ_ORDER = (17, 19, 38, 33)
 
 
+AF = "scenarioAvailabilityFilter.xml"
+COPULA = "scenarioGaussianCopulaGamma.xml"
+
+
+def second_species(s):
+    i = s.index('<anopheles mosquito="gambiae_ss">')
+    j = s.index("</anopheles>", i) + len("</anopheles>")
+    block = s[i:j].replace('mosquito="gambiae_ss"', 'mosquito="funestus"').replace(
+        'annualEIR="24.826144381650714"', 'annualEIR="10"')
+    s = s[:j] + block + s[j:]
+    i = s.index('<anophelesParams mosquito="gambiae_ss"')
+    j = s.index("</anophelesParams>", i) + len("</anophelesParams>")
+    return s[:j] + s[i:j].replace('mosquito="gambiae_ss"', 'mosquito="funestus"') + s[j:]
+
+
+def copula_in_run(s):
+    return rep(s, 'time="2030-01-01" repeatStep="3y"', 'time="2005-01-01" repeatStep="3y"')
+
+
+def const_first_species_availability(s):
+    return rep(s, '<availability distr="gamma" CV="3"/>', '<availability distr="const"/>')
+
 V = "scenarioVivax.xml"
 G = "scenarioGenotypes.xml"
 M = "scenarioMSAT_HRP2.xml"
@@ -516,6 +538,25 @@ GROUPS = {
         Variant("dedupe_cohort_cohort_mda", "scenarioCohort.xml", cohort_pair("cohort", "MDA")),
         Variant("dedupe_cohort_cohort_cohort", "scenarioCohort.xml", cohort_pair("cohort", "cohort")),
         Variant("dedupe_cohort_mda_mda", "scenarioCohort.xml", cohort_pair("MDA", "MDA")),
+    ],
+    "transmission": [
+        Variant("vector_plain", AF),
+        Variant("vector_checkpoint", AF, args=["--checkpoint"], runs=2),
+        Variant("vector_print_eir", AF, args=["--print-EIR"]),
+        Variant("non_vector_print_eir", "scenario5.xml", args=["--print-EIR"]),
+        Variant("life_cycle", AF, model_option("VECTOR_LIFE_CYCLE_MODEL")),
+        Variant("non_vector_simple_mpd", "scenario5.xml", model_option("VECTOR_SIMPLE_MPD_MODEL")),
+        Variant("mass_action_het_first", AF, model_option("NEGATIVE_BINOMIAL_MASS_ACTION")),
+        Variant("mass_action_het_second", AF,
+                lambda s: const_first_species_availability(model_option("NEGATIVE_BINOMIAL_MASS_ACTION")(s))),
+        Variant("mass_action_het_and_life_cycle", AF,
+                lambda s: model_option("VECTOR_LIFE_CYCLE_MODEL")(model_option("NEGATIVE_BINOMIAL_MASS_ACTION")(s))),
+        Variant("filter_percentile_101", AF, lambda s: rep_first(s, 'maxAvailability="100" time="2005-01-01"/>',
+                                                                'maxAvailability="101" time="2005-01-01"/>')),
+        Variant("copula_deployed", COPULA, copula_in_run),
+        Variant("copula_deployed_checkpoint", COPULA, copula_in_run, ["--checkpoint"], runs=2),
+        Variant("copula_deployed_two_species", COPULA, lambda s: second_species(copula_in_run(s))),
+        Variant("copula_two_species_not_deployed", COPULA, second_species),
     ],
     "falciparum-init": [
         Variant("molineaux_no_weight", "scenarioMolineaux.xml", lambda s: drop_element(s, "<weight ", "</weight>")),
