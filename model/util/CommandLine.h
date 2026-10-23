@@ -88,17 +88,6 @@ public:
 
     /** Return true if given option (from CommandLine::Options) is active. */
     static bool option(size_t code);
-
-    /** If path is relative, prepend it with clResourcePath. */
-    static string lookup_resource(const string& path);
-
-    /** Get the name of the output file. */
-    static string output_name();
-
-    static OutputFormat output_format();
-
-    /** Get the name of the ctsout file. */
-    static string ctsout_name();
 };
 
 class CommandLineOptions {
@@ -156,10 +145,6 @@ private:
 
 namespace util {
 inline bool CommandLine::option(size_t code) { return bridge::command_line().option(code); }
-inline string CommandLine::lookup_resource(const string& path) { return bridge::command_line().lookup_resource(path); }
-inline string CommandLine::output_name() { return bridge::command_line().output_name(); }
-inline CommandLine::OutputFormat CommandLine::output_format() { return bridge::command_line().output_format(); }
-inline string CommandLine::ctsout_name() { return bridge::command_line().ctsout_name(); }
 }
 }
 #endif

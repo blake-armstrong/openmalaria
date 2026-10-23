@@ -198,7 +198,9 @@ void write_measure(ostream& stream, Writer write_row, size_t survey, const inter
 
 enum class ValueType : std::uint8_t { All, Integer, Double };
 
-template <class Writer> void write_rows(ostream& stream, Writer write_row, ValueType type = ValueType::All) {
+template <class Writer>
+void write_rows(ostream& stream, const Clinical::InfantMortality& infant_mortality, Writer write_row,
+                ValueType type = ValueType::All) {
     const MonitoringState& runtime = bridge::monitoring();
     for (size_t survey = 0; survey < runtime.n_surveys; ++survey) {
         for (const internal::MeasureStore& store : runtime.stores) {
@@ -209,7 +211,7 @@ template <class Writer> void write_rows(ostream& stream, Writer write_row, Value
         }
     }
     if (runtime.report_imr >= 0 && type != ValueType::Integer) {
-        write_row(stream, 1, 1, runtime.report_imr, bridge::infant_mortality().all_cause(), true);
+        write_row(stream, 1, 1, runtime.report_imr, infant_mortality.all_cause(), true);
     }
 }
 
@@ -225,7 +227,7 @@ uint64_t count_rows(bool is_double) {
     return count;
 }
 
-void write_binary(ostream& stream) {
+void write_binary(ostream& stream, const Clinical::InfantMortality& infant_mortality) {
     static_assert(std::endian::native == std::endian::little, "output.bin uses little-endian values");
     static_assert(sizeof(double) == 8 && std::numeric_limits<double>::is_iec559, "output.bin needs IEEE-754 doubles");
     static_assert(std::numeric_limits<int>::digits <= std::numeric_limits<int32_t>::digits,
@@ -242,7 +244,7 @@ void write_binary(ostream& stream) {
     auto write_id_column = [&](auto select) {
         for (const ValueType type : {ValueType::Integer, ValueType::Double}) {
             write_rows(
-                stream,
+                stream, infant_mortality,
                 [&](ostream& output, int survey, int column, int measure, double, bool) {
                     write_binary_value<int32_t>(output, select(survey, column, measure));
                 },
@@ -253,18 +255,21 @@ void write_binary(ostream& stream) {
     write_id_column([](int, int column, int) { return column; });
     write_id_column([](int, int, int measure) { return measure; });
     write_rows(
-        stream,
+        stream, infant_mortality,
         [](ostream& output, int, int, int, double value, bool) {
             assert(std::trunc(value) == value);
             write_binary_value<int32_t>(output, static_cast<int32_t>(value));
         },
         ValueType::Integer);
     write_rows(
-        stream, [](ostream& output, int, int, int, double value, bool) { write_binary_value<double>(output, value); },
+        stream, infant_mortality,
+        [](ostream& output, int, int, int, double value, bool) { write_binary_value<double>(output, value); },
         ValueType::Double);
 }
 
-void write_text(ostream& stream) { write_rows(stream, write_text_row); }
+void write_text(ostream& stream, const Clinical::InfantMortality& infant_mortality) {
+    write_rows(stream, infant_mortality, write_text_row);
+}
 
 template <class Stream, class Writer> void write_output(const string& filename, ios::openmode mode, Writer writer) {
     Stream stream(filename.c_str(), mode);
@@ -400,13 +405,15 @@ void conclude_survey() {
     update_survey_numbers();
 }
 
-void write_survey_data() {
-    const string filename = util::CommandLine::output_name();
-    const bool binary = util::CommandLine::output_format() == util::CommandLine::OutputFormat::Bin;
-    const auto writer = binary ? write_binary : write_text;
+void write_survey_data(const util::CommandLineOptions& command_line,
+                       const Clinical::InfantMortality& infant_mortality) {
+    const string& filename = command_line.output_name();
+    const bool binary = command_line.output_format() == util::CommandLine::OutputFormat::Bin;
+    const auto write = binary ? write_binary : write_text;
+    const auto writer = [&](ostream& stream) { write(stream, infant_mortality); };
     const ios::openmode mode = ios::out | ios::binary;
 
-    if (util::CommandLine::option(util::CommandLine::CompressOutput)) {
+    if (command_line.option(util::CommandLine::CompressOutput)) {
         write_output<ogzstream>(filename, mode, writer);
     } else {
         write_output<ofstream>(filename, mode, writer);

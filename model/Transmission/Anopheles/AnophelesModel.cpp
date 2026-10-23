@@ -284,7 +284,8 @@ mosquito surviving biting, finding a resting site, resting and ovipositing.");
  * @param EIPDuration parameter from MosqTransmission (used for an estimation)
  */
 void AnophelesModel::init_eir(const vector<double>& init_eir365, vector<double> fs_coeffic_init,
-                              double eir_rotate_angle_init, double prop_infectious, double prop_infected) {
+                              double eir_rotate_angle_init, double prop_infectious, double prop_infected,
+                              bool print_annual_eir) {
     fs_coeffic = std::move(fs_coeffic_init);
     eir_rotate_angle = eir_rotate_angle_init;
     species_eir = init_eir365;
@@ -297,7 +298,7 @@ void AnophelesModel::init_eir(const vector<double>& init_eir365, vector<double> 
         partial_init_eir[mod_nn(Sim::in_steps(i), Sim::steps_per_year())] += init_eir365[i];
     }
 
-    if (util::CommandLine::option(util::CommandLine::PrintAnnualEir))
+    if (print_annual_eir)
         cout << "Annual EIR for " << mosq.name << ": " << vectors::sum(species_eir) << endl;
 
     // Set other data used for mosqEmergeRate calculation:

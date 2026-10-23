@@ -256,7 +256,7 @@ public:
         util::ModelNameProvider modelNameProvider(dummyXML::scenario.getModel());
         static Clock clock;
         bridge::current_clock = &clock;
-        clock.init(dummyXML::scenario, modelNameProvider);
+        clock.init(dummyXML::scenario, modelNameProvider, unittest_options::command_line);
 
         // we could just use zero, but we may spot more errors by using some weird number
         clock.t0 = Sim::from_years_n(83.2591);

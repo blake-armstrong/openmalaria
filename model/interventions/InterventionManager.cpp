@@ -52,8 +52,9 @@ void InterventionManager::init(const scnXml::Interventions& interv_elt, Transmis
                                const Transmission::PerHostParams& per_host_params,
                                const WithinHost::DiagnosticRegistry& diagnostics, const pk_pd::PkPdParams& pk_pd,
                                Clinical::ClinicalParams& clinical, Clinical::DecisionTreeLibrary& decision_trees,
-                               const util::ModelOptionFlags& options) {
+                               const util::ModelOptionFlags& options, const util::CommandLineOptions& command_line) {
     next_timed = 0;
+    verbose = command_line.option(util::CommandLine::Verbose);
 
     if (interv_elt.getChangeHS().present()) {
         const scnXml::ChangeHS& chs = interv_elt.getChangeHS().get();
@@ -403,7 +404,7 @@ void InterventionManager::init(const scnXml::Interventions& interv_elt, Transmis
     // have to check nextTimed is within range:
     timed.push_back(std::make_unique<DummyTimedDeployment>());
 
-    if (util::CommandLine::option(util::CommandLine::PrintInterventions)) {
+    if (command_line.option(util::CommandLine::PrintInterventions)) {
         cout << "Continuous deployments:" << endl << "begin\tend\tage\tsub pop\tcompl\tcoverag\tcomponents" << endl;
         for (auto& deployment : continuous) {
             deployment.print_details(std::cout);
@@ -463,7 +464,7 @@ void InterventionManager::deploy(vector<Host::Human>& population, Transmission::
     // deploy timed interventions
     const SimTime now = Sim::interv_date();
     while (timed[next_timed]->date <= now) {
-        if (util::CommandLine::option(util::CommandLine::Verbose)) {
+        if (verbose) {
             cout << "deploy::" << now << "::Timed";
             timed[next_timed]->print_details(cout);
             cout << endl;
@@ -478,7 +479,7 @@ void InterventionManager::deploy(vector<Host::Human>& population, Transmission::
         uint32_t next_cts_dist = human.nextCtsDist;
         // deploy continuous interventions
         while (next_cts_dist < continuous.size()) {
-            if (util::CommandLine::option(util::CommandLine::Verbose)) {
+            if (verbose) {
                 cout << "deploy::" << now << "::Continuous";
                 continuous[next_cts_dist].print_details(cout);
                 cout << endl;

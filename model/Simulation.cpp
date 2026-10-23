@@ -75,7 +75,7 @@ Simulation::Simulation(std::unique_ptr<scnXml::Scenario> scenario, util::Command
     const util::ModelNameProvider model_name_provider(scenario_xml->getModel());
 
     // 2) elements depending on only elements initialised in (1):
-    clock.init(*scenario_xml, model_name_provider); // Also reads survey dates.
+    clock.init(*scenario_xml, model_name_provider, command_line); // Also reads survey dates.
 
     // 3) elements depending on only elements initialised in (2).
     parameters = Parameters(scenario_xml->getModel().getParameters(), model_name_provider,
@@ -117,14 +117,14 @@ Simulation::Simulation(std::unique_ptr<scnXml::Scenario> scenario, util::Command
                                                     master_rngs.population);
     transmission_model = Transmission::create_transmission_model(
         scenario_xml->getEntomology(), static_cast<int>(pop_size), per_host_params, master_rngs.transmission, genotypes,
-        model_options, continuous);
+        model_options, command_line, continuous);
 
     register_continuous_population_callbacks(continuous);
 
     // Depends on transmission model (for species indexes):
     // MDA1D may depend on health system (too complex to verify)
     intervention_manager.init(scenario_xml->getInterventions(), *transmission_model, per_host_params, diagnostics,
-                              within_host_model.common.pk_pd, clinical, decision_trees, model_options);
+                              within_host_model.common.pk_pd, clinical, decision_trees, model_options, command_line);
     clinical.set_health_system(scenario_xml->getHealthSystem(),
                                decision_trees);       // Depends on interventions, PK/PD (from humanPop)
     mon::init_cohorts(scenario_xml->getMonitoring()); // Depends on interventions
@@ -166,7 +166,7 @@ void Simulation::run(const CheckpointOptions& checkpointing) {
 }
 
 void Simulation::resume(const std::string& checkpoint_file) {
-    continuous.init(scenario_xml->getMonitoring(), true);
+    continuous.init(scenario_xml->getMonitoring(), true, command_line.ctsout_name());
     read_checkpoint(checkpoint_file, command_line, clock, master_rngs, genotypes, neonatal_mortality, new_infections,
                     infant_mortality, continuous, end_time, est_end_time, *population_model, *transmission_model,
                     intervention_manager);
@@ -176,7 +176,7 @@ void Simulation::resume(const std::string& checkpoint_file) {
 }
 
 void Simulation::start_new(const CheckpointOptions& checkpointing) {
-    continuous.init(scenario_xml->getMonitoring(), false);
+    continuous.init(scenario_xml->getMonitoring(), false, command_line.ctsout_name());
     population_model->createInitialHumans();
     transmission_model->init2(population_model->humans);
 
@@ -233,7 +233,7 @@ void Simulation::finish() {
     for (Host::Human& human : population_model->humans)
         human.clinicalModel->flush_reports();
 
-    mon::write_survey_data();
+    mon::write_survey_data(command_line, infant_mortality);
 
 #ifdef OM_STREAM_VALIDATOR
     util::StreamValidator.saveStream();

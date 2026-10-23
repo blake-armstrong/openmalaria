@@ -26,7 +26,6 @@
 #include "Clinical/ClinicalParams.h"
 #include "Host/Human.h"
 #include "Episode.h"
-#include <cassert>
 #include <memory>
 #include <vector>
 
@@ -181,34 +180,5 @@ private:
 };
 
 }
-
-namespace bridge {
-
-// NOLINTNEXTLINE(cppcoreguidelines-avoid-non-const-global-variables)
-inline const Clinical::InfantMortality* current_infant_mortality = nullptr;
-
-inline const Clinical::InfantMortality& infant_mortality() {
-    assert(current_infant_mortality != nullptr);
-    return *current_infant_mortality;
-}
-
-}
-
-class InfantMortalityBinding {
-public:
-    explicit InfantMortalityBinding(const Clinical::InfantMortality& infant_mortality)
-        : previous(bridge::current_infant_mortality) {
-        bridge::current_infant_mortality = &infant_mortality;
-    }
-    InfantMortalityBinding(const InfantMortalityBinding&) = delete;
-    InfantMortalityBinding& operator=(const InfantMortalityBinding&) = delete;
-    InfantMortalityBinding(InfantMortalityBinding&&) = delete;
-    InfantMortalityBinding& operator=(InfantMortalityBinding&&) = delete;
-    ~InfantMortalityBinding() { bridge::current_infant_mortality = previous; }
-
-private:
-    const Clinical::InfantMortality* previous;
-};
-
 }
 #endif

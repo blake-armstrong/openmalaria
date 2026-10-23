@@ -129,7 +129,7 @@ void init_reporting(const scnXml::Scenario& scenario) {
     internal::init_stores(reported_measures, n_species, n_drugs);
 }
 
-SimTime read_survey_dates(const scnXml::Monitoring& monitoring) {
+SimTime read_survey_dates(const scnXml::Monitoring& monitoring, const util::CommandLineOptions& command_line) {
     MonitoringState& runtime = bridge::monitoring();
     const scnXml::Surveys::SurveyTimeSequence& survs = monitoring.getSurveys().getSurveyTime();
     std::map<SimTime, bool> surveys;
@@ -187,7 +187,7 @@ SimTime read_survey_dates(const scnXml::Monitoring& monitoring) {
             << std::endl;
     }
 
-    if (util::CommandLine::option(util::CommandLine::PrintSurveyTimes)) {
+    if (command_line.option(util::CommandLine::PrintSurveyTimes)) {
         std::cout << "Survey\tsteps\tdate\n";
         for (const SurveyDate& survey_date : runtime.survey_dates) {
             if (!survey_date.is_reported())

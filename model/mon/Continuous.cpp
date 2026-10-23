@@ -35,7 +35,7 @@ using util::xml_scenario_error;
 
 /* Initialise: enable outputs registered and requested in XML.
          * Search for Continuous::registerCallback to see outputs available. */
-void Continuous::init(const scnXml::Monitoring& monitoring, bool is_checkpoint) {
+void Continuous::init(const scnXml::Monitoring& monitoring, bool is_checkpoint, const string& ctsout_name) {
     const scnXml::Monitoring::ContinuousOptional& cts_opt = monitoring.getContinuous();
     if (!cts_opt.present()) {
         cts_period = Sim::zero();
@@ -63,17 +63,15 @@ void Continuous::init(const scnXml::Monitoring& monitoring, bool is_checkpoint) 
             to_report.push_back(registered_output->second);
     }
 
-    const string filename = util::CommandLine::ctsout_name();
-
     if (is_checkpoint) {
         // When loading a check-point, we resume reporting to this file.
-        cts_stream.open(filename, ios::binary | ios::ate | ios::in | ios::out);
+        cts_stream.open(ctsout_name, ios::binary | ios::ate | ios::in | ios::out);
         if (cts_stream.fail())
             throw util::checkpoint_error("Continuous: resume error (no file)");
         return; // checkpoint() sets the saved output position later
     }
 
-    cts_stream.open(filename, ios::binary | ios::out);
+    cts_stream.open(ctsout_name, ios::binary | ios::out);
     cts_stream << "##\t##\n"; // live-graph needs a delimiter specifier when it is not a comma
     if (during_init)
         cts_stream << "simulation time\t";

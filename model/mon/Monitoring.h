@@ -35,11 +35,17 @@
 #include <vector>
 
 namespace OM {
+namespace Clinical {
+class InfantMortality;
+}
 namespace Host {
 class Human;
 }
 namespace interventions {
 struct ComponentId;
+}
+namespace util {
+class CommandLineOptions;
 }
 namespace mon {
 
@@ -144,7 +150,7 @@ uint32_t update_cohort_set(uint32_t old, interventions::ComponentId sub_pop, boo
 void update_age_group(size_t& index, SimTime age);
 void init_main_sim();
 void conclude_survey();
-void write_survey_data();
+void write_survey_data(const util::CommandLineOptions& command_line, const Clinical::InfantMortality& infant_mortality);
 
 template <typename Stream> void checkpoint(Stream& stream);
 extern template void checkpoint<std::ostream>(std::ostream& stream);

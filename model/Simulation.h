@@ -101,7 +101,6 @@ private:
     Clinical::ClinicalParams clinical;
     ClinicalParamsBinding clinical_binding{clinical};
     Clinical::InfantMortality infant_mortality;
-    InfantMortalityBinding infant_mortality_binding{infant_mortality};
     Host::NeonatalMortality neonatal_mortality;
     Host::InfectionIncidenceParams infection_incidence;
     Host::NewInfections new_infections;

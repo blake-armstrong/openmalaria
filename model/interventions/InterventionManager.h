@@ -70,7 +70,8 @@ public:
     void init(const scnXml::Interventions& interv_elt, Transmission::TransmissionModel& transmission,
               const Transmission::PerHostParams& per_host_params, const WithinHost::DiagnosticRegistry& diagnostics,
               const pk_pd::PkPdParams& pk_pd, Clinical::ClinicalParams& clinical,
-              Clinical::DecisionTreeLibrary& decision_trees, const util::ModelOptionFlags& options);
+              Clinical::DecisionTreeLibrary& decision_trees, const util::ModelOptionFlags& options,
+              const util::CommandLineOptions& command_line);
 
     /// Checkpointing
     template <class S> void checkpoint(S& stream) {
@@ -125,6 +126,7 @@ private:
     // List of all timed interventions. Should be sorted (time weakly increasing).
     vector<unique_ptr<TimedDeployment>> timed;
     uint32_t next_timed = 0; // not chcekpointed (see loadFromCheckpoint)
+    bool verbose = false;
 
     // imported infections are not really interventions, and handled by a separate class
     // (but are grouped here for convenience and due toassociation in schema)

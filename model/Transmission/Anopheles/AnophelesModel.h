@@ -220,7 +220,7 @@ public:
     void init_availability(size_t species, const vector<NhhParams>& nhhs, int population_size, PerHostParams& per_host);
 
     void init_eir(const vector<double>& init_eir365, vector<double> fs_coeffic_init, double eir_rotate_angle_init,
-                  double prop_infectious, double prop_infected);
+                  double prop_infectious, double prop_infected, bool print_annual_eir);
 
     /** Scale the internal EIR representation by factor; used as part of
      * initialisation. */

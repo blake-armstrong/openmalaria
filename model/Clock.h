@@ -38,10 +38,14 @@ class Scenario;
 }
 
 namespace OM {
+namespace util {
+class CommandLineOptions;
+}
 
 class Clock {
 public:
-    void init(const scnXml::Scenario& scenario, const util::ModelNameProvider& mnp);
+    void init(const scnXml::Scenario& scenario, const util::ModelNameProvider& mnp,
+              const util::CommandLineOptions& command_line);
 
     SimTime one_ts() const { return interval; }
     int in_steps(SimTime d) const { return d / interval; }

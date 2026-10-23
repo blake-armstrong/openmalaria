@@ -30,9 +30,13 @@ class Scenario;
 class Monitoring;
 }
 
+namespace OM::util {
+class CommandLineOptions;
+}
+
 namespace OM::mon {
 
-SimTime read_survey_dates(const scnXml::Monitoring& monitoring);
+SimTime read_survey_dates(const scnXml::Monitoring& monitoring, const util::CommandLineOptions& command_line);
 void init_reporting(const scnXml::Scenario& scenario);
 void init_cohorts(const scnXml::Monitoring& monitoring);
 
