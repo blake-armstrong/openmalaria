@@ -32,24 +32,21 @@
 #include <stdexcept>
 #include <cmath>
 
-namespace OM {
-namespace Host {
+namespace OM::Host {
 using namespace OM::util;
 
 InfectionIncidenceParams::InfectionIncidenceParams(const Parameters& parameters,
-                                                   const util::ModelOptionFlags& model_options) {
-    baseline_avail_shape_param = parameters[Parameter::BaselineAvailabilityShape];
-    baseline_avail_offset = 0.5 * pow(baseline_avail_shape_param, 2);
-
-    gamma_p = parameters[Parameter::GammaP];
-    s_inf = 1 - exp(-parameters[Parameter::NegLogOneMinusSinf]);
-    s_imm = parameters[Parameter::Simm];
-    e_star_inv = 1.0 / parameters[Parameter::EStar];
-    x_star_p_inv = 1.0 / parameters[Parameter::XStarP];
+                                                   const util::ModelOptionFlags& model_options)
+    : baseline_avail_shape_param(parameters[Parameter::BaselineAvailabilityShape]),
+      baseline_avail_offset(0.5 * pow(baseline_avail_shape_param, 2)), gamma_p(parameters[Parameter::GammaP]),
+      s_inf(1 - exp(-parameters[Parameter::NegLogOneMinusSinf])), s_imm(parameters[Parameter::Simm]),
+      e_star_inv(1.0 / parameters[Parameter::EStar]), x_star_p_inv(1.0 / parameters[Parameter::XStarP]),
+      no_pre_erythrocytic(model_options.option(util::NoPreErythrocytic)),
+      vaccine_genotype(model_options.option(util::VaccineGenotype)) {
 
     //! constant defining the constraint for the Gamma shape parameters
     /// Used for the case where availability is assumed gamma distributed
-    double r_square_gamma;
+    double r_square_gamma = NAN;
     /*
     //! Expected number of inoculations
     /// Product of measured EIR, susceptibility and length of time Global::interval
@@ -59,9 +56,6 @@ InfectionIncidenceParams::InfectionIncidenceParams(const Parameters& parameters,
     r_square_Gamma must be greater than zero, so r_square_LogNormal is also. 
     */
     r_square_gamma = 0.649; //such that r_square_LogNormal =0.5
-
-    no_pre_erythrocytic = model_options.option(util::NoPreErythrocytic);
-    vaccine_genotype = model_options.option(util::VaccineGenotype);
 
     if (model_options.option(util::NegativeBinomialMassAction)) {
         kind = Kind::NegativeBinomial;
@@ -103,8 +97,7 @@ std::unique_ptr<InfectionIncidenceModel> InfectionIncidenceParams::create() cons
     return std::make_unique<InfectionIncidenceModel>(*this);
 }
 
-InfectionIncidenceModel::InfectionIncidenceModel(const InfectionIncidenceParams& params)
-    : params(&params), p_infected(0.0), cumulative_eir_a(0.0) {}
+InfectionIncidenceModel::InfectionIncidenceModel(const InfectionIncidenceParams& params) : params(&params) {}
 
 // -----  non-static methods  -----
 
@@ -225,5 +218,4 @@ void InfectionIncidenceModel::report_num_new_infections(Human& human, int new_nu
     new_infections.add(new_num_infections_i + new_num_infections_l);
 }
 
-}
 }

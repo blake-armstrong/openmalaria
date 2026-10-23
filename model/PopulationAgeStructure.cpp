@@ -51,7 +51,7 @@ struct DemographyFit {
 };
 
 double w_calc_rss(const gsl_vector* v, void* params) {
-    double x, y;
+    double x = NAN, y = NAN;
     x = gsl_vector_get(v, 0);
     y = gsl_vector_get(v, 1);
 

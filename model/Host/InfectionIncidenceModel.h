@@ -98,7 +98,7 @@ public:
         cumulative_eir_a & stream;
     }
 
-    virtual ~InfectionIncidenceModel() {}
+    virtual ~InfectionIncidenceModel() = default;
 
     /** Return an availability multiplier, dependant on the model (NegBinomMAII
    * and LogNormalMAII models use this). Ideally availability adjustments
@@ -161,10 +161,10 @@ protected:
    *
    * Appears to be used only for calculating expected inoculations for the
    * analysis of pre-erythrocytic immunity. */
-    double p_infected;
+    double p_infected{0.0};
 
     //!Number of infective bites since birth
-    double cumulative_eir_a; //TODO(memory opt): not needed by NegBinomMAII and LogNormalMAII
+    double cumulative_eir_a{0.0}; //TODO(memory opt): not needed by NegBinomMAII and LogNormalMAII
 };
 
 //TODO(optimisation): none of these add data members, so should we be using
@@ -178,28 +178,29 @@ protected:
 class HeterogeneityWorkaroundII : public InfectionIncidenceModel {
 public:
     explicit HeterogeneityWorkaroundII(const InfectionIncidenceParams& params) : InfectionIncidenceModel(params) {}
-    virtual ~HeterogeneityWorkaroundII() {}
+    ~HeterogeneityWorkaroundII() override = default;
 
 protected:
-    double get_model_expected_infections(LocalRng& rng, double effective_eir, const Transmission::PerHost& ph_trans);
+    double get_model_expected_infections(LocalRng& rng, double effective_eir,
+                                         const Transmission::PerHost& ph_trans) override;
 };
 class NegBinomMAII : public InfectionIncidenceModel {
 public:
     explicit NegBinomMAII(const InfectionIncidenceParams& params) : InfectionIncidenceModel(params) {}
-    virtual ~NegBinomMAII() {}
-    virtual double get_availability_factor(LocalRng& rng, double base_availability = 1.0);
+    ~NegBinomMAII() override = default;
+    double get_availability_factor(LocalRng& rng, double base_availability = 1.0) override;
 
 protected:
-    double get_model_expected_infections(LocalRng& rng, double effective_eir, const Transmission::PerHost&);
+    double get_model_expected_infections(LocalRng& rng, double effective_eir, const Transmission::PerHost&) override;
 };
 class LogNormalMAII : public InfectionIncidenceModel {
 public:
     explicit LogNormalMAII(const InfectionIncidenceParams& params) : InfectionIncidenceModel(params) {}
-    virtual ~LogNormalMAII() {}
-    virtual double get_availability_factor(LocalRng& rng, double base_availability = 1.0);
+    ~LogNormalMAII() override = default;
+    double get_availability_factor(LocalRng& rng, double base_availability = 1.0) override;
 
 protected:
-    double get_model_expected_infections(LocalRng& rng, double effective_eir, const Transmission::PerHost&);
+    double get_model_expected_infections(LocalRng& rng, double effective_eir, const Transmission::PerHost&) override;
 };
 
 }
