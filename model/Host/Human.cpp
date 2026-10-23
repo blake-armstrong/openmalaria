@@ -129,11 +129,10 @@ void Human::addToCohort(ComponentId id, SimTime duration) {
 void Human::removeFromCohort(interventions::ComponentId id) { subPopExp.erase(id); }
 
 void Human::removeFirstEvent(interventions::sub_pop_remove::RemoveAtCode code) {
-    const vector<ComponentId>& removeAtList = bridge::intervention_manager().remove_at_ids(code);
-    for (auto it = removeAtList.begin(), end = removeAtList.end(); it != end; ++it) {
-        auto expIt = subPopExp.find(*it);
-        if (expIt != subPopExp.end()) {
-            if (expIt->second >= Sim::now_or_ts0()) {
+    for (const ComponentId& id : bridge::intervention_manager().remove_at_ids(code)) {
+        auto exp_it = subPopExp.find(id);
+        if (exp_it != subPopExp.end()) {
+            if (exp_it->second >= Sim::now_or_ts0()) {
                 // removeFirstEvent() is used for onFirstBout, onFirstTreatment
                 // and onFirstInfection cohort options. Health system memory must
                 // be reset for this to work properly; in theory the memory should
@@ -143,9 +142,9 @@ void Human::removeFirstEvent(interventions::sub_pop_remove::RemoveAtCode code) {
                 // report removal due to first infection/bout/treatment
                 mon::recordEvent(mon::measure("nSubPopRemovalFirstEvent"), *this);
             }
-            cohortSet = mon::updateCohortSet(cohortSet, expIt->first, false);
+            cohortSet = mon::updateCohortSet(cohortSet, exp_it->first, false);
             // remove (affects reporting, restrictToSubPop and cumulative deployment):
-            subPopExp.erase(expIt);
+            subPopExp.erase(exp_it);
         }
     }
 }

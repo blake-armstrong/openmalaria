@@ -153,7 +153,7 @@ protected:
     HumanDeploymentBase(const scnXml::DeploymentBase& deploy, shared_ptr<const HumanIntervention> intervention,
                         ComponentId sub_pop, bool complement, const Transmission::PerHostParams& per_host_params)
         : coverage(deploy.getCoverage()), sub_pop(sub_pop), complement(complement),
-          intervention(std::move(intervention)), per_host_params(&per_host_params) {
+          intervention(std::move(intervention)), host_params(&per_host_params) {
         if (!(coverage >= 0.0 && coverage <= 1.0)) {
             throw util::xml_scenario_error("intervention deployment coverage must be in range [0,1]");
         }
@@ -187,7 +187,11 @@ protected:
     ComponentId sub_pop; // ComponentId::wholePop() if deployment is not restricted to a sub-population
     bool complement;
     shared_ptr<const HumanIntervention> intervention;
-    const Transmission::PerHostParams* per_host_params;
+
+    const Transmission::PerHostParams& per_host_params() const { return *host_params; }
+
+private:
+    const Transmission::PerHostParams* host_params;
 };
 
 /// Timed deployment of human-specific interventions
@@ -229,7 +233,7 @@ public:
             const SimTime age = human.age(Sim::now());
             if (age >= min_age && age < max_age) {
                 double availability = 0.0;
-                for (size_t i = 0; i < per_host_params->num_species(); ++i)
+                for (size_t i = 0; i < per_host_params().num_species(); ++i)
                     availability += human.perHostTransmission.anoph_ento_availability[i];
 
                 double probability = coverage;
@@ -242,10 +246,10 @@ public:
                         const double alpha = ((1.0 - beta_mean) / beta_var - 1.0 / beta_mean) * (beta_mean * beta_mean);
                         const double beta = alpha * (1.0 / beta_mean - 1.0);
 
-                        if (per_host_params->num_species() > 1)
+                        if (per_host_params().num_species() > 1)
                             throw std::runtime_error("only supports one mosquito species");
 
-                        const double ux = per_host_params->get(0).ento_availability->cdf(
+                        const double ux = per_host_params().get(0).ento_availability->cdf(
                             human.perHostTransmission.anoph_ento_availability_raw[0]);
                         if (ux < 1) {
                             const double xx = gsl_cdf_ugaussian_Pinv(ux); // Unit interval to Normal
@@ -285,8 +289,8 @@ public:
                     }
                 }
 
-                if (availability >= per_host_params->ento_availability_percentile(min_availability) &&
-                    availability <= per_host_params->ento_availability_percentile(max_availability)) {
+                if (availability >= per_host_params().ento_availability_percentile(min_availability) &&
+                    availability <= per_host_params().ento_availability_percentile(max_availability)) {
                     if (sub_pop == ComponentId::whole_pop() || (human.isInSubPop(sub_pop) != complement)) {
                         if (human.intervention_rng.bernoulli(probability)) {
                             deploy_to_human(human, mon::Deploy::TIMED);
@@ -340,10 +344,10 @@ public:
             const SimTime age = human.age(Sim::now());
             if (age >= min_age && age < max_age) {
                 double availability = 0.0;
-                for (size_t i = 0; i < per_host_params->num_species(); ++i)
+                for (size_t i = 0; i < per_host_params().num_species(); ++i)
                     availability += human.perHostTransmission.anoph_ento_availability[i];
-                if (availability >= per_host_params->ento_availability_percentile(min_availability) &&
-                    availability <= per_host_params->ento_availability_percentile(max_availability)) {
+                if (availability >= per_host_params().ento_availability_percentile(min_availability) &&
+                    availability <= per_host_params().ento_availability_percentile(max_availability)) {
                     if (sub_pop == ComponentId::whole_pop() || (human.isInSubPop(sub_pop) != complement)) {
                         total += 1;
                         if (!human.isInSubPop(cum_cov_ind))
@@ -632,11 +636,11 @@ public:
             return false;
         } else if (deploy_age == age) {
             double availability = 0.0;
-            for (size_t i = 0; i < per_host_params->num_species(); ++i)
+            for (size_t i = 0; i < per_host_params().num_species(); ++i)
                 availability += human.perHostTransmission.anoph_ento_availability_raw[i];
 
-            if (availability >= per_host_params->ento_availability_percentile(min_availability) &&
-                availability <= per_host_params->ento_availability_percentile(max_availability)) {
+            if (availability >= per_host_params().ento_availability_percentile(min_availability) &&
+                availability <= per_host_params().ento_availability_percentile(max_availability)) {
                 auto now = Sim::interv_date();
                 if (begin <= now && now < end &&
                     (sub_pop == ComponentId::whole_pop() || (human.isInSubPop(sub_pop) != complement)) &&
