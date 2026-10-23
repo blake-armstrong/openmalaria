@@ -38,8 +38,9 @@
 #include <schema/healthSystem.h>
 #include <schema/interventions.h>
 
-namespace OM {
-namespace interventions {
+#include <algorithm>
+
+namespace OM::interventions {
 using Host::Human;
 using WithinHost::Diagnostic;
 
@@ -51,8 +52,8 @@ bool component_cmp(const HumanInterventionComponent* a, const HumanInterventionC
 HumanIntervention::HumanIntervention(const xsd::cxx::tree::sequence<scnXml::Component>& component_list,
                                      const InterventionManager& manager) {
     components.reserve(component_list.size());
-    for (auto it = component_list.begin(), end = component_list.end(); it != end; ++it) {
-        ComponentId id = manager.get_component_id(it->getId());
+    for (const auto& it : component_list) {
+        ComponentId id = manager.get_component_id(it.getId());
         const HumanInterventionComponent* component = &manager.get_component(id);
         components.push_back(component);
     }
@@ -67,14 +68,14 @@ HumanIntervention::HumanIntervention(const xsd::cxx::tree::sequence<scnXml::Comp
      * Note that when multiple interventions are deployed simultaneously, the
      * order of their deployments is still dependent on the order in the XML
      * file. */
-    std::stable_sort(components.begin(), components.end(), component_cmp);
+    std::ranges::stable_sort(components, component_cmp);
 }
 HumanIntervention::HumanIntervention(const xsd::cxx::tree::sequence<scnXml::Component>& component_list,
                                      const xsd::cxx::tree::sequence<scnXml::Condition>& condition_list,
                                      const InterventionManager& manager) {
     components.reserve(component_list.size());
-    for (auto it = component_list.begin(), end = component_list.end(); it != end; ++it) {
-        ComponentId id = manager.get_component_id(it->getId());
+    for (const auto& it : component_list) {
+        ComponentId id = manager.get_component_id(it.getId());
         const HumanInterventionComponent* component = &manager.get_component(id);
         components.push_back(component);
     }
@@ -89,19 +90,19 @@ HumanIntervention::HumanIntervention(const xsd::cxx::tree::sequence<scnXml::Comp
      * Note that when multiple interventions are deployed simultaneously, the
      * order of their deployments is still dependent on the order in the XML
      * file. */
-    std::stable_sort(components.begin(), components.end(), component_cmp);
+    std::ranges::stable_sort(components, component_cmp);
 
-    for (auto it = condition_list.begin(), end = condition_list.end(); it != end; ++it) {
-        double min = it->getMinValue().present() ? it->getMinValue().get() : -numeric_limits<double>::infinity();
-        double max = it->getMaxValue().present() ? it->getMaxValue().get() : numeric_limits<double>::infinity();
-        conditions.push_back(mon::setupCondition(it->getMeasure(), min, max, it->getInitialState()));
+    for (const auto& it : condition_list) {
+        double min = it.getMinValue().present() ? it.getMinValue().get() : -numeric_limits<double>::infinity();
+        double max = it.getMaxValue().present() ? it.getMaxValue().get() : numeric_limits<double>::infinity();
+        conditions.push_back(mon::setupCondition(it.getMeasure(), min, max, it.getInitialState()));
     }
 }
 HumanIntervention::HumanIntervention(const xsd::cxx::tree::sequence<scnXml::DTDeploy>& component_list,
                                      const InterventionManager& manager) {
     components.reserve(component_list.size());
-    for (auto it = component_list.begin(), end = component_list.end(); it != end; ++it) {
-        ComponentId id = manager.get_component_id(it->getComponent());
+    for (const auto& it : component_list) {
+        ComponentId id = manager.get_component_id(it.getComponent());
         const HumanInterventionComponent* component = &manager.get_component(id);
         components.push_back(component);
     }
@@ -116,7 +117,7 @@ HumanIntervention::HumanIntervention(const xsd::cxx::tree::sequence<scnXml::DTDe
      * Note that when multiple interventions are deployed simultaneously, the
      * order of their deployments is still dependent on the order in the XML
      * file. */
-    std::stable_sort(components.begin(), components.end(), component_cmp);
+    std::ranges::stable_sort(components, component_cmp);
 }
 
 void HumanIntervention::deploy(Human& human, mon::Deploy::Method method, VaccineLimits vacc_limits) const {
@@ -126,8 +127,8 @@ void HumanIntervention::deploy(Human& human, mon::Deploy::Method method, Vaccine
             return;
     }
 
-    for (auto it = components.begin(); it != components.end(); ++it) {
-        const interventions::HumanInterventionComponent& component = **it;
+    for (auto it : components) {
+        const interventions::HumanInterventionComponent& component = *it;
         // we must report first, since it can change cohort and sub-population
         // which may affect what deployment does (at least in the case of reporting deployments)
         human.addToCohort(component.id(), component.duration());
@@ -137,8 +138,8 @@ void HumanIntervention::deploy(Human& human, mon::Deploy::Method method, Vaccine
 
 void HumanIntervention::print_details(std::ostream& out) const {
     out << "human:";
-    for (auto it = components.begin(); it != components.end(); ++it) {
-        out << '\t' << (*it)->id().id;
+    for (auto component : components) {
+        out << '\t' << component->id().id;
     }
 }
 
@@ -147,13 +148,13 @@ void HumanIntervention::print_details(std::ostream& out) const {
 TriggeredDeployments::TriggeredDeployments(const scnXml::TriggeredDeployments& elt,
                                            const InterventionManager& manager) {
     lists.reserve(elt.getDeploy().size());
-    for (auto it = elt.getDeploy().begin(), end = elt.getDeploy().end(); it != end; ++it) {
-        lists.push_back(SubList(*it, manager));
+    for (const auto& it : elt.getDeploy()) {
+        lists.emplace_back(it, manager);
     }
 }
 void TriggeredDeployments::deploy(Human& human, mon::Deploy::Method method, VaccineLimits vacc_limits) const {
-    for (auto it = lists.begin(); it != lists.end(); ++it) {
-        it->deploy(human, method, vacc_limits);
+    for (const auto& list : lists) {
+        list.deploy(human, method, vacc_limits);
     }
 }
 
@@ -195,16 +196,16 @@ void TriggeredDeployments::SubList::deploy(Host::Human& human, mon::Deploy::Meth
 class RecruitmentOnlyComponent : public HumanInterventionComponent {
 public:
     RecruitmentOnlyComponent(ComponentId id) : HumanInterventionComponent(id) {}
-    virtual ~RecruitmentOnlyComponent() {}
+    ~RecruitmentOnlyComponent() override = default;
 
     /// Reports to monitoring, nothing else
-    virtual void deploy(Host::Human& human, mon::Deploy::Method method, VaccineLimits) const {
+    void deploy(Host::Human& human, mon::Deploy::Method method, VaccineLimits) const override {
         mon::recordDeploy(mon::measure("nMassRecruitOnly"), mon::measure("nCtsRecruitOnly"), human, method);
     }
 
-    virtual component_types::Type component_type() const { return component_types::RecruitOnly; }
+    component_types::Type component_type() const override { return component_types::RecruitOnly; }
 
-    virtual void print_details(std::ostream& out) const { out << id().id << "\tRecruit only"; }
+    void print_details(std::ostream& out) const override { out << id().id << "\tRecruit only"; }
 };
 
 class ScreenComponent : public HumanInterventionComponent {
@@ -214,7 +215,7 @@ public:
         : HumanInterventionComponent(id), diagnostic(diagnostics.get(elt.getDiagnostic())),
           positive(elt.getPositive(), manager), negative(elt.getNegative(), manager) {}
 
-    void deploy(Human& human, mon::Deploy::Method method, VaccineLimits vacc_limits) const {
+    void deploy(Human& human, mon::Deploy::Method method, VaccineLimits vacc_limits) const override {
         mon::recordDeploy(mon::measure("nMassScreenings"), mon::measure("nCtsScreenings"), human, method);
         if (human.withinHostModel->diagnostic_result(human.intervention_rng, diagnostic)) {
             positive.deploy(human, method, vacc_limits);
@@ -223,9 +224,9 @@ public:
         }
     }
 
-    virtual component_types::Type component_type() const { return component_types::SCREEN; }
+    component_types::Type component_type() const override { return component_types::SCREEN; }
 
-    virtual void print_details(std::ostream& out) const { out << id().id << "\tScreen"; }
+    void print_details(std::ostream& out) const override { out << id().id << "\tScreen"; }
 
 private:
     const Diagnostic& diagnostic;
@@ -257,14 +258,14 @@ public:
         }
     }
 
-    void deploy(Human& human, mon::Deploy::Method method, VaccineLimits) const {
+    void deploy(Human& human, mon::Deploy::Method method, VaccineLimits) const override {
         mon::recordDeploy(mon::measure("nMDAs"), mon::measure("nCtsMDA"), human, method);
         human.withinHostModel->treat_simple(human, time_liver, time_blood);
     }
 
-    virtual component_types::Type component_type() const { return component_types::TreatSimple; }
+    component_types::Type component_type() const override { return component_types::TreatSimple; }
 
-    virtual void print_details(std::ostream& out) const { out << id().id << "\ttreatSimple"; }
+    void print_details(std::ostream& out) const override { out << id().id << "\ttreatSimple"; }
 
 private:
     SimTime time_liver, time_blood;
@@ -277,15 +278,15 @@ public:
         : HumanInterventionComponent(id), schedule(pk_pd.courses.find_schedule(elt.getSchedule())),
           dosage(pk_pd.courses.find_dosages(elt.getDosage())), delay_d(elt.getDelay_h() / 24.0 /* convert to days */) {}
 
-    void deploy(Human& human, mon::Deploy::Method method, VaccineLimits) const {
+    void deploy(Human& human, mon::Deploy::Method method, VaccineLimits) const override {
         mon::recordDeploy(mon::measure("nMDAs"), mon::measure("nCtsMDA"), human, method);
         double age = Sim::in_years(human.age(Sim::now_or_ts1()));
         human.withinHostModel->treat_pk_pd(schedule, dosage, age, delay_d);
     }
 
-    virtual component_types::Type component_type() const { return component_types::TreatPkpd; }
+    component_types::Type component_type() const override { return component_types::TreatPkpd; }
 
-    virtual void print_details(std::ostream& out) const { out << id().id << "\ttreatPKPD"; }
+    void print_details(std::ostream& out) const override { out << id().id << "\ttreatPKPD"; }
 
 private:
     size_t schedule; // index of the schedule
@@ -299,7 +300,7 @@ public:
                           Clinical::DecisionTreeLibrary& decision_trees)
         : HumanInterventionComponent(id), tree(decision_trees.create(elt, false)) {}
 
-    void deploy(Human& human, mon::Deploy::Method method, VaccineLimits) const {
+    void deploy(Human& human, mon::Deploy::Method method, VaccineLimits) const override {
         Clinical::CMDTOut out =
             tree.exec(Clinical::CMHostData(human, human.intervention_rng, Sim::in_years(human.age(Sim::now_or_ts1())),
                                            human.clinicalModel->get_latest_state()));
@@ -311,9 +312,9 @@ public:
         }
     }
 
-    virtual component_types::Type component_type() const { return component_types::CmDt; }
+    component_types::Type component_type() const override { return component_types::CmDt; }
 
-    virtual void print_details(std::ostream& out) const { out << id().id << "\tDecision tree"; }
+    void print_details(std::ostream& out) const override { out << id().id << "\tDecision tree"; }
 
 private:
     const Clinical::CMDecisionTree& tree;
@@ -323,15 +324,14 @@ class ClearImmunityComponent : public HumanInterventionComponent {
 public:
     ClearImmunityComponent(ComponentId id) : HumanInterventionComponent(id) {}
 
-    void deploy(Human& human, mon::Deploy::Method method, VaccineLimits) const {
+    void deploy(Human& human, mon::Deploy::Method method, VaccineLimits) const override {
         human.withinHostModel->clear_immunity();
         //NOTE: not reported
     }
 
-    virtual component_types::Type component_type() const { return component_types::ClearImmunity; }
+    component_types::Type component_type() const override { return component_types::ClearImmunity; }
 
-    virtual void print_details(std::ostream& out) const { out << id().id << "\tclear immunity"; }
+    void print_details(std::ostream& out) const override { out << id().id << "\tclear immunity"; }
 };
 
-}
 }

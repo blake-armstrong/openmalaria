@@ -46,11 +46,11 @@ public:
     VaccineComponent(ComponentId id, const scnXml::VaccineDescription& seq, vaccines::Types type,
                      bool report_deployments);
 
-    void deploy(Host::Human& human, mon::Deploy::Method method, VaccineLimits vacc_limits) const;
+    void deploy(Host::Human& human, mon::Deploy::Method method, VaccineLimits vacc_limits) const override;
 
-    virtual component_types::Type component_type() const;
+    component_types::Type component_type() const override;
 
-    virtual void print_details(std::ostream& out) const;
+    void print_details(std::ostream& out) const override;
 
 private:
     /** Get the initial efficacy of the vaccine.

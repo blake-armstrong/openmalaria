@@ -36,11 +36,12 @@
 #include "util/errors.h"
 #include <schema/interventions.h>
 
+#include <utility>
+
 #include "util/SpeciesIndexChecker.h"
 #include "Host/Human.h"
 
-namespace OM {
-namespace interventions {
+namespace OM::interventions {
 
 using Host::Human;
 
@@ -60,7 +61,7 @@ public:
             cerr << " happens after last survey" << endl;
         }
     }
-    virtual ~TimedDeployment() {}
+    virtual ~TimedDeployment() = default;
 
     virtual void deploy(vector<Host::Human>& population, Transmission::TransmissionModel& transmission) = 0;
 
@@ -79,8 +80,8 @@ public:
         // check has been done (hacky).
         date = Sim::future();
     }
-    virtual void deploy(vector<Host::Human>& population, Transmission::TransmissionModel& transmission) {}
-    virtual void print_details(std::ostream& out) const { out << "Dummy"; }
+    void deploy(vector<Host::Human>& population, Transmission::TransmissionModel& transmission) override {}
+    void print_details(std::ostream& out) const override { out << "Dummy"; }
 };
 
 class TimedChangeHSDeployment : public TimedDeployment {
@@ -88,12 +89,12 @@ public:
     TimedChangeHSDeployment(SimTime date, const scnXml::ChangeHS::TimedDeploymentType& hs,
                             Clinical::ClinicalParams& clinical, Clinical::DecisionTreeLibrary& decision_trees)
         : TimedDeployment(date), new_hs(hs._clone()), clinical(&clinical), decision_trees(&decision_trees) {}
-    virtual void deploy(vector<Host::Human>& population, Transmission::TransmissionModel& transmission) {
+    void deploy(vector<Host::Human>& population, Transmission::TransmissionModel& transmission) override {
         clinical->set_health_system(*new_hs, *decision_trees);
         delete new_hs;
-        new_hs = 0;
+        new_hs = nullptr;
     }
-    virtual void print_details(std::ostream& out) const { out << "ChangeHS"; }
+    void print_details(std::ostream& out) const override { out << "ChangeHS"; }
 
 private:
     scnXml::HealthSystem* new_hs;
@@ -105,12 +106,12 @@ class TimedChangeEIRDeployment : public TimedDeployment {
 public:
     TimedChangeEIRDeployment(SimTime date, const scnXml::ChangeEIR::TimedDeploymentType& nv)
         : TimedDeployment(date), new_eir(nv._clone()) {}
-    virtual void deploy(vector<Host::Human>& population, Transmission::TransmissionModel& transmission) {
+    void deploy(vector<Host::Human>& population, Transmission::TransmissionModel& transmission) override {
         transmission.change_eir_intervention(*new_eir);
         delete new_eir;
-        new_eir = 0;
+        new_eir = nullptr;
     }
-    virtual void print_details(std::ostream& out) const { out << "ChangeEIR"; }
+    void print_details(std::ostream& out) const override { out << "ChangeEIR"; }
 
 private:
     scnXml::NonVector* new_eir;
@@ -119,10 +120,10 @@ private:
 class TimedUninfectVectorsDeployment : public TimedDeployment {
 public:
     TimedUninfectVectorsDeployment(SimTime date) : TimedDeployment(date) {}
-    virtual void deploy(vector<Host::Human>& population, Transmission::TransmissionModel& transmission) {
+    void deploy(vector<Host::Human>& population, Transmission::TransmissionModel& transmission) override {
         transmission.uninfect_vectors();
     }
-    virtual void print_details(std::ostream& out) const { out << "UninfectVectors"; }
+    void print_details(std::ostream& out) const override { out << "UninfectVectors"; }
 };
 
 void VaccineLimits::set(const scnXml::DeploymentBase& deploy) {
@@ -152,8 +153,8 @@ protected:
      */
     HumanDeploymentBase(const scnXml::DeploymentBase& deploy, shared_ptr<const HumanIntervention> intervention,
                         ComponentId sub_pop, bool complement, const Transmission::PerHostParams& per_host_params)
-        : coverage(deploy.getCoverage()), sub_pop(sub_pop), complement(complement), intervention(intervention),
-          per_host_params(&per_host_params) {
+        : coverage(deploy.getCoverage()), sub_pop(sub_pop), complement(complement),
+          intervention(std::move(intervention)), per_host_params(&per_host_params) {
         if (!(coverage >= 0.0 && coverage <= 1.0)) {
             throw util::xml_scenario_error("intervention deployment coverage must be in range [0,1]");
         }
@@ -203,9 +204,9 @@ public:
     TimedHumanDeployment(SimTime date, const scnXml::MassDeployment& mass,
                          shared_ptr<const HumanIntervention> intervention, ComponentId sub_pop, bool complement,
                          const Transmission::PerHostParams& per_host_params)
-        : TimedDeployment(date), HumanDeploymentBase(mass, intervention, sub_pop, complement, per_host_params),
-          min_age(Sim::from_years_n(mass.getMinAge())), max_age(Sim::future()), min_availability(0),
-          max_availability(100) {
+        : TimedDeployment(date),
+          HumanDeploymentBase(mass, std::move(intervention), sub_pop, complement, per_host_params),
+          min_age(Sim::from_years_n(mass.getMinAge())), max_age(Sim::future()) {
         if (mass.getMaxAge().present())
             max_age = Sim::from_years_n(mass.getMaxAge().get());
 
@@ -224,7 +225,7 @@ public:
                 "timed intervention must have 0 <= minAvailability <= maxAvailability <= 100");
     }
 
-    virtual void deploy(vector<Host::Human>& population, Transmission::TransmissionModel& transmission) {
+    void deploy(vector<Host::Human>& population, Transmission::TransmissionModel& transmission) override {
         for (Human& human : population) {
             const SimTime age = human.age(Sim::now());
             if (age >= min_age && age < max_age) {
@@ -299,7 +300,7 @@ public:
         }
     }
 
-    virtual void print_details(std::ostream& out) const {
+    void print_details(std::ostream& out) const override {
         out << "Human:" << endl;
         out << "\tage: " << Sim::in_years(min_age) << "y\tmax age: " << Sim::in_years(max_age) << "y\tsubpop: ";
         if (sub_pop == ComponentId::whole_pop())
@@ -313,7 +314,7 @@ public:
 protected:
     // restrictions on deployment
     SimTime min_age, max_age;
-    SimTime min_availability, max_availability;
+    SimTime min_availability{0}, max_availability{100};
 };
 
 /// Timed deployment of human-specific interventions in cumulative mode
@@ -331,10 +332,10 @@ public:
                                    shared_ptr<const HumanIntervention> intervention, ComponentId sub_pop,
                                    bool complement, ComponentId cum_cuv_id,
                                    const Transmission::PerHostParams& per_host_params)
-        : TimedHumanDeployment(date, mass, intervention, sub_pop, complement, per_host_params),
+        : TimedHumanDeployment(date, mass, std::move(intervention), sub_pop, complement, per_host_params),
           cum_cov_ind(cum_cuv_id) {}
 
-    virtual void deploy(vector<Host::Human>& population, Transmission::TransmissionModel& transmission) {
+    void deploy(vector<Host::Human>& population, Transmission::TransmissionModel& transmission) override {
         // Cumulative case: bring target group's coverage up to target coverage
         vector<Host::Human*> unprotected;
         size_t total = 0; // number of humans within age bound and optionally subPop
@@ -380,12 +381,12 @@ protected:
 class TimedVectorDeployment : public TimedDeployment {
 public:
     TimedVectorDeployment(SimTime date, size_t instance) : TimedDeployment(date), inst(instance) {}
-    virtual void deploy(vector<Host::Human>& population, Transmission::TransmissionModel& transmission) {
+    void deploy(vector<Host::Human>& population, Transmission::TransmissionModel& transmission) override {
         Transmission::VectorModel* vector_model = dynamic_cast<Transmission::VectorModel*>(&transmission);
         if (vector_model)
             vector_model->deploy_vector_pop_interv(inst);
     }
-    virtual void print_details(std::ostream& out) const { out << "Vector"; }
+    void print_details(std::ostream& out) const override { out << "Vector"; }
 
 private:
     size_t inst;
@@ -395,14 +396,14 @@ class TimedTrapDeployment : public TimedDeployment {
 public:
     TimedTrapDeployment(SimTime date, size_t instance, double ratio, SimTime lifespan)
         : TimedDeployment(date), inst(instance), ratio(ratio), lifespan(lifespan) {}
-    virtual void deploy(vector<Host::Human>& population, Transmission::TransmissionModel& transmission) {
+    void deploy(vector<Host::Human>& population, Transmission::TransmissionModel& transmission) override {
         Transmission::VectorModel* vector_model = dynamic_cast<Transmission::VectorModel*>(&transmission);
         if (vector_model) {
             double number = population.size() * ratio;
             vector_model->deploy_vector_trap(inst, number, lifespan);
         }
     }
-    virtual void print_details(std::ostream& out) const {
+    void print_details(std::ostream& out) const override {
         out << "VectorTrap:" << endl;
         out << "\tratio: " << ratio << "\tlifespan: " << lifespan;
     }
@@ -415,9 +416,9 @@ private:
 
 class TimedNonHumanHostsDeployment : public TimedDeployment {
 public:
-    TimedNonHumanHostsDeployment(SimTime date, size_t instance, string interv_name,
-                                 const scnXml::Description2::AnophelesSequence list, const scnXml::DecayFunction& decay,
-                                 Transmission::TransmissionModel& transmission)
+    TimedNonHumanHostsDeployment(SimTime date, size_t instance, const string& interv_name,
+                                 const scnXml::Description2::AnophelesSequence& list,
+                                 const scnXml::DecayFunction& decay, Transmission::TransmissionModel& transmission)
         : TimedDeployment(date), instance(instance), interv_name(interv_name) {
         Transmission::VectorModel* vector_model = dynamic_cast<Transmission::VectorModel*>(&transmission);
         if (vector_model) {
@@ -480,7 +481,7 @@ public:
             checker.checkNoneMissed();
         }
     }
-    virtual void deploy(vector<Host::Human>& population, Transmission::TransmissionModel& transmission) {
+    void deploy(vector<Host::Human>& population, Transmission::TransmissionModel& transmission) override {
         Transmission::VectorModel* vector_model = dynamic_cast<Transmission::VectorModel*>(&transmission);
         if (vector_model) {
             for (size_t i = 0; i < vector_model->species_index.size(); ++i) {
@@ -498,7 +499,7 @@ public:
             }
         }
     }
-    virtual void print_details(std::ostream& out) const { out << "NonHumanHosts(" << interv_name << ")"; }
+    void print_details(std::ostream& out) const override { out << "NonHumanHosts(" << interv_name << ")"; }
 
 private:
     size_t instance;
@@ -510,7 +511,7 @@ const string VecModeErr = "vector interventions can only be used in dynamic tran
 class TimedAddNonHumanHostsDeployment : public TimedDeployment {
 public:
     TimedAddNonHumanHostsDeployment(SimTime date, const string& interv_name, SimTime lifespan,
-                                    const scnXml::Description3::AnophelesSequence list,
+                                    const scnXml::Description3::AnophelesSequence& list,
                                     Transmission::TransmissionModel& transmission,
                                     const Transmission::PerHostParams& per_host_params)
         : TimedDeployment(date), interv_name(interv_name), lifespan(lifespan), per_host_params(&per_host_params) {
@@ -521,7 +522,7 @@ public:
                 const string& mosq_name = anoph.getMosquito();
                 checker.getIndex(mosq_name);
 
-                NhhParamsInterv nhh;
+                NhhParamsInterv nhh{};
                 nhh.mosq_relative_availability_human = anoph.getMosqRelativeAvailabilityHuman().getValue();
                 nhh.mosq_prob_biting = anoph.getMosqProbBiting().getValue();
                 nhh.mosq_prob_finding_rest_site = anoph.getMosqProbFindRestSite().getValue();
@@ -533,7 +534,7 @@ public:
         }
     }
 
-    virtual void deploy(vector<Host::Human>& population, Transmission::TransmissionModel& transmission) {
+    void deploy(vector<Host::Human>& population, Transmission::TransmissionModel& transmission) override {
         Transmission::VectorModel* vector_model = dynamic_cast<Transmission::VectorModel*>(&transmission);
         if (vector_model) {
             double pop_size = population.size();
@@ -565,7 +566,7 @@ public:
             }
         }
     }
-    virtual void print_details(std::ostream& out) const {
+    void print_details(std::ostream& out) const override {
         out << "AddNonHumanHosts(" << interv_name << "):" << endl;
         out << "\tlifespan: " << lifespan;
     }
@@ -593,8 +594,8 @@ public:
     ContinuousHumanDeployment(SimTime begin, SimTime end, const ::scnXml::ContinuousDeployment& elt,
                               shared_ptr<const HumanIntervention> intervention, ComponentId sub_pop, bool complement,
                               const Transmission::PerHostParams& per_host_params)
-        : HumanDeploymentBase(elt, intervention, sub_pop, complement, per_host_params), begin(begin), end(end),
-          deploy_age(Sim::from_years_n(elt.getTargetAgeYrs())), min_availability(0), max_availability(100) {
+        : HumanDeploymentBase(elt, std::move(intervention), sub_pop, complement, per_host_params), begin(begin),
+          end(end), deploy_age(Sim::from_years_n(elt.getTargetAgeYrs())) {
         if (begin < Sim::start_date() || end < begin) {
             throw util::xml_scenario_error("continuous intervention must have startDate <= begin <= end");
         }
@@ -670,7 +671,7 @@ public:
 protected:
     SimTime begin, end; // first time step active and first time step no-longer active
     SimTime deploy_age = Sim::never();
-    SimTime min_availability, max_availability;
+    SimTime min_availability{0}, max_availability{100};
 
     friend ByDeployTime;
 };
@@ -685,5 +686,4 @@ struct ByDeployTime {
     }
 } by_deploy_time;
 
-}
 }

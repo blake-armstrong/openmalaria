@@ -34,8 +34,7 @@
 #include <limits>
 #include <cmath>
 
-namespace OM {
-namespace interventions {
+namespace OM::interventions {
 using namespace OM::util;
 
 VaccineComponent::VaccineComponent(ComponentId component, const scnXml::VaccineDescription& vd, vaccines::Types type,
@@ -47,8 +46,8 @@ VaccineComponent::VaccineComponent(ComponentId component, const scnXml::VaccineD
 
     opt_vaccine_genotype = util::ModelOptions::option(util::VaccineGenotype);
 
-    const scnXml::VaccineDescription::InitialEfficacySequence ies = vd.getInitialEfficacy();
-    const scnXml::VaccineDescription::PhenotypeSequence ps = vd.getPhenotype();
+    const scnXml::VaccineDescription::InitialEfficacySequence& ies = vd.getInitialEfficacy();
+    const scnXml::VaccineDescription::PhenotypeSequence& ps = vd.getPhenotype();
 
     //cout << ies.size() << " " << ps.size() << " " << WithinHost::Genotypes::N() << endl;
 
@@ -65,42 +64,42 @@ VaccineComponent::VaccineComponent(ComponentId component, const scnXml::VaccineD
     if (opt_vaccine_genotype == true) {
         per_genotype_initial_mean_efficacy.resize(WithinHost::Genotypes::count());
 
-        for (size_t i = 0; i < ps.size(); ++i) {
+        for (const auto& p : ps) {
             //cout << "Phenotype: " << ps[i].getName() << endl;
 
-            const scnXml::VaccinePhenotype::RestrictionSequence restrictions = ps[i].getRestriction();
-            const scnXml::VaccinePhenotype::InitialEfficacySequence vpies = ps[i].getInitialEfficacy();
+            const scnXml::VaccinePhenotype::RestrictionSequence& restrictions = p.getRestriction();
+            const scnXml::VaccinePhenotype::InitialEfficacySequence& vpies = p.getInitialEfficacy();
 
-            for (size_t j = 0; j < restrictions.size(); ++j) {
+            for (const auto& restriction : restrictions) {
                 //cout << "\tonLocus: " << restrictions[j].getOnLocus() << ", " << "toAllelle: " << restrictions[j].getToAllele() << endl;
                 //cout << "\tmatching allelle code: " << WithinHost::Genotypes::findAlleleCode(restrictions[j].getOnLocus(), restrictions[j].getToAllele()) << endl;
 
-                uint32_t allele_code = WithinHost::Genotypes::find_allele_code(restrictions[j].getOnLocus(),
-                                                                               restrictions[j].getToAllele());
+                uint32_t allele_code =
+                    WithinHost::Genotypes::find_allele_code(restriction.getOnLocus(), restriction.getToAllele());
 
                 if (allele_code == numeric_limits<uint32_t>::max()) {
                     throw util::xml_scenario_error("phenotype has "
                                                    "restriction on locus " +
-                                                   string(restrictions[j].getOnLocus()) + " allele " +
-                                                   string(restrictions[j].getToAllele()) +
+                                                   string(restriction.getOnLocus()) + " allele " +
+                                                   string(restriction.getToAllele()) +
                                                    " but this locus/allele "
                                                    "has not been defined in parasiteGenetics section");
                 }
 
                 if (allele_code >= WithinHost::Genotypes::count())
                     throw util::xml_scenario_error(string("Vaccine phenotype: Invalid Locus ") +
-                                                   restrictions[j].getOnLocus() + string(" and allele ") +
-                                                   restrictions[j].getToAllele());
+                                                   restriction.getOnLocus() + string(" and allele ") +
+                                                   restriction.getToAllele());
 
                 if (per_genotype_initial_mean_efficacy[allele_code].size() != 0)
-                    throw util::xml_scenario_error(string(
-                        "Vaccine phenotype: there are multiple restrictions locus " +
-                        string(restrictions[j].getOnLocus() + string(" and allele ") + restrictions[j].getToAllele())));
+                    throw util::xml_scenario_error(
+                        string("Vaccine phenotype: there are multiple restrictions locus " +
+                               string(restriction.getOnLocus() + string(" and allele ") + restriction.getToAllele())));
 
                 if (vpies.size() == 0)
                     throw util::xml_scenario_error(
                         string("Vaccine phenotype: initialEfficacy is required but is missing for phenotype: " +
-                               string(restrictions[j].getOnLocus() + string(" ") + restrictions[j].getToAllele())));
+                               string(restriction.getOnLocus() + string(" ") + restriction.getToAllele())));
 
                 per_genotype_initial_mean_efficacy[allele_code].resize(vpies.size());
 
@@ -209,11 +208,11 @@ void PerEffectPerHumanVaccine::checkpointHet(istream& stream) {
 
 double PerHumanVaccine::get_factor(vaccines::Types type, uint32_t genotype) const {
     double factor = 1.0;
-    for (EffectList::const_iterator effect = effects.begin(); effect != effects.end(); ++effect) {
-        if (effect->params->type == type) {
-            SimTime age = Sim::ts1() - effect->time_last_deployment; // implies age 1 TS on first use
-            double decay_factor = effect->het_sample->eval(age);
-            factor *= 1.0 - effect->per_genotype_initial_efficacy[genotype] * decay_factor;
+    for (const auto& effect : effects) {
+        if (effect.params->type == type) {
+            SimTime age = Sim::ts1() - effect.time_last_deployment; // implies age 1 TS on first use
+            double decay_factor = effect.het_sample->eval(age);
+            factor *= 1.0 - effect.per_genotype_initial_efficacy[genotype] * decay_factor;
         }
     }
     return factor;
@@ -221,19 +220,19 @@ double PerHumanVaccine::get_factor(vaccines::Types type, uint32_t genotype) cons
 
 bool PerHumanVaccine::possibly_vaccinate(Host::Human& human, const VaccineComponent& params,
                                          interventions::VaccineLimits vacc_limits) {
-    PerEffectPerHumanVaccine* effect = 0;
-    for (EffectList::iterator it = effects.begin(); it != effects.end(); ++it) {
-        if (it->component == params.id()) {
-            effect = &*it;
+    PerEffectPerHumanVaccine* effect = nullptr;
+    for (auto& it : effects) {
+        if (it.component == params.id()) {
+            effect = &it;
             break;
         }
     }
 
-    uint32_t num_doses_administered = (effect == 0) ? 0 : effect->num_doses_administered;
+    uint32_t num_doses_administered = (effect == nullptr) ? 0 : effect->num_doses_administered;
     if (num_doses_administered < vacc_limits.min_prev_doses || num_doses_administered >= vacc_limits.max_cum_doses)
         return false; // no vaccination (this replaces the old schedule for continuous doses)
 
-    if (effect == 0) {
+    if (effect == nullptr) {
         effects.push_back(PerEffectPerHumanVaccine(human.intervention_rng, params));
         effect = &effects.back();
     }
@@ -252,5 +251,4 @@ bool PerHumanVaccine::possibly_vaccinate(Host::Human& human, const VaccineCompon
     return true;
 }
 
-}
 }

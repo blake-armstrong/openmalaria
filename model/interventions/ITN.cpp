@@ -29,8 +29,7 @@
 #include "util/CommandLine.h"
 #include <cmath>
 
-namespace OM {
-namespace interventions {
+namespace OM::interventions {
 
 // —————  utility classes (internal use only)  —————
 
@@ -467,7 +466,7 @@ double factors::RelativeAttractiveness::relative_attractiveness(double hole_inde
 
 ITNComponent::ITNComponent(ComponentId id, const scnXml::ITNDescription& elt,
                            const map<string, size_t>& species_name_map)
-    : Transmission::HumanVectorInterventionComponent(id), rip_factor(numeric_limits<double>::signaling_NaN()) {
+    : Transmission::HumanVectorInterventionComponent(id), rip_factor(elt.getRipFactor().getValue()) {
     initial_insecticide.setParams(elt.getInitialInsecticide());
     const double max_prop = 0.999; //NOTE: this could be exposed in XML, but probably doesn't need to be
     max_insecticide = R::qnorm5(max_prop, initial_insecticide.getMu(), initial_insecticide.getSigma(), true, false);
@@ -475,11 +474,11 @@ ITNComponent::ITNComponent(ComponentId id, const scnXml::ITNDescription& elt,
     hole_rate->scaleMean(Sim::years_per_step());        // convert to per step
     rip_rate = util::createSampler(elt.getRipRate());
     rip_rate->scaleMean(Sim::years_per_step());
-    rip_factor = elt.getRipFactor().getValue();
+
     insecticide_decay = DecayFunction::makeObject(elt.getInsecticideDecay(), "ITNDescription.insecticideDecay");
     attrition_of_nets = DecayFunction::makeObject(elt.getAttritionOfNets(), "ITNDescription.attritionOfNets");
     // assume usage modifier is 100% if none is specified
-    double prop_use;
+    double prop_use = NAN;
     if (elt.getUsage().present()) {
         prop_use = elt.getUsage().get().getValue();
     } else {
@@ -489,12 +488,12 @@ ITNComponent::ITNComponent(ComponentId id, const scnXml::ITNDescription& elt,
         throw util::xml_scenario_error("ITN.description.proportionUse: must be within range [0,1]");
     }
 
-    typedef scnXml::ITNDescription::AnophelesParamsSequence AP;
+    using AP = scnXml::ITNDescription::AnophelesParamsSequence;
     const AP& ap = elt.getAnophelesParams();
     species.resize(species_name_map.size());
     util::SpeciesIndexChecker checker("ITN", species_name_map);
-    for (AP::const_iterator it = ap.begin(); it != ap.end(); ++it) {
-        species[checker.getIndex(it->getMosquito())].init(*it, prop_use, max_insecticide);
+    for (const auto& it : ap) {
+        species[checker.getIndex(it.getMosquito())].init(it, prop_use, max_insecticide);
     }
     checker.checkNoneMissed();
 }
@@ -585,7 +584,7 @@ HumanITN::HumanITN(LocalRng& rng, const ITNComponent& params)
 
 HumanITN::HumanITN(LocalRng& rng, const ITNComponent& params, util::NormalSample handling)
     : PerHostInterventionData(params.id()), disposal_time(Sim::now() + params.attrition_of_nets->sampleAgeOfDecay(rng)),
-      n_holes(0), hole_index(0.0),
+
       // this is sampled independently: initial insecticide content doesn't depend on handling
       initial_insecticide(params.initial_insecticide.sample(rng)), hole_rate(params.hole_rate->sample(handling)),
       rip_rate(params.rip_rate->sample(handling)), insecticide_decay_het(params.insecticide_decay->hetSample(handling)),
@@ -687,5 +686,4 @@ HumanITN::HumanITN(istream& stream, ComponentId id, const ITNComponent& params)
     component->insecticide_decay->checkpointSample(insecticide_decay_het, stream);
 }
 
-}
 }

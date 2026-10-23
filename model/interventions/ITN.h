@@ -28,8 +28,7 @@
 #include "util/sampler.h"
 #include "schema/interventions.h"
 
-namespace OM {
-namespace interventions {
+namespace OM::interventions {
 using Transmission::PerHostInterventionData;
 using util::DecayFunction;
 using util::LocalRng;
@@ -92,7 +91,7 @@ class RelativeAttractiveness {
     enum DeterrencyModel { NoModel, SingleStage, TwoStage, TwoStageLogit };
 
 public:
-    RelativeAttractiveness() : model(0) {}
+    RelativeAttractiveness() {}
 
     /** Set parameters for single-stage deterrency model.
          * 
@@ -120,7 +119,7 @@ private:
         struct {
             double l_hf, l_pf, l_if; // logs of hole, insecticide and interaction factors
             double hole_scaling, insecticide_scaling;
-        } a;
+        } a{};
         struct {
             double l_pf_entering; // log of insecticide factor
             double insecticide_scaling_entering;
@@ -134,7 +133,7 @@ private:
             SurvivalFactor p_attacking;
         } c;
     };
-    int model;
+    int model{0};
 };
 }
 
@@ -144,14 +143,14 @@ class ITNComponent : public Transmission::HumanVectorInterventionComponent {
 public:
     ITNComponent(ComponentId id, const scnXml::ITNDescription& elt, const map<string, size_t>& species_name_map);
 
-    virtual void deploy(Host::Human& human, mon::Deploy::Method method, VaccineLimits) const;
+    void deploy(Host::Human& human, mon::Deploy::Method method, VaccineLimits) const override;
 
-    virtual component_types::Type component_type() const;
+    component_types::Type component_type() const override;
 
-    virtual void print_details(std::ostream& out) const;
+    void print_details(std::ostream& out) const override;
 
-    virtual unique_ptr<PerHostInterventionData> make_human_part(LocalRng& rng) const;
-    virtual unique_ptr<PerHostInterventionData> make_human_part(istream& stream, ComponentId id) const;
+    unique_ptr<PerHostInterventionData> make_human_part(LocalRng& rng) const override;
+    unique_ptr<PerHostInterventionData> make_human_part(istream& stream, ComponentId id) const override;
 
 private:
     /** Per mosquito-species parameters for extended ITN model. */
@@ -190,9 +189,9 @@ private:
         double proportion_protected;
         double proportion_unprotected;
         factors::RelativeAttractiveness rel_attractiveness;
-        factors::SurvivalFactor preprandial_killing_effect;
-        factors::SurvivalFactor postprandial_killing_effect;
-        factors::SurvivalFactor rel_fecundity_effect;
+        factors::SurvivalFactor preprandial_killing_effect{};
+        factors::SurvivalFactor postprandial_killing_effect{};
+        factors::SurvivalFactor rel_fecundity_effect{};
 
         friend class HumanITN;
     };
@@ -218,7 +217,7 @@ public:
     HumanITN(LocalRng& rng, const ITNComponent& params);
     HumanITN(istream& stream, ComponentId id, const ITNComponent& params);
 
-    virtual void redeploy(LocalRng& rng, const Transmission::HumanVectorInterventionComponent& params);
+    void redeploy(LocalRng& rng, const Transmission::HumanVectorInterventionComponent& params) override;
 
     inline double get_hole_index() const { return hole_index; }
     inline double get_insecticide_content(const ITNComponent& params) const {
@@ -228,39 +227,38 @@ public:
     }
 
     /// Call once per time step to update holes
-    virtual void update(Host::Human& human);
+    void update(Host::Human& human) override;
 
     /// Get deterrency. See ComponentParams::effect for a more detailed description.
-    virtual double relative_attractiveness(size_t species_index) const;
+    double relative_attractiveness(size_t species_index) const override;
     /// Get killing effect on mosquitoes before they've eaten.
     /// See ComponentParams::effect for a more detailed description.
-    virtual double preprandial_survival_factor(size_t species_index) const;
+    double preprandial_survival_factor(size_t species_index) const override;
     /// Get killing effect on mosquitoes after they've eaten.
     /// See ComponentParams::effect for a more detailed description.
-    virtual double postprandial_survival_factor(size_t species_index) const;
+    double postprandial_survival_factor(size_t species_index) const override;
     /// Get the mosquito fecundity multiplier (1 for no effect).
-    virtual double rel_fecundity(size_t species_index) const;
+    double rel_fecundity(size_t species_index) const override;
 
 protected:
-    virtual void checkpoint(ostream& stream);
+    void checkpoint(ostream& stream) override;
 
 private:
     HumanITN(LocalRng& rng, const ITNComponent& params, util::NormalSample handling);
 
     // these parameters express the current state of the net:
     SimTime disposal_time = Sim::never(); // time at which net will be disposed of (if it's not already been replaced)
-    int n_holes;                          // total number of holes
-    double hole_index;                    // a measure of both the number and size of holes
-    double initial_insecticide;           // units: mg/m²
+    int n_holes{};                        // total number of holes
+    double hole_index{};                  // a measure of both the number and size of holes
+    double initial_insecticide{};         // units: mg/m²
 
     // these parameters are sampled from log-normal per net, but thereafter constant:
-    double hole_rate; // rate at which new holes are created (holes/time-step)
-    double rip_rate;  // rate at which holes are enlarged (rips/hole/time-step)
+    double hole_rate{}; // rate at which new holes are created (holes/time-step)
+    double rip_rate{};  // rate at which holes are enlarged (rips/hole/time-step)
     unique_ptr<DecayFunction> insecticide_decay_het;
     const ITNComponent* component;
 };
 
-}
 }
 
 #endif

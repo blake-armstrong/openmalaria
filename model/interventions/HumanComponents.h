@@ -102,7 +102,7 @@ private:
 /** Per-human vaccine code. */
 class PerHumanVaccine {
 public:
-    PerHumanVaccine() {}
+    PerHumanVaccine() = default;
 
     /** Get one minus the efficacy of the vaccine (1 for no effect, 0 for full effect). */
     double get_factor(vaccines::Types type, uint32_t genotype = 0) const;
@@ -127,7 +127,7 @@ public:
 
 private:
     /// Details for each deployed vaccine for this human
-    typedef std::vector<PerEffectPerHumanVaccine> EffectList;
+    using EffectList = std::vector<PerEffectPerHumanVaccine>;
     EffectList effects;
 };
 

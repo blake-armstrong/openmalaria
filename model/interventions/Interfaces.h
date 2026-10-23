@@ -63,9 +63,9 @@ enum Type {
 /** Specifies limits on the number of existing doses when deciding whether to
  * vaccinate a human. */
 struct VaccineLimits {
-    VaccineLimits() : min_prev_doses(0), max_cum_doses(numeric_limits<uint32_t>::max()) {}
+    VaccineLimits() : max_cum_doses(numeric_limits<uint32_t>::max()) {}
     void set(const scnXml::DeploymentBase&);
-    uint32_t min_prev_doses, max_cum_doses;
+    uint32_t min_prev_doses{0}, max_cum_doses;
 };
 
 /** Essentially just an integer, used as a vector index.
@@ -83,7 +83,7 @@ struct ComponentId {
     /// Special value indicating the whole population
     static ComponentId whole_pop() { return ComponentId{numeric_limits<uint32_t>::max()}; }
 
-    size_t id;
+    size_t id{};
 };
 
 /** A description of one component of a human intervention.
@@ -94,7 +94,7 @@ struct ComponentId {
  * This is a base class. */
 class HumanInterventionComponent {
 public:
-    virtual ~HumanInterventionComponent() {}
+    virtual ~HumanInterventionComponent() = default;
 
     /** Deploy the component to a pre-selected human.
      * 

@@ -29,8 +29,7 @@
 #include "R_nmath/qnorm.h"
 #include <cmath>
 
-namespace OM {
-namespace interventions {
+namespace OM::interventions {
 
 IRSComponent::IRSComponent(ComponentId id, const scnXml::IRSDescription& elt,
                            const map<string, size_t>& species_name_map)
@@ -41,7 +40,7 @@ IRSComponent::IRSComponent(ComponentId id, const scnXml::IRSDescription& elt,
     insecticide_decay =
         DecayFunction::makeObject(elt.getInsecticideDecay(), "interventions.human.IRS.description.insecticideDecay");
     // assume usage modifier is 100% if none is specified
-    double prop_use;
+    double prop_use = NAN;
     if (elt.getUsage().present()) {
         prop_use = elt.getUsage().get().getValue();
     } else {
@@ -51,12 +50,12 @@ IRSComponent::IRSComponent(ComponentId id, const scnXml::IRSDescription& elt,
         throw util::xml_scenario_error("ITN.description.usage: must be within range [0,1]");
     }
 
-    typedef scnXml::IRSDescription::AnophelesParamsSequence AP;
+    using AP = scnXml::IRSDescription::AnophelesParamsSequence;
     const AP& ap = elt.getAnophelesParams();
     species.resize(species_name_map.size());
     util::SpeciesIndexChecker checker("IRS intervention", species_name_map);
-    for (AP::const_iterator it = ap.begin(); it != ap.end(); ++it) {
-        species[checker.getIndex(it->getMosquito())].init(*it, prop_use, max_insecticide);
+    for (const auto& it : ap) {
+        species[checker.getIndex(it.getMosquito())].init(it, prop_use, max_insecticide);
     }
     checker.checkNoneMissed();
 }
@@ -226,7 +225,7 @@ HumanIRS::HumanIRS(LocalRng& rng, const IRSComponent& params)
 void HumanIRS::redeploy(LocalRng& rng, const OM::Transmission::HumanVectorInterventionComponent& params) {
     deploy_time = Sim::now_or_ts1();
     const IRSComponent* irs_params = dynamic_cast<const IRSComponent*>(&params);
-    assert(irs_params != 0); // code error if this fails
+    assert(irs_params != nullptr); // code error if this fails
     initial_insecticide = irs_params->sample_initial_insecticide(rng);
 }
 
@@ -271,5 +270,4 @@ HumanIRS::HumanIRS(istream& stream, ComponentId id, const IRSComponent& params)
     component->insecticide_decay->checkpointSample(insecticide_decay_het, stream);
 }
 
-}
 }

@@ -28,15 +28,14 @@
 #include "util/CommandLine.h"
 #include <cmath>
 
-namespace OM {
-namespace interventions {
+namespace OM::interventions {
 
 GVIComponent::GVIComponent(ComponentId id, const scnXml::GVIDescription& elt,
                            const map<string, size_t>& species_name_map)
     : Transmission::HumanVectorInterventionComponent(id) {
     decay = DecayFunction::makeObject(elt.getDecay(), "interventions.human.vector.decay");
     // assume usage modifier is 100% if none is specified
-    double prop_use;
+    double prop_use = NAN;
     if (elt.getUsage().present()) {
         prop_use = elt.getUsage().get().getValue();
     } else {
@@ -46,12 +45,12 @@ GVIComponent::GVIComponent(ComponentId id, const scnXml::GVIDescription& elt,
         throw util::xml_scenario_error("GVI.description.usage: must be within range [0,1]");
     }
 
-    typedef scnXml::GVIDescription::AnophelesParamsSequence AP;
+    using AP = scnXml::GVIDescription::AnophelesParamsSequence;
     const AP& ap = elt.getAnophelesParams();
     species.resize(species_name_map.size());
     util::SpeciesIndexChecker checker("GVI intervention", species_name_map);
-    for (AP::const_iterator it = ap.begin(); it != ap.end(); ++it) {
-        species[checker.getIndex(it->getMosquito())].init(*it, prop_use);
+    for (const auto& it : ap) {
+        species[checker.getIndex(it.getMosquito())].init(it, prop_use);
     }
     checker.checkNoneMissed();
 }
@@ -142,5 +141,4 @@ HumanGVI::HumanGVI(istream& stream, ComponentId id, const GVIComponent& params)
     component->decay->checkpointSample(decay_het, stream);
 }
 
-}
 }

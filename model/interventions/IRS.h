@@ -27,8 +27,7 @@
 #include "Transmission/PerHost.h"
 #include "schema/interventions.h"
 
-namespace OM {
-namespace interventions {
+namespace OM::interventions {
 using Transmission::PerHostInterventionData;
 using util::DecayFunction;
 using util::LocalRng;
@@ -39,14 +38,14 @@ class IRSComponent : public Transmission::HumanVectorInterventionComponent {
 public:
     IRSComponent(ComponentId id, const scnXml::IRSDescription& elt, const map<string, size_t>& species_name_map);
 
-    virtual void deploy(Host::Human& human, mon::Deploy::Method method, VaccineLimits) const;
+    void deploy(Host::Human& human, mon::Deploy::Method method, VaccineLimits) const override;
 
-    virtual component_types::Type component_type() const;
+    component_types::Type component_type() const override;
 
-    virtual void print_details(std::ostream& out) const;
+    void print_details(std::ostream& out) const override;
 
-    virtual unique_ptr<PerHostInterventionData> make_human_part(LocalRng& rng) const;
-    virtual unique_ptr<PerHostInterventionData> make_human_part(istream& stream, ComponentId) const;
+    unique_ptr<PerHostInterventionData> make_human_part(LocalRng& rng) const override;
+    unique_ptr<PerHostInterventionData> make_human_part(istream& stream, ComponentId) const override;
 
 private:
     /** Per mosquito-species parameters for extended IRS model. */
@@ -155,7 +154,7 @@ public:
     HumanIRS(LocalRng& rng, const IRSComponent& params);
     HumanIRS(istream& stream, ComponentId id, const IRSComponent& params);
 
-    virtual void redeploy(LocalRng& rng, const Transmission::HumanVectorInterventionComponent& params);
+    void redeploy(LocalRng& rng, const Transmission::HumanVectorInterventionComponent& params) override;
 
     /// Get remaining insecticide content based on initial amount and decay.
     inline double get_insecticide_content(const IRSComponent& params) const {
@@ -165,33 +164,32 @@ public:
     }
 
     /// Call once per time step to update holes
-    virtual void update(Host::Human& human);
+    void update(Host::Human& human) override;
 
     /// Get deterrency. See ComponentParams::effect for a more detailed description.
-    virtual double relative_attractiveness(size_t species_index) const;
+    double relative_attractiveness(size_t species_index) const override;
     /// Get killing effect on mosquitoes before they've eaten.
     /// See ComponentParams::effect for a more detailed description.
-    virtual double preprandial_survival_factor(size_t species_index) const;
+    double preprandial_survival_factor(size_t species_index) const override;
     /// Get killing effect on mosquitoes after they've eaten.
     /// See ComponentParams::effect for a more detailed description.
-    virtual double postprandial_survival_factor(size_t species_index) const;
+    double postprandial_survival_factor(size_t species_index) const override;
     /// Get the mosquito fecundity multiplier (1 for no effect).
-    virtual double rel_fecundity(size_t species_index) const;
+    double rel_fecundity(size_t species_index) const override;
 
 protected:
-    virtual void checkpoint(ostream& stream);
+    void checkpoint(ostream& stream) override;
 
 private:
     // this is sampled for each deployment: initial insecticide content doesn't
     // depend on handling by the recipient
-    double initial_insecticide; // units: mg/m²
+    double initial_insecticide{}; // units: mg/m²
 
     // this parameter is sampled on first deployment, but never resampled for the same human:
     unique_ptr<DecayFunction> insecticide_decay_het;
     const IRSComponent* component;
 };
 
-}
 }
 
 #endif

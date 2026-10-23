@@ -29,8 +29,7 @@
 #include "util/sampler.h"
 #include "schema/interventions.h"
 
-namespace OM {
-namespace interventions {
+namespace OM::interventions {
 using Transmission::PerHostInterventionData;
 using util::DecayFunction;
 using util::LocalRng;
@@ -46,14 +45,14 @@ public:
      */
     GVIComponent(ComponentId, const scnXml::GVIDescription& elt, const map<string, size_t>& species_name_map);
 
-    void deploy(Host::Human& human, mon::Deploy::Method method, VaccineLimits) const;
+    void deploy(Host::Human& human, mon::Deploy::Method method, VaccineLimits) const override;
 
-    virtual component_types::Type component_type() const;
+    component_types::Type component_type() const override;
 
-    virtual void print_details(std::ostream& out) const;
+    void print_details(std::ostream& out) const override;
 
-    virtual unique_ptr<PerHostInterventionData> make_human_part(LocalRng& rng) const;
-    virtual unique_ptr<PerHostInterventionData> make_human_part(istream& stream, ComponentId) const;
+    unique_ptr<PerHostInterventionData> make_human_part(LocalRng& rng) const override;
+    unique_ptr<PerHostInterventionData> make_human_part(istream& stream, ComponentId) const override;
 
 private:
     /** Per mosquito-species parameters for generic vector intervention model. */
@@ -97,7 +96,7 @@ public:
     HumanGVI(LocalRng& rng, const GVIComponent& params);
     HumanGVI(istream& stream, ComponentId id, const GVIComponent& params);
 
-    virtual void redeploy(LocalRng& rng, const Transmission::HumanVectorInterventionComponent&);
+    void redeploy(LocalRng& rng, const Transmission::HumanVectorInterventionComponent&) override;
 
     /** This is the survival factor of the effect. */
     inline double get_effect_survival(const GVIComponent& params) const {
@@ -105,21 +104,21 @@ public:
         return decay_het->eval(age);
     }
 
-    virtual void update(Host::Human& human);
+    void update(Host::Human& human) override;
 
     /// Get deterrency. See ComponentParams::effect for a more detailed description.
-    virtual double relative_attractiveness(size_t species_index) const;
+    double relative_attractiveness(size_t species_index) const override;
     /// Get killing effect on mosquitoes before they've eaten.
     /// See ComponentParams::effect for a more detailed description.
-    virtual double preprandial_survival_factor(size_t species_index) const;
+    double preprandial_survival_factor(size_t species_index) const override;
     /// Get killing effect on mosquitoes after they've eaten.
     /// See ComponentParams::effect for a more detailed description.
-    virtual double postprandial_survival_factor(size_t species_index) const;
+    double postprandial_survival_factor(size_t species_index) const override;
     /// Get the mosquito fecundity multiplier (1 for no effect).
-    virtual double rel_fecundity(size_t species_index) const;
+    double rel_fecundity(size_t species_index) const override;
 
 protected:
-    virtual void checkpoint(ostream& stream);
+    void checkpoint(ostream& stream) override;
 
 private:
     // this parameter is sampled on first deployment, but never resampled for the same human:
@@ -127,7 +126,6 @@ private:
     const GVIComponent* component;
 };
 
-}
 }
 
 #endif
