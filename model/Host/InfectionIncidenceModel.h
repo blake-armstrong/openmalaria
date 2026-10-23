@@ -20,8 +20,8 @@
  * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301, USA.
  */
 
-#ifndef Hmod_InfectionIncidence
-#define Hmod_InfectionIncidence
+#ifndef HMOD_INFECTION_INCIDENCE
+#define HMOD_INFECTION_INCIDENCE
 
 #include "Global.h"
 #include "Transmission/PerHost.h"
@@ -94,8 +94,8 @@ public:
 
     /// Checkpointing
     template <class S> void operator&(S& stream) {
-        m_pInfected & stream;
-        m_cumulativeEIRa & stream;
+        p_infected & stream;
+        cumulative_eir_a & stream;
     }
 
     virtual ~InfectionIncidenceModel() {}
@@ -107,7 +107,7 @@ public:
    * @param baseAvailability This was BaselineAvailabilityMean from Constant.h,
    *	and had the value 1.0. Whether it should be anything else I don't know.
    */
-    virtual double getAvailabilityFactor(LocalRng& rng, double baseAvailability = 1.0);
+    virtual double get_availability_factor(LocalRng& rng, double base_availability = 1.0);
 
     /// Output _pinfected to the summary
     void summarize(const Host::Human& human);
@@ -127,7 +127,7 @@ public:
    * @param effectiveEIR    EIR adjusted for availability (age, het,
    *        outside transmission due to hospitalisation)
    */
-    double expectedNumNewInfections(OM::Host::Human& human, double effectiveEIR);
+    double expected_num_new_infections(OM::Host::Human& human, double effective_eir);
 
     /** Calculate the number of new infections to introduce.
    * 
@@ -135,7 +135,7 @@ public:
    * @param expectedNumNewInfections   Expected number of infections
    * to be introduced
    */
-    int numNewInfections(OM::Host::Human& human, double expectedNumNewInfections);
+    int num_new_infections(OM::Host::Human& human, double expected_num_new_infections);
 
     /** Report the number of new infections
    * 
@@ -145,12 +145,13 @@ public:
    * @param int newNumInfections_i  Number of introduced infections to be reported
    * @param int newNumInfections_l  Number of local (indigenous) infections to be reported
    */
-    void reportNumNewInfections(Human& human, int newNumInfections_i, int newNumInfections_l,
-                                NewInfections& new_infections);
+    void report_num_new_infections(Human& human, int new_num_infections_i, int new_num_infections_l,
+                                   NewInfections& new_infections);
 
 protected:
     /// Calculates the expected number of infections, excluding vaccine effects
-    virtual double getModelExpectedInfections(LocalRng& rng, double effectiveEIR, const Transmission::PerHost& phTrans);
+    virtual double get_model_expected_infections(LocalRng& rng, double effective_eir,
+                                                 const Transmission::PerHost& ph_trans);
 
     double susceptibility();
 
@@ -160,10 +161,10 @@ protected:
    *
    * Appears to be used only for calculating expected inoculations for the
    * analysis of pre-erythrocytic immunity. */
-    double m_pInfected;
+    double p_infected;
 
     //!Number of infective bites since birth
-    double m_cumulativeEIRa; //TODO(memory opt): not needed by NegBinomMAII and LogNormalMAII
+    double cumulative_eir_a; //TODO(memory opt): not needed by NegBinomMAII and LogNormalMAII
 };
 
 //TODO(optimisation): none of these add data members, so should we be using
@@ -180,25 +181,25 @@ public:
     virtual ~HeterogeneityWorkaroundII() {}
 
 protected:
-    double getModelExpectedInfections(LocalRng& rng, double effectiveEIR, const Transmission::PerHost& phTrans);
+    double get_model_expected_infections(LocalRng& rng, double effective_eir, const Transmission::PerHost& ph_trans);
 };
 class NegBinomMAII : public InfectionIncidenceModel {
 public:
     explicit NegBinomMAII(const InfectionIncidenceParams& params) : InfectionIncidenceModel(params) {}
     virtual ~NegBinomMAII() {}
-    virtual double getAvailabilityFactor(LocalRng& rng, double baseAvailability = 1.0);
+    virtual double get_availability_factor(LocalRng& rng, double base_availability = 1.0);
 
 protected:
-    double getModelExpectedInfections(LocalRng& rng, double effectiveEIR, const Transmission::PerHost&);
+    double get_model_expected_infections(LocalRng& rng, double effective_eir, const Transmission::PerHost&);
 };
 class LogNormalMAII : public InfectionIncidenceModel {
 public:
     explicit LogNormalMAII(const InfectionIncidenceParams& params) : InfectionIncidenceModel(params) {}
     virtual ~LogNormalMAII() {}
-    virtual double getAvailabilityFactor(LocalRng& rng, double baseAvailability = 1.0);
+    virtual double get_availability_factor(LocalRng& rng, double base_availability = 1.0);
 
 protected:
-    double getModelExpectedInfections(LocalRng& rng, double effectiveEIR, const Transmission::PerHost&);
+    double get_model_expected_infections(LocalRng& rng, double effective_eir, const Transmission::PerHost&);
 };
 
 }

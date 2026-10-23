@@ -114,7 +114,7 @@ Human::Human(SimTime dateOfBirth, const HumanParams& params, util::MasterRng& rn
 
     HumanHet het = hetSample(host_rng);
     withinHostModel = WithinHost::WHInterface::create_within_host_model(host_rng, het.comorbidityFactor);
-    double ii_factor = infIncidence->getAvailabilityFactor(host_rng, 1.0);
+    double ii_factor = infIncidence->get_availability_factor(host_rng, 1.0);
     perHostTransmission.initialise(*params.per_host, host_rng, het.availabilityFactor * ii_factor);
     clinicalModel = bridge::clinical_params().create(het.treatmentSeekingFactor);
 }
@@ -254,18 +254,18 @@ void update(Human& human, Transmission::TransmissionModel& transmission, const N
     if (EIR > 0)
         x = EIR_i / EIR;
 
-    double expectedNNewInfs = human.infIncidence->expectedNumNewInfections(human, EIR);
+    double expectedNNewInfs = human.infIncidence->expected_num_new_infections(human, EIR);
     double expectedNNewInfs_i = x * expectedNNewInfs;
     double expectedNNewInfs_l = (1.0 - x) * expectedNNewInfs;
 
     // One more rng call if imported infection
-    int nNewInfs_l = human.infIncidence->numNewInfections(human, expectedNNewInfs_l);
-    int nNewInfs_i = human.infIncidence->numNewInfections(human, expectedNNewInfs_i);
+    int nNewInfs_l = human.infIncidence->num_new_infections(human, expectedNNewInfs_l);
+    int nNewInfs_i = human.infIncidence->num_new_infections(human, expectedNNewInfs_i);
 
     // age1 used when medicating drugs (small effect) and in immunity model (which was parameterised for it)
     human.withinHostModel->update(human, human.host_rng, nNewInfs_i, nNewInfs_l, EIR_per_genotype_i, EIR_per_genotype_l,
                                   age1);
-    human.infIncidence->reportNumNewInfections(human, nNewInfs_i, nNewInfs_l, new_infections);
+    human.infIncidence->report_num_new_infections(human, nNewInfs_i, nNewInfs_l, new_infections);
 
     // age1 used to get case fatality and sequelae probabilities, determine pathogenesis
     human.clinicalModel->update(human, age1, age0 == Sim::zero(), neonatal_mortality);

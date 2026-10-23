@@ -20,8 +20,8 @@
  * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301, USA.
  */
 
-#ifndef Hmod_PopulationAgeStructure
-#define Hmod_PopulationAgeStructure
+#ifndef HMOD_POPULATION_AGE_STRUCTURE
+#define HMOD_POPULATION_AGE_STRUCTURE
 
 #include <vector>
 #include "Global.h"
