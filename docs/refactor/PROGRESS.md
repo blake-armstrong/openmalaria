@@ -38,7 +38,7 @@ See `PLAN.md` for the session protocol, chunks and gates. Append one log entry p
 | D6 | split | D6a–D6c |
 | D6a | done | 1b084b2e, 910bf9a9, 3be68cb7, c38704fb, 225947ca, 4ed41e45, aa825247, f7849271, c2e8281b, f4b0cfd2, c5dc1e95, 25082ee3, 44666fc1, 0d84e89f, (this log entry) |
 | D6b | done | 66fdf1e1, 38a88580, a0e9a737, 18a6f0c2, f1831c6f, 227daa2f, d4e7b71c, 51663e3e, 9011466e, (this log entry); F59/F60 fixes e169341c, 75700eda, 41c35aa4, f8f0896b, (their log entry) |
-| D6c | done | 38f78eda, a7c68da3, 9e34f002, 6e9038b9, 9cf1ff5a, bb46b13d, c78608b6, 0eb65ebb, (this log entry) |
+| D6c | done | 38f78eda, a7c68da3, 9e34f002, 6e9038b9, 9cf1ff5a, bb46b13d, c78608b6, 0eb65ebb, (this log entry); F68/F71/F72 fixes ee622593, 5ec95acf, 942a1306, 137ce408, (their log entry) |
 | D7 | todo | |
 | D8 | todo | |
 | D9 | todo | |
@@ -1245,5 +1245,25 @@ Base 7d115055. The user approved, at the start, pushing `throwaway_ai_rework` an
 - Follow-ups:
   - D8: `DecisionTreeComponent` and `TimedChangeHSDeployment` use `bridge::mutable_decision_tree_library()`. `CMDTCohort` and `CMDTDeploy` still use the static `InterventionManager` (`getComponentId`, `HumanIntervention`). `LSTMTreatments::find_schedule`/`find_dosages` and `Diagnostics::get` remain for the intervention components.
   - The uncompiled `ESCaseManagementSuite.h` (F9) still uses `CMHostData`'s old names (`pgState`, `ageYears`) and constructor.
-  - F68, F71 and F72 change outputs or turn scenarios into init errors; they wait for the user.
+  - F68, F71 and F72 change outputs or turn scenarios into init errors; they wait for the user. **Fixed after the log entry, with the user's approval; see the next entry.**
+- Next: D7.
+
+### D6c follow-up: F68, F71 and F72 fixed, with tests (2026-10-23, after D6c)
+The user asked for the three behaviour-changing D6c findings to be fixed. Each fix is its own commit with a test that fails without it. The base for the A/B runs and G-perf is the D6c head 15e8a223 (`../om-bench-base`, rebuilt).
+- Commits:
+  - ee622593: **F68 fix.** `CMDTUncomplicated`, `CMDTCohort` and `CMDTTreatSimple` compare `memory`, `component` and both duration lists in `operator==`, so the library merges only nodes that behave the same. CxxTest tests in `CMDecisionTreeSuite`: an `<uncomplicated>` pair differing in memory and `<treatSimple>` pairs differing in either duration give two nodes; equal pairs still give one. Without the fix, the memory test and the blood-duration test fail. The cohort pair needs the intervention manager, which the unit tests don't set up; its A/B variant covers it.
+  - 5ec95acf: **F71 fix.** A top-level `<severe>` node passes the caller's `is_uc` to its branches, as one inside `<multiple>` already did. A `<caseType>` under `<severe>` in a complicated or intervention tree is now an init error. Test: the uncomplicated tree accepts it, the other is rejected (without the fix both accept). The test uses an explicit try/catch, because clang-tidy on the suite header can't parse CxxTest's `TS_ASSERT_THROWS` ("expected catch").
+  - 942a1306: **F72 fix.** `CMDTMultiple::exec` ORs its children's `screened`. Test: a `<multiple>` with a diagnostic reports a screening (without the fix it doesn't), one with only a treatment does not. The test sets the mock's density; left NaN, the diagnostic's draw trips a Debug assert.
+  - 137ce408: scenario test scenarioDecisionTreeLibrary (Dielmo plus an `<uncomplicated>` memory pair, a `<treatSimple>` blood-duration pair and `nMassScreenings` monitored), registered in `OM_BOXTEST_NAMES`. New files only, from the fixed build (Release and Debug identical). The build before the fixes differs in four measures: nMassScreenings 0 → 29127, report 90 0 → 460, reports 3 and 14 14660 → 14686 and 472 → 460.
+- Deviation: the tests are CxxTest, not Catch2 (M1 says new tests are Catch2). The decision-tree fixtures (clock, diagnostics, PK/PD, a `WHMock` human) exist only in `CMDecisionTreeSuite`; M9 ports the suite.
+- Gates:
+  - G-exact / G-unit: after each fix 58/58 (strict) on Release and Debug, then 59/59 with the new scenario. No existing `test/expected/` file moves. Of the ctest scenarios with a diagnostic inside `<multiple>` (F72), Dielmo monitors no screening measure, and ESTS and ESChangeHS never reach the hospital branch that holds theirs (one severe case, no complicated-case treatment).
+  - A/B (base 15e8a223), cumulative:
+    - after F68, 3 of 177 differ: `decision-trees/dedupe_uncomplicated_memory_0_1`, `dedupe_treat_simple_blood_1_5` and `dedupe_cohort_cohort_mda`. Each now differs from the twin it used to equal.
+    - after F71, also `es_case_type_under_severe`, which now exits 69 with the caseType error.
+    - after F72, also `dedupe_cohort_cohort_cohort` and `dedupe_cohort_mda_mda`, which wrap Cohort's diagnostic tree in `<multiple>`.
+  - G-stat: `ctest -L statistical -j4` at 137ce408: 53 passed, 6 disabled (the new scenario has no reference).
+  - G-style: `util/style.sh check HEAD` clean before each commit.
+  - G-perf: `util/bench.sh -n 7 --compare ../om-bench-base/build-rework`, candidate 137ce408 against 15e8a223: median per-pair ratio 0.9988 (−0.12%), spreads 4.0% / 5.1%.
+- Findings: F68, F71 and F72 moved to FINDINGS § Closed.
 - Next: D7.

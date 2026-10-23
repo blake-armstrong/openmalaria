@@ -66,7 +66,7 @@ bugs (e.g. the three vivax liver-stage scenarios, 9315b35d). The `PROGRESS.md` e
 records which of these checks ran and their results.
 
 Chunks that change outputs on purpose (D2b, M4, V1's warmup fixes, B6's `-ffp-contract=off`), and the behaviour-changing bug fixes
-listed under FINDINGS § Closed (e.g. F59, F60), say so in their commit messages,
+listed under FINDINGS § Closed (e.g. F59, F60, F68, F71, F72), say so in their commit messages,
 were agreed with the user first, and regenerate `test/expected/` or the statistical references in
 commits of their own that list which measures moved.
 
