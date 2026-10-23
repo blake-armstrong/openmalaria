@@ -311,6 +311,81 @@ def copula_in_run(s):
 def const_first_species_availability(s):
     return rep(s, '<availability distr="gamma" CV="3"/>', '<availability distr="const"/>')
 
+
+MA = "scenarioMonitoringAll.xml"
+ITNS = "scenario2ITNs.xml"
+MDA_TREE = ('<decisionTree>\n          <diagnostic diagnostic="RDT">',
+            '</diagnostic>\n        </decisionTree>')
+LEGACY_ACT = '<ACT name="legacy (emulate pre-32 treatment)">'
+
+
+def mda_tree_in(before, after):
+    def transform(s):
+        s = rep(s, MDA_TREE[0], MDA_TREE[0].replace("<decisionTree>", "<decisionTree>" + before))
+        return rep(s, MDA_TREE[1], MDA_TREE[1].replace("</decisionTree>", after + "</decisionTree>"))
+    return transform
+
+
+def mda_tree_cohort(component):
+    return mda_tree_in(f'<cohort component="{component}"><positive>{NO_TREATMENT}</positive><negative>',
+                       "</negative></cohort>")
+
+
+def mda_tree_negative(node):
+    return lambda s: rep(s, MDA_TREE[0] + """
+            <positive>
+              <treatPKPD schedule="AL_treat" dosage="AL_dosages"/>
+            </positive>
+            <negative>
+              <noTreatment/>""", MDA_TREE[0] + """
+            <positive>
+              <treatPKPD schedule="AL_treat" dosage="AL_dosages"/>
+            </positive>
+            <negative>
+              """ + node)
+
+
+def triggered_by_treatment(component):
+    return lambda s: rep(s, LEGACY_ACT, LEGACY_ACT + f'<deploy p="0.5"><component id="{component}"/></deploy>')
+
+
+def tbv_not_deployed(s):
+    return rep(s, '<component id="TBV"/>\n', "")
+
+
+def pev_first(s):
+    i = s.index('<component id="PEV">')
+    j = s.index("</component>", i) + len("</component>")
+    pev = s[i:j]
+    s = s[:i] + s[j:]
+    k = s.index('<component id="TBV">')
+    return s[:k] + pev + s[k:]
+
+
+def with_clear_immunity(s):
+    s = rep(s, '<component id="monitoringCohort">',
+            '<component id="clearImmunity"><clearImmunity/></component><component id="monitoringCohort">')
+    return rep(s, '<component id="monitoringCohort"/>',
+               '<component id="monitoringCohort"/><component id="clearImmunity"/>')
+
+
+def only_removal(option):
+    return lambda s: rep(s, '<subPopRemoval onFirstBout="true" onFirstTreatment="true" onFirstInfection="true"/>',
+                         f'<subPopRemoval {option}="true"/>')
+
+
+def without_tbv_efficacy(s):
+    i = s.index("<TBV>")
+    j = s.index("</TBV>", i)
+    return s[:i] + re.sub(r"\s*<initialEfficacy [^>]*/>", "", s[i:j]) + s[j:]
+
+
+def gvi_in_non_vector(s):
+    m = read(MA)
+    i = m.index('<component id="GVI"')
+    j = m.index("</component>", i) + len("</component>")
+    return rep(s, '<component id="TBV">', m[i:j] + '<component id="TBV">')
+
 V = "scenarioVivax.xml"
 G = "scenarioGenotypes.xml"
 M = "scenarioMSAT_HRP2.xml"
@@ -579,6 +654,50 @@ GROUPS = {
         Variant("demography_altered", "scenario5.xml",
                 lambda s: rep(s, '<group poppercent="3.474714994" upperbound="1"/>',
                               '<group poppercent="6" upperbound="1"/>')),
+    ],
+    "interventions": [
+        Variant("print_monitoring_all", MA, args=["--print-interventions"]),
+        Variant("print_2itns", ITNS, args=["--print-interventions"]),
+        Variant("print_non_human_hosts", "scenarioNonHumanHosts.xml", args=["--print-interventions"]),
+        Variant("print_trap", "scenarioTrapTest.xml", args=["--print-interventions"]),
+        Variant("verbose_monitoring_all", MA, args=["--verbose"]),
+        Variant("monitoring_all_checkpoint", MA, args=["--checkpoint"], runs=2),
+        Variant("2itns_checkpoint", ITNS, args=["--checkpoint"], runs=2),
+        Variant("change_eir_checkpoint", "scenario12.xml", args=["--checkpoint"], runs=2),
+        Variant("vaccine_report_tbv_not_deployed", MA, tbv_not_deployed),
+        Variant("vaccine_report_pev_first_tbv_not_deployed", MA, lambda s: pev_first(tbv_not_deployed(s))),
+        Variant("clear_immunity", MA, with_clear_immunity),
+        Variant("triggered_by_treatment", "scenario5.xml", triggered_by_treatment("PEV")),
+        *(Variant(f"sub_pop_removal_{o}", "scenarioSubPopRemoval.xml", only_removal(o))
+          for o in ("onFirstBout", "onFirstTreatment", "onFirstInfection")),
+        Variant("restrict_to_sub_pop", ITNS, lambda s: rep(s, 'complement="true"', 'complement="false"')),
+        Variant("continuous_availability_filter", MA,
+                lambda s: rep(s, 'targetAgeYrs="0.01"', 'targetAgeYrs="0.01" minAvailability="20" maxAvailability="80"')),
+        Variant("dt_cohort_self", MA, mda_tree_cohort("MDA")),
+        Variant("timed_after_last_survey", MA,
+                lambda s: rep(s, '<deploy coverage="0.20" time="1168t"/>', '<deploy coverage="0.20" time="5000t"/>')),
+        Variant("duplicate_component_id", MA,
+                lambda s: rep(s, '<component id="GVI" name="Monitoring GVI">', '<component id="ITN" name="Monitoring GVI">')),
+        Variant("unknown_deployment_component", MA,
+                lambda s: rep(s, '<component id="monitoringCohort"/>', '<component id="nosuch"/>')),
+        Variant("cohort_unknown_component", MA,
+                lambda s: rep(s, '<subPop id="monitoringCohort" number="1"/>', '<subPop id="nosuch" number="1"/>')),
+        Variant("repeat_step_without_end", MA, lambda s: rep(s, 'repeatStep="292t" repeatEnd="731t"', 'repeatStep="292t"')),
+        Variant("repeat_step_zero", MA, lambda s: rep(s, 'repeatStep="292t"', 'repeatStep="0t"')),
+        Variant("duplicate_deploy_date", MA,
+                lambda s: rep(s, '<deploy coverage="0.20" time="1168t"/>', '<deploy coverage="0.20" time="438t"/>')),
+        Variant("timed_before_start", MA,
+                lambda s: rep(s, '<deploy coverage="0.20" time="1168t"/>', '<deploy coverage="0.20" time="-5t"/>')),
+        Variant("cumulative_unknown_component", ITNS,
+                lambda s: rep(s, '<cumulativeCoverage component="IRS"/>', '<cumulativeCoverage component="nosuch"/>')),
+        Variant("continuous_target_age_zero", MA, lambda s: rep(s, 'targetAgeYrs="0.01"', 'targetAgeYrs="0"')),
+        Variant("continuous_target_age_too_old", MA, lambda s: rep(s, 'targetAgeYrs="0.01"', 'targetAgeYrs="200"')),
+        Variant("vaccine_no_initial_efficacy", "scenario5.xml", without_tbv_efficacy),
+        Variant("vector_component_non_vector", "scenario5.xml", gvi_in_non_vector),
+        Variant("triggered_unknown_component", "scenario5.xml", triggered_by_treatment("nosuch")),
+        Variant("dt_cohort_later_component", MA, mda_tree_cohort("PEV")),
+        Variant("dt_deploy_self", MA, mda_tree_negative('<deploy component="MDA"/>')),
+        Variant("dt_deploy_later_component", MA, mda_tree_negative('<deploy component="PEV"/>')),
     ],
     "falciparum-init": [
         Variant("molineaux_no_weight", "scenarioMolineaux.xml", lambda s: drop_element(s, "<weight ", "</weight>")),
