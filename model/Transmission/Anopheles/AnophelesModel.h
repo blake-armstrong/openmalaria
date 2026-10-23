@@ -24,6 +24,7 @@
 #define HMOD_ANOPHELES_MODEL
 
 #include "Global.h"
+#include "Host/WithinHost/Genotypes.h"
 #include "Transmission/PerHost.h"
 #include "util/SimpleDecayingValue.h"
 #include "util/vectors.h"
@@ -34,9 +35,6 @@
 #include <limits>
 
 namespace OM {
-namespace WithinHost {
-class GenotypeRegistry;
-}
 
 namespace Transmission::Anopheles {
 using std::numeric_limits;

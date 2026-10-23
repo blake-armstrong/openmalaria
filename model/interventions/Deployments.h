@@ -538,9 +538,9 @@ public:
                                                    " already deployed during non human hosts deployment");
 
                 const NhhParamsInterv& p = nhhParams[anophModel->mosq.name];
-                const double adultAvail = bridge::per_host_params().get(i).ento_availability->mean();
+                const double adult_avail = bridge::per_host_params().get(i).ento_availability->mean();
                 const double avail_i = bridge::per_host_params().get(i).ento_availability_factor * popSize *
-                                       adultAvail * p.mosqRelativeAvailabilityHuman;
+                                       adult_avail * p.mosqRelativeAvailabilityHuman;
                 Transmission::Anopheles::Nhh nhh;
 
                 nhh.avail_i = avail_i;
