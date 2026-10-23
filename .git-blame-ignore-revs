@@ -64,3 +64,7 @@ a0e9a7379d517745b79136922ccd221dedbf9653
 9e34f002ba9d442a1ade4f5d36e4fd07ebc3b145
 # D6c: model/Clinical/CMDecisionTree safe modernize fix-its (util/style.sh modernize)
 9cf1ff5a33c102b5d051fe24250bc0a7c9a48839
+# D7: rename model/Transmission identifiers (util/style.sh rename)
+8b5835530464ec010a40e821fc70d4fce488939d
+# D7: rename the model/Transmission names the tool could not reach (hand)
+529d46cffa53dfabfecb1377511024031b4725a7
