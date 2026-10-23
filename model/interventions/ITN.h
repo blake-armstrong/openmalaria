@@ -245,6 +245,8 @@ protected:
     virtual void checkpoint(ostream& stream);
 
 private:
+    HumanITN(LocalRng& rng, const ITNComponent& params, util::NormalSample handling);
+
     // these parameters express the current state of the net:
     SimTime disposal_time = Sim::never(); // time at which net will be disposed of (if it's not already been replaced)
     int n_holes;                          // total number of holes

@@ -577,20 +577,19 @@ void ITNComponent::ITNAnopheles::init(const scnXml::ITNDescription::AnophelesPar
     proportion_unprotected = 1.0 - proportion_protected;
 }
 
+// Net rips and insecticide loss are assumed to co-vary dependent on
+// handling of net. They are sampled once per human: human handling is
+// presumed to be the largest cause of variance.
 HumanITN::HumanITN(LocalRng& rng, const ITNComponent& params)
-    : PerHostInterventionData(params.id()), n_holes(0), hole_index(0.0), component(&params) {
-    // Net rips and insecticide loss are assumed to co-vary dependent on
-    // handling of net. They are sampled once per human: human handling is
-    // presumed to be the largest cause of variance.
-    util::NormalSample x = util::NormalSample::generate(rng);
-    hole_rate = params.hole_rate->sample(x);
-    rip_rate = params.rip_rate->sample(x);
-    insecticide_decay_het = params.insecticide_decay->hetSample(x);
+    : HumanITN(rng, params, util::NormalSample::generate(rng)) {}
 
-    // Sample per-deployment variables as in redeploy:
-    disposal_time = Sim::now() + params.attrition_of_nets->sampleAgeOfDecay(rng);
-    // this is sampled independently: initial insecticide content doesn't depend on handling
-    initial_insecticide = params.initial_insecticide.sample(rng);
+HumanITN::HumanITN(LocalRng& rng, const ITNComponent& params, util::NormalSample handling)
+    : PerHostInterventionData(params.id()), disposal_time(Sim::now() + params.attrition_of_nets->sampleAgeOfDecay(rng)),
+      n_holes(0), hole_index(0.0),
+      // this is sampled independently: initial insecticide content doesn't depend on handling
+      initial_insecticide(params.initial_insecticide.sample(rng)), hole_rate(params.hole_rate->sample(handling)),
+      rip_rate(params.rip_rate->sample(handling)), insecticide_decay_het(params.insecticide_decay->hetSample(handling)),
+      component(&params) {
     if (initial_insecticide < 0.0)
         initial_insecticide = 0.0; // avoid negative samples
     if (initial_insecticide > params.max_insecticide)
