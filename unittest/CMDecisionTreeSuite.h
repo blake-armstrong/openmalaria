@@ -72,7 +72,9 @@ public:
      * returns the proportion of these runs where the output was any treatment
      */
     double propTreatmentsNReps(int N, const scnXml::DecisionTree& dt) {
-        const CMDecisionTree& cmdt = CMDecisionTree::create(dt, true);
+        Clinical::DecisionTreeLibrary library(unittest_options::diagnostics, UnittestUtil::pk_pd_params(),
+                                              unittest_options::clinical.health_system_memory);
+        const CMDecisionTree& cmdt = library.create(dt, true);
 
         whm->nTreatments = 0;
         int secondCounter = 0;

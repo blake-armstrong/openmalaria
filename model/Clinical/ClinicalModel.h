@@ -83,8 +83,6 @@ public:
      * (within health-system-memory and not new cases). */
     virtual bool is_existing_case() = 0;
 
-    inline static SimTime hs_memory() { return bridge::clinical_params().health_system_memory; }
-
     /// Force all pending summaries to be reported. Should only be called when
     /// class is about to be destroyed anyway to avoid affecting output.
     inline void flush_reports() { latest_report.flush(); }

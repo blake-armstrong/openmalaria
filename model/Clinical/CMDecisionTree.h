@@ -28,9 +28,16 @@
 #include "Clinical/Episode.h"
 #include <schema/healthSystem.h>
 
+#include <memory>
+#include <vector>
+
 namespace OM {
 namespace WithinHost {
 class WHInterface;
+class DiagnosticRegistry;
+}
+namespace pk_pd {
+struct PkPdParams;
 }
 namespace Clinical {
 using WithinHost::WHInterface;
@@ -39,7 +46,7 @@ using WithinHost::WHInterface;
 struct CMHostData {
     /** Initialise, from a human h drawing from stream r, with age age_years,
      * and pathogenesis state pg_state. Note that pg_state is only needed for
-     * uncomplicated trees (see CMDecisionTree::create()). */
+     * uncomplicated trees (see DecisionTreeLibrary::create()). */
     CMHostData(Host::Human& h, util::LocalRng& r, double age_years, Episode::State pg_state)
         : human(h), ageYears(age_years), pgState(pg_state), rng(r) {}
     Host::Human& human;
@@ -67,17 +74,6 @@ class CMDecisionTree {
 public:
     virtual ~CMDecisionTree() {}
 
-    /** Create a user-configured decision from an XML node.
-     * 
-     * Memory management is handled internally (statically).
-     * 
-     * @param node XML element describing the tree
-     * @param isUC If isUC is false and a "case type" decision is created, an
-     *  xml_scenario_error exception is thrown. CMHostData::pgState is only
-     *  used by the "case type" decision, so if isUC is false when creating the
-     *  tree, pgState does not need to be set when executing the tree. */
-    static const CMDecisionTree& create(const ::scnXml::DecisionTree& node, bool isUC);
-
     /** Test for equivalence in two decision trees. Nodes are equivalent if
      * they have the same type, same deployments and treatments, and their
      * sub-nodes are equivalent. */
@@ -91,6 +87,64 @@ public:
     virtual CMDTOut exec(CMHostData hostData) const = 0;
 };
 
+class DecisionTreeLibrary {
+public:
+    DecisionTreeLibrary() = default;
+    DecisionTreeLibrary(const WithinHost::DiagnosticRegistry& diagnostics, const pk_pd::PkPdParams& pk_pd,
+                        SimTime health_system_memory)
+        : diagnostic_registry(&diagnostics), pk_pd_params(&pk_pd), hs_memory(health_system_memory) {}
+
+    /** Create a user-configured decision from an XML node.
+     * 
+     * @param node XML element describing the tree
+     * @param isUC If isUC is false and a "case type" decision is created, an
+     *  xml_scenario_error exception is thrown. CMHostData::pgState is only
+     *  used by the "case type" decision, so if isUC is false when creating the
+     *  tree, pgState does not need to be set when executing the tree. */
+    const CMDecisionTree& create(const ::scnXml::DecisionTree& node, bool isUC);
+
+    const CMDecisionTree& save(CMDecisionTree* decision);
+
+    const WithinHost::DiagnosticRegistry& diagnostics() const { return *diagnostic_registry; }
+    const pk_pd::PkPdParams& pk_pd() const { return *pk_pd_params; }
+    SimTime health_system_memory() const { return hs_memory; }
+
+private:
+    const WithinHost::DiagnosticRegistry* diagnostic_registry = nullptr;
+    const pk_pd::PkPdParams* pk_pd_params = nullptr;
+    SimTime hs_memory = Sim::never();
+    std::vector<std::unique_ptr<CMDecisionTree>> decisions;
+};
+
 }
+
+namespace bridge {
+
+// NOLINTNEXTLINE(cppcoreguidelines-avoid-non-const-global-variables)
+inline Clinical::DecisionTreeLibrary* current_decision_tree_library = nullptr;
+
+inline Clinical::DecisionTreeLibrary& mutable_decision_tree_library() {
+    assert(current_decision_tree_library != nullptr);
+    return *current_decision_tree_library;
+}
+
+}
+
+class DecisionTreeLibraryBinding {
+public:
+    explicit DecisionTreeLibraryBinding(Clinical::DecisionTreeLibrary& library)
+        : previous(bridge::current_decision_tree_library) {
+        bridge::current_decision_tree_library = &library;
+    }
+    DecisionTreeLibraryBinding(const DecisionTreeLibraryBinding&) = delete;
+    DecisionTreeLibraryBinding& operator=(const DecisionTreeLibraryBinding&) = delete;
+    DecisionTreeLibraryBinding(DecisionTreeLibraryBinding&&) = delete;
+    DecisionTreeLibraryBinding& operator=(DecisionTreeLibraryBinding&&) = delete;
+    ~DecisionTreeLibraryBinding() { bridge::current_decision_tree_library = previous; }
+
+private:
+    Clinical::DecisionTreeLibrary* previous;
+};
+
 }
 #endif

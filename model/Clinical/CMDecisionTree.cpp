@@ -24,7 +24,7 @@
 #include "Clinical/ClinicalModel.h"
 #include "Host/WithinHost/WHInterface.h"
 #include "Host/WithinHost/Diagnostic.h"
-#include "PkPd/LSTMTreatments.h"
+#include "PkPd/PkPdParams.h"
 #include "util/random.h"
 #include "util/errors.h"
 #include "util/UnitParse.h"
@@ -52,7 +52,7 @@ using std::vector;
  */
 class CMDTMultiple : public CMDecisionTree {
 public:
-    static const CMDecisionTree& create(const ::scnXml::DTMultiple& node, bool isUC);
+    static const CMDecisionTree& create(DecisionTreeLibrary& library, const ::scnXml::DTMultiple& node, bool isUC);
 
 protected:
     virtual bool operator==(const CMDecisionTree& that) const {
@@ -95,7 +95,7 @@ private:
  */
 class CMDTCaseType : public CMDecisionTree {
 public:
-    static const CMDecisionTree& create(const ::scnXml::DTCaseType& node, bool isUC);
+    static const CMDecisionTree& create(DecisionTreeLibrary& library, const ::scnXml::DTCaseType& node, bool isUC);
 
 protected:
     virtual bool operator==(const CMDecisionTree& that) const {
@@ -134,7 +134,8 @@ private:
  */
 class CMDTInfectionOrigin : public CMDecisionTree {
 public:
-    static const CMDecisionTree& create(const ::scnXml::DTInfectionOrigin& node, bool isUC);
+    static const CMDecisionTree& create(DecisionTreeLibrary& library, const ::scnXml::DTInfectionOrigin& node,
+                                        bool isUC);
 
 protected:
     virtual bool operator==(const CMDecisionTree& that) const {
@@ -175,7 +176,7 @@ private:
  */
 class CMDTDiagnostic : public CMDecisionTree {
 public:
-    static const CMDecisionTree& create(const ::scnXml::DTDiagnostic& node, bool isUC);
+    static const CMDecisionTree& create(DecisionTreeLibrary& library, const ::scnXml::DTDiagnostic& node, bool isUC);
 
 protected:
     virtual bool operator==(const CMDecisionTree& that) const {
@@ -216,7 +217,7 @@ private:
 
 class CMDTUncomplicated : public CMDecisionTree {
 public:
-    static const CMDecisionTree& create(const ::scnXml::DTUncomplicated& node, bool isUC);
+    static const CMDecisionTree& create(DecisionTreeLibrary& library, const ::scnXml::DTUncomplicated& node, bool isUC);
 
 protected:
     virtual bool operator==(const CMDecisionTree& that) const {
@@ -247,9 +248,10 @@ protected:
     }
 
 private:
-    CMDTUncomplicated(const SimTime memory, const CMDecisionTree& positive, const CMDecisionTree& negative)
+    CMDTUncomplicated(const SimTime memory, SimTime health_system_memory, const CMDecisionTree& positive,
+                      const CMDecisionTree& negative)
         : memory(memory), positive(positive), negative(negative) {
-        if (memory > ClinicalModel::hs_memory())
+        if (memory > health_system_memory)
             throw util::xml_scenario_error("<uncomplicated> memory parameter must be less than or equal to the "
                                            "healthsystem memory (hsmemory parameter)");
     }
@@ -261,7 +263,7 @@ private:
 
 class CMDTSevere : public CMDecisionTree {
 public:
-    static const CMDecisionTree& create(const ::scnXml::DTSevere& node, bool isUC);
+    static const CMDecisionTree& create(DecisionTreeLibrary& library, const ::scnXml::DTSevere& node, bool isUC);
 
 protected:
     virtual bool operator==(const CMDecisionTree& that) const {
@@ -306,7 +308,7 @@ private:
  */
 class CMDTRandom : public CMDecisionTree {
 public:
-    static const CMDecisionTree& create(const ::scnXml::DTRandom& node, bool isUC);
+    static const CMDecisionTree& create(DecisionTreeLibrary& library, const ::scnXml::DTRandom& node, bool isUC);
 
 protected:
     virtual bool operator==(const CMDecisionTree& that) const {
@@ -345,7 +347,7 @@ private:
  */
 class CMDTAge : public CMDecisionTree {
 public:
-    static const CMDecisionTree& create(const ::scnXml::DTAge& node, bool isUC);
+    static const CMDecisionTree& create(DecisionTreeLibrary& library, const ::scnXml::DTAge& node, bool isUC);
 
 protected:
     virtual bool operator==(const CMDecisionTree& that) const {
@@ -451,10 +453,11 @@ protected:
  */
 class CMDTTreatPKPD : public CMDecisionTree {
 public:
-    CMDTTreatPKPD(const scnXml::DecisionTree::TreatPKPDSequence& seq) {
+    CMDTTreatPKPD(const pk_pd::CourseRegistry& courses, const scnXml::DecisionTree::TreatPKPDSequence& seq) {
         treatments.reserve(seq.size());
         for (const scnXml::DTTreatPKPD& treatElt : seq) {
-            treatments.push_back(TreatInfo(treatElt.getSchedule(), treatElt.getDosage(), treatElt.getDelay_h()));
+            treatments.push_back(
+                TreatInfo(courses, treatElt.getSchedule(), treatElt.getDosage(), treatElt.getDelay_h()));
         }
         assert(treatments.size() > 0); // CMDTTreatPKPD should not be used in this case
     }
@@ -484,9 +487,8 @@ protected:
 
 private:
     struct TreatInfo {
-        TreatInfo(const string& s, const string& d, double h)
-            : schedule(pk_pd::LSTMTreatments::find_schedule(s)), dosage(pk_pd::LSTMTreatments::find_dosages(d)),
-              delay_h(h) {}
+        TreatInfo(const pk_pd::CourseRegistry& courses, const string& s, const string& d, double h)
+            : schedule(courses.find_schedule(s)), dosage(courses.find_dosages(d)), delay_h(h) {}
         inline bool operator!=(const TreatInfo& that) const {
             return schedule != that.schedule || dosage != that.dosage || delay_h != that.delay_h;
         }
@@ -590,7 +592,7 @@ protected:
 
 class CMDTCohort : public CMDecisionTree {
 public:
-    static const CMDecisionTree& create(const ::scnXml::DTCohort& node, bool isUC);
+    static const CMDecisionTree& create(DecisionTreeLibrary& library, const ::scnXml::DTCohort& node, bool isUC);
 
 protected:
     virtual bool operator==(const CMDecisionTree& that) const {
@@ -630,150 +632,149 @@ private:
     const CMDecisionTree& negative;
 };
 
-// ———  static functions  ———
+// ———  library  ———
 
-// Memory management: lists all decisions and frees memory at program exit.
-// We store pointers into this list, so elements must not move.
-vector<unique_ptr<CMDecisionTree>> decision_library;
-
-// Saves a decision to decision_library, making it const.
+// Saves a decision to the library, making it const.
 // Also optimises away duplicates
-const CMDecisionTree& save_decision(CMDecisionTree* decision) {
+const CMDecisionTree& DecisionTreeLibrary::save(CMDecisionTree* decision) {
     // We search the library for a duplicate, and delete this one if there is
     // a duplicate. Note that this is not implemented efficiently, but a little
     // wasted time at start up is hardly a concern.
-    for (auto& d : decision_library) {
+    for (auto& d : decisions) {
         if (*d == *decision) {
             return *d;
         }
     }
 
     // No match: add to the library.
-    decision_library.push_back(unique_ptr<CMDecisionTree>(decision));
-    return *decision_library.back();
+    decisions.push_back(unique_ptr<CMDecisionTree>(decision));
+    return *decisions.back();
 }
 
-const CMDecisionTree& CMDecisionTree::create(const scnXml::DecisionTree& node, bool isUC) {
+const CMDecisionTree& DecisionTreeLibrary::create(const scnXml::DecisionTree& node, bool isUC) {
     if (node.getMultiple().present())
-        return CMDTMultiple::create(node.getMultiple().get(), isUC);
+        return CMDTMultiple::create(*this, node.getMultiple().get(), isUC);
     // branching nodes
     if (node.getCaseType().present())
-        return CMDTCaseType::create(node.getCaseType().get(), isUC);
+        return CMDTCaseType::create(*this, node.getCaseType().get(), isUC);
     if (node.getInfectionOrigin().present())
-        return CMDTInfectionOrigin::create(node.getInfectionOrigin().get(), isUC);
+        return CMDTInfectionOrigin::create(*this, node.getInfectionOrigin().get(), isUC);
     if (node.getDiagnostic().present())
-        return CMDTDiagnostic::create(node.getDiagnostic().get(), isUC);
+        return CMDTDiagnostic::create(*this, node.getDiagnostic().get(), isUC);
     if (node.getUncomplicated().present())
-        return CMDTUncomplicated::create(node.getUncomplicated().get(), isUC);
+        return CMDTUncomplicated::create(*this, node.getUncomplicated().get(), isUC);
     if (node.getSevere().present())
-        return CMDTSevere::create(node.getSevere().get(), true);
+        return CMDTSevere::create(*this, node.getSevere().get(), true);
     if (node.getRandom().present())
-        return CMDTRandom::create(node.getRandom().get(), isUC);
+        return CMDTRandom::create(*this, node.getRandom().get(), isUC);
     if (node.getAge().present())
-        return CMDTAge::create(node.getAge().get(), isUC);
+        return CMDTAge::create(*this, node.getAge().get(), isUC);
     if (node.getCohort().present())
-        return CMDTCohort::create(node.getCohort().get(), isUC);
+        return CMDTCohort::create(*this, node.getCohort().get(), isUC);
 
     // action nodes
     if (node.getNoTreatment().present())
-        return save_decision(new CMDTNoTreatment());
+        return save(new CMDTNoTreatment());
     if (node.getReport().size())
-        return save_decision(new CMDTReport(node.getReport()));
+        return save(new CMDTReport(node.getReport()));
     if (node.getTreatFailure().present())
-        return save_decision(new CMDTTreatFailure());
+        return save(new CMDTTreatFailure());
     if (node.getTreatPKPD().size())
-        return save_decision(new CMDTTreatPKPD(node.getTreatPKPD()));
+        return save(new CMDTTreatPKPD(pk_pd().courses, node.getTreatPKPD()));
     if (node.getTreatSimple().size())
-        return save_decision(new CMDTTreatSimple(node.getTreatSimple()));
+        return save(new CMDTTreatSimple(node.getTreatSimple()));
     if (node.getDeploy().size())
-        return save_decision(new CMDTDeploy(node.getDeploy()));
+        return save(new CMDTDeploy(node.getDeploy()));
     throw xml_scenario_error("unterminated decision tree");
 }
 
-const CMDecisionTree& CMDTMultiple::create(const scnXml::DTMultiple& node, bool isUC) {
+const CMDecisionTree& CMDTMultiple::create(DecisionTreeLibrary& library, const scnXml::DTMultiple& node, bool isUC) {
     CMDTMultiple* self = new CMDTMultiple();
     for (const scnXml::DTCaseType& sn : node.getCaseType()) {
-        self->children.push_back(&CMDTCaseType::create(sn, isUC));
+        self->children.push_back(&CMDTCaseType::create(library, sn, isUC));
     }
     for (const scnXml::DTInfectionOrigin& sn : node.getInfectionOrigin()) {
-        self->children.push_back(&CMDTInfectionOrigin::create(sn, isUC));
+        self->children.push_back(&CMDTInfectionOrigin::create(library, sn, isUC));
     }
     for (const scnXml::DTDiagnostic& sn : node.getDiagnostic()) {
-        self->children.push_back(&CMDTDiagnostic::create(sn, isUC));
+        self->children.push_back(&CMDTDiagnostic::create(library, sn, isUC));
     }
     for (const scnXml::DTUncomplicated& sn : node.getUncomplicated()) {
-        self->children.push_back(&CMDTUncomplicated::create(sn, isUC));
+        self->children.push_back(&CMDTUncomplicated::create(library, sn, isUC));
     }
     for (const scnXml::DTSevere& sn : node.getSevere()) {
-        self->children.push_back(&CMDTSevere::create(sn, isUC));
+        self->children.push_back(&CMDTSevere::create(library, sn, isUC));
     }
     for (const scnXml::DTRandom& sn : node.getRandom()) {
-        self->children.push_back(&CMDTRandom::create(sn, isUC));
+        self->children.push_back(&CMDTRandom::create(library, sn, isUC));
     }
     for (const scnXml::DTAge& sn : node.getAge()) {
-        self->children.push_back(&CMDTAge::create(sn, isUC));
+        self->children.push_back(&CMDTAge::create(library, sn, isUC));
     }
     for (const scnXml::DTCohort& sn : node.getCohort()) {
-        self->children.push_back(&CMDTCohort::create(sn, isUC));
+        self->children.push_back(&CMDTCohort::create(library, sn, isUC));
     }
     if (node.getTreatPKPD().size()) {
-        self->children.push_back(&save_decision(new CMDTTreatPKPD(node.getTreatPKPD())));
+        self->children.push_back(&library.save(new CMDTTreatPKPD(library.pk_pd().courses, node.getTreatPKPD())));
     }
     if (node.getTreatSimple().size()) {
-        self->children.push_back(&save_decision(new CMDTTreatSimple(node.getTreatSimple())));
+        self->children.push_back(&library.save(new CMDTTreatSimple(node.getTreatSimple())));
     }
     if (node.getReport().size()) {
-        self->children.push_back(&save_decision(new CMDTReport(node.getReport())));
+        self->children.push_back(&library.save(new CMDTReport(node.getReport())));
     }
     if (node.getDeploy().size()) {
-        self->children.push_back(&save_decision(new CMDTDeploy(node.getDeploy())));
+        self->children.push_back(&library.save(new CMDTDeploy(node.getDeploy())));
     }
-    return save_decision(self);
+    return library.save(self);
 }
 
-const CMDecisionTree& CMDTCaseType::create(const scnXml::DTCaseType& node, bool isUC) {
+const CMDecisionTree& CMDTCaseType::create(DecisionTreeLibrary& library, const scnXml::DTCaseType& node, bool isUC) {
     if (!isUC) {
         throw util::xml_scenario_error("decision tree: caseType can only be used for uncomplicated cases");
     }
-    return save_decision(new CMDTCaseType(CMDecisionTree::create(node.getFirstLine(), isUC),
-                                          CMDecisionTree::create(node.getSecondLine(), isUC)));
+    return library.save(
+        new CMDTCaseType(library.create(node.getFirstLine(), isUC), library.create(node.getSecondLine(), isUC)));
 }
 
-const CMDecisionTree& CMDTInfectionOrigin::create(const scnXml::DTInfectionOrigin& node, bool isUC) {
-    return save_decision(new CMDTInfectionOrigin(CMDecisionTree::create(node.getImported(), isUC),
-                                                 CMDecisionTree::create(node.getIntroduced(), isUC),
-                                                 CMDecisionTree::create(node.getIndigenous(), isUC)));
+const CMDecisionTree& CMDTInfectionOrigin::create(DecisionTreeLibrary& library, const scnXml::DTInfectionOrigin& node,
+                                                  bool isUC) {
+    return library.save(new CMDTInfectionOrigin(library.create(node.getImported(), isUC),
+                                                library.create(node.getIntroduced(), isUC),
+                                                library.create(node.getIndigenous(), isUC)));
 }
 
-const CMDecisionTree& CMDTDiagnostic::create(const scnXml::DTDiagnostic& node, bool isUC) {
-    return save_decision(new CMDTDiagnostic(Diagnostics::get(node.getDiagnostic()),
-                                            CMDecisionTree::create(node.getPositive(), isUC),
-                                            CMDecisionTree::create(node.getNegative(), isUC)));
+const CMDecisionTree& CMDTDiagnostic::create(DecisionTreeLibrary& library, const scnXml::DTDiagnostic& node,
+                                             bool isUC) {
+    return library.save(new CMDTDiagnostic(library.diagnostics().get(node.getDiagnostic()),
+                                           library.create(node.getPositive(), isUC),
+                                           library.create(node.getNegative(), isUC)));
 }
 
-const CMDecisionTree& CMDTUncomplicated::create(const scnXml::DTUncomplicated& node, bool isUC) {
-    return save_decision(new CMDTUncomplicated(UnitParse::readShortDuration(node.getMemory(), UnitParse::STEPS),
-                                               CMDecisionTree::create(node.getPositive(), isUC),
-                                               CMDecisionTree::create(node.getNegative(), isUC)));
+const CMDecisionTree& CMDTUncomplicated::create(DecisionTreeLibrary& library, const scnXml::DTUncomplicated& node,
+                                                bool isUC) {
+    return library.save(new CMDTUncomplicated(UnitParse::readShortDuration(node.getMemory(), UnitParse::STEPS),
+                                              library.health_system_memory(), library.create(node.getPositive(), isUC),
+                                              library.create(node.getNegative(), isUC)));
 }
 
-const CMDecisionTree& CMDTSevere::create(const scnXml::DTSevere& node, bool isUC) {
-    return save_decision(new CMDTSevere(CMDecisionTree::create(node.getPositive(), isUC),
-                                        CMDecisionTree::create(node.getNegative(), isUC)));
+const CMDecisionTree& CMDTSevere::create(DecisionTreeLibrary& library, const scnXml::DTSevere& node, bool isUC) {
+    return library.save(
+        new CMDTSevere(library.create(node.getPositive(), isUC), library.create(node.getNegative(), isUC)));
 }
 
-const CMDecisionTree& CMDTCohort::create(const scnXml::DTCohort& node, bool isUC) {
-    return save_decision(new CMDTCohort(node.getComponent(), CMDecisionTree::create(node.getPositive(), isUC),
-                                        CMDecisionTree::create(node.getNegative(), isUC)));
+const CMDecisionTree& CMDTCohort::create(DecisionTreeLibrary& library, const scnXml::DTCohort& node, bool isUC) {
+    return library.save(new CMDTCohort(node.getComponent(), library.create(node.getPositive(), isUC),
+                                       library.create(node.getNegative(), isUC)));
 }
 
-const CMDecisionTree& CMDTRandom::create(const scnXml::DTRandom& node, bool isUC) {
+const CMDecisionTree& CMDTRandom::create(DecisionTreeLibrary& library, const scnXml::DTRandom& node, bool isUC) {
     CMDTRandom* result = new CMDTRandom();
 
     double cum_p = 0.0;
     for (const scnXml::Outcome& outcome : node.getOutcome()) {
         cum_p += outcome.getP();
-        result->branches.insert(make_pair(cum_p, &CMDecisionTree::create(outcome, isUC)));
+        result->branches.insert(make_pair(cum_p, &library.create(outcome, isUC)));
     }
 
     // Test cum_p is approx. 1.0 in case the input tree is wrong. We require no
@@ -784,10 +785,10 @@ const CMDecisionTree& CMDTRandom::create(const scnXml::DTRandom& node, bool isUC
                                        to_string(cum_p));
     }
 
-    return save_decision(result);
+    return library.save(result);
 }
 
-const CMDecisionTree& CMDTAge::create(const scnXml::DTAge& node, bool isUC) {
+const CMDecisionTree& CMDTAge::create(DecisionTreeLibrary& library, const scnXml::DTAge& node, bool isUC) {
     CMDTAge* result = new CMDTAge();
 
     double lastAge = numeric_limits<double>::quiet_NaN();
@@ -803,13 +804,13 @@ const CMDecisionTree& CMDTAge::create(const scnXml::DTAge& node, bool isUC) {
             double lb = age.getLb();
             result->branches.insert(make_pair(lb, lastNode));
         }
-        lastNode = &CMDecisionTree::create(age, isUC);
+        lastNode = &library.create(age, isUC);
         lastAge = age.getLb();
     }
     double noLb = numeric_limits<double>::infinity();
     result->branches.insert(make_pair(noLb, lastNode));
 
-    return save_decision(result);
+    return library.save(result);
 }
 
 }

@@ -51,6 +51,7 @@ namespace Clinical { // NOLINT(readability-identifier-naming)
 
 class ClinicalModel;
 class CMDecisionTree;
+class DecisionTreeLibrary;
 
 enum CaseType : std::uint8_t { FirstLine, SecondLine, NumCaseTypes }; // NOLINT(cppcoreguidelines-use-enum-class)
 
@@ -80,7 +81,8 @@ struct EventSchedulerParams {
     EventSchedulerParams(const OM::Parameters& parameters, const util::ModelOptionFlags& options,
                          const scnXml::Clinical& clinical);
 
-    void set_health_system(const scnXml::HSEventScheduler& es_data, util::AgeGroupInterpolator& case_fatality_rate);
+    void set_health_system(const scnXml::HSEventScheduler& es_data, util::AgeGroupInterpolator& case_fatality_rate,
+                           DecisionTreeLibrary& decision_trees);
     void set_parameters(const scnXml::HSEventScheduler& es_data, util::AgeGroupInterpolator& case_fatality_rate);
 
     bool non_malaria_fevers = false;
@@ -149,7 +151,7 @@ struct ClinicalParams {
     ClinicalParams(const OM::Parameters& parameters, const util::ModelOptionFlags& options,
                    const util::CommandLineOptions& command_line, const scnXml::Scenario& scenario);
 
-    void set_health_system(const scnXml::HealthSystem& health_system);
+    void set_health_system(const scnXml::HealthSystem& health_system, DecisionTreeLibrary& decision_trees);
 
     std::unique_ptr<ClinicalModel> create(double treatment_seeking_factor) const;
 
@@ -180,7 +182,7 @@ struct ClinicalParams {
 
 private:
     void set_immediate_outcomes(const scnXml::HSImmediateOutcomes& hs_description);
-    void set_decision_tree_5day(const scnXml::HSDT5Day& hs_description);
+    void set_decision_tree_5day(const scnXml::HSDT5Day& hs_description, DecisionTreeLibrary& decision_trees);
 };
 
 }

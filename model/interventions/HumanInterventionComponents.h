@@ -292,7 +292,7 @@ private:
 class DecisionTreeComponent : public HumanInterventionComponent {
 public:
     DecisionTreeComponent(ComponentId id, const scnXml::DecisionTree& elt)
-        : HumanInterventionComponent(id), tree(Clinical::CMDecisionTree::create(elt, false)) {}
+        : HumanInterventionComponent(id), tree(bridge::mutable_decision_tree_library().create(elt, false)) {}
 
     void deploy(Human& human, mon::Deploy::Method method, VaccineLimits) const {
         Clinical::CMDTOut out =

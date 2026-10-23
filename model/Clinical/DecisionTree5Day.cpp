@@ -33,7 +33,8 @@ using namespace ::OM::util;
 
 // ———  static, init  ———
 
-void ClinicalParams::set_decision_tree_5day(const scnXml::HSDT5Day& hs_description) {
+void ClinicalParams::set_decision_tree_5day(const scnXml::HSDT5Day& hs_description,
+                                            DecisionTreeLibrary& decision_trees) {
     const double access_uc_official1 = hs_description.getPSeekOfficialCareUncomplicated1().getValue();
     const double access_uc_official2 = hs_description.getPSeekOfficialCareUncomplicated2().getValue();
     // Note: this asymmetry is historical, and probably matters little:
@@ -54,8 +55,8 @@ void ClinicalParams::set_decision_tree_5day(const scnXml::HSDT5Day& hs_descripti
                                        "be in range [0,1]");
     }
 
-    decision_tree_5day.tree_uc_official = &CMDecisionTree::create(hs_description.getTreeUCOfficial(), true);
-    decision_tree_5day.tree_uc_self_treat = &CMDecisionTree::create(hs_description.getTreeUCSelfTreat(), true);
+    decision_tree_5day.tree_uc_official = &decision_trees.create(hs_description.getTreeUCOfficial(), true);
+    decision_tree_5day.tree_uc_self_treat = &decision_trees.create(hs_description.getTreeUCSelfTreat(), true);
 
     five_day.cure_rate_severe = hs_description.getCureRateSevere().getValue();
     five_day.treatment_severe = WHInterface::add_treatment(hs_description.getTreatmentSevere());

@@ -97,6 +97,8 @@ Simulation::Simulation(std::unique_ptr<scnXml::Scenario> scenario, util::Command
     Host::InfectionIncidenceModel::init(parameters);
     within_host_model = WithinHost::WithinHostModel(parameters, model_options, command_line, genotypes, *scenario_xml);
     clinical = Clinical::ClinicalParams(parameters, model_options, command_line, *scenario_xml);
+    decision_trees =
+        Clinical::DecisionTreeLibrary(diagnostics, within_host_model.common.pk_pd, clinical.health_system_memory);
     infant_mortality = Clinical::InfantMortality(clinical.non_malaria_infant_mortality);
     neonatal_mortality = Host::NeonatalMortality(scenario_xml->getModel().getClinical(), diagnostics, command_line);
     AgeStructure::init(scenario_xml->getDemography());
@@ -117,8 +119,9 @@ Simulation::Simulation(std::unique_ptr<scnXml::Scenario> scenario, util::Command
     // Depends on transmission model (for species indexes):
     // MDA1D may depend on health system (too complex to verify)
     interventions::InterventionManager::init(scenario_xml->getInterventions(), *population_model, *transmission_model);
-    clinical.set_health_system(scenario_xml->getHealthSystem()); // Depends on interventions, PK/PD (from humanPop)
-    mon::initCohorts(scenario_xml->getMonitoring());             // Depends on interventions
+    clinical.set_health_system(scenario_xml->getHealthSystem(),
+                               decision_trees);      // Depends on interventions, PK/PD (from humanPop)
+    mon::initCohorts(scenario_xml->getMonitoring()); // Depends on interventions
 
     clock.reset_time();
 

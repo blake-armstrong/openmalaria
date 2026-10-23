@@ -23,6 +23,7 @@
 #ifndef HMOD_SIMULATION
 #define HMOD_SIMULATION
 
+#include "Clinical/CMDecisionTree.h"
 #include "Clinical/ClinicalModel.h"
 #include "Clinical/ClinicalParams.h"
 #include "Global.h"
@@ -90,6 +91,8 @@ private:
     DiagnosticsBinding diagnostics_binding{diagnostics};
     WithinHost::WithinHostModel within_host_model;
     WithinHostModelBinding within_host_model_binding{within_host_model};
+    Clinical::DecisionTreeLibrary decision_trees;
+    DecisionTreeLibraryBinding decision_trees_binding{decision_trees};
     Clinical::ClinicalParams clinical;
     ClinicalParamsBinding clinical_binding{clinical};
     Clinical::InfantMortality infant_mortality;

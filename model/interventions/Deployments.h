@@ -27,6 +27,7 @@
 #include "Global.h"
 #include "util/errors.h"
 #include "Clinical/ClinicalModel.h"
+#include "Clinical/CMDecisionTree.h"
 #include "Population.h"
 #include "Transmission/TransmissionModel.h"
 #include "Transmission/VectorModel.h"
@@ -87,7 +88,7 @@ public:
     TimedChangeHSDeployment(SimTime date, const scnXml::ChangeHS::TimedDeploymentType& hs)
         : TimedDeployment(date), newHS(hs._clone()) {}
     virtual void deploy(vector<Host::Human>& population, Transmission::TransmissionModel& transmission) {
-        bridge::mutable_clinical_params().set_health_system(*newHS);
+        bridge::mutable_clinical_params().set_health_system(*newHS, bridge::mutable_decision_tree_library());
         delete newHS;
         newHS = 0;
     }

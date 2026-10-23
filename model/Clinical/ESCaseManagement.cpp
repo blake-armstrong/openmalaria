@@ -35,9 +35,10 @@ using namespace OM::util;
 // -----  ESCaseManagement  -----
 
 void EventSchedulerParams::set_health_system(const scnXml::HSEventScheduler& es_data,
-                                             util::AgeGroupInterpolator& case_fatality_rate) {
-    uncomplicated_tree = &CMDecisionTree::create(es_data.getUncomplicated(), true);
-    complicated_tree = &CMDecisionTree::create(es_data.getComplicated(), false);
+                                             util::AgeGroupInterpolator& case_fatality_rate,
+                                             DecisionTreeLibrary& decision_trees) {
+    uncomplicated_tree = &decision_trees.create(es_data.getUncomplicated(), true);
+    complicated_tree = &decision_trees.create(es_data.getComplicated(), false);
 
     set_parameters(es_data, case_fatality_rate);
 }
