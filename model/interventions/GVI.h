@@ -52,8 +52,8 @@ public:
 
     virtual void print_details(std::ostream& out) const;
 
-    virtual unique_ptr<PerHostInterventionData> makeHumanPart(LocalRng& rng) const;
-    virtual unique_ptr<PerHostInterventionData> makeHumanPart(istream& stream, ComponentId) const;
+    virtual unique_ptr<PerHostInterventionData> make_human_part(LocalRng& rng) const;
+    virtual unique_ptr<PerHostInterventionData> make_human_part(istream& stream, ComponentId) const;
 
 private:
     /** Per mosquito-species parameters for generic vector intervention model. */
@@ -105,22 +105,22 @@ public:
 
     /** This is the survival factor of the effect. */
     inline double getEffectSurvival(const GVIComponent& params) const {
-        SimTime age = Sim::now_or_ts1() - deployTime; // implies age 1 TS on first use
+        SimTime age = Sim::now_or_ts1() - deploy_time; // implies age 1 TS on first use
         return decayHet->eval(age);
     }
 
     virtual void update(Host::Human& human);
 
     /// Get deterrency. See ComponentParams::effect for a more detailed description.
-    virtual double relativeAttractiveness(size_t speciesIndex) const;
+    virtual double relative_attractiveness(size_t speciesIndex) const;
     /// Get killing effect on mosquitoes before they've eaten.
     /// See ComponentParams::effect for a more detailed description.
-    virtual double preprandialSurvivalFactor(size_t speciesIndex) const;
+    virtual double preprandial_survival_factor(size_t speciesIndex) const;
     /// Get killing effect on mosquitoes after they've eaten.
     /// See ComponentParams::effect for a more detailed description.
-    virtual double postprandialSurvivalFactor(size_t speciesIndex) const;
+    virtual double postprandial_survival_factor(size_t speciesIndex) const;
     /// Get the mosquito fecundity multiplier (1 for no effect).
-    virtual double relFecundity(size_t speciesIndex) const;
+    virtual double rel_fecundity(size_t speciesIndex) const;
 
 protected:
     virtual void checkpoint(ostream& stream);

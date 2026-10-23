@@ -20,8 +20,8 @@
  * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301, USA.
  */
 
-#ifndef Hmod_TransmissionModel
-#define Hmod_TransmissionModel
+#ifndef HMOD_TRANSMISSION_MODEL
+#define HMOD_TRANSMISSION_MODEL
 
 #include <string.h>
 #include <fstream>
@@ -55,35 +55,35 @@ class Human;
 }
 namespace Transmission {
 
-inline double averageEIR(const scnXml::NonVector& nonVectorData) {
+inline double average_eir(const scnXml::NonVector& non_vector_data) {
     // Calculates the arithmetic mean of the whole daily EIR vector read from the .XML file
-    double valaverageEIR = 0.0;
+    double val_average_eir = 0.0;
     size_t i = 0;
-    for (const scnXml::NonVector::EIRDailySequence& daily = nonVectorData.getEIRDaily(); i < daily.size(); ++i) {
-        valaverageEIR += (double)daily[i];
+    for (const scnXml::NonVector::EIRDailySequence& daily = non_vector_data.getEIRDaily(); i < daily.size(); ++i) {
+        val_average_eir += (double)daily[i];
     }
     if (i == 0)
         throw util::xml_scenario_error("no EIRDaily values given"); // pedantic check
-    return valaverageEIR / i;
+    return val_average_eir / i;
 }
 
-inline double averageEIR(const scnXml::DailyValues& vectorData) {
+inline double average_eir(const scnXml::DailyValues& vector_data) {
     // Calculates the arithmetic mean of the whole daily EIR vector read from the .XML file
-    double valaverageEIR = 0.0;
+    double val_average_eir = 0.0;
     size_t i = 0;
-    for (const scnXml::DailyValues::ValueSequence& daily = vectorData.getValue(); i < daily.size(); ++i) {
-        valaverageEIR += (double)daily[i];
+    for (const scnXml::DailyValues::ValueSequence& daily = vector_data.getValue(); i < daily.size(); ++i) {
+        val_average_eir += (double)daily[i];
     }
     if (i == 0)
         throw util::xml_scenario_error("no daily values given"); // pedantic check
-    return valaverageEIR / i;
+    return val_average_eir / i;
 }
 
 /** Variable describing current simulation mode. */
 enum SimulationMode {
     /** Initial mode. Indicates that initialisation still needs to happen (i.e.
      * it is an error if this mode is still set when getEIR is called). */
-    preInit,
+    PreInit,
     /** Equilibrium mode (i.e. just apply a fixed EIR)
      *
      * This is used for the warm-up period and if we want to separate direct
@@ -92,13 +92,13 @@ enum SimulationMode {
      * over years.
      *
      * In this mode vector calculations aren't run. */
-    forcedEIR,
+    ForcedEir,
     /** Transient EIR known
      *
      * This is used to simulate an intervention that changes EIR, and where we
      * have measurements of the EIR over time during the intervention period.
      */
-    transientEIRknown,
+    TransientEirKnown,
     /** EIR changes
      *
      * The simulation is driven by the EIR which changes dynamically during the
@@ -108,7 +108,7 @@ enum SimulationMode {
      * Dependending on whether the Vector or NonVector model is in use, this
      * EIR may be calculated from a mosquito emergence rate or be an input EIR
      * scaled by the relative infectiousness of the humans. */
-    dynamicEIR,
+    DynamicEir,
 };
 
 /// Abstract base class, defines behaviour of transmission models
@@ -117,23 +117,24 @@ protected:
     /// Reads all entomological parameters from the input datafile.
     /// @param entoData input configuration for model
     /// @param n_genotypes number of genotypes transmission model is using
-    TransmissionModel(vector<double> initialisationEIR, int interventionMode, size_t n_genotypes, SimTime adult_age)
-        : n_genotypes(n_genotypes), initialisationEIR(std::move(initialisationEIR)), simulationMode(forcedEIR),
-          interventionMode(interventionMode),
-          laggedKappa(Sim::steps_per_year(), 0.0), // if using non-vector model, it will resize this
-          annualEIR(0.0), _annualAverageKappa(numeric_limits<double>::signaling_NaN()), _sumAnnualKappa(0.0),
-          tsAdultEIR(0.0), surveyInputEIR(0.0), surveySimulatedEIR(0.0), adultAge(adult_age), numTransmittingHumans(0) {
+    TransmissionModel(vector<double> initialisation_eir, int intervention_mode, size_t n_genotypes, SimTime adult_age)
+        : n_genotypes(n_genotypes), initialisation_eir(std::move(initialisation_eir)), simulation_mode(ForcedEir),
+          intervention_mode(intervention_mode),
+          lagged_kappa(Sim::steps_per_year(), 0.0), // if using non-vector model, it will resize this
+          annual_eir(0.0), annual_average_kappa(numeric_limits<double>::signaling_NaN()), sum_annual_kappa(0.0),
+          ts_adult_eir(0.0), survey_input_eir(0.0), survey_simulated_eir(0.0), adult_age(adult_age),
+          num_transmitting_humans(0) {
         // Set VACCINE_GENOTYPE option
         opt_vaccine_genotype = util::ModelOptions::option(util::VaccineGenotype);
 
         mon::Continuous::registerCallback("input EIR", "\tinput EIR",
-                                          std::bind(&TransmissionModel::ctsCbInputEIR, this, _1));
+                                          std::bind(&TransmissionModel::cts_cb_input_eir, this, _1));
         mon::Continuous::registerCallback("simulated EIR", "\tsimulated EIR",
-                                          std::bind(&TransmissionModel::ctsCbSimulatedEIR, this, _1));
+                                          std::bind(&TransmissionModel::cts_cb_simulated_eir, this, _1));
         mon::Continuous::registerCallback("human infectiousness", "\thuman infectiousness",
-                                          std::bind(&TransmissionModel::ctsCbKappa, this, _1));
+                                          std::bind(&TransmissionModel::cts_cb_kappa, this, _1));
         mon::Continuous::registerCallback("num transmitting humans", "\tnum transmitting humans",
-                                          std::bind(&TransmissionModel::ctsCbNumTransmittingHumans, this, _1));
+                                          std::bind(&TransmissionModel::cts_cb_num_transmitting_humans, this, _1));
     }
 
 public:
@@ -152,41 +153,41 @@ public:
      *
      * Overriding functions should call this base version too. */
     virtual void summarize() {
-        mon::recordStat(mon::measure("nTransmit"), laggedKappa[Sim::modulo_steps(Sim::now(), laggedKappa.size())]);
-        mon::recordStat(mon::measure("annAvgK"), _annualAverageKappa);
+        mon::recordStat(mon::measure("nTransmit"), lagged_kappa[Sim::modulo_steps(Sim::now(), lagged_kappa.size())]);
+        mon::recordStat(mon::measure("annAvgK"), annual_average_kappa);
 
         if (!mon::isReported())
             return; // cannot use counters below when not reporting
 
-        double duration = Sim::in_steps(Sim::now() - lastSurveyTime);
+        double duration = Sim::in_steps(Sim::now() - last_survey_time);
         if (duration > 0.0) {
-            mon::recordStat(mon::measure("inputEIR"), surveyInputEIR / duration);
-            mon::recordStat(mon::measure("simulatedEIR"), surveySimulatedEIR / duration);
-            mon::recordStat(mon::measure("simulatedEIR_Introduced"), surveySimulatedEIR_i / duration);
-            mon::recordStat(mon::measure("simulatedEIR_Indigenous"), surveySimulatedEIR_l / duration);
+            mon::recordStat(mon::measure("inputEIR"), survey_input_eir / duration);
+            mon::recordStat(mon::measure("simulatedEIR"), survey_simulated_eir / duration);
+            mon::recordStat(mon::measure("simulatedEIR_Introduced"), survey_simulated_eir_i / duration);
+            mon::recordStat(mon::measure("simulatedEIR_Indigenous"), survey_simulated_eir_l / duration);
         }
 
-        surveyInputEIR = 0.0;
-        surveySimulatedEIR = 0.0;
-        surveySimulatedEIR_i = 0.0;
-        surveySimulatedEIR_l = 0.0;
-        lastSurveyTime = Sim::now();
+        survey_input_eir = 0.0;
+        survey_simulated_eir = 0.0;
+        survey_simulated_eir_i = 0.0;
+        survey_simulated_eir_l = 0.0;
+        last_survey_time = Sim::now();
     }
 
     /** Scale the EIR used by the model.
      *
      * EIR is scaled in memory (so will affect this simulation).
      * XML data is not touched. */
-    virtual void scaleEIR(double factor) = 0;
+    virtual void scale_eir(double factor) = 0;
 
-    virtual SimTime initIterate() = 0;
+    virtual SimTime init_iterate() = 0;
 
     /** Needs to be called each step of the simulation before Human::update().
      *
      * when the vector model is used this updates mosquito populations. */
-    virtual void vectorUpdate(const vector<Host::Human>& population) {};
+    virtual void vector_update(const vector<Host::Human>& population) {};
 
-    virtual void changeEIRIntervention(const scnXml::NonVector&) = 0;
+    virtual void change_eir_intervention(const scnXml::NonVector&) = 0;
 
     /** Does per-time-step updates and returns the EIR (inoculation rate per host
      * per time step). Should be called exactly once per time-step (at least,
@@ -212,111 +213,112 @@ public:
      *    the non-vector model), the length is set to one.
      * @returns the sum of EIR across genotypes
      */
-    double getEIR(Host::Human& human, SimTime age, double ageYears, vector<double>& EIR_i, vector<double>& EIR_l) {
+    double get_eir(Host::Human& human, SimTime age, double age_years, vector<double>& genotype_eir_i,
+                   vector<double>& genotype_eir_l) {
         /* For the NonVector model, the EIR should just be multiplied by the
          * availability. For the Vector model, the availability is also required
          * for internal calculations, but again the EIR should be multiplied by the
          * availability. */
-        calculateEIR(human, ageYears, EIR_i, EIR_l);
+        calculate_eir(human, age_years, genotype_eir_i, genotype_eir_l);
 
-        double sum_EIR_i = util::vectors::sum(EIR_i);
-        double sum_EIR_l = util::vectors::sum(EIR_l);
+        double sum_eir_i = util::vectors::sum(genotype_eir_i);
+        double sum_eir_l = util::vectors::sum(genotype_eir_l);
 
-        double allEIR = sum_EIR_i + sum_EIR_l;
-        if (age >= adultAge) {
-            tsAdultEntoInocs_i += sum_EIR_i;
-            tsAdultEntoInocs_l += sum_EIR_l;
-            tsAdultEntoInocs += allEIR;
-            tsNumAdults += 1;
+        double all_eir = sum_eir_i + sum_eir_l;
+        if (age >= adult_age) {
+            ts_adult_ento_inocs_i += sum_eir_i;
+            ts_adult_ento_inocs_l += sum_eir_l;
+            ts_adult_ento_inocs += all_eir;
+            ts_num_adults += 1;
         }
-        return allEIR;
+        return all_eir;
     }
 
     /** Remove all current infections to mosquitoes, such that without re-
      * infection, humans will then be exposed to zero EIR. */
-    virtual void uninfectVectors() = 0;
+    virtual void uninfect_vectors() = 0;
 
     /** Needs to be called each time-step after Human::update() to update summary
      * statististics related to transmission. Also returns kappa (the average
      * human infectiousness weighted by availability to mosquitoes). */
-    virtual double updateKappa(const vector<Host::Human>& population) {
+    virtual double update_kappa(const vector<Host::Human>& population) {
         // We calculate kappa for output and the non-vector model.
-        double sumWt_kappa = 0.0;
-        double sumWeight = 0.0;
-        numTransmittingHumans = 0;
+        double sum_wt_kappa = 0.0;
+        double sum_weight = 0.0;
+        num_transmitting_humans = 0;
 
         for (const Host::Human& human : population) {
             // NOTE: calculate availability relative to age at end of time step;
             // not my preference but consistent with TransmissionModel::getEIR().
             const double avail =
-                human.perHostTransmission.relativeAvailabilityHetAge(Sim::in_years(human.age(Sim::ts1())));
-            sumWeight += avail;
+                human.perHostTransmission.relative_availability_het_age(Sim::in_years(human.age(Sim::ts1())));
+            sum_weight += avail;
 
-            vector<double> probTransGenotype_i(num_genotypes());
-            vector<double> probTransGenotype_l(num_genotypes());
-            const double pTransmit =
-                human.withinHostModel->prob_transmission_to_mosquito(probTransGenotype_i, probTransGenotype_l);
+            vector<double> prob_trans_genotype_i(num_genotypes());
+            vector<double> prob_trans_genotype_l(num_genotypes());
+            const double p_transmit =
+                human.withinHostModel->prob_transmission_to_mosquito(prob_trans_genotype_i, prob_trans_genotype_l);
 
-            double riskTrans = 0.0;
+            double risk_trans = 0.0;
 
             // Only to be consistent with old simulation runs when set to false
             // Setting this option to true will only affect reporting
             if (opt_vaccine_genotype == false)
-                riskTrans = avail * pTransmit * human.vaccine.getFactor(interventions::Vaccine::TBV);
+                risk_trans = avail * p_transmit * human.vaccine.getFactor(interventions::Vaccine::TBV);
             else {
                 for (size_t g = 0; g < num_genotypes(); ++g)
-                    riskTrans += (probTransGenotype_i[g] + probTransGenotype_l[g]) *
-                                 human.vaccine.getFactor(interventions::Vaccine::TBV, g);
-                riskTrans *= avail;
+                    risk_trans += (prob_trans_genotype_i[g] + prob_trans_genotype_l[g]) *
+                                  human.vaccine.getFactor(interventions::Vaccine::TBV, g);
+                risk_trans *= avail;
             }
 
-            if (riskTrans > 0.0)
-                ++numTransmittingHumans;
+            if (risk_trans > 0.0)
+                ++num_transmitting_humans;
 
-            sumWt_kappa += riskTrans;
+            sum_wt_kappa += risk_trans;
         }
 
-        size_t lKMod = Sim::modulo_steps(Sim::ts1(), laggedKappa.size()); // now
-        if (population.size() == 0) {                                     // this is valid
-            laggedKappa[lKMod] = 0.0;                                     // no humans: no infectiousness
+        size_t l_k_mod = Sim::modulo_steps(Sim::ts1(), lagged_kappa.size()); // now
+        if (population.size() == 0) {                                        // this is valid
+            lagged_kappa[l_k_mod] = 0.0;                                     // no humans: no infectiousness
         } else {
-            if (!(sumWeight > DBL_MIN * 10.0)) { // if approx. eq. 0, negative or an NaN
+            if (!(sum_weight > DBL_MIN * 10.0)) { // if approx. eq. 0, negative or an NaN
                 ostringstream msg;
-                msg << "sumWeight is invalid: " << sumWeight << ", " << sumWt_kappa << ", " << population.size();
+                msg << "sumWeight is invalid: " << sum_weight << ", " << sum_wt_kappa << ", " << population.size();
                 throw TRACED_EXCEPTION(msg.str(), util::Error::SumWeight);
             }
-            laggedKappa[lKMod] = sumWt_kappa / sumWeight;
+            lagged_kappa[l_k_mod] = sum_wt_kappa / sum_weight;
         }
 
         size_t tmod = Sim::modulo_year_steps(Sim::ts0());
 
         // Calculate time-weighted average of kappa
-        _sumAnnualKappa += laggedKappa[lKMod] * initialisationEIR[tmod];
+        sum_annual_kappa += lagged_kappa[l_k_mod] * initialisation_eir[tmod];
         if (tmod == Sim::steps_per_year() - 1) {
-            _annualAverageKappa = _sumAnnualKappa / annualEIR; // inf or NaN when annualEIR is 0
-            _sumAnnualKappa = 0.0;
+            annual_average_kappa = sum_annual_kappa / annual_eir; // inf or NaN when annualEIR is 0
+            sum_annual_kappa = 0.0;
         }
 
-        return laggedKappa[lKMod]; // kappa now
+        return lagged_kappa[l_k_mod]; // kappa now
     }
 
-    virtual void surveyEIR() {
-        tsAdultEIR = tsAdultEntoInocs / tsNumAdults;
-        tsAdultEntoInocs = 0.0;
+    virtual void survey_eir() {
+        ts_adult_eir = ts_adult_ento_inocs / ts_num_adults;
+        ts_adult_ento_inocs = 0.0;
 
-        tsAdultEIR_i = tsAdultEntoInocs_i / tsNumAdults;
-        tsAdultEntoInocs_i = 0.0;
+        ts_adult_eir_i = ts_adult_ento_inocs_i / ts_num_adults;
+        ts_adult_ento_inocs_i = 0.0;
 
-        tsAdultEIR_l = tsAdultEntoInocs_l / tsNumAdults;
-        tsAdultEntoInocs_l = 0.0;
+        ts_adult_eir_l = ts_adult_ento_inocs_l / ts_num_adults;
+        ts_adult_ento_inocs_l = 0.0;
 
-        tsNumAdults = 0;
+        ts_num_adults = 0;
 
-        surveyInputEIR += initialisationEIR[Sim::modulo_year_steps(Sim::ts0())];
+        survey_input_eir += initialisation_eir[Sim::modulo_year_steps(Sim::ts0())];
 
-        surveySimulatedEIR += tsAdultEIR;
-        surveySimulatedEIR_i += tsAdultEIR_i;
-        surveySimulatedEIR_l += tsAdultEIR_l;
+        survey_simulated_eir += ts_adult_eir;
+        survey_simulated_eir_i += ts_adult_eir_i;
+        survey_simulated_eir_l += ts_adult_eir_l;
     }
 
 protected:
@@ -330,58 +332,58 @@ protected:
      *    individual human is exposed to, per parasite genotype, in units of
      *    inoculations per day. Length set by callee. 
      *    _i for imported infections and _l for local infections */
-    virtual void calculateEIR(Host::Human& human, double ageYears, vector<double>& EIR_i,
-                              vector<double>& EIR_l) const = 0;
+    virtual void calculate_eir(Host::Human& human, double age_years, vector<double>& genotype_eir_i,
+                               vector<double>& genotype_eir_l) const = 0;
 
     virtual void checkpoint(istream& stream) {
-        simulationMode & stream;
-        interventionMode & stream;
-        initialisationEIR & stream;
-        laggedKappa & stream;
-        annualEIR & stream;
-        _annualAverageKappa & stream;
-        _sumAnnualKappa & stream;
-        tsAdultEIR & stream;
-        surveyInputEIR & stream;
-        surveySimulatedEIR & stream;
-        surveySimulatedEIR_i & stream;
-        surveySimulatedEIR_l & stream;
-        lastSurveyTime & stream;
-        adultAge & stream;
-        numTransmittingHumans & stream;
+        simulation_mode & stream;
+        intervention_mode & stream;
+        initialisation_eir & stream;
+        lagged_kappa & stream;
+        annual_eir & stream;
+        annual_average_kappa & stream;
+        sum_annual_kappa & stream;
+        ts_adult_eir & stream;
+        survey_input_eir & stream;
+        survey_simulated_eir & stream;
+        survey_simulated_eir_i & stream;
+        survey_simulated_eir_l & stream;
+        last_survey_time & stream;
+        adult_age & stream;
+        num_transmitting_humans & stream;
     }
 
     virtual void checkpoint(ostream& stream) {
-        simulationMode & stream;
-        interventionMode & stream;
-        initialisationEIR & stream;
-        laggedKappa & stream;
-        annualEIR & stream;
-        _annualAverageKappa & stream;
-        _sumAnnualKappa & stream;
-        tsAdultEIR & stream;
-        surveyInputEIR & stream;
-        surveySimulatedEIR & stream;
-        surveySimulatedEIR_i & stream;
-        surveySimulatedEIR_l & stream;
-        lastSurveyTime & stream;
-        adultAge & stream;
-        numTransmittingHumans & stream;
+        simulation_mode & stream;
+        intervention_mode & stream;
+        initialisation_eir & stream;
+        lagged_kappa & stream;
+        annual_eir & stream;
+        annual_average_kappa & stream;
+        sum_annual_kappa & stream;
+        ts_adult_eir & stream;
+        survey_input_eir & stream;
+        survey_simulated_eir & stream;
+        survey_simulated_eir_i & stream;
+        survey_simulated_eir_l & stream;
+        last_survey_time & stream;
+        adult_age & stream;
+        num_transmitting_humans & stream;
     }
 
 private:
     // The times here should be for the last updated index of arrays:
-    void ctsCbInputEIR(ostream& stream) {
-        int prevStep = (Sim::now() - Sim::one_ts()) / Sim::one_ts();
+    void cts_cb_input_eir(ostream& stream) {
+        int prev_step = (Sim::now() - Sim::one_ts()) / Sim::one_ts();
         // Note: prevStep may be negative, hence util::mod not mod_nn:
-        stream << '\t' << initialisationEIR[util::mod(prevStep, Sim::steps_per_year())];
+        stream << '\t' << initialisation_eir[util::mod(prev_step, Sim::steps_per_year())];
     }
-    void ctsCbSimulatedEIR(ostream& stream) { stream << '\t' << tsAdultEIR; }
-    void ctsCbKappa(ostream& stream) {
+    void cts_cb_simulated_eir(ostream& stream) { stream << '\t' << ts_adult_eir; }
+    void cts_cb_kappa(ostream& stream) {
         // The latest time-step's kappa:
-        stream << '\t' << laggedKappa[Sim::modulo_steps(Sim::now(), laggedKappa.size())];
+        stream << '\t' << lagged_kappa[Sim::modulo_steps(Sim::now(), lagged_kappa.size())];
     }
-    void ctsCbNumTransmittingHumans(ostream& stream) { stream << '\t' << numTransmittingHumans; }
+    void cts_cb_num_transmitting_humans(ostream& stream) { stream << '\t' << num_transmitting_humans; }
 
 protected:
     size_t num_genotypes() const { return n_genotypes; }
@@ -405,12 +407,12 @@ public:
      *
      * Not checkpointed; doesn't need to be except when a changeEIR intervention
      * occurs. */
-    vector<double> initialisationEIR;
+    vector<double> initialisation_eir;
 
     /** The type of EIR calculation. Checkpointed. */
-    int simulationMode;
+    int simulation_mode;
     /** New simulation mode during intervention period. Not checkpointed. */
-    int interventionMode;
+    int intervention_mode;
 
     /** The probability of infection of a mosquito at each bite.
      * It is calculated as the average infectiousness per human.
@@ -421,12 +423,12 @@ public:
      * non-vector model.
      *
      * Checkpointed. */
-    vector<double> laggedKappa;
+    vector<double> lagged_kappa;
 
     /** Total annual infectious bites per adult.
      *
      * Checkpointed. */
-    double annualEIR;
+    double annual_eir;
 
 private:
     /*! annAvgKappa is the overall proportion of mosquitoes that get infected
@@ -434,37 +436,37 @@ private:
      * relative mosquito density with the EIR).
      *
      * Checkpointed. */
-    double _annualAverageKappa;
+    double annual_average_kappa;
 
     /*! Used to calculate annAvgKappa.
      *
      * Checkpointed. */
-    double _sumAnnualKappa;
+    double sum_annual_kappa;
 
     /// Adult-only EIR over the last update
-    double tsAdultEIR, tsAdultEIR_i, tsAdultEIR_l;
+    double ts_adult_eir, ts_adult_eir_i, ts_adult_eir_l;
 
     /** Per-time-step input EIR summed over inter-survey period.
      * Units: infectious bites/adult/inter-survey period. */
-    double surveyInputEIR, surveyInputEIR_i, surveyInputEIR_l;
+    double survey_input_eir, survey_input_eir_i, survey_input_eir_l;
 
     /** Per-time-step simulated EIR summed over inter-survey period.
      * Units: infectious bites/adult/inter-survey period. */
-    double surveySimulatedEIR, surveySimulatedEIR_i, surveySimulatedEIR_l;
+    double survey_simulated_eir, survey_simulated_eir_i, survey_simulated_eir_l;
 
     /** Time of last survey. */
-    SimTime lastSurveyTime = Sim::never();
+    SimTime last_survey_time = Sim::never();
 
     /// age at which an individual is considered an adult
-    SimTime adultAge = Sim::never();
+    SimTime adult_age = Sim::never();
 
     /// For "num transmitting humans" cts output.
-    int numTransmittingHumans;
+    int num_transmitting_humans;
 
     // Reporting data. Doesn't need checkpointing due to reset every time-step.
     // accumulator for time step EIR of adults
-    double tsAdultEntoInocs = 0.0, tsAdultEntoInocs_i = 0.0, tsAdultEntoInocs_l = 0.0;
-    int tsNumAdults = 0; // accumulator for time step adults requesting EIR
+    double ts_adult_ento_inocs = 0.0, ts_adult_ento_inocs_i = 0.0, ts_adult_ento_inocs_l = 0.0;
+    int ts_num_adults = 0; // accumulator for time step adults requesting EIR
 
     bool opt_vaccine_genotype = false;
 };

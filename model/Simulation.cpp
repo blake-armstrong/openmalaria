@@ -112,8 +112,8 @@ Simulation::Simulation(std::unique_ptr<scnXml::Scenario> scenario, util::Command
 
     population_model = std::make_unique<Population>(pop_size);
     transmission_model = std::unique_ptr<Transmission::TransmissionModel>(
-        Transmission::createTransmissionModel(scenario_xml->getEntomology(), static_cast<int>(pop_size),
-                                              per_host_params, master_rngs.transmission, genotypes));
+        Transmission::create_transmission_model(scenario_xml->getEntomology(), static_cast<int>(pop_size),
+                                                per_host_params, master_rngs.transmission, genotypes));
 
     registerContinousPopulationCallbacks();
 
@@ -129,7 +129,7 @@ Simulation::Simulation(std::unique_ptr<scnXml::Scenario> scenario, util::Command
     // Make sure warmup period is at least as long as a human lifespan, as the
     // length required by vector warmup, and is a whole number of years.
     SimTime warmup = clock.max_human_age();
-    if (transmission_model->interventionMode != Transmission::forcedEIR)
+    if (transmission_model->intervention_mode != Transmission::ForcedEir)
         warmup = max(warmup, Sim::from_years_i(55)); // Data is summed over 5 years; add an extra 50 for stabilization.
 
     warmup_length = Sim::from_years_i(static_cast<int>(ceil(Sim::in_years(warmup))));
@@ -186,13 +186,13 @@ void Simulation::start_new(const CheckpointOptions& checkpointing) {
 
     /** Transmission init phase:
      * Fit the emergence rate to the input EIR */
-    SimTime iterate = transmission_model->initIterate();
+    SimTime iterate = transmission_model->init_iterate();
     while (iterate > Sim::zero()) {
         end_time = end_time + iterate;
         // adjust estimation of final time step: end of current period + length of main phase
         est_end_time = end_time + (clock.end_date() - clock.start_date()) + clock.one_ts();
         run_phase("EIR Calibration", end_time);
-        iterate = transmission_model->initIterate();
+        iterate = transmission_model->init_iterate();
     }
 
     /** Main phase:
@@ -277,7 +277,7 @@ void Simulation::step() {
 
     // This should be called before humans contract new infections in the simulation step.
     // This needs the whole population (it is an approximation before all humans are updated).
-    transmission.vectorUpdate(population.humans);
+    transmission.vector_update(population.humans);
 
     // NOTE: no neonatal mortalities will occur in the first 20 years of warmup
     // (until humans old enough to be pregnate get updated and can be infected).
@@ -292,8 +292,8 @@ void Simulation::step() {
 
     // Doesn't matter whether non-updated humans are included (value isn't used
     // before all humans are updated).
-    transmission.updateKappa(population.humans);
-    transmission.surveyEIR();
+    transmission.update_kappa(population.humans);
+    transmission.survey_eir();
 
     clock.end_update();
 

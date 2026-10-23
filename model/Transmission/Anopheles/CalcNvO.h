@@ -30,36 +30,37 @@
 
 #include <vector>
 
-double
-CalcInitMosqEmergeRate(std::vector<double>& mosqEmergeRateVector, // output vector
-                       int thetap,                                // $\theta_p$: daysInYear
-                       int tau,                                   // $\tau$: mosqRestDuration
-                       int thetas,                                // $\theta_s$: EIPDuration
-                       int n,                                     // $n$: nHostTypes
-                       int m,                                     // $m$: nMalHostTypes
-                       const std::vector<double>& Ni,             // $N_i$: popSize (length n)
-                       const std::vector<double>& alphai,         // $\alpha_i$: hostAvailabilityRate	(length n)
-                       double muvA,                               // $\mu_{vA}: mosqSeekingDeathRate
-                       double thetad,                             // $\theta_d$: mosqSeekingDuration
-                       const std::vector<double>& PBi,            // $P_{B_i}$: mosqProbBiting (length n)
-                       const std::vector<double>& PCi,            // $P_{C_i}$: mosqProbFindRestSite (length n)
-                       const std::vector<double>& PDi,            // $P_{D_i}$: mosqProbResting (length n)
-                       const std::vector<double>& PEi, // $P_{E_i}$: mosqProbOvipositing -- assumed not affected by nhh
-                       const std::vector<double> KviInit, // Kvi (size n * thetap)
-                       const std::vector<double> SvInit   // Sv (length n)
+double calc_init_mosq_emerge_rate(
+    std::vector<double>& mosq_emerge_rate_vector, // output vector
+    int thetap,                                   // $\theta_p$: daysInYear
+    int tau,                                      // $\tau$: mosqRestDuration
+    int thetas,                                   // $\theta_s$: EIPDuration
+    int n,                                        // $n$: nHostTypes
+    int m,                                        // $m$: nMalHostTypes
+    const std::vector<double>& ni,                // $N_i$: popSize (length n)
+    const std::vector<double>& alphai,            // $\alpha_i$: hostAvailabilityRate	(length n)
+    double muv_a,                                 // $\mu_{vA}: mosqSeekingDeathRate
+    double thetad,                                // $\theta_d$: mosqSeekingDuration
+    const std::vector<double>& p_bi,              // $P_{B_i}$: mosqProbBiting (length n)
+    const std::vector<double>& p_ci,              // $P_{C_i}$: mosqProbFindRestSite (length n)
+    const std::vector<double>& p_di,              // $P_{D_i}$: mosqProbResting (length n)
+    const std::vector<double>& p_ei,              // $P_{E_i}$: mosqProbOvipositing -- assumed not affected by nhh
+    const std::vector<double> kvi_init,           // Kvi (size n * thetap)
+    const std::vector<double> sv_init             // Sv (length n)
 );
 
-void CalcUpsilon(std::vector<gsl_matrix*>& Upsilon, double& PA, double& PAi, int thetap, int eta, int mt, int tau,
-                 int thetas, int n, int m, const double* Ni, const double* alphai, double muvA, double thetad,
-                 const double* PBi, const double* PCi, const double* PDi, const double* PEi, const gsl_matrix* Kvi);
+void calc_upsilon(std::vector<gsl_matrix*>& upsilon, double& pa, double& p_ai, int thetap, int eta, int mt, int tau,
+                  int thetas, int n, int m, const double* ni, const double* alphai, double muv_a, double thetad,
+                  const double* p_bi, const double* p_ci, const double* p_di, const double* p_ei,
+                  const gsl_matrix* kvi);
 
-void CalcSvJacobian(gsl_matrix* J, const std::vector<gsl_matrix*>& Upsilon, gsl_matrix* inv1Xtp, int eta, int mt,
-                    int thetap);
+void calc_sv_jacobian(gsl_matrix* j, const std::vector<gsl_matrix*>& upsilon, gsl_matrix* inv1_xtp, int eta, int mt,
+                      int thetap);
 
-void CalcPSTS(double& sumkplus, double* sumklplus, int thetas, int tau, double PA, double Pdf);
+void calc_psts(double& sumkplus, double* sumklplus, int thetas, int tau, double pa, double pdf);
 
-void FuncX(gsl_matrix* X, const std::vector<gsl_matrix*>& Upsilon, int t, int s, int n);
+void func_x(gsl_matrix* x, const std::vector<gsl_matrix*>& upsilon, int t, int s, int n);
 
-double CalcSpectralRadius(gsl_matrix* A, int n);
+double calc_spectral_radius(gsl_matrix* a, int n);
 
-void CalcInv1minusA(gsl_matrix* inv1A, gsl_matrix* A, int n);
+void calc_inv1minus_a(gsl_matrix* inv1_a, gsl_matrix* a, int n);

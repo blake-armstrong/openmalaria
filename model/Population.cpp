@@ -213,9 +213,9 @@ void ctsMeanAgeAvailEffect(Population& population, ostream& stream) {
     int nHumans = 0;
     double avail = 0.0;
     for (Host::Human& human : population.humans) {
-        if (!human.perHostTransmission.outsideTransmission) {
+        if (!human.perHostTransmission.outside_transmission) {
             ++nHumans;
-            avail += human.perHostTransmission.relativeAvailabilityAge(Sim::in_years(human.age(Sim::now())));
+            avail += human.perHostTransmission.relative_availability_age(Sim::in_years(human.age(Sim::now())));
         }
     }
     stream << '\t' << avail / nHumans;
@@ -224,7 +224,7 @@ void ctsMeanAgeAvailEffect(Population& population, ostream& stream) {
 void ctsITNCoverage(Population& population, ostream& stream) {
     int nActive = 0;
     for (const Host::Human& human : population.humans) {
-        nActive += human.perHostTransmission.hasActiveInterv(interventions::Component::ITN);
+        nActive += human.perHostTransmission.has_active_interv(interventions::Component::ITN);
     }
     double coverage = static_cast<double>(nActive) / population.getSize();
     stream << '\t' << coverage;
@@ -233,7 +233,7 @@ void ctsITNCoverage(Population& population, ostream& stream) {
 void ctsIRSCoverage(Population& population, ostream& stream) {
     int nActive = 0;
     for (const Host::Human& human : population.humans) {
-        nActive += human.perHostTransmission.hasActiveInterv(interventions::Component::IRS);
+        nActive += human.perHostTransmission.has_active_interv(interventions::Component::IRS);
     }
     double coverage = static_cast<double>(nActive) / population.getSize();
     stream << '\t' << coverage;
@@ -242,7 +242,7 @@ void ctsIRSCoverage(Population& population, ostream& stream) {
 void ctsGVICoverage(Population& population, ostream& stream) {
     int nActive = 0;
     for (const Host::Human& human : population.humans) {
-        nActive += human.perHostTransmission.hasActiveInterv(interventions::Component::GVI);
+        nActive += human.perHostTransmission.has_active_interv(interventions::Component::GVI);
     }
     double coverage = static_cast<double>(nActive) / population.getSize();
     stream << '\t' << coverage;

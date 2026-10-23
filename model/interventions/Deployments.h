@@ -103,7 +103,7 @@ public:
     TimedChangeEIRDeployment(SimTime date, const scnXml::ChangeEIR::TimedDeploymentType& nv)
         : TimedDeployment(date), newEIR(nv._clone()) {}
     virtual void deploy(vector<Host::Human>& population, Transmission::TransmissionModel& transmission) {
-        transmission.changeEIRIntervention(*newEIR);
+        transmission.change_eir_intervention(*newEIR);
         delete newEIR;
         newEIR = 0;
     }
@@ -117,7 +117,7 @@ class TimedUninfectVectorsDeployment : public TimedDeployment {
 public:
     TimedUninfectVectorsDeployment(SimTime date) : TimedDeployment(date) {}
     virtual void deploy(vector<Host::Human>& population, Transmission::TransmissionModel& transmission) {
-        transmission.uninfectVectors();
+        transmission.uninfect_vectors();
     }
     virtual void print_details(std::ostream& out) const { out << "UninfectVectors"; }
 };
@@ -223,7 +223,7 @@ public:
             if (age >= minAge && age < maxAge) {
                 double availability = 0.0;
                 for (size_t i = 0; i < bridge::per_host_params().num_species(); ++i)
-                    availability += human.perHostTransmission.anophEntoAvailability[i];
+                    availability += human.perHostTransmission.anoph_ento_availability[i];
 
                 double probability = coverage;
 
@@ -238,8 +238,8 @@ public:
                         if (bridge::per_host_params().num_species() > 1)
                             throw std::runtime_error("only supports one mosquito species");
 
-                        const double ux = bridge::per_host_params().get(0).entoAvailability->cdf(
-                            human.perHostTransmission.anophEntoAvailabilityRaw[0]);
+                        const double ux = bridge::per_host_params().get(0).ento_availability->cdf(
+                            human.perHostTransmission.anoph_ento_availability_raw[0]);
                         if (ux < 1) {
                             double xx = gsl_cdf_ugaussian_Pinv(ux); // Unit interval to Normal
 
@@ -250,12 +250,12 @@ public:
                              * the same component on the same human must use the same gaussian sample. Therefore we store
                              * this value in the human the first time it is calculated. */
                             double g = 0.0;
-                            const auto it = human.perHostTransmission.copulaGaussianSamples.find(cid);
-                            if (it != human.perHostTransmission.copulaGaussianSamples.end())
+                            const auto it = human.perHostTransmission.copula_gaussian_samples.find(cid);
+                            if (it != human.perHostTransmission.copula_gaussian_samples.end())
                                 g = it->second;
                             else {
                                 g = human.intervention_rng.gauss(0.0, 1.0);
-                                human.perHostTransmission.copulaGaussianSamples[cid] = g;
+                                human.perHostTransmission.copula_gaussian_samples[cid] = g;
                             }
                             const double yy = coverageCorr * xx + g * sqrt(1 - coverageCorr * coverageCorr);
 
@@ -334,7 +334,7 @@ public:
             if (age >= minAge && age < maxAge) {
                 double availability = 0.0;
                 for (size_t i = 0; i < bridge::per_host_params().num_species(); ++i)
-                    availability += human.perHostTransmission.anophEntoAvailability[i];
+                    availability += human.perHostTransmission.anoph_ento_availability[i];
                 if (availability >= bridge::per_host_params().ento_availability_percentile(minAvailability) &&
                     availability <= bridge::per_host_params().ento_availability_percentile(maxAvailability)) {
                     if (subPop == ComponentId::wholePop() || (human.isInSubPop(subPop) != complement)) {
@@ -374,7 +374,7 @@ public:
     virtual void deploy(vector<Host::Human>& population, Transmission::TransmissionModel& transmission) {
         Transmission::VectorModel* vectorModel = dynamic_cast<Transmission::VectorModel*>(&transmission);
         if (vectorModel)
-            vectorModel->deployVectorPopInterv(inst);
+            vectorModel->deploy_vector_pop_interv(inst);
     }
     virtual void print_details(std::ostream& out) const { out << "Vector"; }
 
@@ -390,7 +390,7 @@ public:
         Transmission::VectorModel* vectorModel = dynamic_cast<Transmission::VectorModel*>(&transmission);
         if (vectorModel) {
             double number = population.size() * ratio;
-            vectorModel->deployVectorTrap(inst, number, lifespan);
+            vectorModel->deploy_vector_trap(inst, number, lifespan);
         }
     }
     virtual void print_details(std::ostream& out) const {
@@ -412,60 +412,60 @@ public:
         : TimedDeployment(date), instance(instance), intervName(intervName) {
         Transmission::VectorModel* vectorModel = dynamic_cast<Transmission::VectorModel*>(&transmission);
         if (vectorModel) {
-            util::SpeciesIndexChecker checker(intervName, vectorModel->speciesIndex);
+            util::SpeciesIndexChecker checker(intervName, vectorModel->species_index);
             for (const scnXml::NonHumanHostsSpeciesIntervention& anoph : list) {
                 const string& mosqName = anoph.getMosquito();
                 size_t i = checker.getIndex(mosqName);
 
                 Transmission::Anopheles::AnophelesModel* anophModel = vectorModel->species[i].get();
 
-                if (anophModel->reduceNhhAvailability[intervName].size() <= instance)
-                    anophModel->reduceNhhAvailability[intervName].resize(instance + 1);
-                if (anophModel->reduceP_B_I[intervName].size() <= instance)
-                    anophModel->reduceP_B_I[intervName].resize(instance + 1);
-                if (anophModel->reduceP_C_I[intervName].size() <= instance)
-                    anophModel->reduceP_C_I[intervName].resize(instance + 1);
-                if (anophModel->reduceP_D_I[intervName].size() <= instance)
-                    anophModel->reduceP_D_I[intervName].resize(instance + 1);
-                if (anophModel->reduceFecundity[intervName].size() <= instance)
-                    anophModel->reduceFecundity[intervName].resize(instance + 1);
+                if (anophModel->reduce_nhh_availability[intervName].size() <= instance)
+                    anophModel->reduce_nhh_availability[intervName].resize(instance + 1);
+                if (anophModel->reduce_p_b_i[intervName].size() <= instance)
+                    anophModel->reduce_p_b_i[intervName].resize(instance + 1);
+                if (anophModel->reduce_p_c_i[intervName].size() <= instance)
+                    anophModel->reduce_p_c_i[intervName].resize(instance + 1);
+                if (anophModel->reduce_p_d_i[intervName].size() <= instance)
+                    anophModel->reduce_p_d_i[intervName].resize(instance + 1);
+                if (anophModel->reduce_fecundity[intervName].size() <= instance)
+                    anophModel->reduce_fecundity[intervName].resize(instance + 1);
 
                 if (anoph.getAvailabilityReduction().present()) {
                     const scnXml::AvailabilityReduction& decayFunc = anoph.getAvailabilityReduction().get();
                     if (decayFunc.getInitial() > 1.0)
                         throw util::xml_scenario_error(
                             "availabilityReduction intervention: initial effect must be <= 1");
-                    anophModel->reduceNhhAvailability[intervName][instance].set(decayFunc.getInitial(), decay,
-                                                                                "availabilityReduction");
+                    anophModel->reduce_nhh_availability[intervName][instance].set(decayFunc.getInitial(), decay,
+                                                                                  "availabilityReduction");
                 }
                 if (anoph.getPreprandialKillingEffect().present()) {
                     const scnXml::PreprandialKillingEffect& decayFunc = anoph.getPreprandialKillingEffect().get();
                     if (decayFunc.getInitial() < 0 || decayFunc.getInitial() > 1)
                         throw util::xml_scenario_error(
                             "PreprandialKillingEffect intervention: initial effect must be between 0 and 1");
-                    anophModel->reduceP_B_I[intervName][instance].set(decayFunc.getInitial(), decay, "reduceP_B_I");
+                    anophModel->reduce_p_b_i[intervName][instance].set(decayFunc.getInitial(), decay, "reduceP_B_I");
                 }
                 if (anoph.getPostprandialKillingEffect().present()) {
                     const scnXml::PostprandialKillingEffect& decayFunc = anoph.getPostprandialKillingEffect().get();
                     if (decayFunc.getInitial() < 0 || decayFunc.getInitial() > 1)
                         throw util::xml_scenario_error(
                             "PostprandialKillingEffect intervention: initial effect must be between 0 and 1");
-                    anophModel->reduceP_C_I[intervName][instance].set(decayFunc.getInitial(), decay, "reduceP_C_I");
+                    anophModel->reduce_p_c_i[intervName][instance].set(decayFunc.getInitial(), decay, "reduceP_C_I");
                 }
                 if (anoph.getRestingKillingEffect().present()) {
                     const scnXml::RestingKillingEffect& decayFunc = anoph.getRestingKillingEffect().get();
                     if (decayFunc.getInitial() < 0 || decayFunc.getInitial() > 1)
                         throw util::xml_scenario_error(
                             "RestingKillingEffect intervention: initial effect must be be between 0 and 1");
-                    anophModel->reduceP_D_I[intervName][instance].set(decayFunc.getInitial(), decay, "reduceP_D_I");
+                    anophModel->reduce_p_d_i[intervName][instance].set(decayFunc.getInitial(), decay, "reduceP_D_I");
                 }
                 if (anoph.getFecundityReduction().present()) {
                     const scnXml::FecundityReduction& decayFunc = anoph.getFecundityReduction().get();
                     if (decayFunc.getInitial() < 0 || decayFunc.getInitial() > 1)
                         throw util::xml_scenario_error(
                             "FecundityReduction intervention: initial effect must be be between 0 and 1");
-                    anophModel->reduceFecundity[intervName][instance].set(decayFunc.getInitial(), decay,
-                                                                          "reduceFecundity");
+                    anophModel->reduce_fecundity[intervName][instance].set(decayFunc.getInitial(), decay,
+                                                                           "reduceFecundity");
                 }
             }
             checker.checkNoneMissed();
@@ -474,18 +474,18 @@ public:
     virtual void deploy(vector<Host::Human>& population, Transmission::TransmissionModel& transmission) {
         Transmission::VectorModel* vectorModel = dynamic_cast<Transmission::VectorModel*>(&transmission);
         if (vectorModel) {
-            for (size_t i = 0; i < vectorModel->speciesIndex.size(); ++i) {
+            for (size_t i = 0; i < vectorModel->species_index.size(); ++i) {
                 Transmission::Anopheles::AnophelesModel* anophModel = vectorModel->species[i].get();
 
-                if (anophModel->nhhInstances.count(intervName) == 0)
+                if (anophModel->nhh_instances.count(intervName) == 0)
                     throw util::xml_scenario_error("non human hosts type " + intervName +
                                                    " not deployed during non human hosts intervention deployment");
 
-                anophModel->reduceNhhAvailability[intervName][instance].deploy(vectorModel->m_rng, Sim::now());
-                anophModel->reduceP_B_I[intervName][instance].deploy(vectorModel->m_rng, Sim::now());
-                anophModel->reduceP_C_I[intervName][instance].deploy(vectorModel->m_rng, Sim::now());
-                anophModel->reduceP_D_I[intervName][instance].deploy(vectorModel->m_rng, Sim::now());
-                anophModel->reduceFecundity[intervName][instance].deploy(vectorModel->m_rng, Sim::now());
+                anophModel->reduce_nhh_availability[intervName][instance].deploy(vectorModel->rng, Sim::now());
+                anophModel->reduce_p_b_i[intervName][instance].deploy(vectorModel->rng, Sim::now());
+                anophModel->reduce_p_c_i[intervName][instance].deploy(vectorModel->rng, Sim::now());
+                anophModel->reduce_p_d_i[intervName][instance].deploy(vectorModel->rng, Sim::now());
+                anophModel->reduce_fecundity[intervName][instance].deploy(vectorModel->rng, Sim::now());
             }
         }
     }
@@ -506,7 +506,7 @@ public:
         : TimedDeployment(date), intervName(intervName), lifespan(lifespan) {
         Transmission::VectorModel* vectorModel = dynamic_cast<Transmission::VectorModel*>(&transmission);
         if (vectorModel) {
-            util::SpeciesIndexChecker checker(intervName, vectorModel->speciesIndex);
+            util::SpeciesIndexChecker checker(intervName, vectorModel->species_index);
             for (const scnXml::NonHumanHostsVectorSpecies& anoph : list) {
                 const string& mosqName = anoph.getMosquito();
                 checker.getIndex(mosqName);
@@ -527,31 +527,31 @@ public:
         Transmission::VectorModel* vectorModel = dynamic_cast<Transmission::VectorModel*>(&transmission);
         if (vectorModel) {
             double popSize = population.size();
-            if (vectorModel->interventionMode != Transmission::SimulationMode::dynamicEIR) {
+            if (vectorModel->intervention_mode != Transmission::SimulationMode::DynamicEir) {
                 throw util::xml_scenario_error(vec_mode_err);
             }
-            for (size_t i = 0; i < vectorModel->speciesIndex.size(); ++i) {
+            for (size_t i = 0; i < vectorModel->species_index.size(); ++i) {
                 Transmission::Anopheles::AnophelesModel* anophModel = vectorModel->species[i].get();
 
-                if (anophModel->nhhInstances.count(intervName) != 0)
+                if (anophModel->nhh_instances.count(intervName) != 0)
                     throw util::xml_scenario_error("non human hosts type " + intervName +
                                                    " already deployed during non human hosts deployment");
 
                 const NhhParamsInterv& p = nhhParams[anophModel->mosq.name];
-                const double adultAvail = bridge::per_host_params().get(i).entoAvailability->mean();
-                const double avail_i = bridge::per_host_params().get(i).entoAvailabilityFactor * popSize * adultAvail *
-                                       p.mosqRelativeAvailabilityHuman;
+                const double adultAvail = bridge::per_host_params().get(i).ento_availability->mean();
+                const double avail_i = bridge::per_host_params().get(i).ento_availability_factor * popSize *
+                                       adultAvail * p.mosqRelativeAvailabilityHuman;
                 Transmission::Anopheles::Nhh nhh;
 
                 nhh.avail_i = avail_i;
-                nhh.P_B_I = p.mosqProbBiting;
-                nhh.P_C_I = p.mosqProbFindingRestSite;
-                nhh.P_D_I = p.mosqProbResting;
+                nhh.p_b_i = p.mosqProbBiting;
+                nhh.p_c_i = p.mosqProbFindingRestSite;
+                nhh.p_d_i = p.mosqProbResting;
                 nhh.rel_fecundity = p.hostFecundityFactor;
                 nhh.expiry = Sim::now() + lifespan;
 
                 // add the nhh to the active nhh instances
-                anophModel->nhhInstances[intervName] = nhh;
+                anophModel->nhh_instances[intervName] = nhh;
             }
         }
     }
@@ -623,7 +623,7 @@ public:
         } else if (deployAge == age) {
             double availability = 0.0;
             for (size_t i = 0; i < bridge::per_host_params().num_species(); ++i)
-                availability += human.perHostTransmission.anophEntoAvailabilityRaw[i];
+                availability += human.perHostTransmission.anoph_ento_availability_raw[i];
 
             if (availability >= bridge::per_host_params().ento_availability_percentile(minAvailability) &&
                 availability <= bridge::per_host_params().ento_availability_percentile(maxAvailability)) {

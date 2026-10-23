@@ -244,7 +244,7 @@ void update(Human& human, Transmission::TransmissionModel& transmission, const N
 
     // age1 used only in PerHost::relativeAvailabilityAge(); difference to age0 should be minor
     vector<double> EIR_per_genotype_i, EIR_per_genotype_l;
-    transmission.getEIR(human, age0, age1, EIR_per_genotype_i, EIR_per_genotype_l);
+    transmission.get_eir(human, age0, age1, EIR_per_genotype_i, EIR_per_genotype_l);
 
     double EIR_i = util::vectors::sum(EIR_per_genotype_i);
     double EIR_l = util::vectors::sum(EIR_per_genotype_l);

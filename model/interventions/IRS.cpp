@@ -67,7 +67,7 @@ IRSComponent::IRSComponent(ComponentId id, const scnXml::IRSDescription& elt,
 }
 
 void IRSComponent::deploy(Host::Human& human, mon::Deploy::Method method, VaccineLimits) const {
-    human.perHostTransmission.deployComponent(human.intervention_rng, *this);
+    human.perHostTransmission.deploy_component(human.intervention_rng, *this);
     mon::recordDeploy(mon::measure("nMassIRS"), mon::measure("nCtsIRS"), human, method);
 }
 
@@ -75,10 +75,10 @@ Component::Type IRSComponent::componentType() const { return Component::IRS; }
 
 void IRSComponent::print_details(std::ostream& out) const { out << id().id << "\tIRS"; }
 
-unique_ptr<PerHostInterventionData> IRSComponent::makeHumanPart(LocalRng& rng) const {
+unique_ptr<PerHostInterventionData> IRSComponent::make_human_part(LocalRng& rng) const {
     return unique_ptr<PerHostInterventionData>(new HumanIRS(rng, *this));
 }
-unique_ptr<PerHostInterventionData> IRSComponent::makeHumanPart(istream& stream, ComponentId id) const {
+unique_ptr<PerHostInterventionData> IRSComponent::make_human_part(istream& stream, ComponentId id) const {
     return unique_ptr<PerHostInterventionData>(new HumanIRS(stream, id));
 }
 
@@ -228,7 +228,7 @@ HumanIRS::HumanIRS(LocalRng& rng, const IRSComponent& params)
 }
 
 void HumanIRS::redeploy(LocalRng& rng, const OM::Transmission::HumanVectorInterventionComponent& params) {
-    deployTime = Sim::now_or_ts1();
+    deploy_time = Sim::now_or_ts1();
     const IRSComponent* irsParams = dynamic_cast<const IRSComponent*>(&params);
     assert(irsParams != 0); // code error if this fails
     initialInsecticide = irsParams->sampleInitialInsecticide(rng);
@@ -236,42 +236,42 @@ void HumanIRS::redeploy(LocalRng& rng, const OM::Transmission::HumanVectorInterv
 
 void HumanIRS::update(Host::Human& human) {}
 
-double HumanIRS::relativeAttractiveness(size_t speciesIndex) const {
-    const IRSComponent& params = *IRSComponent::componentsByIndex[m_id.id];
+double HumanIRS::relative_attractiveness(size_t speciesIndex) const {
+    const IRSComponent& params = *IRSComponent::componentsByIndex[component_id.id];
     const IRSComponent::IRSAnopheles& anoph = params.species[speciesIndex];
     double effect = anoph.relativeAttractiveness(getInsecticideContent(params));
     return anoph.byProtection(effect);
 }
 
-double HumanIRS::preprandialSurvivalFactor(size_t speciesIndex) const {
-    const IRSComponent& params = *IRSComponent::componentsByIndex[m_id.id];
+double HumanIRS::preprandial_survival_factor(size_t speciesIndex) const {
+    const IRSComponent& params = *IRSComponent::componentsByIndex[component_id.id];
     const IRSComponent::IRSAnopheles& anoph = params.species[speciesIndex];
     double effect = anoph.preprandialSurvivalFactor(getInsecticideContent(params));
     return anoph.byProtection(effect);
 }
 
-double HumanIRS::postprandialSurvivalFactor(size_t speciesIndex) const {
-    const IRSComponent& params = *IRSComponent::componentsByIndex[m_id.id];
+double HumanIRS::postprandial_survival_factor(size_t speciesIndex) const {
+    const IRSComponent& params = *IRSComponent::componentsByIndex[component_id.id];
     const IRSComponent::IRSAnopheles& anoph = params.species[speciesIndex];
     double effect = anoph.postprandialSurvivalFactor(getInsecticideContent(params));
     return anoph.byProtection(effect);
 }
-double HumanIRS::relFecundity(size_t speciesIndex) const {
-    const IRSComponent& params = *IRSComponent::componentsByIndex[m_id.id];
+double HumanIRS::rel_fecundity(size_t speciesIndex) const {
+    const IRSComponent& params = *IRSComponent::componentsByIndex[component_id.id];
     const IRSComponent::IRSAnopheles& anoph = params.species[speciesIndex];
     double effect = anoph.fecundityEffect(getInsecticideContent(params));
     return anoph.byProtection(effect);
 }
 
 void HumanIRS::checkpoint(ostream& stream) {
-    deployTime & stream;
+    deploy_time & stream;
     initialInsecticide & stream;
-    IRSComponent::componentsByIndex[m_id.id]->insecticideDecay->checkpointSample(insecticideDecayHet, stream);
+    IRSComponent::componentsByIndex[component_id.id]->insecticideDecay->checkpointSample(insecticideDecayHet, stream);
 }
 HumanIRS::HumanIRS(istream& stream, ComponentId id) : PerHostInterventionData(id) {
-    deployTime & stream;
+    deploy_time & stream;
     initialInsecticide & stream;
-    IRSComponent::componentsByIndex[m_id.id]->insecticideDecay->checkpointSample(insecticideDecayHet, stream);
+    IRSComponent::componentsByIndex[component_id.id]->insecticideDecay->checkpointSample(insecticideDecayHet, stream);
 }
 
 }

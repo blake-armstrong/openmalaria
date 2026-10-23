@@ -63,7 +63,7 @@ GVIComponent::GVIComponent(ComponentId id, const scnXml::GVIDescription& elt,
 }
 
 void GVIComponent::deploy(Host::Human& human, mon::Deploy::Method method, VaccineLimits) const {
-    human.perHostTransmission.deployComponent(human.intervention_rng, *this);
+    human.perHostTransmission.deploy_component(human.intervention_rng, *this);
     mon::recordDeploy(mon::measure("nMassGVI"), mon::measure("nCtsGVI"), human, method);
 }
 
@@ -71,10 +71,10 @@ Component::Type GVIComponent::componentType() const { return Component::GVI; }
 
 void GVIComponent::print_details(std::ostream& out) const { out << id().id << "\tGVI"; }
 
-unique_ptr<PerHostInterventionData> GVIComponent::makeHumanPart(LocalRng& rng) const {
+unique_ptr<PerHostInterventionData> GVIComponent::make_human_part(LocalRng& rng) const {
     return unique_ptr<PerHostInterventionData>(new HumanGVI(rng, *this));
 }
-unique_ptr<PerHostInterventionData> GVIComponent::makeHumanPart(istream& stream, ComponentId id) const {
+unique_ptr<PerHostInterventionData> GVIComponent::make_human_part(istream& stream, ComponentId id) const {
     return unique_ptr<PerHostInterventionData>(new HumanGVI(stream, id));
 }
 
@@ -105,45 +105,45 @@ HumanGVI::HumanGVI(LocalRng& rng, const GVIComponent& params) : PerHostIntervent
 }
 
 void HumanGVI::redeploy(LocalRng& rng, const Transmission::HumanVectorInterventionComponent&) {
-    deployTime = Sim::now_or_ts1();
+    deploy_time = Sim::now_or_ts1();
 }
 
 void HumanGVI::update(Host::Human& human) {}
 
-double HumanGVI::relativeAttractiveness(size_t speciesIndex) const {
-    const GVIComponent& params = *GVIComponent::componentsByIndex[m_id.id];
+double HumanGVI::relative_attractiveness(size_t speciesIndex) const {
+    const GVIComponent& params = *GVIComponent::componentsByIndex[component_id.id];
     const GVIComponent::GVIAnopheles& anoph = params.species[speciesIndex];
     double effect = (1.0 - anoph.deterrency * getEffectSurvival(params));
     return anoph.byProtection(effect);
 }
 
-double HumanGVI::preprandialSurvivalFactor(size_t speciesIndex) const {
-    const GVIComponent& params = *GVIComponent::componentsByIndex[m_id.id];
+double HumanGVI::preprandial_survival_factor(size_t speciesIndex) const {
+    const GVIComponent& params = *GVIComponent::componentsByIndex[component_id.id];
     const GVIComponent::GVIAnopheles& anoph = params.species[speciesIndex];
     double effect = (1.0 - anoph.preprandialKilling * getEffectSurvival(params));
     return anoph.byProtection(effect);
 }
 
-double HumanGVI::postprandialSurvivalFactor(size_t speciesIndex) const {
-    const GVIComponent& params = *GVIComponent::componentsByIndex[m_id.id];
+double HumanGVI::postprandial_survival_factor(size_t speciesIndex) const {
+    const GVIComponent& params = *GVIComponent::componentsByIndex[component_id.id];
     const GVIComponent::GVIAnopheles& anoph = params.species[speciesIndex];
     double effect = (1.0 - anoph.postprandialKilling * getEffectSurvival(params));
     return anoph.byProtection(effect);
 }
-double HumanGVI::relFecundity(size_t speciesIndex) const {
-    const GVIComponent& params = *GVIComponent::componentsByIndex[m_id.id];
+double HumanGVI::rel_fecundity(size_t speciesIndex) const {
+    const GVIComponent& params = *GVIComponent::componentsByIndex[component_id.id];
     const GVIComponent::GVIAnopheles& anoph = params.species[speciesIndex];
     double effect = (1.0 - anoph.fecundityReduction * getEffectSurvival(params));
     return anoph.byProtection(effect);
 }
 
 void HumanGVI::checkpoint(ostream& stream) {
-    deployTime & stream;
-    GVIComponent::componentsByIndex[m_id.id]->decay->checkpointSample(decayHet, stream);
+    deploy_time & stream;
+    GVIComponent::componentsByIndex[component_id.id]->decay->checkpointSample(decayHet, stream);
 }
 HumanGVI::HumanGVI(istream& stream, ComponentId id) : PerHostInterventionData(id) {
-    deployTime & stream;
-    GVIComponent::componentsByIndex[m_id.id]->decay->checkpointSample(decayHet, stream);
+    deploy_time & stream;
+    GVIComponent::componentsByIndex[component_id.id]->decay->checkpointSample(decayHet, stream);
 }
 
 }

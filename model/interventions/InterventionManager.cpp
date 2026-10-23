@@ -95,7 +95,7 @@ void InterventionManager::init(const scnXml::Interventions& intervElt, const Pop
     {
         Transmission::VectorModel* vectorModel = dynamic_cast<Transmission::VectorModel*>(&transmission);
         if (vectorModel != nullptr)
-            species_index_map = vectorModel->getSpeciesIndexMap();
+            species_index_map = vectorModel->get_species_index_map();
     }
 
     if (intervElt.getHuman().present()) {
@@ -316,7 +316,7 @@ void InterventionManager::init(const scnXml::Interventions& intervElt, const Pop
             for (auto it = seq.begin(), end = seq.end(); it != end; ++it) {
                 const scnXml::VectorIntervention& elt = *it;
                 if (elt.getTimed().present()) {
-                    vectorModel->initVectorInterv(elt.getDescription().getAnopheles(), instance, elt.getName());
+                    vectorModel->init_vector_interv(elt.getDescription().getAnopheles(), instance, elt.getName());
 
                     const scnXml::TimedBaseList::DeploySequence& seq = elt.getTimed().get().getDeploy();
                     for (auto it = seq.begin(); it != seq.end(); ++it) {
@@ -381,7 +381,7 @@ void InterventionManager::init(const scnXml::Interventions& intervElt, const Pop
         if (vectorModel) {
             size_t instance = 0;
             for (const scnXml::VectorTrap& trap : intervElt.getVectorTrap().get().getIntervention()) {
-                vectorModel->initVectorTrap(trap.getDescription(), instance, trap.getName());
+                vectorModel->init_vector_trap(trap.getDescription(), instance, trap.getName());
                 if (trap.getTimed().present()) {
                     for (const scnXml::Deploy1& deploy : trap.getTimed().get().getDeploy()) {
                         SimTime date = UnitParse::readDate(deploy.getTime(), UnitParse::STEPS);

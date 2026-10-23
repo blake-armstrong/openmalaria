@@ -39,10 +39,10 @@ PerHostAnophParams::PerHostAnophParams(const scnXml::Mosq& mosq) {
             "LOGNORMAL_MASS_ACTION, COMORB_TRANS_HET are not compatible with ento-availability heterogeneity "
             "distributions other than \"const\"");
 
-    entoAvailability = util::createSampler(1.0, mosq.getAvailability());
-    probMosqBiting.setParams(mosq.getMosqProbBiting());
-    probMosqFindRestSite.setParams(mosq.getMosqProbFindRestSite());
-    probMosqSurvivalResting.setParams(mosq.getMosqProbResting());
+    ento_availability = util::createSampler(1.0, mosq.getAvailability());
+    prob_mosq_biting.setParams(mosq.getMosqProbBiting());
+    prob_mosq_find_rest_site.setParams(mosq.getMosqProbFindRestSite());
+    prob_mosq_survival_resting.setParams(mosq.getMosqProbResting());
 }
 
 PerHostParams::PerHostParams(const scnXml::AgeGroupValues& availability_to_mosquitoes) {
@@ -50,8 +50,8 @@ PerHostParams::PerHostParams(const scnXml::AgeGroupValues& availability_to_mosqu
 }
 
 void PerHostParams::calc_availability_percentiles() {
-    int nSamples = 100000;
-    vector<double> samples(nSamples, 0.0);
+    int n_samples = 100000;
+    vector<double> samples(n_samples, 0.0);
 
     // Using a different seed to make sure old results will not change
     // Does it really matter?
@@ -61,10 +61,10 @@ void PerHostParams::calc_availability_percentiles() {
     util::LocalRng rng(seed);
 
     // Sample
-    for (int i = 0; i < nSamples; i++) {
+    for (int i = 0; i < n_samples; i++) {
         double avail = 0.0;
         for (size_t s = 0; s < num_species(); ++s)
-            avail += get(s).entoAvailabilityFactor * get(s).entoAvailability->sample(rng);
+            avail += get(s).ento_availability_factor * get(s).ento_availability->sample(rng);
         samples[i] = avail;
     }
 
@@ -75,7 +75,7 @@ void PerHostParams::calc_availability_percentiles() {
 
     // Calc percetiles threshold values
     for (int i = 0; i < 100; i++)
-        ento_availability_percentiles[i] = samples[int(i * nSamples / 100)];
+        ento_availability_percentiles[i] = samples[int(i * n_samples / 100)];
     ento_availability_percentiles[0] = 0.0;
 }
 
@@ -91,37 +91,38 @@ double PerHostParams::ento_availability_percentile(int p) const {
 
 // -----  PerHost non-static -----
 
-PerHost::PerHost() : outsideTransmission(false), relativeAvailabilityHet(numeric_limits<double>::signaling_NaN()) {}
+PerHost::PerHost() : outside_transmission(false), relative_availability_het(numeric_limits<double>::signaling_NaN()) {}
 
-void PerHost::initialise(const PerHostParams& per_host_params, LocalRng& rng, double availabilityFactor) {
+void PerHost::initialise(const PerHostParams& per_host_params, LocalRng& rng, double availability_factor) {
     params = &per_host_params;
-    relativeAvailabilityHet = availabilityFactor;
-    anophEntoAvailabilityRaw.resize(params->num_species());
-    anophEntoAvailability.resize(params->num_species());
-    anophProbMosqBiting.resize(params->num_species());
-    anophProbMosqResting.resize(params->num_species());
+    relative_availability_het = availability_factor;
+    anoph_ento_availability_raw.resize(params->num_species());
+    anoph_ento_availability.resize(params->num_species());
+    anoph_prob_mosq_biting.resize(params->num_species());
+    anoph_prob_mosq_resting.resize(params->num_species());
 
     for (size_t i = 0; i < params->num_species(); ++i) {
         const PerHostAnophParams& base = params->get(i);
-        anophEntoAvailabilityRaw[i] = base.entoAvailability->sample(rng);
-        anophEntoAvailability[i] = base.entoAvailabilityFactor * anophEntoAvailabilityRaw[i] * availabilityFactor;
-        anophProbMosqBiting[i] = base.probMosqBiting.sample(rng);
-        auto pRest1 = base.probMosqFindRestSite.sample(rng);
-        auto pRest2 = base.probMosqSurvivalResting.sample(rng);
-        anophProbMosqResting[i] = pRest1 * pRest2;
+        anoph_ento_availability_raw[i] = base.ento_availability->sample(rng);
+        anoph_ento_availability[i] =
+            base.ento_availability_factor * anoph_ento_availability_raw[i] * availability_factor;
+        anoph_prob_mosq_biting[i] = base.prob_mosq_biting.sample(rng);
+        auto p_rest1 = base.prob_mosq_find_rest_site.sample(rng);
+        auto p_rest2 = base.prob_mosq_survival_resting.sample(rng);
+        anoph_prob_mosq_resting[i] = p_rest1 * p_rest2;
     }
 }
 
 void PerHost::update(Host::Human& human) {
-    for (auto iter = activeComponents.begin(); iter != activeComponents.end(); ++iter) {
+    for (auto iter = active_components.begin(); iter != active_components.end(); ++iter) {
         (*iter)->update(human);
     }
 }
 
-void PerHost::deployComponent(LocalRng& rng, const HumanVectorInterventionComponent& params) {
+void PerHost::deploy_component(LocalRng& rng, const HumanVectorInterventionComponent& params) {
     // This adds per-host per-intervention details to the host's data set.
     // This data is never removed since it can contain per-host heterogeneity samples.
-    for (auto iter = activeComponents.begin(); iter != activeComponents.end(); ++iter) {
+    for (auto iter = active_components.begin(); iter != active_components.end(); ++iter) {
         if ((*iter)->id() == params.id()) {
             // already have a deployment for that description; just update it
             (*iter)->redeploy(rng, params);
@@ -129,7 +130,7 @@ void PerHost::deployComponent(LocalRng& rng, const HumanVectorInterventionCompon
         }
     }
     // no deployment for that description: must make a new one
-    activeComponents.push_back(params.makeHumanPart(rng));
+    active_components.push_back(params.make_human_part(rng));
 }
 
 // Note: in the case an intervention is not present, we can use the approximation
@@ -137,39 +138,39 @@ void PerHost::deployComponent(LocalRng& rng, const HumanVectorInterventionCompon
 // (easily large enough for conceivable Weibull params that the value is 0.0 when
 // rounded to a double. Performance-wise it's perhaps slightly slower than using
 // an if() when interventions aren't present.
-double PerHost::entoAvailabilityHetVecItv(size_t species) const {
-    double alpha_i = anophEntoAvailability[species];
-    for (auto iter = activeComponents.begin(); iter != activeComponents.end(); ++iter) {
-        alpha_i *= (*iter)->relativeAttractiveness(species);
+double PerHost::ento_availability_het_vec_itv(size_t species) const {
+    double alpha_i = anoph_ento_availability[species];
+    for (auto iter = active_components.begin(); iter != active_components.end(); ++iter) {
+        alpha_i *= (*iter)->relative_attractiveness(species);
     }
     return alpha_i;
 }
-double PerHost::probMosqBiting(size_t species) const {
-    double P_B_i = anophProbMosqBiting[species];
-    for (auto iter = activeComponents.begin(); iter != activeComponents.end(); ++iter) {
-        P_B_i *= (*iter)->preprandialSurvivalFactor(species);
+double PerHost::prob_mosq_biting(size_t species) const {
+    double p_b_i = anoph_prob_mosq_biting[species];
+    for (auto iter = active_components.begin(); iter != active_components.end(); ++iter) {
+        p_b_i *= (*iter)->preprandial_survival_factor(species);
     }
-    return P_B_i;
+    return p_b_i;
 }
-double PerHost::probMosqResting(size_t species) const {
-    double pRest = anophProbMosqResting[species];
-    for (auto iter = activeComponents.begin(); iter != activeComponents.end(); ++iter) {
-        pRest *= (*iter)->postprandialSurvivalFactor(species);
+double PerHost::prob_mosq_resting(size_t species) const {
+    double p_rest = anoph_prob_mosq_resting[species];
+    for (auto iter = active_components.begin(); iter != active_components.end(); ++iter) {
+        p_rest *= (*iter)->postprandial_survival_factor(species);
     }
-    return pRest;
-}
-
-double PerHost::relMosqFecundity(size_t species) const {
-    double relFecundity = 1.0;
-    for (auto iter = activeComponents.begin(); iter != activeComponents.end(); ++iter) {
-        relFecundity *= (*iter)->relFecundity(species);
-    }
-    return relFecundity;
+    return p_rest;
 }
 
-bool PerHost::hasActiveInterv(interventions::Component::Type type) const {
-    for (auto iter = activeComponents.begin(); iter != activeComponents.end(); ++iter) {
-        if ((*iter)->isDeployed()) {
+double PerHost::rel_mosq_fecundity(size_t species) const {
+    double rel_fecundity = 1.0;
+    for (auto iter = active_components.begin(); iter != active_components.end(); ++iter) {
+        rel_fecundity *= (*iter)->rel_fecundity(species);
+    }
+    return rel_fecundity;
+}
+
+bool PerHost::has_active_interv(interventions::Component::Type type) const {
+    for (auto iter = active_components.begin(); iter != active_components.end(); ++iter) {
+        if ((*iter)->is_deployed()) {
             if (interventions::InterventionManager::getComponent((*iter)->id()).componentType() == type)
                 return true;
         }
@@ -178,8 +179,8 @@ bool PerHost::hasActiveInterv(interventions::Component::Type type) const {
 }
 
 void PerHost::checkpointIntervs(ostream& stream) {
-    activeComponents.size() & stream;
-    for (auto iter = activeComponents.begin(); iter != activeComponents.end(); ++iter) {
+    active_components.size() & stream;
+    for (auto iter = active_components.begin(); iter != active_components.end(); ++iter) {
         *iter& stream;
     }
 }
@@ -187,7 +188,7 @@ void PerHost::checkpointIntervs(istream& stream) {
     size_t l;
     l & stream;
     validateListSize(l);
-    activeComponents.clear();
+    active_components.clear();
     for (size_t i = 0; i < l; ++i) {
         interventions::ComponentId id(stream);
         try {
@@ -197,7 +198,7 @@ void PerHost::checkpointIntervs(istream& stream) {
                 dynamic_cast<const HumanVectorInterventionComponent*>(&gen_params);
             if (params == 0)
                 throw util::base_exception(""); // see catch block below
-            activeComponents.push_back(params->makeHumanPart(stream, id));
+            active_components.push_back(params->make_human_part(stream, id));
         } catch (util::base_exception& e) {
             // two causes, both boil down to index being wrong
             throw util::checkpoint_error("bad value in checkpoint file");

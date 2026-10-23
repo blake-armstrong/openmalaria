@@ -20,8 +20,8 @@
  * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301, USA.
  */
 
-#ifndef Hmod_VectorModel
-#define Hmod_VectorModel
+#ifndef HMOD_VECTOR_MODEL
+#define HMOD_VECTOR_MODEL
 
 #include "Global.h"
 #include "Transmission/TransmissionModel.h"
@@ -44,12 +44,12 @@ namespace Transmission {
 class VectorModel : public TransmissionModel {
 public:
     /// Get the map of species names to indicies.
-    const map<string, size_t>& getSpeciesIndexMap() { return speciesIndex; }
+    const map<string, size_t>& get_species_index_map() { return species_index; }
 
-    VectorModel(vector<double> initEIR, int interventionMode,
-                vector<std::unique_ptr<Anopheles::AnophelesModel>> speciesList,
-                vector<std::unique_ptr<Anopheles::EmergenceRateEstimator>> emergenceRateEstimatorsList,
-                map<string, size_t> speciesIndexList, int populationSize, util::MasterRng& transmission_rng,
+    VectorModel(vector<double> init_eir, int intervention_mode,
+                vector<std::unique_ptr<Anopheles::AnophelesModel>> species_list,
+                vector<std::unique_ptr<Anopheles::EmergenceRateEstimator>> emergence_rate_estimators_list,
+                map<string, size_t> species_index_list, int population_size, util::MasterRng& transmission_rng,
                 size_t n_genotypes, SimTime adult_age);
 
     ~VectorModel() override;
@@ -58,28 +58,28 @@ public:
      * information from the human population structure. */
     void init2(const vector<Host::Human>& population) override;
 
-    virtual void initVectorInterv(const scnXml::Description::AnophelesSequence& list, size_t instance,
-                                  const string& name);
-    virtual void initVectorTrap(const scnXml::VectorTrap::DescriptionSequence list, size_t instance,
-                                const scnXml::VectorTrap::NameOptional name);
+    virtual void init_vector_interv(const scnXml::Description::AnophelesSequence& list, size_t instance,
+                                    const string& name);
+    virtual void init_vector_trap(const scnXml::VectorTrap::DescriptionSequence list, size_t instance,
+                                  const scnXml::VectorTrap::NameOptional name);
 
-    void scaleEIR(double factor) override;
+    void scale_eir(double factor) override;
 
-    SimTime initIterate() override;
+    SimTime init_iterate() override;
 
-    void vectorUpdate(const vector<Host::Human>& population) override;
+    void vector_update(const vector<Host::Human>& population) override;
 
-    double updateKappa(const vector<Host::Human>& population) override;
+    double update_kappa(const vector<Host::Human>& population) override;
 
-    void calculateEIR(Host::Human& human, double age_years, vector<double>& eir_i,
-                      vector<double>& eir_l) const override;
+    void calculate_eir(Host::Human& human, double age_years, vector<double>& eir_i,
+                       vector<double>& eir_l) const override;
 
-    virtual void deployVectorPopInterv(size_t instance);
-    virtual void deployVectorTrap(size_t instance, double popSize, SimTime lifespan);
+    virtual void deploy_vector_pop_interv(size_t instance);
+    virtual void deploy_vector_trap(size_t instance, double pop_size, SimTime lifespan);
 
-    void changeEIRIntervention(const scnXml::NonVector& non_vector_data) override;
+    void change_eir_intervention(const scnXml::NonVector& non_vector_data) override;
 
-    void uninfectVectors() override;
+    void uninfect_vectors() override;
 
     void summarize() override;
 
@@ -88,38 +88,38 @@ protected:
     void checkpoint(ostream& stream) override;
 
 private:
-    void ctsCbN_v0(ostream& stream);
-    void ctsCbP_A(ostream& stream);
-    void ctsCbP_Amu(ostream& stream);
-    void ctsCbP_A1(ostream& stream);
-    void ctsCbP_Ah(ostream& stream);
-    void ctsCbP_df(ostream& stream);
-    void ctsCbP_dif(ostream& stream);
-    void ctsCbN_v(ostream& stream);
-    void ctsCbO_v(ostream& stream);
-    void ctsCbS_v(ostream& stream);
-    void ctsCbAlpha(const vector<Host::Human>& population, ostream& stream);
-    void ctsCbP_B(const vector<Host::Human>& population, ostream& stream);
-    void ctsCbP_CD(const vector<Host::Human>& population, ostream& stream);
-    void ctsNetInsecticideContent(const vector<Host::Human>& population, ostream& stream);
-    void ctsIRSInsecticideContent(const vector<Host::Human>& population, ostream& stream);
-    void ctsIRSEffects(const vector<Host::Human>& population, ostream& stream);
-    void ctsCbResAvailability(ostream& stream);
-    void ctsCbResRequirements(ostream& stream);
+    void cts_cb_n_v0(ostream& stream);
+    void cts_cb_p_a(ostream& stream);
+    void cts_cb_p_amu(ostream& stream);
+    void cts_cb_p_a1(ostream& stream);
+    void cts_cb_p_ah(ostream& stream);
+    void cts_cb_p_df(ostream& stream);
+    void cts_cb_p_dif(ostream& stream);
+    void cts_cb_n_v(ostream& stream);
+    void cts_cb_o_v(ostream& stream);
+    void cts_cb_s_v(ostream& stream);
+    void cts_cb_alpha(const vector<Host::Human>& population, ostream& stream);
+    void cts_cb_p_b(const vector<Host::Human>& population, ostream& stream);
+    void cts_cb_p_cd(const vector<Host::Human>& population, ostream& stream);
+    void cts_net_insecticide_content(const vector<Host::Human>& population, ostream& stream);
+    void cts_irs_insecticide_content(const vector<Host::Human>& population, ostream& stream);
+    void cts_irs_effects(const vector<Host::Human>& population, ostream& stream);
+    void cts_cb_res_availability(ostream& stream);
+    void cts_cb_res_requirements(ostream& stream);
 
     vector<double> mean_annual_kappa() const;
 
 public:
     /// RNG used by the transmission model
-    LocalRng m_rng;
+    LocalRng rng;
 
     /// Number of iterations performed during initialization.
     ///
     /// Special cases: 0 during initial one-human-lifespan warmup, <0 after
     /// initialisation.
-    int initIterations;
+    int init_iterations;
 
-    double meanAvail = 1.0;
+    double mean_avail = 1.0;
 
     vector<double> quinquennial_kappa;
 
@@ -128,7 +128,7 @@ public:
      * Array will be recreated by constructor, but some members of AnophelesModel
      * need to be checkpointed. */
     vector<std::unique_ptr<Anopheles::AnophelesModel>> species;
-    vector<std::unique_ptr<Anopheles::EmergenceRateEstimator>> emergenceRateEstimators;
+    vector<std::unique_ptr<Anopheles::EmergenceRateEstimator>> emergence_rate_estimators;
 
     /** A map of anopheles species/variant name to an index in species.
      *
@@ -138,7 +138,7 @@ public:
      *
      * Other data read from XML should look up the name here and use the index
      * found. Doesn't need checkpointing. */
-    map<string, size_t> speciesIndex;
+    map<string, size_t> species_index;
 
     bool opt_vaccine_genotype = false;
 
