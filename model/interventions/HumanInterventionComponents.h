@@ -95,7 +95,7 @@ HumanIntervention::HumanIntervention(const xsd::cxx::tree::sequence<scnXml::Comp
     for (const auto& it : condition_list) {
         const double min = it.getMinValue().present() ? it.getMinValue().get() : -numeric_limits<double>::infinity();
         const double max = it.getMaxValue().present() ? it.getMaxValue().get() : numeric_limits<double>::infinity();
-        conditions.push_back(mon::setupCondition(it.getMeasure(), min, max, it.getInitialState()));
+        conditions.push_back(mon::setup_condition(it.getMeasure(), min, max, it.getInitialState()));
     }
 }
 HumanIntervention::HumanIntervention(const xsd::cxx::tree::sequence<scnXml::DTDeploy>& component_list,
@@ -120,10 +120,10 @@ HumanIntervention::HumanIntervention(const xsd::cxx::tree::sequence<scnXml::DTDe
     std::ranges::stable_sort(components, component_cmp);
 }
 
-void HumanIntervention::deploy(Human& human, mon::Deploy::Method method, VaccineLimits vacc_limits) const {
+void HumanIntervention::deploy(Human& human, mon::deploy::Method method, VaccineLimits vacc_limits) const {
     for (size_t cond : conditions) {
         // Abort deployment if any condition is false.
-        if (!mon::checkCondition(cond))
+        if (!mon::check_condition(cond))
             return;
     }
 
@@ -152,7 +152,7 @@ TriggeredDeployments::TriggeredDeployments(const scnXml::TriggeredDeployments& e
         lists.emplace_back(it, manager);
     }
 }
-void TriggeredDeployments::deploy(Human& human, mon::Deploy::Method method, VaccineLimits vacc_limits) const {
+void TriggeredDeployments::deploy(Human& human, mon::deploy::Method method, VaccineLimits vacc_limits) const {
     for (const auto& list : lists) {
         list.deploy(human, method, vacc_limits);
     }
@@ -177,7 +177,7 @@ TriggeredDeployments::SubList::SubList(const scnXml::TriggeredDeployments::Deplo
     if (coverage <= 0.0 || min_age >= max_age)
         components.clear();
 }
-void TriggeredDeployments::SubList::deploy(Host::Human& human, mon::Deploy::Method method,
+void TriggeredDeployments::SubList::deploy(Host::Human& human, mon::deploy::Method method,
                                            VaccineLimits vacc_limits) const {
     // This may be used within a time step; in that case we use human age at
     // the beginning of the step since this gives the expected result with age
@@ -199,8 +199,8 @@ public:
     ~RecruitmentOnlyComponent() override = default;
 
     /// Reports to monitoring, nothing else
-    void deploy(Host::Human& human, mon::Deploy::Method method, VaccineLimits) const override {
-        mon::recordDeploy(mon::measure("nMassRecruitOnly"), mon::measure("nCtsRecruitOnly"), human, method);
+    void deploy(Host::Human& human, mon::deploy::Method method, VaccineLimits) const override {
+        mon::record_deploy(mon::measure("nMassRecruitOnly"), mon::measure("nCtsRecruitOnly"), human, method);
     }
 
     component_types::Type component_type() const override { return component_types::RecruitOnly; }
@@ -215,8 +215,8 @@ public:
         : HumanInterventionComponent(id), diagnostic(diagnostics.get(elt.getDiagnostic())),
           positive(elt.getPositive(), manager), negative(elt.getNegative(), manager) {}
 
-    void deploy(Human& human, mon::Deploy::Method method, VaccineLimits vacc_limits) const override {
-        mon::recordDeploy(mon::measure("nMassScreenings"), mon::measure("nCtsScreenings"), human, method);
+    void deploy(Human& human, mon::deploy::Method method, VaccineLimits vacc_limits) const override {
+        mon::record_deploy(mon::measure("nMassScreenings"), mon::measure("nCtsScreenings"), human, method);
         if (human.withinHostModel->diagnostic_result(human.intervention_rng, diagnostic)) {
             positive.deploy(human, method, vacc_limits);
         } else {
@@ -258,8 +258,8 @@ public:
         }
     }
 
-    void deploy(Human& human, mon::Deploy::Method method, VaccineLimits) const override {
-        mon::recordDeploy(mon::measure("nMDAs"), mon::measure("nCtsMDA"), human, method);
+    void deploy(Human& human, mon::deploy::Method method, VaccineLimits) const override {
+        mon::record_deploy(mon::measure("nMDAs"), mon::measure("nCtsMDA"), human, method);
         human.withinHostModel->treat_simple(human, time_liver, time_blood);
     }
 
@@ -278,8 +278,8 @@ public:
         : HumanInterventionComponent(id), schedule(pk_pd.courses.find_schedule(elt.getSchedule())),
           dosage(pk_pd.courses.find_dosages(elt.getDosage())), delay_d(elt.getDelay_h() / 24.0 /* convert to days */) {}
 
-    void deploy(Human& human, mon::Deploy::Method method, VaccineLimits) const override {
-        mon::recordDeploy(mon::measure("nMDAs"), mon::measure("nCtsMDA"), human, method);
+    void deploy(Human& human, mon::deploy::Method method, VaccineLimits) const override {
+        mon::record_deploy(mon::measure("nMDAs"), mon::measure("nCtsMDA"), human, method);
         const double age = Sim::in_years(human.age(Sim::now_or_ts1()));
         human.withinHostModel->treat_pk_pd(schedule, dosage, age, delay_d);
     }
@@ -300,15 +300,15 @@ public:
                           Clinical::DecisionTreeLibrary& decision_trees)
         : HumanInterventionComponent(id), tree(decision_trees.create(elt, false)) {}
 
-    void deploy(Human& human, mon::Deploy::Method method, VaccineLimits) const override {
+    void deploy(Human& human, mon::deploy::Method method, VaccineLimits) const override {
         const Clinical::CMDTOut out =
             tree.exec(Clinical::CMHostData(human, human.intervention_rng, Sim::in_years(human.age(Sim::now_or_ts1())),
                                            human.clinicalModel->get_latest_state()));
         if (out.treated) {
-            mon::recordDeploy(mon::measure("nMDAs"), mon::measure("nCtsMDA"), human, method);
+            mon::record_deploy(mon::measure("nMDAs"), mon::measure("nCtsMDA"), human, method);
         }
         if (out.screened) {
-            mon::recordDeploy(mon::measure("nMassScreenings"), mon::measure("nCtsScreenings"), human, method);
+            mon::record_deploy(mon::measure("nMassScreenings"), mon::measure("nCtsScreenings"), human, method);
         }
     }
 
@@ -324,7 +324,7 @@ class ClearImmunityComponent : public HumanInterventionComponent {
 public:
     ClearImmunityComponent(ComponentId id) : HumanInterventionComponent(id) {}
 
-    void deploy(Human& human, mon::Deploy::Method method, VaccineLimits) const override {
+    void deploy(Human& human, mon::deploy::Method method, VaccineLimits) const override {
         human.withinHostModel->clear_immunity();
         //NOTE: not reported
     }

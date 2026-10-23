@@ -43,7 +43,7 @@ void Episode::update(const Host::Human& human, Episode::State new_state) {
         report();
 
         time = Sim::ts0();
-        survey_period = mon::eventSurveyNumber();
+        survey_period = mon::event_survey_number();
         age_group = human.monitoringAgeGroup;
         cohort_set = human.getCohortSet();
         state = new_state;
@@ -60,53 +60,53 @@ void Episode::report() {
     if (state & Episode::Malaria) {
         // Malarial fevers: report bout
         if (state & Episode::Complicated) {
-            mon::recordEvent(mon::measure("nSevere"), survey_period, age_group, cohort_set);
+            mon::record_event(mon::measure("nSevere"), survey_period, age_group, cohort_set);
             if (state & Episode::Severe) {
-                mon::recordEvent(mon::measure("nSevereWithoutComorbidities"), survey_period, age_group, cohort_set);
+                mon::record_event(mon::measure("nSevereWithoutComorbidities"), survey_period, age_group, cohort_set);
             }
         } else { // UC or UC2
-            mon::recordEvent(mon::measure("nUncomp"), survey_period, age_group, cohort_set);
+            mon::record_event(mon::measure("nUncomp"), survey_period, age_group, cohort_set);
             if (infection_type == WithinHost::InfectionOrigin::Indigenous)
-                mon::recordEvent(mon::measure("nUncomp_Indigenous"), survey_period, age_group, cohort_set);
+                mon::record_event(mon::measure("nUncomp_Indigenous"), survey_period, age_group, cohort_set);
             else if (infection_type == WithinHost::InfectionOrigin::Introduced)
-                mon::recordEvent(mon::measure("nUncomp_Introduced"), survey_period, age_group, cohort_set);
+                mon::record_event(mon::measure("nUncomp_Introduced"), survey_period, age_group, cohort_set);
             else
-                mon::recordEvent(mon::measure("nUncomp_Imported"), survey_period, age_group, cohort_set);
+                mon::record_event(mon::measure("nUncomp_Imported"), survey_period, age_group, cohort_set);
         }
 
         // Report outcomes of malarial fevers
         if (state & Episode::EventInHospital) {
             if (state & Episode::DirectDeath) {
-                mon::recordEvent(mon::measure("nDirDeaths"), survey_period, age_group, cohort_set);
-                mon::recordEvent(mon::measure("nHospitalDeaths"), survey_period, age_group, cohort_set);
+                mon::record_event(mon::measure("nDirDeaths"), survey_period, age_group, cohort_set);
+                mon::record_event(mon::measure("nHospitalDeaths"), survey_period, age_group, cohort_set);
                 if (state & Episode::EventFirstDay) {
-                    mon::recordEvent(mon::measure("Clinical_FirstDayDeaths"), survey_period, age_group, cohort_set);
-                    mon::recordEvent(mon::measure("Clinical_HospitalFirstDayDeaths"), survey_period, age_group,
-                                     cohort_set);
+                    mon::record_event(mon::measure("Clinical_FirstDayDeaths"), survey_period, age_group, cohort_set);
+                    mon::record_event(mon::measure("Clinical_HospitalFirstDayDeaths"), survey_period, age_group,
+                                      cohort_set);
                 }
             } else if (state & Episode::Sequelae) {
-                mon::recordEvent(mon::measure("nSeq"), survey_period, age_group, cohort_set);
-                mon::recordEvent(mon::measure("nHospitalSeqs"), survey_period, age_group, cohort_set);
+                mon::record_event(mon::measure("nSeq"), survey_period, age_group, cohort_set);
+                mon::record_event(mon::measure("nHospitalSeqs"), survey_period, age_group, cohort_set);
             } else if (state & Episode::Recovery) {
-                mon::recordEvent(mon::measure("nHospitalRecovs"), survey_period, age_group, cohort_set);
+                mon::record_event(mon::measure("nHospitalRecovs"), survey_period, age_group, cohort_set);
             }
         } else {
             if (state & Episode::DirectDeath) {
-                mon::recordEvent(mon::measure("nDirDeaths"), survey_period, age_group, cohort_set);
+                mon::record_event(mon::measure("nDirDeaths"), survey_period, age_group, cohort_set);
                 if (state & Episode::EventFirstDay) {
-                    mon::recordEvent(mon::measure("Clinical_FirstDayDeaths"), survey_period, age_group, cohort_set);
+                    mon::record_event(mon::measure("Clinical_FirstDayDeaths"), survey_period, age_group, cohort_set);
                 }
             } else if (state & Episode::Sequelae) {
-                mon::recordEvent(mon::measure("nSeq"), survey_period, age_group, cohort_set);
+                mon::record_event(mon::measure("nSeq"), survey_period, age_group, cohort_set);
             }
             // Don't care about out-of-hospital recoveries
         }
     } else if (state & Episode::Sick) {
         // Report non-malarial fever and outcomes
-        mon::recordEvent(mon::measure("nNMFever"), survey_period, age_group, cohort_set);
+        mon::record_event(mon::measure("nNMFever"), survey_period, age_group, cohort_set);
 
         if (state & Episode::DirectDeath) {
-            mon::recordEvent(mon::measure("nNmfDeaths"), survey_period, age_group, cohort_set);
+            mon::record_event(mon::measure("nNmfDeaths"), survey_period, age_group, cohort_set);
         }
     }
 }

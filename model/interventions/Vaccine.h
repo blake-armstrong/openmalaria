@@ -46,7 +46,7 @@ public:
     VaccineComponent(ComponentId id, const scnXml::VaccineDescription& seq, vaccines::Types type,
                      bool report_deployments);
 
-    void deploy(Host::Human& human, mon::Deploy::Method method, VaccineLimits vacc_limits) const override;
+    void deploy(Host::Human& human, mon::deploy::Method method, VaccineLimits vacc_limits) const override;
 
     component_types::Type component_type() const override;
 

@@ -426,7 +426,7 @@ protected:
 
     CMDTOut exec(CMHostData host_data) const override {
         for (const int out_id : out_ids) {
-            mon::recordEvent(mon::measure("nCMDTReport"), host_data.human, 1, out_id);
+            mon::record_event(mon::measure("nCMDTReport"), host_data.human, 1, out_id);
         }
         return CMDTOut(false);
     }
@@ -573,7 +573,7 @@ protected:
     }
 
     CMDTOut exec(CMHostData host_data) const override {
-        deploy(host_data.human, mon::Deploy::TREAT, interventions::VaccineLimits(/*default initialise: no limits*/));
+        deploy(host_data.human, mon::deploy::TREAT, interventions::VaccineLimits(/*default initialise: no limits*/));
 
         //NOTE: it's not intuitively obvious what value should be returned here
         // in the case of intervention deployment. This at least means that

@@ -109,7 +109,7 @@ public:
      * @param human Individual receiving the intervention
      * @param method Channel of deployment (mass, continuous)
      */
-    virtual void deploy(Host::Human& human, mon::Deploy::Method method, VaccineLimits vacc_limits) const = 0;
+    virtual void deploy(Host::Human& human, mon::deploy::Method method, VaccineLimits vacc_limits) const = 0;
 
     /** Get the component identifier. */
     inline ComponentId id() const { return component_id; }
@@ -164,7 +164,7 @@ public:
                       const InterventionManager& manager);
 
     /** Deploy all components to a pre-selected human. */
-    void deploy(Host::Human& human, mon::Deploy::Method method, VaccineLimits vacc_limits) const;
+    void deploy(Host::Human& human, mon::deploy::Method method, VaccineLimits vacc_limits) const;
 
     void print_details(std::ostream& out) const;
 
@@ -181,13 +181,13 @@ class TriggeredDeployments {
 public:
     TriggeredDeployments(const scnXml::TriggeredDeployments& elt, const InterventionManager& manager);
 
-    void deploy(Host::Human& human, mon::Deploy::Method method, VaccineLimits vacc_limits) const;
+    void deploy(Host::Human& human, mon::deploy::Method method, VaccineLimits vacc_limits) const;
 
 private:
     struct SubList : protected HumanIntervention {
         SubList(const scnXml::TriggeredDeployments::DeployType& elt, const InterventionManager& manager);
 
-        void deploy(Host::Human& human, mon::Deploy::Method method, VaccineLimits vacc_limits) const;
+        void deploy(Host::Human& human, mon::deploy::Method method, VaccineLimits vacc_limits) const;
 
         // Deployment restrictions:
         SimTime min_age, max_age;

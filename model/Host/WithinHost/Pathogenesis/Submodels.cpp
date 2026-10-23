@@ -77,8 +77,8 @@ double PyrogenPathogenesis::get_p_episode(double time_step_max_density, double t
 }
 
 void PyrogenPathogenesis::summarize(const Host::Human& human) {
-    mon::recordStat(mon::measure("sumPyrogenThresh"), human, pyrogen_thres);
-    mon::recordStat(mon::measure("sumLogPyrogenThres"), human, log(pyrogen_thres + 1.0));
+    mon::record_stat(mon::measure("sumPyrogenThresh"), human, pyrogen_thres);
+    mon::record_stat(mon::measure("sumLogPyrogenThres"), human, log(pyrogen_thres + 1.0));
 }
 
 void PyrogenPathogenesis::update_pyrogen_thres(double total_density) {

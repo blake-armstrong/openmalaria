@@ -205,32 +205,32 @@ VectorModel::VectorModel(vector<double> init_eir, int intervention_mode,
         cts_rr << "\tres req(" << name << ")";
     }
 
-    continuous.registerCallback("N_v0", cts_nv0.str(), [this](ostream& stream) { cts_cb_n_v0(stream); });
-    continuous.registerCallback("P_A", cts_pa.str(), [this](ostream& stream) { cts_cb_p_a(stream); });
-    continuous.registerCallback("P_Amu", cts_p_amu.str(), [this](ostream& stream) { cts_cb_p_amu(stream); });
-    continuous.registerCallback("P_A1", cts_p_a1.str(), [this](ostream& stream) { cts_cb_p_a1(stream); });
-    continuous.registerCallback("P_Ah", cts_p_ah.str(), [this](ostream& stream) { cts_cb_p_ah(stream); });
-    continuous.registerCallback("P_df", cts_pdf.str(), [this](ostream& stream) { cts_cb_p_df(stream); });
-    continuous.registerCallback("P_dif", cts_pdif.str(), [this](ostream& stream) { cts_cb_p_dif(stream); });
-    continuous.registerCallback("N_v", cts_nv.str(), [this](ostream& stream) { cts_cb_n_v(stream); });
-    continuous.registerCallback("O_v", cts_ov.str(), [this](ostream& stream) { cts_cb_o_v(stream); });
-    continuous.registerCallback("S_v", cts_sv.str(), [this](ostream& stream) { cts_cb_s_v(stream); });
+    continuous.register_callback("N_v0", cts_nv0.str(), [this](ostream& stream) { cts_cb_n_v0(stream); });
+    continuous.register_callback("P_A", cts_pa.str(), [this](ostream& stream) { cts_cb_p_a(stream); });
+    continuous.register_callback("P_Amu", cts_p_amu.str(), [this](ostream& stream) { cts_cb_p_amu(stream); });
+    continuous.register_callback("P_A1", cts_p_a1.str(), [this](ostream& stream) { cts_cb_p_a1(stream); });
+    continuous.register_callback("P_Ah", cts_p_ah.str(), [this](ostream& stream) { cts_cb_p_ah(stream); });
+    continuous.register_callback("P_df", cts_pdf.str(), [this](ostream& stream) { cts_cb_p_df(stream); });
+    continuous.register_callback("P_dif", cts_pdif.str(), [this](ostream& stream) { cts_cb_p_dif(stream); });
+    continuous.register_callback("N_v", cts_nv.str(), [this](ostream& stream) { cts_cb_n_v(stream); });
+    continuous.register_callback("O_v", cts_ov.str(), [this](ostream& stream) { cts_cb_o_v(stream); });
+    continuous.register_callback("S_v", cts_sv.str(), [this](ostream& stream) { cts_cb_s_v(stream); });
 
     // availability to mosquitoes relative to other humans, excluding age factor
-    continuous.registerCallback(
+    continuous.register_callback(
         "alpha", cts_alpha.str(),
         [this](const vector<Host::Human>& population, ostream& stream) { cts_cb_alpha(population, stream); });
-    continuous.registerCallback("P_B", cts_pb.str(), [this](const vector<Host::Human>& population, ostream& stream) {
+    continuous.register_callback("P_B", cts_pb.str(), [this](const vector<Host::Human>& population, ostream& stream) {
         cts_cb_p_b(population, stream);
     });
-    continuous.registerCallback(
+    continuous.register_callback(
         "P_C*P_D", cts_pcd.str(),
         [this](const vector<Host::Human>& population, ostream& stream) { cts_cb_p_cd(population, stream); });
 
-    continuous.registerCallback("resource availability", cts_ra.str(),
-                                [this](ostream& stream) { cts_cb_res_availability(stream); });
-    continuous.registerCallback("resource requirements", cts_rr.str(),
-                                [this](ostream& stream) { cts_cb_res_requirements(stream); });
+    continuous.register_callback("resource availability", cts_ra.str(),
+                                 [this](ostream& stream) { cts_cb_res_availability(stream); });
+    continuous.register_callback("resource requirements", cts_rr.str(),
+                                 [this](ostream& stream) { cts_cb_res_requirements(stream); });
 }
 
 VectorModel::~VectorModel() = default;
@@ -367,8 +367,8 @@ void VectorModel::calculate_eir(Host::Human& human, double age_years, vector<dou
              * See comment in AnophelesModel::advancePeriod for method. */
             const double eir = species[i]->get_intervention_eir() * host.relative_availability_age(age_years) *
                                host.ento_availability_het_vec_itv(i);
-            mon::recordStat(mon::measure("innoculationsPerAgeGroup"), human, eir);
-            mon::recordStat(mon::measure("innoculationsPerVector"), human, eir, i);
+            mon::record_stat(mon::measure("innoculationsPerAgeGroup"), human, eir);
+            mon::record_stat(mon::measure("innoculationsPerVector"), human, eir, i);
             // cout << host.availBite(i) << endl;
             // cout << "species: " << eir << " " << host.entoAvailabilityHetVecItv(i) << " " << host.entoAvailabilityHetVecItv(i) * (1000*0.00112608) << endl;
             genotype_eir_l[0] += eir;
@@ -390,8 +390,8 @@ void VectorModel::calculate_eir(Host::Human& human, double age_years, vector<dou
              * See comment in AnophelesModel::advancePeriod for method. */
             const double eir = species[i]->get_init_partial_eir() * host.relative_availability_age(age_years) *
                                host.ento_availability_het_vec_itv(i);
-            mon::recordStat(mon::measure("innoculationsPerAgeGroup"), human, eir);
-            mon::recordStat(mon::measure("innoculationsPerVector"), human, eir, i);
+            mon::record_stat(mon::measure("innoculationsPerAgeGroup"), human, eir);
+            mon::record_stat(mon::measure("innoculationsPerVector"), human, eir, i);
             // cout << host.availBite(i) << endl;
             // cout << "species: " << eir << " " << host.entoAvailabilityHetVecItv(i) << " " << host.entoAvailabilityHetVecItv(i) * (1000*0.00112608) << endl;
             genotype_eir_l[0] += eir;
@@ -417,8 +417,8 @@ void VectorModel::calculate_eir(Host::Human& human, double age_years, vector<dou
             for (size_t g = 0; g < genotype_eir_i.size(); ++g) {
                 const double eir_i = partial_eir_i[g] * ento_factor;
                 const double eir_l = partial_eir_l[g] * ento_factor;
-                mon::recordStat(mon::measure("innoculationsPerAgeGroup"), human, eir_i + eir_l, 0, g);
-                mon::recordStat(mon::measure("innoculationsPerVector"), human, eir_i + eir_l, i, g);
+                mon::record_stat(mon::measure("innoculationsPerAgeGroup"), human, eir_i + eir_l, 0, g);
+                mon::record_stat(mon::measure("innoculationsPerVector"), human, eir_i + eir_l, i, g);
                 genotype_eir_i[g] += eir_i;
                 genotype_eir_l[g] += eir_l;
             }

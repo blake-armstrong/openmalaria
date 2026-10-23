@@ -20,8 +20,8 @@
  * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301, USA.
  */
 
-#ifndef H_OM_mon_OutMeasures
-#define H_OM_mon_OutMeasures
+#ifndef H_OM_MON_OUT_MEASURES
+#define H_OM_MON_OUT_MEASURES
 
 #include <cstdint>
 #include <limits>
@@ -31,20 +31,20 @@ namespace OM {
 namespace mon {
 
 using Measure = uint16_t;
-inline constexpr Measure invalidMeasure = std::numeric_limits<Measure>::max() - 2;
+inline constexpr Measure InvalidMeasure = std::numeric_limits<Measure>::max() - 2;
 
 enum Dim : uint8_t { None = 0, Age = 1 << 0, Cohort = 1 << 1, Species = 1 << 2, Genotype = 1 << 3, Drug = 1 << 4 };
 
 struct OutMeasure {
     const char* name = nullptr; // defs[] only
-    int outId = -1;
-    bool isDouble = false;
+    int out_id = -1;
+    bool is_double = false;
     uint8_t dims = Dim::None;
-    Measure measure = invalidMeasure; // resolved at init-time
+    Measure measure = InvalidMeasure; // resolved at init-time
 };
 
 // Output IDs are stable: append new measures and never reuse gaps.
-inline constexpr OutMeasure defs[] = {
+inline constexpr OutMeasure Defs[] = {
     {"nHost", 0, false, Dim::Age | Dim::Cohort},
     /** The number of human hosts with an infection (patent or not) at the time
         * the survey is taken. */
@@ -320,29 +320,29 @@ inline constexpr OutMeasure defs[] = {
     {"nNMFTreatments", -1, false, Dim::Age | Dim::Cohort},
 };
 
-inline bool isObsoleteMeasure(std::string_view name) {
+inline bool is_obsolete_measure(std::string_view name) {
     return name == "contrib" || name == "nIPTDoses" || name == "innoculationsPerDayOfYear" ||
            name == "kappaPerDayOfYear" || name == "Clinical_RDTs" || name == "Clinical_DrugUsage" ||
            name == "nMassVA" || name == "Clinical_Microscopy" || name == "Clinical_DrugUsageIV" ||
            name == "nAddedToCohort" || name == "nRemovedFromCohort" || name == "nAntibioticTreatments";
 }
 
-inline constexpr Measure MeasureCount = sizeof(defs) / sizeof(defs[0]);
+inline constexpr Measure MeasureCount = sizeof(Defs) / sizeof(Defs[0]);
 
-consteval Measure measure(std::string_view measureName) {
+consteval Measure measure(std::string_view measure_name) {
     for (Measure i = 0; i < MeasureCount; ++i) {
-        if (defs[i].name == measureName)
+        if (Defs[i].name == measure_name)
             return i;
     }
     throw "unknown monitoring measure";
 }
 
-inline constexpr Measure allCauseIMR = measure("allCauseIMR");
+inline constexpr Measure AllCauseImr = measure("allCauseIMR");
 
-inline OutMeasure findOutMeasure(std::string_view name) {
+inline OutMeasure find_out_measure(std::string_view name) {
     for (Measure i = 0; i < MeasureCount; ++i) {
-        OutMeasure om = defs[i];
-        if (om.outId >= 0 && name == om.name) {
+        OutMeasure om = Defs[i];
+        if (om.out_id >= 0 && name == om.name) {
             om.measure = i;
             return om;
         }
@@ -350,8 +350,8 @@ inline OutMeasure findOutMeasure(std::string_view name) {
     return {};
 }
 
-inline bool isValidCondition(Measure measure) {
-    static constexpr Measure invalid[] = {mon::measure("nSevere"),
+inline bool is_valid_condition(Measure measure) {
+    static constexpr Measure Invalid[] = {mon::measure("nSevere"),
                                           mon::measure("nSevereWithoutComorbidities"),
                                           mon::measure("nUncomp"),
                                           mon::measure("nDirDeaths"),
@@ -368,9 +368,9 @@ inline bool isValidCondition(Measure measure) {
                                           mon::measure("innoculationsPerVector"),
                                           mon::measure("inputEIR"),
                                           mon::measure("simulatedEIR"),
-                                          allCauseIMR};
-    for (Measure invalidMeasure : invalid) {
-        if (measure == invalidMeasure)
+                                          AllCauseImr};
+    for (Measure invalid_measure : Invalid) {
+        if (measure == invalid_measure)
             return false;
     }
     return true;

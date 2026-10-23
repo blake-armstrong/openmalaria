@@ -36,63 +36,63 @@ using util::xml_scenario_error;
 
 /* Initialise: enable outputs registered and requested in XML.
          * Search for Continuous::registerCallback to see outputs available. */
-void Continuous::init(const scnXml::Monitoring& monitoring, bool isCheckpoint) {
-    const scnXml::Monitoring::ContinuousOptional& ctsOpt = monitoring.getContinuous();
-    if (!ctsOpt.present()) {
-        ctsPeriod = Sim::zero();
+void Continuous::init(const scnXml::Monitoring& monitoring, bool is_checkpoint) {
+    const scnXml::Monitoring::ContinuousOptional& cts_opt = monitoring.getContinuous();
+    if (!cts_opt.present()) {
+        cts_period = Sim::zero();
         return;
     }
-    const auto& options = ctsOpt.get();
+    const auto& options = cts_opt.get();
     try {
         //NOTE: if changing XSD, this should not have a default unit:
-        ctsPeriod = UnitParse::readShortDuration(options.getPeriod(), UnitParse::STEPS);
-        if (ctsPeriod < Sim::one_ts())
+        cts_period = UnitParse::readShortDuration(options.getPeriod(), UnitParse::STEPS);
+        if (cts_period < Sim::one_ts())
             throw util::format_error("must be >= 1 time step");
     } catch (const util::format_error& e) {
         throw xml_scenario_error(string("monitoring/continuous/period: ").append(e.message()));
     }
 
     if (options.getDuringInit().present())
-        duringInit = options.getDuringInit().get();
+        during_init = options.getDuringInit().get();
 
     for (const auto& option : options.getOption()) {
-        auto registeredOutput = registered.find(option.getName());
-        if (registeredOutput == registered.end()) {
+        auto registered_output = registered.find(option.getName());
+        if (registered_output == registered.end()) {
             throw xml_scenario_error("monitoring.continuous: no output " + string(option.getName()));
         }
         if (option.getValue())
-            toReport.push_back(registeredOutput->second);
+            to_report.push_back(registered_output->second);
     }
 
     const string filename = util::CommandLine::ctsout_name();
 
-    if (isCheckpoint) {
+    if (is_checkpoint) {
         // When loading a check-point, we resume reporting to this file.
-        ctsOStream.open(filename, ios::binary | ios::ate | ios::in | ios::out);
-        if (ctsOStream.fail())
+        cts_stream.open(filename, ios::binary | ios::ate | ios::in | ios::out);
+        if (cts_stream.fail())
             throw util::checkpoint_error("Continuous: resume error (no file)");
         return; // checkpoint() sets the saved output position later
     }
 
-    ctsOStream.open(filename, ios::binary | ios::out);
-    ctsOStream << "##\t##\n"; // live-graph needs a delimiter specifier when it is not a comma
-    if (duringInit)
-        ctsOStream << "simulation time\t";
-    ctsOStream << "timestep"; // TODO: change to days or remove or leave?
-    for (const auto& report : toReport)
-        ctsOStream << std::get<0>(report);
-    ctsOStream << '\n' << flush;
-    streamOffset = ctsOStream.tellp();
+    cts_stream.open(filename, ios::binary | ios::out);
+    cts_stream << "##\t##\n"; // live-graph needs a delimiter specifier when it is not a comma
+    if (during_init)
+        cts_stream << "simulation time\t";
+    cts_stream << "timestep"; // TODO: change to days or remove or leave?
+    for (const auto& report : to_report)
+        cts_stream << std::get<0>(report);
+    cts_stream << '\n' << flush;
+    stream_offset = cts_stream.tellp();
 }
 
 void Continuous::checkpoint(ostream& stream) {
-    if (ctsPeriod == Sim::zero())
+    if (cts_period == Sim::zero())
         return; // output disabled
 
-    streamOffset & stream;
+    stream_offset & stream;
 }
 void Continuous::checkpoint(istream& stream) {
-    if (ctsPeriod == Sim::zero())
+    if (cts_period == Sim::zero())
         return; // output disabled
 
     /* We attempt to resume output correctly after a reload by recording
@@ -100,62 +100,62 @@ void Continuous::checkpoint(istream& stream) {
             * 
             * (Keeping results in memory until end of sim would be another,
             * slightly safer, option, but loses real-time output.) */
-    streamOffset & stream;
+    stream_offset & stream;
     // We skip back to the last write-point, so anything written after the
     // last checkpoint will be repeated:
-    ctsOStream.seekp(streamOffset, ios_base::beg);
+    cts_stream.seekp(stream_offset, ios_base::beg);
 
-    if (ctsOStream.fail())
+    if (cts_stream.fail())
         throw util::checkpoint_error("Continuous: resume error (bad pos/file)");
 }
 
-void Continuous::registerCallback(string optName, string titles, function<void(ostream&)> f) {
-    assert(registered.count(optName) == 0); // name clash/registered twice?
-    function<void(const Population&, ostream&)> _f = [f](const Population&, ostream& ostream) { f(ostream); };
-    registered[optName] = {titles, _f};
+void Continuous::register_callback(string opt_name, string titles, function<void(ostream&)> f) {
+    assert(registered.count(opt_name) == 0); // name clash/registered twice?
+    function<void(const Population&, ostream&)> wrapped = [f](const Population&, ostream& ostream) { f(ostream); };
+    registered[opt_name] = {titles, wrapped};
 }
 
-void Continuous::registerCallback(string optName, string titles,
-                                  function<void(const vector<Host::Human>&, ostream&)> f) {
-    assert(registered.count(optName) == 0); // name clash/registered twice?
-    function<void(const Population&, ostream&)> _f = [f](const Population& p, ostream& ostream) {
+void Continuous::register_callback(string opt_name, string titles,
+                                   function<void(const vector<Host::Human>&, ostream&)> f) {
+    assert(registered.count(opt_name) == 0); // name clash/registered twice?
+    function<void(const Population&, ostream&)> wrapped = [f](const Population& p, ostream& ostream) {
         f(p.humans, ostream);
     };
-    registered[optName] = {titles, _f};
+    registered[opt_name] = {titles, wrapped};
 }
 
-void Continuous::registerCallback(string optName, string titles, function<void(Population&, ostream&)> f) {
-    assert(registered.count(optName) == 0); // name clash/registered twice?
-    registered[optName] = {titles, f};
+void Continuous::register_callback(string opt_name, string titles, function<void(Population&, ostream&)> f) {
+    assert(registered.count(opt_name) == 0); // name clash/registered twice?
+    registered[opt_name] = {titles, f};
 }
 
 void Continuous::update(Population& population) {
-    if (ctsPeriod == Sim::zero())
+    if (cts_period == Sim::zero())
         return; // output disabled
-    if (!duringInit) {
-        if (Sim::interv_time() < Sim::zero() || mod_nn(Sim::interv_time(), ctsPeriod) != Sim::zero())
+    if (!during_init) {
+        if (Sim::interv_time() < Sim::zero() || mod_nn(Sim::interv_time(), cts_period) != Sim::zero())
             return;
     } else {
-        if (mod_nn(Sim::now(), ctsPeriod) != Sim::zero())
+        if (mod_nn(Sim::now(), cts_period) != Sim::zero())
             return;
-        ctsOStream << Sim::in_steps(Sim::now()) << '\t';
+        cts_stream << Sim::in_steps(Sim::now()) << '\t';
     }
 
-    if (duringInit && Sim::interv_time() < Sim::zero()) {
-        ctsOStream << "nan";
+    if (during_init && Sim::interv_time() < Sim::zero()) {
+        cts_stream << "nan";
     } else {
         // NOTE: we could switch this to output dates, but (1) it would be
         // breaking change and (2) it may be harder to use.
-        ctsOStream << Sim::in_steps(Sim::interv_time());
+        cts_stream << Sim::in_steps(Sim::interv_time());
     }
-    for (const auto& report : toReport)
-        std::get<1>(report)(population, ctsOStream);
+    for (const auto& report : to_report)
+        std::get<1>(report)(population, cts_stream);
 
     // We must flush often to avoid temporarily outputting partial lines
     // (resulting in incorrect real-time graphs).
-    ctsOStream << '\n' << flush;
+    cts_stream << '\n' << flush;
 
-    streamOffset = ctsOStream.tellp();
+    stream_offset = cts_stream.tellp();
 }
 } // namespace mon
 }

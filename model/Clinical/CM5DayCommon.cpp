@@ -110,21 +110,21 @@ void CM5DayCommon::severe_malaria(Human& human, Episode::State pg_state, double 
     // expanded, separating in-hospital and without (q[0]):
     const double ex_hospital_death = p2 * (p3 * p4 + (1 - p3) * p5b);
     const double ex_death = ex_hospital_death + (1 - p2) * p5a;
-    mon::recordStat(mon::measure("expectedHospitalDeaths"), human, ex_hospital_death);
-    mon::recordStat(mon::measure("expectedDirectDeaths"), human, ex_death);
+    mon::record_stat(mon::measure("expectedHospitalDeaths"), human, ex_hospital_death);
+    mon::record_stat(mon::measure("expectedDirectDeaths"), human, ex_death);
 
     // Expectation of sequelae is:
     // double exSeq = (q[7] - q[6]) + (q[4] - q[3]) + (q[1] - q[0]);
     // expanded and simplified, noting that p7 == p6 :
     const double ex_seq = (p2 * (p3 * (1 - p4) + (1 - p3) * (1 - p5b)) + (1 - p2) * (1 - p5a)) * p6;
-    mon::recordStat(mon::measure("expectedSequelae"), human, ex_seq);
+    mon::record_stat(mon::measure("expectedSequelae"), human, ex_seq);
 
     const double prandom = human.clinical_rng.uniform_01();
 
     //NOTE: we do not model diagnostics in this case
     if (prandom >= q[2]) { // treated in hospital
         t_last_treatment = Sim::ts0();
-        mon::recordEvent(mon::measure("nTreatments3"), human);
+        mon::record_event(mon::measure("nTreatments3"), human);
         const auto state_treated = Episode::State(pg_state | Episode::EventInHospital);
 
         if (prandom >= q[5]) { // treatment successful at clearing parasites

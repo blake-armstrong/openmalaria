@@ -52,9 +52,9 @@ SimTime read_latent_p(const scnXml::Model& model) {
 }
 
 bool any_patent_infected_measure_used() {
-    return mon::isUsed(mon::measure("totalPatentInf")) || mon::isUsed(mon::measure("totalPatentInf_Imported")) ||
-           mon::isUsed(mon::measure("totalPatentInf_Introduced")) ||
-           mon::isUsed(mon::measure("totalPatentInf_Indigenous"));
+    return mon::is_used(mon::measure("totalPatentInf")) || mon::is_used(mon::measure("totalPatentInf_Imported")) ||
+           mon::is_used(mon::measure("totalPatentInf_Introduced")) ||
+           mon::is_used(mon::measure("totalPatentInf_Indigenous"));
 }
 
 }

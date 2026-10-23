@@ -20,8 +20,8 @@
  * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301, USA.
  */
 
-#ifndef H_OM_mon_init
-#define H_OM_mon_init
+#ifndef H_OM_MON_INIT
+#define H_OM_MON_INIT
 
 #include "Global.h"
 
@@ -33,9 +33,9 @@ class Monitoring;
 namespace OM {
 namespace mon {
 
-SimTime readSurveyDates(const scnXml::Monitoring& monitoring);
-void initReporting(const scnXml::Scenario& scenario);
-void initCohorts(const scnXml::Monitoring& monitoring);
+SimTime read_survey_dates(const scnXml::Monitoring& monitoring);
+void init_reporting(const scnXml::Scenario& scenario);
+void init_cohorts(const scnXml::Monitoring& monitoring);
 
 } // namespace mon
 } // namespace OM

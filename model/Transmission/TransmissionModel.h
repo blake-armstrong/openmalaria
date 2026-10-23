@@ -123,13 +123,13 @@ protected:
           opt_vaccine_genotype(util::ModelOptions::option(util::VaccineGenotype)) {
         // Set VACCINE_GENOTYPE option
 
-        continuous.registerCallback("input EIR", "\tinput EIR", [this](ostream& stream) { cts_cb_input_eir(stream); });
-        continuous.registerCallback("simulated EIR", "\tsimulated EIR",
-                                    [this](ostream& stream) { cts_cb_simulated_eir(stream); });
-        continuous.registerCallback("human infectiousness", "\thuman infectiousness",
-                                    [this](ostream& stream) { cts_cb_kappa(stream); });
-        continuous.registerCallback("num transmitting humans", "\tnum transmitting humans",
-                                    [this](ostream& stream) { cts_cb_num_transmitting_humans(stream); });
+        continuous.register_callback("input EIR", "\tinput EIR", [this](ostream& stream) { cts_cb_input_eir(stream); });
+        continuous.register_callback("simulated EIR", "\tsimulated EIR",
+                                     [this](ostream& stream) { cts_cb_simulated_eir(stream); });
+        continuous.register_callback("human infectiousness", "\thuman infectiousness",
+                                     [this](ostream& stream) { cts_cb_kappa(stream); });
+        continuous.register_callback("num transmitting humans", "\tnum transmitting humans",
+                                     [this](ostream& stream) { cts_cb_num_transmitting_humans(stream); });
     }
 
 public:
@@ -148,18 +148,18 @@ public:
      *
      * Overriding functions should call this base version too. */
     virtual void summarize() {
-        mon::recordStat(mon::measure("nTransmit"), lagged_kappa[Sim::modulo_steps(Sim::now(), lagged_kappa.size())]);
-        mon::recordStat(mon::measure("annAvgK"), annual_average_kappa);
+        mon::record_stat(mon::measure("nTransmit"), lagged_kappa[Sim::modulo_steps(Sim::now(), lagged_kappa.size())]);
+        mon::record_stat(mon::measure("annAvgK"), annual_average_kappa);
 
-        if (!mon::isReported())
+        if (!mon::is_reported())
             return; // cannot use counters below when not reporting
 
         const double duration = Sim::in_steps(Sim::now() - last_survey_time);
         if (duration > 0.0) {
-            mon::recordStat(mon::measure("inputEIR"), survey_input_eir / duration);
-            mon::recordStat(mon::measure("simulatedEIR"), survey_simulated_eir / duration);
-            mon::recordStat(mon::measure("simulatedEIR_Introduced"), survey_simulated_eir_i / duration);
-            mon::recordStat(mon::measure("simulatedEIR_Indigenous"), survey_simulated_eir_l / duration);
+            mon::record_stat(mon::measure("inputEIR"), survey_input_eir / duration);
+            mon::record_stat(mon::measure("simulatedEIR"), survey_simulated_eir / duration);
+            mon::record_stat(mon::measure("simulatedEIR_Introduced"), survey_simulated_eir_i / duration);
+            mon::record_stat(mon::measure("simulatedEIR_Indigenous"), survey_simulated_eir_l / duration);
         }
 
         survey_input_eir = 0.0;

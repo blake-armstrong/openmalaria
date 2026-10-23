@@ -135,14 +135,14 @@ void ClinicalModel::update(Human& human, double age_years, bool new_born,
 
     //indirect death: if this human's about to die, don't worry about further episodes:
     if (doomed <= DoomedExpired) { //clinical bout 6 intervals before
-        mon::recordEvent(mon::measure("nIndDeaths"), human);
+        mon::record_event(mon::measure("nIndDeaths"), human);
         doomed = DoomedIndirect;
         return;
     }
     if (new_born /* i.e. first update since birth */) {
         // Chance of neonatal mortality:
         if (neonatal_mortality.event_neonatal_mortality(human.clinical_rng)) {
-            mon::recordEvent(mon::measure("nIndDeaths"), human);
+            mon::record_event(mon::measure("nIndDeaths"), human);
             doomed = DoomedNeonatal;
             return;
         }

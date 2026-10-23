@@ -51,7 +51,7 @@ void Clock::init(const scnXml::Scenario& scenario, const util::ModelNameProvider
     }
 
     interv = Sim::never(); // large negative number
-    end = mon::readSurveyDates(mon);
+    end = mon::read_survey_dates(mon);
 }
 
 void Clock::init_interval(const scnXml::Scenario& scenario, util::ModelNameProvider mnp) {

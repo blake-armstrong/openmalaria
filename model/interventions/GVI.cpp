@@ -55,9 +55,9 @@ GVIComponent::GVIComponent(ComponentId id, const scnXml::GVIDescription& elt,
     checker.checkNoneMissed();
 }
 
-void GVIComponent::deploy(Host::Human& human, mon::Deploy::Method method, VaccineLimits) const {
+void GVIComponent::deploy(Host::Human& human, mon::deploy::Method method, VaccineLimits) const {
     human.perHostTransmission.deploy_component(human.intervention_rng, *this);
-    mon::recordDeploy(mon::measure("nMassGVI"), mon::measure("nCtsGVI"), human, method);
+    mon::record_deploy(mon::measure("nMassGVI"), mon::measure("nCtsGVI"), human, method);
 }
 
 component_types::Type GVIComponent::component_type() const { return component_types::GVI; }

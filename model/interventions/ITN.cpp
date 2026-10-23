@@ -497,9 +497,9 @@ ITNComponent::ITNComponent(ComponentId id, const scnXml::ITNDescription& elt,
     checker.checkNoneMissed();
 }
 
-void ITNComponent::deploy(Host::Human& human, mon::Deploy::Method method, VaccineLimits) const {
+void ITNComponent::deploy(Host::Human& human, mon::deploy::Method method, VaccineLimits) const {
     human.perHostTransmission.deploy_component(human.intervention_rng, *this);
-    mon::recordDeploy(mon::measure("nMassITNs"), mon::measure("nEPI_ITNs"), human, method);
+    mon::record_deploy(mon::measure("nMassITNs"), mon::measure("nEPI_ITNs"), human, method);
 }
 
 component_types::Type ITNComponent::component_type() const { return component_types::ITN; }

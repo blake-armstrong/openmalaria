@@ -195,14 +195,14 @@ void ImmediateOutcomes::uncomplicated_event(Human& human, Episode::State pg_stat
         // UC2: official care only
 
         if (io.use_diagnostic_uc) {
-            mon::recordEvent(mon::measure("nTreatDiagnostics"), human);
+            mon::record_event(mon::measure("nTreatDiagnostics"), human);
             auto diag = WithinHost::Diagnostics::monitoring_diagnostic();
             if (!human.withinHostModel->diagnostic_result(human.clinical_rng, diag))
                 return; // negative outcome: no treatment
         }
 
         t_last_treatment = Sim::ts0();
-        mon::recordEvent(TreatmentMeasures[regimen], human);
+        mon::record_event(TreatmentMeasures[regimen], human);
 
         const double p = (x < params().five_day.access_uc_self_treat[regimen] * treatment_seeking_factor)
                              ? io.cure_rate_uc_self_treat[regimen]

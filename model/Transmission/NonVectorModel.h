@@ -199,8 +199,8 @@ public:
 #endif
         genotype_eir_l[0] *= human.perHostTransmission.relative_availability_het_age(age_years);
 
-        mon::recordStat(mon::measure("innoculationsPerAgeGroup"), human, genotype_eir_l[0]);
-        mon::recordStat(mon::measure("innoculationsPerVector"), human, genotype_eir_l[0]);
+        mon::record_stat(mon::measure("innoculationsPerAgeGroup"), human, genotype_eir_l[0]);
+        mon::record_stat(mon::measure("innoculationsPerVector"), human, genotype_eir_l[0]);
     }
 
 private:

@@ -126,14 +126,14 @@ VaccineComponent::VaccineComponent(ComponentId component, const scnXml::VaccineD
         initialMeanEfficacy[i] = ies[i].getValue();*/
 }
 
-void VaccineComponent::deploy(Host::Human& human, mon::Deploy::Method method, VaccineLimits vacc_limits) const {
+void VaccineComponent::deploy(Host::Human& human, mon::deploy::Method method, VaccineLimits vacc_limits) const {
     const bool administered = human.vaccine.possibly_vaccinate(human, *this, vacc_limits);
     if (administered && report_deployments) {
-        mon::recordDeploy(mon::measure("nMassVaccinations"), mon::measure("nEPIVaccinations"), human, method);
+        mon::record_deploy(mon::measure("nMassVaccinations"), mon::measure("nEPIVaccinations"), human, method);
     }
     assert(type == vaccines::PEV || type == vaccines::BSV || type == vaccines::TBV);
-    if (method == mon::Deploy::TREAT)
-        mon::recordEvent(mon::measure("nTreatDeployments"), human);
+    if (method == mon::deploy::TREAT)
+        mon::record_event(mon::measure("nTreatDeployments"), human);
 }
 
 component_types::Type VaccineComponent::component_type() const {

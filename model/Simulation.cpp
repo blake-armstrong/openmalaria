@@ -88,13 +88,13 @@ Simulation::Simulation(std::unique_ptr<scnXml::Scenario> scenario, util::Command
                                                  *scenario_xml); // Depends on Parameters.
 
     // 5) elements depending on only elements initialised in (4).
-    mon::initReporting(*scenario_xml); // Reporting init depends on diagnostics and monitoring
+    mon::init_reporting(*scenario_xml); // Reporting init depends on diagnostics and monitoring
 
     // Init models used by humans
     per_host_params = Transmission::PerHostParams(scenario_xml->getModel().getHuman().getAvailabilityToMosquitoes());
     infection_incidence = Host::InfectionIncidenceParams(parameters, model_options);
-    continuous.registerCallback("new infections", "\tnew infections",
-                                [this](ostream& stream) { new_infections.report(stream); });
+    continuous.register_callback("new infections", "\tnew infections",
+                                 [this](ostream& stream) { new_infections.report(stream); });
     within_host_model = WithinHost::WithinHostModel(parameters, model_options, command_line, genotypes, *scenario_xml);
     clinical = Clinical::ClinicalParams(parameters, model_options, command_line, *scenario_xml);
     decision_trees =
@@ -125,8 +125,8 @@ Simulation::Simulation(std::unique_ptr<scnXml::Scenario> scenario, util::Command
     intervention_manager.init(scenario_xml->getInterventions(), *transmission_model, per_host_params, diagnostics,
                               within_host_model.common.pk_pd, clinical, decision_trees);
     clinical.set_health_system(scenario_xml->getHealthSystem(),
-                               decision_trees);      // Depends on interventions, PK/PD (from humanPop)
-    mon::initCohorts(scenario_xml->getMonitoring()); // Depends on interventions
+                               decision_trees);       // Depends on interventions, PK/PD (from humanPop)
+    mon::init_cohorts(scenario_xml->getMonitoring()); // Depends on interventions
 
     clock.reset_time();
 
@@ -215,7 +215,7 @@ void Simulation::start_new(const CheckpointOptions& checkpointing) {
     genotypes.pre_main_sim_init();
     population_model->resetRecentBirths();
     transmission_model->summarize(); // Only to reset TransmissionModel::inoculationsPerAgeGroup
-    mon::initMainSim();
+    mon::init_main_sim();
 
     if (checkpointing.enabled) {
         write_checkpoint(false, checkpointing.file_name, command_line, clock, master_rngs, genotypes,
@@ -232,7 +232,7 @@ void Simulation::finish() {
     for (Host::Human& human : population_model->humans)
         human.clinicalModel->flush_reports();
 
-    mon::writeSurveyData();
+    mon::write_survey_data();
 
 #ifdef OM_STREAM_VALIDATOR
     util::StreamValidator.saveStream();
@@ -266,11 +266,11 @@ void Simulation::step() {
     // Monitoring. clock.now() gives time of end of last step,
     // and is when reporting happens in our time-series.
     continuous.update(population);
-    if (clock.interv_date() == mon::nextSurveyDate()) {
+    if (clock.interv_date() == mon::next_survey_date()) {
         for (Host::Human& human : population.humans)
             Host::summarize(human, only_new_episode);
         transmission.summarize();
-        mon::concludeSurvey();
+        mon::conclude_survey();
     }
 
     // Deploy interventions, at time clock.now().

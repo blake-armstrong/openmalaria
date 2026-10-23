@@ -351,19 +351,19 @@ double WHVivax::prob_transmission_to_mosquito(vector<double>& prob_trans_genotyp
 bool WHVivax::summarize(Host::Human& human) const {
     if (infections.size() == 0)
         return false; // no infections: not patent, nothing to report
-    mon::recordStat(mon::measure("nInfect"), human);
+    mon::record_stat(mon::measure("nInfect"), human);
     bool patent_host = false;
     // (patent) infections are reported by genotype, even though we don't have
     // genotype in this model
-    mon::recordStat(mon::measure("totalInfs"), human, static_cast<int>(infections.size()));
+    mon::record_stat(mon::measure("totalInfs"), human, static_cast<int>(infections.size()));
     for (const auto& infection : infections) {
         if (infection.is_patent()) {
-            mon::recordStat(mon::measure("totalPatentInf"), human);
+            mon::record_stat(mon::measure("totalPatentInf"), human);
             patent_host = true;
         }
     }
     if (patent_host)
-        mon::recordStat(mon::measure("nPatent"), human);
+        mon::record_stat(mon::measure("nPatent"), human);
     return patent_host;
 }
 
@@ -476,7 +476,7 @@ bool WHVivax::diagnostic_result(LocalRng& rng, const Diagnostic& diagnostic) con
 }
 
 Pathogenesis::StatePair WHVivax::determine_morbidity(Host::Human& human, double age_years, bool) {
-    mon::recordStat(mon::measure("expectedSevere"), human, p_severe);
+    mon::record_stat(mon::measure("expectedSevere"), human, p_severe);
     Pathogenesis::StatePair result; // no indirect mortality in the vivax model
     result.state = morbidity;
     return result;
@@ -489,7 +489,7 @@ void WHVivax::treatment(Host::Human& human, TreatmentId treat_id) {
     treat_simple(human, treat.liver_effect(), treat.blood_effect());
 
     // triggered intervention deployments:
-    treat.deploy(human, mon::Deploy::TREAT, interventions::VaccineLimits(/*default initialise: no limits*/));
+    treat.deploy(human, mon::deploy::TREAT, interventions::VaccineLimits(/*default initialise: no limits*/));
 }
 void WHVivax::optional_pq_treatment(Host::Human& human) {
     // PQ clears liver stages. We don't worry about the effect of PQ on
@@ -502,7 +502,7 @@ void WHVivax::optional_pq_treatment(Host::Human& human) {
                 infection.treatment_ls();
             }
         }
-        mon::recordEvent(mon::measure("nLiverStageTreatments"), human);
+        mon::record_event(mon::measure("nLiverStageTreatments"), human);
     }
 }
 bool WHVivax::treat_simple(Host::Human& human, SimTime time_liver, SimTime time_blood) {
@@ -529,7 +529,7 @@ bool WHVivax::treat_simple(Host::Human& human, SimTime time_liver, SimTime time_
                 }
             }
         }
-        mon::recordEvent(mon::measure("nLiverStageTreatments"), human);
+        mon::record_event(mon::measure("nLiverStageTreatments"), human);
     }
 
     // there probably will be blood-stage treatment

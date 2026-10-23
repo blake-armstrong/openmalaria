@@ -132,17 +132,17 @@ void registerContinousPopulationCallbacks(mon::Continuous& continuous) {
     for (double ubound : ctsDemogAgeGroups)
         ctsDemogTitle << "\thost % ≤ " << ubound;
 
-    continuous.registerCallback("hosts", "\thosts", &ctsHosts);
-    continuous.registerCallback("host demography", ctsDemogTitle.str(), &ctsHostDemography);
-    continuous.registerCallback("recent births", "\trecent births", &ctsRecentBirths);
-    continuous.registerCallback("patent hosts", "\tpatent hosts", &ctsPatentHosts);
-    continuous.registerCallback("immunity h", "\timmunity h", &ctsImmunityh);
-    continuous.registerCallback("immunity Y", "\timmunity Y", &ctsImmunityY);
-    continuous.registerCallback("median immunity Y", "\tmedian immunity Y", &ctsMedianImmunityY);
-    continuous.registerCallback("human age availability", "\thuman age availability", &ctsMeanAgeAvailEffect);
-    continuous.registerCallback("ITN coverage", "\tITN coverage", &ctsITNCoverage);
-    continuous.registerCallback("IRS coverage", "\tIRS coverage", &ctsIRSCoverage);
-    continuous.registerCallback("GVI coverage", "\tGVI coverage", &ctsGVICoverage);
+    continuous.register_callback("hosts", "\thosts", &ctsHosts);
+    continuous.register_callback("host demography", ctsDemogTitle.str(), &ctsHostDemography);
+    continuous.register_callback("recent births", "\trecent births", &ctsRecentBirths);
+    continuous.register_callback("patent hosts", "\tpatent hosts", &ctsPatentHosts);
+    continuous.register_callback("immunity h", "\timmunity h", &ctsImmunityh);
+    continuous.register_callback("immunity Y", "\timmunity Y", &ctsImmunityY);
+    continuous.register_callback("median immunity Y", "\tmedian immunity Y", &ctsMedianImmunityY);
+    continuous.register_callback("human age availability", "\thuman age availability", &ctsMeanAgeAvailEffect);
+    continuous.register_callback("ITN coverage", "\tITN coverage", &ctsITNCoverage);
+    continuous.register_callback("IRS coverage", "\tIRS coverage", &ctsIRSCoverage);
+    continuous.register_callback("GVI coverage", "\tGVI coverage", &ctsGVICoverage);
 }
 
 void ctsHosts(Population& population, ostream& stream) {

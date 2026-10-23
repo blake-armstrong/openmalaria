@@ -227,13 +227,13 @@ bool DescriptiveWithinHostModel::summarize(Host::Human& human) const {
 
     // If the number of infections is 0 and parasite density is positive we default to Indigenous
     if (infections.size() > 0) {
-        mon::recordStat(mon::measure("nInfect"), human);
+        mon::record_stat(mon::measure("nInfect"), human);
         if (infection_type == InfectionOrigin::Indigenous)
-            mon::recordStat(mon::measure("nInfect_Indigenous"), human);
+            mon::record_stat(mon::measure("nInfect_Indigenous"), human);
         else if (infection_type == InfectionOrigin::Introduced)
-            mon::recordStat(mon::measure("nInfect_Introduced"), human);
+            mon::record_stat(mon::measure("nInfect_Introduced"), human);
         else
-            mon::recordStat(mon::measure("nInfect_Imported"), human);
+            mon::record_stat(mon::measure("nInfect_Imported"), human);
 
         int n_imported = 0, n_introduced = 0, n_indigenous = 0;
         for (const auto& infection : infections) {
@@ -247,22 +247,22 @@ bool DescriptiveWithinHostModel::summarize(Host::Human& human) const {
 
         // (patent) infections are reported by genotype, even though we don't have
         // genotype in this model
-        mon::recordStat(mon::measure("totalInfs"), human, static_cast<int>(infections.size()));
-        mon::recordStat(mon::measure("totalInfs_Imported"), human, n_imported);
-        mon::recordStat(mon::measure("totalInfs_Introduced"), human, n_introduced);
-        mon::recordStat(mon::measure("totalInfs_Indigenous"), human, n_indigenous);
+        mon::record_stat(mon::measure("totalInfs"), human, static_cast<int>(infections.size()));
+        mon::record_stat(mon::measure("totalInfs_Imported"), human, n_imported);
+        mon::record_stat(mon::measure("totalInfs_Introduced"), human, n_introduced);
+        mon::record_stat(mon::measure("totalInfs_Indigenous"), human, n_indigenous);
 
         if (descriptive_params->report_patent_infected) {
             for (const auto& infection : infections) {
                 if (Diagnostics::monitoring_diagnostic().is_positive(human.monitoring_rng, infection->get_density(),
                                                                      std::numeric_limits<double>::quiet_NaN())) {
-                    mon::recordStat(mon::measure("totalPatentInf"), human);
+                    mon::record_stat(mon::measure("totalPatentInf"), human);
                     if (infection->origin() == InfectionOrigin::Indigenous)
-                        mon::recordStat(mon::measure("totalPatentInf_Indigenous"), human);
+                        mon::record_stat(mon::measure("totalPatentInf_Indigenous"), human);
                     else if (infection->origin() == InfectionOrigin::Introduced)
-                        mon::recordStat(mon::measure("totalPatentInf_Introduced"), human);
+                        mon::record_stat(mon::measure("totalPatentInf_Introduced"), human);
                     else
-                        mon::recordStat(mon::measure("totalPatentInf_Imported"), human);
+                        mon::record_stat(mon::measure("totalPatentInf_Imported"), human);
                 }
             }
         }
@@ -274,11 +274,11 @@ bool DescriptiveWithinHostModel::summarize(Host::Human& human) const {
 
             for (auto gtype : dens_by_gtype) {
                 // we had at least one infection of this genotype
-                mon::recordStat(mon::measure("nInfectByGenotype"), human, 1, 0, gtype.first, 0);
+                mon::record_stat(mon::measure("nInfectByGenotype"), human, 1, 0, gtype.first, 0);
                 if (Diagnostics::monitoring_diagnostic().is_positive(human.monitoring_rng, gtype.second,
                                                                      std::numeric_limits<double>::quiet_NaN())) {
-                    mon::recordStat(mon::measure("nPatentByGenotype"), human, 1, 0, gtype.first, 0);
-                    mon::recordStat(mon::measure("logDensByGenotype"), human, log(gtype.second), 0, gtype.first, 0);
+                    mon::record_stat(mon::measure("nPatentByGenotype"), human, 1, 0, gtype.first, 0);
+                    mon::record_stat(mon::measure("logDensByGenotype"), human, log(gtype.second), 0, gtype.first, 0);
                 }
             }
         }
@@ -289,16 +289,16 @@ bool DescriptiveWithinHostModel::summarize(Host::Human& human) const {
     // totalDensity > 0. Here we report the last calculated density.
     if (Diagnostics::monitoring_diagnostic().is_positive(human.monitoring_rng, total_density,
                                                          std::numeric_limits<double>::quiet_NaN())) {
-        mon::recordStat(mon::measure("nPatent"), human);
+        mon::record_stat(mon::measure("nPatent"), human);
         if (infection_type == InfectionOrigin::Imported)
-            mon::recordStat(mon::measure("nPatent_Imported"), human);
+            mon::record_stat(mon::measure("nPatent_Imported"), human);
         else if (infection_type == InfectionOrigin::Introduced)
-            mon::recordStat(mon::measure("nPatent_Introduced"), human);
+            mon::record_stat(mon::measure("nPatent_Introduced"), human);
         else if (infection_type == InfectionOrigin::Indigenous)
-            mon::recordStat(mon::measure("nPatent_Indigenous"), human);
+            mon::record_stat(mon::measure("nPatent_Indigenous"), human);
 
         if (total_density > 1e-10)
-            mon::recordStat(mon::measure("sumlogDens"), human, log(total_density));
+            mon::record_stat(mon::measure("sumlogDens"), human, log(total_density));
         return true; // patent
     }
     return false; // not patent

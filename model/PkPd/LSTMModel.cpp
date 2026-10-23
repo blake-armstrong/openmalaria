@@ -157,8 +157,8 @@ void LSTMModel::summarize(const Host::Human& human) const {
         for (auto& drug : drugs) {
             const double conc = drug->get_concentration(index);
             if (conc > 0.0) {
-                mon::recordStat(mon::measure("nHostDrugConcNonZero"), human, 1, 0, 0, index);
-                mon::recordStat(mon::measure("sumLogDrugConcNonZero"), human, log(conc), 0, 0, index);
+                mon::record_stat(mon::measure("nHostDrugConcNonZero"), human, 1, 0, 0, index);
+                mon::record_stat(mon::measure("sumLogDrugConcNonZero"), human, log(conc), 0, 0, index);
             }
         }
     }

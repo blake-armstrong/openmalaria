@@ -176,7 +176,7 @@ protected:
         vacc_limits.set(deploy);
     }
 
-    inline void deploy_to_human(Host::Human& human, mon::Deploy::Method method) const {
+    inline void deploy_to_human(Host::Human& human, mon::deploy::Method method) const {
         intervention->deploy(human, method, vacc_limits);
     }
 
@@ -293,7 +293,7 @@ public:
                     availability <= per_host_params().ento_availability_percentile(max_availability)) {
                     if (sub_pop == ComponentId::whole_pop() || (human.isInSubPop(sub_pop) != complement)) {
                         if (human.intervention_rng.bernoulli(probability)) {
-                            deploy_to_human(human, mon::Deploy::TIMED);
+                            deploy_to_human(human, mon::deploy::TIMED);
                         }
                     }
                 }
@@ -369,7 +369,7 @@ public:
                  << additional_coverage << "; total " << total << endl;
             for (Human* human : unprotected) {
                 if (human->intervention_rng.uniform_01() < additional_coverage) {
-                    deploy_to_human(*human, mon::Deploy::TIMED);
+                    deploy_to_human(*human, mon::deploy::TIMED);
                 }
             }
         }
@@ -646,7 +646,7 @@ public:
                     (sub_pop == ComponentId::whole_pop() || (human.isInSubPop(sub_pop) != complement)) &&
                     human.intervention_rng.uniform_01() < coverage) // RNG call should be last test
                 {
-                    deploy_to_human(human, mon::Deploy::CTS);
+                    deploy_to_human(human, mon::deploy::CTS);
                 }
             }
         } //else: for some reason, a deployment age was missed; ignore it

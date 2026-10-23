@@ -20,8 +20,8 @@
  * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301, USA.
  */
 
-#ifndef Hmod_Output_Continuous
-#define Hmod_Output_Continuous
+#ifndef HMOD_OUTPUT_CONTINUOUS
+#define HMOD_OUTPUT_CONTINUOUS
 
 #include "Global.h"
 #include <string>
@@ -61,7 +61,7 @@ public:
 	 * assume we shouldn't overwrite existing files for security reasons).
 	 * 
 	 * Callbacks should be registered before init() is called. */
-    void init(const scnXml::Monitoring& monitoring, bool isCheckpoint);
+    void init(const scnXml::Monitoring& monitoring, bool is_checkpoint);
 
     void checkpoint(ostream& stream);
     void checkpoint(istream& stream);
@@ -78,11 +78,11 @@ public:
 	 * @param outputCb A callback function, which when called, outputs its
 	 * data to the passed stream, with each entry preceeded by '\t'.
 	 */
-    void registerCallback(string optName, string titles, function<void(ostream&)> f);
+    void register_callback(string opt_name, string titles, function<void(ostream&)> f);
 
-    void registerCallback(string optName, string titles, function<void(const vector<Host::Human>&, ostream&)> f);
+    void register_callback(string opt_name, string titles, function<void(const vector<Host::Human>&, ostream&)> f);
 
-    void registerCallback(string optName, string titles, function<void(Population&, ostream&)> f);
+    void register_callback(string opt_name, string titles, function<void(Population&, ostream&)> f);
 
     /// Generate time-step's output. Called at beginning of time step.
     /// Passed population since some callbacks use this to generate output.
@@ -91,19 +91,19 @@ public:
 private:
     /// This is used to output some statistics in a tab-deliminated-value file.
     /// (It used to be csv, but German Excel can't open csv directly.)
-    fstream ctsOStream;
+    fstream cts_stream;
 
     // Serializable output position used when resuming from a checkpoint.
-    streamoff streamOffset = 0;
+    streamoff stream_offset = 0;
 
     map<string, tuple<string, std::function<void(Population&, ostream&)>>> registered;
 
     // List that we report.
-    vector<tuple<string, std::function<void(Population&, ostream&)>>> toReport;
+    vector<tuple<string, std::function<void(Population&, ostream&)>>> to_report;
 
-    SimTime ctsPeriod = Sim::zero();
+    SimTime cts_period = Sim::zero();
 
-    bool duringInit = false;
+    bool during_init = false;
 };
 
 } // namespace mon

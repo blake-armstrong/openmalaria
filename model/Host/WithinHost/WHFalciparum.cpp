@@ -56,9 +56,9 @@ FalciparumParams::FalciparumParams(const OM::Parameters& parameters, const util:
       inv_cumulative_h_star(1.0 / parameters[Parameter::CumulativeHStar]),
       alpha_m(1.0 - exp(-parameters[Parameter::NegLogOneMinusAlphaM])), decay_m(parameters[Parameter::DecayM]),
       y_lag_len(Sim::in_steps(Sim::from_days(20)) + 1),
-      report_infections_by_genotype(mon::isUsed(mon::measure("nInfectByGenotype")) ||
-                                    mon::isUsed(mon::measure("nPatentByGenotype")) ||
-                                    mon::isUsed(mon::measure("logDensByGenotype"))),
+      report_infections_by_genotype(mon::is_used(mon::measure("nInfectByGenotype")) ||
+                                    mon::is_used(mon::measure("nPatentByGenotype")) ||
+                                    mon::is_used(mon::measure("logDensByGenotype"))),
       vaccine_genotype(options.option(util::VaccineGenotype)) {}
 
 // -----  Non-static  -----
@@ -183,7 +183,7 @@ void WHFalciparum::treatment(Host::Human& human, TreatmentId treat_id) {
     treat_simple(human, treat.liver_effect(), treat.blood_effect());
 
     // triggered intervention deployments:
-    treat.deploy(human, mon::Deploy::TREAT, interventions::VaccineLimits(/*default initialise: no limits*/));
+    treat.deploy(human, mon::deploy::TREAT, interventions::VaccineLimits(/*default initialise: no limits*/));
 }
 bool WHFalciparum::treat_simple(Host::Human& human, SimTime time_liver, SimTime time_blood) {
     if (time_liver != Sim::zero()) {
@@ -191,7 +191,7 @@ bool WHFalciparum::treat_simple(Host::Human& human, SimTime time_liver, SimTime 
             clear_infections(Treatments::LIVER);
         else
             treat_expiry_liver = max(treat_expiry_liver, Sim::now_or_ts1() + time_liver);
-        mon::recordEvent(mon::measure("nLiverStageTreatments"), human);
+        mon::record_event(mon::measure("nLiverStageTreatments"), human);
     }
     if (time_blood != Sim::zero()) {
         if (time_blood < Sim::zero())

@@ -38,7 +38,7 @@ class IRSComponent : public Transmission::HumanVectorInterventionComponent {
 public:
     IRSComponent(ComponentId id, const scnXml::IRSDescription& elt, const map<string, size_t>& species_name_map);
 
-    void deploy(Host::Human& human, mon::Deploy::Method method, VaccineLimits) const override;
+    void deploy(Host::Human& human, mon::deploy::Method method, VaccineLimits) const override;
 
     component_types::Type component_type() const override;
 

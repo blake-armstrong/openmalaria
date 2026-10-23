@@ -123,7 +123,7 @@ void Human::addToCohort(ComponentId id, SimTime duration) {
     if (duration <= Sim::zero())
         return; // nothing to do
     subPopExp[id] = Sim::now_or_ts1() + duration;
-    cohortSet = mon::updateCohortSet(cohortSet, id, true);
+    cohortSet = mon::update_cohort_set(cohortSet, id, true);
 }
 
 void Human::removeFromCohort(interventions::ComponentId id) { subPopExp.erase(id); }
@@ -140,9 +140,9 @@ void Human::removeFirstEvent(interventions::sub_pop_remove::RemoveAtCode code) {
                 clinicalModel->flush_reports(); // reset HS memory
 
                 // report removal due to first infection/bout/treatment
-                mon::recordEvent(mon::measure("nSubPopRemovalFirstEvent"), *this);
+                mon::record_event(mon::measure("nSubPopRemovalFirstEvent"), *this);
             }
-            cohortSet = mon::updateCohortSet(cohortSet, exp_it->first, false);
+            cohortSet = mon::update_cohort_set(cohortSet, exp_it->first, false);
             // remove (affects reporting, restrictToSubPop and cumulative deployment):
             subPopExp.erase(exp_it);
         }
@@ -155,8 +155,8 @@ void Human::updateCohortSet() {
         if (!(expIt->second >= Sim::ts0())) { // membership expired
             // don't flush reports
             // report removal due to expiry
-            mon::recordEvent(mon::measure("nSubPopRemovalTooOld"), *this);
-            cohortSet = mon::updateCohortSet(cohortSet, expIt->first, false);
+            mon::record_event(mon::measure("nSubPopRemovalTooOld"), *this);
+            cohortSet = mon::update_cohort_set(cohortSet, expIt->first, false);
             // erase element, but continue iteration
             expIt = subPopExp.erase(expIt);
         } else {
@@ -207,12 +207,12 @@ void summarize(Human& human, bool surveyOnlyNewEp) {
         return;
     }
 
-    mon::recordStat(mon::measure("nHost"), human);
-    mon::recordStat(mon::measure("sumAge"), human, Sim::in_years(human.age(Sim::now())));
+    mon::record_stat(mon::measure("nHost"), human);
+    mon::record_stat(mon::measure("sumAge"), human, Sim::in_years(human.age(Sim::now())));
     bool patent = human.withinHostModel->summarize(human);
     human.infIncidence->summarize(human);
 
-    if (patent && mon::isReported()) {
+    if (patent && mon::is_reported()) {
         // this should happen after all other reporting!
         human.removeFirstEvent(interventions::sub_pop_remove::OnFirstInfection);
     }
@@ -230,7 +230,7 @@ void update(Human& human, Transmission::TransmissionModel& transmission, const N
     util::streamValidate(age0);
 
     // monitoringAgeGroup is the group for the start of the time step.
-    mon::updateAgeGroup(human.monitoringAgeGroup, age0);
+    mon::update_age_group(human.monitoringAgeGroup, age0);
 
     human.updateCohortSet();
 
