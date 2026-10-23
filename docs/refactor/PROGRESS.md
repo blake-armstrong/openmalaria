@@ -40,7 +40,7 @@ See `PLAN.md` for the session protocol, chunks and gates. Append one log entry p
 | D6b | done | 66fdf1e1, 38a88580, a0e9a737, 18a6f0c2, f1831c6f, 227daa2f, d4e7b71c, 51663e3e, 9011466e, (this log entry); F59/F60 fixes e169341c, 75700eda, 41c35aa4, f8f0896b, (their log entry) |
 | D6c | done | 38f78eda, a7c68da3, 9e34f002, 6e9038b9, 9cf1ff5a, bb46b13d, c78608b6, 0eb65ebb, (this log entry); F68/F71/F72 fixes ee622593, 5ec95acf, 942a1306, 137ce408, (their log entry) |
 | D7 | done | 3de6a425, 31d61953, 8e9e674f, 8b583553, 529d46cf, 5d117152, f4c2f44c, e1f80857, acec99a5, d5761b35, e18142b8, (this log entry); F73 tests 2e3ff85e, 3409b9e9, (their log entry) |
-| D7b | todo | |
+| D7b | done | f844263a, 99a752ec, 6ac27849, 4eaa9225, e1c53c02, 13d177cc, 804c0268, 9f0a66fe, 2a18091d, b38f88e7, (this log entry) |
 | D8 | todo | |
 | D9 | todo | |
 | E1 | todo | |
@@ -454,6 +454,7 @@ See `PLAN.md` for the session protocol, chunks and gates. Append one log entry p
   | `model/Host/WithinHost/Pathogenesis` | c38704fb + 225947ca's hand rename (D6a) | c2e8281b + c5dc1e95 (D6a) |
   | `model/Clinical/` (not `CMDecisionTree`, D6c) and `model/Host/NeonatalMortality` | a0e9a737 + 18a6f0c2's hand rename (D6b) | 227daa2f + 51663e3e (D6b) |
   | `model/Transmission` (not the uncompiled AnophelesModel and MosqLifeCycle suites, F9) | 8b583553 + 529d46cf's hand rename (D7) | f4c2f44c + acec99a5 (D7) |
+  | `model/Host/InfectionIncidenceModel.{h,cpp}`, `model/PopulationAgeStructure.{h,cpp}` | 6ac27849 (D7b) | 13d177cc + 9f0a66fe (D7b) |
 
   Rows from D4a on were added in D4d; the D4 entries had recorded the commits only in their logs.
 
@@ -1328,3 +1329,37 @@ The user asked to double-check F73 and, if it held, to add a test with the fix, 
   - No model code changed, so G-style and G-perf do not apply.
 - Findings: F73 moved to § Closed with the corrected description and the evidence. New: F75 (the copula's per-human sample is keyed by the sub-population, not the component, so whole-population copula deployments of different components share it; not changed).
 - Next: D7b.
+
+### D7b: infection incidence and age structure statics → `Simulation` (done, 2026-10-23)
+- Base: e55b3741 (D7's F73 follow-up; same C++ as d5761b35). The G-perf and A/B base worktree `../om-bench-base` was moved to e55b3741 and rebuilt.
+- Scope: the plan row (added at the start of D7): `InfectionIncidenceModel`'s 11 file globals and its `ctsNewInfections` counter, `AgeStructure`'s statics (and the file-global function pointer its GSL fit called through), and `Human` taking the population master RNG and the `PerHostParams` by injection (D2's and D7's follow-ups).
+- Commits:
+  - f844263a: `util/ab_scenarios.py` group `host` (19 variants, below), base against base first.
+  - 99a752ec: **logic.**
+    - `Host::InfectionIncidenceParams` (`InfectionIncidenceModel.h`), a `Simulation` member built where `InfectionIncidenceModel::init` ran, from the `Parameters` and the `ModelOptionFlags` (init read the options through the bridge; same values). Its constructor is the old init body: parameters 16, 5, 1, 3, 2, 4, then the LogNormal NaN error or the heterogeneity-workaround warning. `Kind` replaces the three exclusive `opt_` flags with their old precedence; `create` replaces `createModel` and returns `unique_ptr`; each per-human model holds a pointer. Default-constructed params have the zero/false values of the never-initialised globals, which the unit tests' humans use.
+    - `Host::NewInfections`, a `Simulation` member: `Host::update` passes it to `report_num_new_infections`; checkpointed at the old position (after neonatal mortality), so the format is unchanged; the "new infections" ctsout callback is registered right after the params are built, capturing the member.
+    - `AgeStructure` is an instance class and a `Simulation` member built where `AgeStructure::init` ran; the fit's statics and `wCalcRSSFunc` became a file-local `DemographyFit` passed to GSL through its `params` pointer. Same arithmetic and the same final re-evaluation at the minimiser's point.
+    - `Human(SimTime, const HumanParams&, util::MasterRng&)`, `HumanParams` holding the `PerHostParams` and `InfectionIncidenceParams`; member order unchanged, so its four streams are seeded in the old order. `Population` holds them with the `AgeStructure`. `Human` was `bridge::master_rngs()`'s last user, so the bridge and `MasterRngsBinding` were removed. The unit tests pass their static `MasterRngs(0)` directly (same draws, F30).
+  - 6ac27849 + 4eaa9225: **rename**, 62 by the tool (28 parameter, 17 variable, 7 method, 4 member, 2 header guards, 2 function, 1 constexpr variable, 1 local constant). Map: `m_cumulativeEIRa=cumulative_eir_a` (the tool gave `cumulative_ei_ra`). Collisions reviewed: `expected_num_infections` and `cum_age_prop`, each in a different function or class. No uncompiled suite uses the module.
+  - e1c53c02: **logic**, members of `InfectionIncidenceParams` declared in read order. The modernise dry run showed `prefer-member-initializer` moving the six throwing parameter reads into the initializer list, which runs in declaration order; `x_star_p_inv` (4) was declared before `e_star_inv` (2), so a scenario missing both would have reported 4 instead of 2 (F58's hazard).
+  - 13d177cc + 804c0268: **modernise, tool:** 9 `prefer-member-initializer`, 8 `use-override`, 4 `use-equals-default`, 3 `init-variables`, 2 `use-default-member-init`, 1 `concat-nested-namespaces`. Run with `--passes 12`: each member-initializer move overlaps the next, so the tool takes one per pass, and the default 5 passes left four (that first output was reverted, not committed).
+  - 9f0a66fe: **modernise, hand:** `misc-const-correctness` (24 locals, west const); the tool's `= NAN` followed by an assignment → one const initialisation (twice); the effectiveEIR error's `ostringstream` → `std::format` with `{:g}` (same text; no scenario can reach it); `static_cast`s for a C cast and a narrowing; `Kind` on `std::uint8_t`. Left: the GSL minimiser's allocations (M5/M6), protected data, the warning's `endl` (F14), `operator&` (H3), `scnXml::Demography` (E).
+  - 2a18091d: G-style on lines the chunk changed: `params` private behind a protected `params()`, `Human`'s constructor parameter `date_of_birth`, `Population`'s `target_pop` and casts, `emplace_back`, designated initializers, `make_unique` in the unit tests.
+  - b38f88e7: FINDINGS F76, F77; PLAN.md D7b row as built; README's bridge list (`util/random.h` gone) and A/B row.
+- Gates:
+  - G-exact / G-unit: 61/61 (strict) on `build-rework/` (Release) and `build-debug/` (Debug) after each C++ commit. ctest reaches the default, LogNormal and TRIPLE_HET heterogeneity-workaround incidence models, `NO_PRE_ERYTHROCYTIC`, `VACCINE_GENOTYPE`, the "new infections" ctsout column (11 scenarios), and the age structure in every scenario, all with checkpoint stop and resume.
+  - G-stat: `ctest -L statistical -j4` at 2a18091d: 53 passed, 8 disabled (no reference), as after D7's F73 follow-up.
+  - G-style: `util/style.sh check e55b3741` clean at 2a18091d. Rename: format half clean, second dry run `nothing to rename`, token check passed, `check 6ac27849^` clean. Modernise tool commit: format half clean, second dry run applies nothing, `check 13d177cc^` clean.
+  - G-perf: `util/bench.sh -n 7 --compare ../om-bench-base/build-rework`, candidate 2a18091d, load ~3.5 at the start: median per-pair ratio 1.0157 (+1.57%), spreads 12.0% (base) / 4.2%.
+  - A/B (`util/ab_scenarios.py <base> <candidate>`, base e55b3741): 0 of 210 variants (all nine groups) differ after the logic commit, after the hand commit and after the G-style commit. The group `host` covers: `TRANS_HET`, `COMORB_TRANS_HET` and `TRANS_TREAT_HET` (the heterogeneity workaround and its warning; ctest has only `TRIPLE_HET`); the LogNormal parameter-16 error; the negative binomial model, which no ctest scenario uses, with scenario5's parameter 16 (F76's error) and with parameter 16 = 2 and `--checkpoint`; checkpoint bytes of scenarioNoInterv, which reports "new infections"; each incidence parameter dropped alone and each consecutive pair in the read order; an altered demography table.
+  - Planted bugs (then reverted): parameters 3 and 2 read in swapped order → `host/incidence_no_params_3_2` differs; the counter not checkpointed → `host/lognormal_new_infections_checkpoint` and `host/neg_bin_checkpoint` differ, ctest passes (below); the counter not reset at the start of the main phase → 10 ctest scenarios fail; the fit's final re-evaluation at the minimiser's point skipped → 51 ctest scenarios fail and `host/demography_altered` differs. A fifth plant, restoring the age-group percentages after each fit evaluation, changed nothing (F77).
+- Findings: F76 (negative binomial with a small parameter 16 reported as a code error), F77 (the fit's in-place update has no effect).
+- Surprises:
+  - ctest cannot see the counter's checkpointing: the only checkpoint is written right after the counter is reset at the start of the main phase, so it always holds 0 there. The A/B checkpoint-bytes variants do see it.
+  - The modernise tool's default 5 passes were not enough for a constructor with nine member assignments.
+- Follow-ups:
+  - D8: the intervention deployments (`Deployments.h`) still use `bridge::per_host_params()`.
+  - D9: `Human`'s constructor still reaches the within-host model (`WHInterface::create_within_host_model`), the clinical params (`bridge::clinical_params()`) and the model options (`hetSample`) through their bridges; `mon::Continuous`'s callback registry is still global.
+  - Sweep before F0: `Human` and `Population` are not renamed or modernised (their constructors changed here; the rest is untouched).
+  - E: F76.
+- Next: D8.
