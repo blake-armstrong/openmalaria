@@ -270,7 +270,7 @@ double factors::SurvivalFactor::survival_factor(double hole_index, double insect
     if (!use_logit_eqns) {
         double hole_component = exp(-hole_index * a.hole_scaling);
         double insecticide_component = 1.0 - exp(-insecticide_content * a.insecticide_scaling);
-        double killing_effect =
+        const double killing_effect =
             a.bf + a.hf * hole_component + a.pf * insecticide_component + a.IF * hole_component * insecticide_component;
 
         double survival_factor = (1.0 - killing_effect) * a.inv_base_survival;
@@ -294,9 +294,9 @@ double factors::SurvivalFactor::survival_factor(double hole_index, double insect
 }
 
 void factors::RelativeAttractiveness::init_single_stage(const scnXml::ITNDeterrency& elt, double max_insecticide) {
-    model = SingleStage;
-    double hf = elt.getHoleFactor();
-    double pf = elt.getInsecticideFactor();
+    model = DeterrencyModel::SingleStage;
+    const double hf = elt.getHoleFactor();
+    const double pf = elt.getInsecticideFactor();
     double IF = elt.getInteractionFactor();
     a.hole_scaling = elt.getHoleScalingFactor();
     a.insecticide_scaling = elt.getInsecticideScalingFactor();
@@ -363,15 +363,14 @@ void factors::RelativeAttractiveness::init_two_stage(const scnXml::TwoStageDeter
                                                      double hole_index_max, bool hole_index_max_present) {
     b.l_pf_entering = numeric_limits<double>::quiet_NaN();
     if (elt.getEntering().present()) {
-        model = TwoStage;
+        model = DeterrencyModel::TwoStage;
         const double pf = elt.getEntering().get().getInsecticideFactor();
         b.insecticide_scaling_entering = elt.getEntering().get().getInsecticideScalingFactor();
         if (!(pf > 0.0)) {
             // we take the log of PF, so it must be positive
-            ostringstream msg;
-            msg << "ITN.description.anophelesParams.twoStageDeterrency.entering: insecticideFactor must be positive "
-                   "since we take its logarithm.";
-            throw util::xml_scenario_error(msg.str());
+            throw util::xml_scenario_error(
+                "ITN.description.anophelesParams.twoStageDeterrency.entering: insecticideFactor must be positive "
+                "since we take its logarithm.");
         }
 
         /* We need to ensure the relative availability is non-negative. However,
@@ -397,7 +396,7 @@ void factors::RelativeAttractiveness::init_two_stage(const scnXml::TwoStageDeter
         b.l_pf_entering = log(pf);
     } else {
         assert(elt.getEnteringLogit().present());
-        model = TwoStageLogit;
+        model = DeterrencyModel::TwoStageLogit;
         c.ent_base_factor = elt.getEnteringLogit().get().getBaseFactor();
         c.ent_insecticide_factor = elt.getEnteringLogit().get().getInsecticideFactor();
         if (c.ent_insecticide_factor > 0.0) {
@@ -414,7 +413,7 @@ void factors::RelativeAttractiveness::init_two_stage(const scnXml::TwoStageDeter
                            "ITN.description.anophelesParams.twoStageDeterrency.attacking", true);
     } else {
         assert(elt.getAttackingLogit().present());
-        if (!hole_index_max) {
+        if (hole_index_max == 0.0) {
             throw util::xml_scenario_error(
                 "ITN.description.anophelesParams: holeIndexMax required when using logit attacking deterrency");
         }
@@ -423,7 +422,7 @@ void factors::RelativeAttractiveness::init_two_stage(const scnXml::TwoStageDeter
 }
 
 double factors::RelativeAttractiveness::relative_attractiveness(double hole_index, double insecticide_content) const {
-    if (model == SingleStage) {
+    if (model == DeterrencyModel::SingleStage) {
         double hole_component = exp(-hole_index * a.hole_scaling);
         double insecticide_component = 1.0 - exp(-insecticide_content * a.insecticide_scaling);
         double rel_avail = exp(a.l_hf * hole_component + a.l_pf * insecticide_component +
@@ -433,7 +432,7 @@ double factors::RelativeAttractiveness::relative_attractiveness(double hole_inde
     }
 
     double factor = numeric_limits<double>::quiet_NaN();
-    if (model == TwoStage) {
+    if (model == DeterrencyModel::TwoStage) {
         // This is essentially a combination of the relative attractiveness as used
         // by IRS and a killing factor.
 
@@ -448,7 +447,7 @@ double factors::RelativeAttractiveness::relative_attractiveness(double hole_inde
         // divide by a denominator like in the logit model:
         factor = p_ent;
     } else {
-        assert(model == TwoStageLogit);
+        assert(model == DeterrencyModel::TwoStageLogit);
         const double p = log(insecticide_content + 1.0);
         // We directly take the exponential (this is exp(logit.pEnt0):
         const double q = exp(c.ent_base_factor + c.ent_insecticide_factor * p);
@@ -508,10 +507,10 @@ component_types::Type ITNComponent::component_type() const { return component_ty
 void ITNComponent::print_details(std::ostream& out) const { out << id().id << "\tITN"; }
 
 unique_ptr<PerHostInterventionData> ITNComponent::make_human_part(LocalRng& rng) const {
-    return unique_ptr<PerHostInterventionData>(new HumanITN(rng, *this));
+    return std::make_unique<HumanITN>(rng, *this);
 }
 unique_ptr<PerHostInterventionData> ITNComponent::make_human_part(istream& stream, ComponentId id) const {
-    return unique_ptr<PerHostInterventionData>(new HumanITN(stream, id, *this));
+    return std::make_unique<HumanITN>(stream, id, *this);
 }
 
 void ITNComponent::ITNAnopheles::init(const scnXml::ITNDescription::AnophelesParamsType& elt, double proportion_use,
@@ -536,7 +535,7 @@ void ITNComponent::ITNAnopheles::init(const scnXml::ITNDescription::AnophelesPar
                                         "ITN.description.anophelesParams.preprandialKillingFactor", false);
     } else {
         assert(elt.getPreprandialKillingEffectLogit().present());
-        if (!hole_index_max) {
+        if (hole_index_max == 0.0) {
             throw util::xml_scenario_error(
                 "ITN.description.anophelesParams: holeIndexMax required when using logit killing effect");
         }
@@ -547,7 +546,7 @@ void ITNComponent::ITNAnopheles::init(const scnXml::ITNDescription::AnophelesPar
                                          "ITN.description.anophelesParams.postprandialKillingFactor", false);
     } else {
         assert(elt.getPostprandialKillingEffectLogit().present());
-        if (!hole_index_max) {
+        if (hole_index_max == 0.0) {
             throw util::xml_scenario_error(
                 "ITN.description.anophelesParams: holeIndexMax required when using logit killing effect");
         }
@@ -557,7 +556,7 @@ void ITNComponent::ITNAnopheles::init(const scnXml::ITNDescription::AnophelesPar
         rel_fecundity_effect.init(elt.getFecundityReduction().get(), max_insecticide,
                                   "ITN.description.anophelesParams.fecundityReduction", false);
     } else if (elt.getFecundityReductionLogit().present()) {
-        if (!hole_index_max) {
+        if (hole_index_max == 0.0) {
             throw util::xml_scenario_error(
                 "ITN.description.anophelesParams: holeIndexMax required when using logit fecundity effect");
         }
@@ -567,7 +566,7 @@ void ITNComponent::ITNAnopheles::init(const scnXml::ITNDescription::AnophelesPar
     }
     // Nets only affect people while they're using the net. NOTE: we may want
     // to revise this at some point (heterogeneity, seasonal usage patterns).
-    double prop_active = elt.getPropActive();
+    const double prop_active = elt.getPropActive();
     if (prop_active != 1.0 && prop_active != 0.0)
         throw util::xml_scenario_error("GVI.description.propActive: must be either 0 or 1");
     assert(proportion_use >= 0.0 && proportion_use <= 1.0);
@@ -627,7 +626,7 @@ void HumanITN::update(Host::Human& human) {
         n_holes += new_holes;
         hole_index += new_holes;
 
-        double lambda = n_holes * rip_rate;
+        const double lambda = n_holes * rip_rate;
         if (lambda > 0)
             hole_index += params.rip_factor * human.intervention_rng.poisson(lambda);
     }

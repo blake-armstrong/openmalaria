@@ -72,7 +72,7 @@ public:
         num_doses_administered & stream;
         time_last_deployment & stream;
         per_genotype_initial_efficacy & stream;
-        checkpointHet(stream);
+        checkpoint_het(stream);
     }
 
 private:
@@ -93,8 +93,8 @@ private:
     unique_ptr<util::DecayFunction> het_sample;
     const VaccineComponent* params = nullptr;
 
-    void checkpointHet(ostream& stream);
-    void checkpointHet(istream& stream);
+    void checkpoint_het(ostream& stream);
+    void checkpoint_het(istream& stream);
 
     friend class PerHumanVaccine;
 };

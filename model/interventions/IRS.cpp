@@ -70,10 +70,10 @@ component_types::Type IRSComponent::component_type() const { return component_ty
 void IRSComponent::print_details(std::ostream& out) const { out << id().id << "\tIRS"; }
 
 unique_ptr<PerHostInterventionData> IRSComponent::make_human_part(LocalRng& rng) const {
-    return unique_ptr<PerHostInterventionData>(new HumanIRS(rng, *this));
+    return std::make_unique<HumanIRS>(rng, *this);
 }
 unique_ptr<PerHostInterventionData> IRSComponent::make_human_part(istream& stream, ComponentId id) const {
-    return unique_ptr<PerHostInterventionData>(new HumanIRS(stream, id, *this));
+    return std::make_unique<HumanIRS>(stream, id, *this);
 }
 
 void IRSComponent::IRSAnopheles::init(const scnXml::IRSDescription::AnophelesParamsType& elt, double proportion_use,
@@ -88,7 +88,7 @@ void IRSComponent::IRSAnopheles::init(const scnXml::IRSDescription::AnophelesPar
     }
     assert(proportion_use >= 0.0 && proportion_use <= 1.0);
     // Simpler version of ITN usage/action:
-    double prop_active = elt.getPropActive();
+    const double prop_active = elt.getPropActive();
     if (prop_active != 1.0 && prop_active != 0.0)
         throw util::xml_scenario_error("GVI.description.propActive: must be either 0 or 1");
 
@@ -100,12 +100,11 @@ void IRSComponent::IRSAnopheles::init(const scnXml::IRSDescription::AnophelesPar
 IRSComponent::IRSAnopheles::RelativeAttractiveness::RelativeAttractiveness()
     : l_pf(numeric_limits<double>::signaling_NaN()), insecticide_scaling(numeric_limits<double>::signaling_NaN()) {}
 void IRSComponent::IRSAnopheles::RelativeAttractiveness::init(const scnXml::IRSDeterrency& elt) {
-    double pf = elt.getInsecticideFactor();
+    const double pf = elt.getInsecticideFactor();
     insecticide_scaling = elt.getInsecticideScalingFactor();
     if (!(pf > 0.0)) {
-        ostringstream msg;
-        msg << "IRS.description.anophelesParams.relativeAvailability: expected insecticideFactor to be positive.";
-        throw util::xml_scenario_error(msg.str());
+        throw util::xml_scenario_error(
+            "IRS.description.anophelesParams.relativeAvailability: expected insecticideFactor to be positive.");
     }
 
     /* We need to ensure the relative availability is non-negative. However,
@@ -175,7 +174,7 @@ void IRSComponent::IRSAnopheles::SurvivalFactor::init(const scnXml::IRSKillingEf
     As with the ITN model, we impose a maximum value on the initial insecticide
     content, Pmax, such that the probability of sampling a value from our
     parameterise normal distribution greater than Pmax is 0.001. */
-    double pmax = 1.0 - exp(-max_insecticide * insecticide_scaling);
+    const double pmax = 1.0 - exp(-max_insecticide * insecticide_scaling);
     if (!(pf >= 0.0 && bf + pf * pmax <= 1.0)) {
         ostringstream msg;
         msg << "IRS.description.anophelesParams." << (post_prandial ? "post" : "pre")
@@ -190,15 +189,15 @@ void IRSComponent::IRSAnopheles::SurvivalFactor::init1() {
     inv_base_survival = 1.0;
 }
 double IRSComponent::IRSAnopheles::RelativeAttractiveness::relative_attractiveness(double insecticide_content) const {
-    double insecticide_component = 1.0 - exp(-insecticide_content * insecticide_scaling);
-    double rel_avail = exp(l_pf * insecticide_component);
+    const double insecticide_component = 1.0 - exp(-insecticide_content * insecticide_scaling);
+    const double rel_avail = exp(l_pf * insecticide_component);
     assert(rel_avail >= 0.0);
     return rel_avail;
 }
 double IRSComponent::IRSAnopheles::SurvivalFactor::survival_factor(double insecticide_content) const {
-    double insecticide_component = 1.0 - exp(-insecticide_content * insecticide_scaling);
-    double killing_effect = bf + pf * insecticide_component;
-    double survival_factor = (1.0 - killing_effect) * inv_base_survival;
+    const double insecticide_component = 1.0 - exp(-insecticide_content * insecticide_scaling);
+    const double killing_effect = bf + pf * insecticide_component;
+    const double survival_factor = (1.0 - killing_effect) * inv_base_survival;
     assert(survival_factor >= 0.0);
     assert(survival_factor <= 1.0);
     return survival_factor;
@@ -224,7 +223,7 @@ HumanIRS::HumanIRS(LocalRng& rng, const IRSComponent& params)
 
 void HumanIRS::redeploy(LocalRng& rng, const OM::Transmission::HumanVectorInterventionComponent& params) {
     deploy_time = Sim::now_or_ts1();
-    const IRSComponent* irs_params = dynamic_cast<const IRSComponent*>(&params);
+    const auto* irs_params = dynamic_cast<const IRSComponent*>(&params);
     assert(irs_params != nullptr); // code error if this fails
     initial_insecticide = irs_params->sample_initial_insecticide(rng);
 }
@@ -234,27 +233,27 @@ void HumanIRS::update(Host::Human& human) {}
 double HumanIRS::relative_attractiveness(size_t species_index) const {
     const IRSComponent& params = *component;
     const IRSComponent::IRSAnopheles& anoph = params.species[species_index];
-    double effect = anoph.relative_attractiveness(get_insecticide_content(params));
+    const double effect = anoph.relative_attractiveness(get_insecticide_content(params));
     return anoph.by_protection(effect);
 }
 
 double HumanIRS::preprandial_survival_factor(size_t species_index) const {
     const IRSComponent& params = *component;
     const IRSComponent::IRSAnopheles& anoph = params.species[species_index];
-    double effect = anoph.preprandial_survival_factor(get_insecticide_content(params));
+    const double effect = anoph.preprandial_survival_factor(get_insecticide_content(params));
     return anoph.by_protection(effect);
 }
 
 double HumanIRS::postprandial_survival_factor(size_t species_index) const {
     const IRSComponent& params = *component;
     const IRSComponent::IRSAnopheles& anoph = params.species[species_index];
-    double effect = anoph.postprandial_survival_factor(get_insecticide_content(params));
+    const double effect = anoph.postprandial_survival_factor(get_insecticide_content(params));
     return anoph.by_protection(effect);
 }
 double HumanIRS::rel_fecundity(size_t species_index) const {
     const IRSComponent& params = *component;
     const IRSComponent::IRSAnopheles& anoph = params.species[species_index];
-    double effect = anoph.fecundity_effect(get_insecticide_content(params));
+    const double effect = anoph.fecundity_effect(get_insecticide_content(params));
     return anoph.by_protection(effect);
 }
 

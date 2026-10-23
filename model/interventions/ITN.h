@@ -24,6 +24,7 @@
 #define OM_INTERVENTIONS_ITN
 
 #include "util/DecayFunction.h"
+#include <cstdint>
 #include "Transmission/PerHost.h"
 #include "util/sampler.h"
 #include "schema/interventions.h"
@@ -88,7 +89,7 @@ private:
 };
 
 class RelativeAttractiveness {
-    enum DeterrencyModel { NoModel, SingleStage, TwoStage, TwoStageLogit };
+    enum class DeterrencyModel : std::uint8_t { NoModel, SingleStage, TwoStage, TwoStageLogit };
 
 public:
     RelativeAttractiveness() {}
@@ -133,7 +134,7 @@ private:
             SurvivalFactor p_attacking;
         } c;
     };
-    int model{0};
+    DeterrencyModel model = DeterrencyModel::NoModel;
 };
 }
 
@@ -221,8 +222,8 @@ public:
 
     inline double get_hole_index() const { return hole_index; }
     inline double get_insecticide_content(const ITNComponent& params) const {
-        SimTime age = Sim::now_or_ts1() - deploy_time; // implies age 1 TS on first use
-        double effect_survival = insecticide_decay_het->eval(age);
+        const SimTime age = Sim::now_or_ts1() - deploy_time; // implies age 1 TS on first use
+        const double effect_survival = insecticide_decay_het->eval(age);
         return initial_insecticide * effect_survival;
     }
 

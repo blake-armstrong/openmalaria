@@ -65,10 +65,10 @@ component_types::Type GVIComponent::component_type() const { return component_ty
 void GVIComponent::print_details(std::ostream& out) const { out << id().id << "\tGVI"; }
 
 unique_ptr<PerHostInterventionData> GVIComponent::make_human_part(LocalRng& rng) const {
-    return unique_ptr<PerHostInterventionData>(new HumanGVI(rng, *this));
+    return std::make_unique<HumanGVI>(rng, *this);
 }
 unique_ptr<PerHostInterventionData> GVIComponent::make_human_part(istream& stream, ComponentId id) const {
-    return unique_ptr<PerHostInterventionData>(new HumanGVI(stream, id, *this));
+    return std::make_unique<HumanGVI>(stream, id, *this);
 }
 
 void GVIComponent::GVIAnopheles::init(const scnXml::GVIDescription::AnophelesParamsType& elt, double proportion_use) {
@@ -80,7 +80,7 @@ void GVIComponent::GVIAnopheles::init(const scnXml::GVIDescription::AnophelesPar
         elt.getPostprandialKillingEffect().present() ? elt.getPostprandialKillingEffect().get().getValue() : 0.0;
     fecundity_reduction = elt.getFecundityReduction().present() ? elt.getFecundityReduction().get().getValue() : 0.0;
     // Simpler version of ITN usage/action:
-    double prop_active = elt.getPropActive();
+    const double prop_active = elt.getPropActive();
     if (prop_active != 1.0 && prop_active != 0.0)
         throw util::xml_scenario_error("GVI.description.propActive: must be either 0 or 1");
 
@@ -107,27 +107,27 @@ void HumanGVI::update(Host::Human& human) {}
 double HumanGVI::relative_attractiveness(size_t species_index) const {
     const GVIComponent& params = *component;
     const GVIComponent::GVIAnopheles& anoph = params.species[species_index];
-    double effect = (1.0 - anoph.deterrency * get_effect_survival(params));
+    const double effect = (1.0 - anoph.deterrency * get_effect_survival(params));
     return anoph.by_protection(effect);
 }
 
 double HumanGVI::preprandial_survival_factor(size_t species_index) const {
     const GVIComponent& params = *component;
     const GVIComponent::GVIAnopheles& anoph = params.species[species_index];
-    double effect = (1.0 - anoph.preprandial_killing * get_effect_survival(params));
+    const double effect = (1.0 - anoph.preprandial_killing * get_effect_survival(params));
     return anoph.by_protection(effect);
 }
 
 double HumanGVI::postprandial_survival_factor(size_t species_index) const {
     const GVIComponent& params = *component;
     const GVIComponent::GVIAnopheles& anoph = params.species[species_index];
-    double effect = (1.0 - anoph.postprandial_killing * get_effect_survival(params));
+    const double effect = (1.0 - anoph.postprandial_killing * get_effect_survival(params));
     return anoph.by_protection(effect);
 }
 double HumanGVI::rel_fecundity(size_t species_index) const {
     const GVIComponent& params = *component;
     const GVIComponent::GVIAnopheles& anoph = params.species[species_index];
-    double effect = (1.0 - anoph.fecundity_reduction * get_effect_survival(params));
+    const double effect = (1.0 - anoph.fecundity_reduction * get_effect_survival(params));
     return anoph.by_protection(effect);
 }
 

@@ -100,7 +100,7 @@ public:
 
     /** This is the survival factor of the effect. */
     inline double get_effect_survival(const GVIComponent& params) const {
-        SimTime age = Sim::now_or_ts1() - deploy_time; // implies age 1 TS on first use
+        const SimTime age = Sim::now_or_ts1() - deploy_time; // implies age 1 TS on first use
         return decay_het->eval(age);
     }
 

@@ -95,6 +95,11 @@ struct ComponentId {
 class HumanInterventionComponent {
 public:
     virtual ~HumanInterventionComponent() = default;
+    /** Don't copy (this may be possible but shouldn't be needed). */
+    HumanInterventionComponent(const HumanInterventionComponent&) = delete;
+    HumanInterventionComponent& operator=(const HumanInterventionComponent&) = delete;
+    HumanInterventionComponent(HumanInterventionComponent&&) = delete;
+    HumanInterventionComponent& operator=(HumanInterventionComponent&&) = delete;
 
     /** Deploy the component to a pre-selected human.
      * 
@@ -133,10 +138,6 @@ protected:
     explicit HumanInterventionComponent(ComponentId id) : component_id(id) {}
 
 private:
-    /** Don't copy (this may be possible but shouldn't be needed). */
-    HumanInterventionComponent(const HumanInterventionComponent&) = delete;
-    HumanInterventionComponent& operator=(const HumanInterventionComponent&) = delete;
-
     ComponentId component_id;
     SimTime cohort_duration = Sim::never();
 };

@@ -158,8 +158,8 @@ public:
 
     /// Get remaining insecticide content based on initial amount and decay.
     inline double get_insecticide_content(const IRSComponent& params) const {
-        SimTime age = Sim::now_or_ts1() - deploy_time; // implies age 1 TS on first use
-        double effect_survival = insecticide_decay_het->eval(age);
+        const SimTime age = Sim::now_or_ts1() - deploy_time; // implies age 1 TS on first use
+        const double effect_survival = insecticide_decay_het->eval(age);
         return initial_insecticide * effect_survival;
     }
 

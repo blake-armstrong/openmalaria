@@ -53,7 +53,7 @@ HumanIntervention::HumanIntervention(const xsd::cxx::tree::sequence<scnXml::Comp
                                      const InterventionManager& manager) {
     components.reserve(component_list.size());
     for (const auto& it : component_list) {
-        ComponentId id = manager.get_component_id(it.getId());
+        const ComponentId id = manager.get_component_id(it.getId());
         const HumanInterventionComponent* component = &manager.get_component(id);
         components.push_back(component);
     }
@@ -75,7 +75,7 @@ HumanIntervention::HumanIntervention(const xsd::cxx::tree::sequence<scnXml::Comp
                                      const InterventionManager& manager) {
     components.reserve(component_list.size());
     for (const auto& it : component_list) {
-        ComponentId id = manager.get_component_id(it.getId());
+        const ComponentId id = manager.get_component_id(it.getId());
         const HumanInterventionComponent* component = &manager.get_component(id);
         components.push_back(component);
     }
@@ -93,8 +93,8 @@ HumanIntervention::HumanIntervention(const xsd::cxx::tree::sequence<scnXml::Comp
     std::ranges::stable_sort(components, component_cmp);
 
     for (const auto& it : condition_list) {
-        double min = it.getMinValue().present() ? it.getMinValue().get() : -numeric_limits<double>::infinity();
-        double max = it.getMaxValue().present() ? it.getMaxValue().get() : numeric_limits<double>::infinity();
+        const double min = it.getMinValue().present() ? it.getMinValue().get() : -numeric_limits<double>::infinity();
+        const double max = it.getMaxValue().present() ? it.getMaxValue().get() : numeric_limits<double>::infinity();
         conditions.push_back(mon::setupCondition(it.getMeasure(), min, max, it.getInitialState()));
     }
 }
@@ -102,7 +102,7 @@ HumanIntervention::HumanIntervention(const xsd::cxx::tree::sequence<scnXml::DTDe
                                      const InterventionManager& manager) {
     components.reserve(component_list.size());
     for (const auto& it : component_list) {
-        ComponentId id = manager.get_component_id(it.getComponent());
+        const ComponentId id = manager.get_component_id(it.getComponent());
         const HumanInterventionComponent* component = &manager.get_component(id);
         components.push_back(component);
     }
@@ -183,7 +183,7 @@ void TriggeredDeployments::SubList::deploy(Host::Human& human, mon::Deploy::Meth
     // the beginning of the step since this gives the expected result with age
     // limits of 0 to 1 time step.
     //TODO: why does the above contradict what we do? Is this due to a date being shifted later?
-    SimTime age = human.age(Sim::now_or_ts1());
+    const SimTime age = human.age(Sim::now_or_ts1());
     if (age >= min_age && age < max_age) {
         if (coverage >= 1.0 || human.intervention_rng.bernoulli(coverage)) {
             HumanIntervention::deploy(human, method, vacc_limits);
@@ -241,7 +241,7 @@ public:
         try {
             SimTime dur_l = UnitParse::readShortDuration(elt.getDurationLiver(), UnitParse::NONE),
                     dur_b = UnitParse::readShortDuration(elt.getDurationBlood(), UnitParse::NONE);
-            SimTime neg1 = -Sim::one_ts();
+            const SimTime neg1 = -Sim::one_ts();
             if (dur_l < neg1 || dur_b < neg1) {
                 throw util::xml_scenario_error("treatSimple: cannot have durationBlood or durationLiver less than -1");
             }
@@ -280,7 +280,7 @@ public:
 
     void deploy(Human& human, mon::Deploy::Method method, VaccineLimits) const override {
         mon::recordDeploy(mon::measure("nMDAs"), mon::measure("nCtsMDA"), human, method);
-        double age = Sim::in_years(human.age(Sim::now_or_ts1()));
+        const double age = Sim::in_years(human.age(Sim::now_or_ts1()));
         human.withinHostModel->treat_pk_pd(schedule, dosage, age, delay_d);
     }
 
@@ -301,7 +301,7 @@ public:
         : HumanInterventionComponent(id), tree(decision_trees.create(elt, false)) {}
 
     void deploy(Human& human, mon::Deploy::Method method, VaccineLimits) const override {
-        Clinical::CMDTOut out =
+        const Clinical::CMDTOut out =
             tree.exec(Clinical::CMHostData(human, human.intervention_rng, Sim::in_years(human.age(Sim::now_or_ts1())),
                                            human.clinicalModel->get_latest_state()));
         if (out.treated) {

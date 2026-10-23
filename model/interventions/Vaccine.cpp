@@ -74,7 +74,7 @@ VaccineComponent::VaccineComponent(ComponentId component, const scnXml::VaccineD
                 //cout << "\tonLocus: " << restrictions[j].getOnLocus() << ", " << "toAllelle: " << restrictions[j].getToAllele() << endl;
                 //cout << "\tmatching allelle code: " << WithinHost::Genotypes::findAlleleCode(restrictions[j].getOnLocus(), restrictions[j].getToAllele()) << endl;
 
-                uint32_t allele_code =
+                const uint32_t allele_code =
                     WithinHost::Genotypes::find_allele_code(restriction.getOnLocus(), restriction.getToAllele());
 
                 if (allele_code == numeric_limits<uint32_t>::max()) {
@@ -127,7 +127,7 @@ VaccineComponent::VaccineComponent(ComponentId component, const scnXml::VaccineD
 }
 
 void VaccineComponent::deploy(Host::Human& human, mon::Deploy::Method method, VaccineLimits vacc_limits) const {
-    bool administered = human.vaccine.possibly_vaccinate(human, *this, vacc_limits);
+    const bool administered = human.vaccine.possibly_vaccinate(human, *this, vacc_limits);
     if (administered && report_deployments) {
         mon::recordDeploy(mon::measure("nMassVaccinations"), mon::measure("nEPIVaccinations"), human, method);
     }
@@ -156,14 +156,14 @@ double VaccineComponent::get_initial_efficacy(LocalRng& rng, size_t num_prev_dos
      * the last efficacy. */
     if (num_prev_doses >= per_genotype_initial_mean_efficacy[genotype].size())
         num_prev_doses = per_genotype_initial_mean_efficacy[genotype].size() - 1;
-    double ime = per_genotype_initial_mean_efficacy[genotype][num_prev_doses];
+    const double ime = per_genotype_initial_mean_efficacy[genotype][num_prev_doses];
     //NOTE(validation): With extra valiadation in random, the first difference is noticed here:
     util::streamValidate(ime);
     util::streamValidate(efficacy_b);
     if (ime == 0.0) {
         return 0.0;
     } else if (ime < 1.0) {
-        double result = rng.beta_with_mean(ime, efficacy_b);
+        const double result = rng.beta_with_mean(ime, efficacy_b);
         //NOTE(validation):: Without extra validation in random, the first difference is noticed here:
         util::streamValidate(result);
         //TODO(validation):: Why the difference? Bug in/limitation of StreamValidatior?
@@ -195,14 +195,13 @@ PerEffectPerHumanVaccine::PerEffectPerHumanVaccine(LocalRng& rng, const VaccineC
     het_sample = params.decay_func->hetSample(rng);
 }
 
-void PerEffectPerHumanVaccine::checkpointHet(ostream& stream) {
+void PerEffectPerHumanVaccine::checkpoint_het(ostream& stream) {
     params->decay_func->checkpointSample(het_sample, stream);
 }
 
-void PerEffectPerHumanVaccine::checkpointHet(istream& stream) {
-    const HumanInterventionComponent& component_params = bridge::intervention_manager().get_component(component);
-    assert(dynamic_cast<const VaccineComponent*>(&component_params) != nullptr);
-    params = static_cast<const VaccineComponent*>(&component_params);
+void PerEffectPerHumanVaccine::checkpoint_het(istream& stream) {
+    params = dynamic_cast<const VaccineComponent*>(&bridge::intervention_manager().get_component(component));
+    assert(params != nullptr);
     params->decay_func->checkpointSample(het_sample, stream);
 }
 
@@ -210,8 +209,8 @@ double PerHumanVaccine::get_factor(vaccines::Types type, uint32_t genotype) cons
     double factor = 1.0;
     for (const auto& effect : effects) {
         if (effect.params->type == type) {
-            SimTime age = Sim::ts1() - effect.time_last_deployment; // implies age 1 TS on first use
-            double decay_factor = effect.het_sample->eval(age);
+            const SimTime age = Sim::ts1() - effect.time_last_deployment; // implies age 1 TS on first use
+            const double decay_factor = effect.het_sample->eval(age);
             factor *= 1.0 - effect.per_genotype_initial_efficacy[genotype] * decay_factor;
         }
     }
@@ -228,7 +227,7 @@ bool PerHumanVaccine::possibly_vaccinate(Host::Human& human, const VaccineCompon
         }
     }
 
-    uint32_t num_doses_administered = (effect == nullptr) ? 0 : effect->num_doses_administered;
+    const uint32_t num_doses_administered = (effect == nullptr) ? 0 : effect->num_doses_administered;
     if (num_doses_administered < vacc_limits.min_prev_doses || num_doses_administered >= vacc_limits.max_cum_doses)
         return false; // no vaccination (this replaces the old schedule for continuous doses)
 
