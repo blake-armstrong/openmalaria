@@ -127,7 +127,7 @@ void Population::checkpoint(ostream& stream) {
         human.checkpoint(stream);
 }
 
-void registerContinousPopulationCallbacks(mon::Continuous& continuous) {
+void register_continuous_population_callbacks(mon::Continuous& continuous) {
     ostringstream ctsDemogTitle;
     for (double ubound : ctsDemogAgeGroups)
         ctsDemogTitle << "\thost % ≤ " << ubound;

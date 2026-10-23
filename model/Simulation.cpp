@@ -118,7 +118,7 @@ Simulation::Simulation(std::unique_ptr<scnXml::Scenario> scenario, util::Command
         Transmission::create_transmission_model(scenario_xml->getEntomology(), static_cast<int>(pop_size),
                                                 per_host_params, master_rngs.transmission, genotypes, continuous);
 
-    registerContinousPopulationCallbacks(continuous);
+    register_continuous_population_callbacks(continuous);
 
     // Depends on transmission model (for species indexes):
     // MDA1D may depend on health system (too complex to verify)

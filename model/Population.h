@@ -76,7 +76,7 @@ private:
     int recentBirths = 0;
 };
 
-void registerContinousPopulationCallbacks(mon::Continuous& continuous);
+void register_continuous_population_callbacks(mon::Continuous& continuous);
 
 /// Delegate to print the number of hosts
 void ctsHosts(Population& population, ostream& stream);
