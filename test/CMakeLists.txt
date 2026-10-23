@@ -92,31 +92,41 @@ foreach (TEST_NAME ${OM_BOXTEST_NC_NAMES})
 endforeach (TEST_NAME)
 
 set (OM_STATS_DIR ${CMAKE_CURRENT_SOURCE_DIR}/stats)
-file (GLOB OM_STAT_REFERENCES CONFIGURE_DEPENDS ${CMAKE_CURRENT_SOURCE_DIR}/reference/scenario*.csv.gz)
-set (OM_STAT_FULL_JOBS 4 CACHE STRING "Parallel openMalaria runs in each statfull_<NAME> test")
-set (OM_STAT_MISSING)
-foreach (TEST_NAME ${OM_BOXTEST_NAMES} ${OM_BOXTEST_NC_NAMES})
-    add_test (NAME stat_${TEST_NAME}
-        COMMAND ${PYTHON_EXECUTABLE} ${OM_STATS_DIR}/check_scenario.py --build-dir ${CMAKE_BINARY_DIR} ${TEST_NAME})
-    set_tests_properties (stat_${TEST_NAME} PROPERTIES LABELS statistical)
-    add_test (NAME statfull_${TEST_NAME} CONFIGURATIONS full
-        COMMAND ${PYTHON_EXECUTABLE} ${OM_STATS_DIR}/check_scenario.py --build-dir ${CMAKE_BINARY_DIR}
-            --replicates -j ${OM_STAT_FULL_JOBS} ${TEST_NAME})
-    set_tests_properties (statfull_${TEST_NAME} PROPERTIES LABELS statistical-full PROCESSORS ${OM_STAT_FULL_JOBS})
-    if (NOT "${CMAKE_CURRENT_SOURCE_DIR}/reference/scenario${TEST_NAME}.csv.gz" IN_LIST OM_STAT_REFERENCES)
-        set_tests_properties (stat_${TEST_NAME} statfull_${TEST_NAME} PROPERTIES DISABLED TRUE)
-        list (APPEND OM_STAT_MISSING ${TEST_NAME})
+execute_process (COMMAND ${PYTHON_EXECUTABLE} -c "import sys; sys.exit(sys.version_info < (3, 10))"
+    RESULT_VARIABLE OM_STATS_PYTHON_TOO_OLD OUTPUT_QUIET ERROR_QUIET)
+if (OM_STATS_PYTHON_TOO_OLD)
+    execute_process (COMMAND ${PYTHON_EXECUTABLE} --version OUTPUT_VARIABLE OM_STATS_PYTHON_VERSION
+        ERROR_VARIABLE OM_STATS_PYTHON_VERSION OUTPUT_STRIP_TRAILING_WHITESPACE ERROR_STRIP_TRAILING_WHITESPACE)
+    message (STATUS "Statistical tests need Python 3.10 or newer; ${PYTHON_EXECUTABLE} is ${OM_STATS_PYTHON_VERSION}, "
+        "so the stat_<NAME>, statfull_<NAME> and stats_tool_check_scenario tests are not registered")
+else ()
+    file (GLOB OM_STAT_REFERENCES CONFIGURE_DEPENDS ${CMAKE_CURRENT_SOURCE_DIR}/reference/scenario*.csv.gz)
+    set (OM_STAT_FULL_JOBS 4 CACHE STRING "Parallel openMalaria runs in each statfull_<NAME> test")
+    set (OM_STAT_MISSING)
+    foreach (TEST_NAME ${OM_BOXTEST_NAMES} ${OM_BOXTEST_NC_NAMES})
+        add_test (NAME stat_${TEST_NAME}
+            COMMAND ${PYTHON_EXECUTABLE} ${OM_STATS_DIR}/check_scenario.py --build-dir ${CMAKE_BINARY_DIR} ${TEST_NAME})
+        set_tests_properties (stat_${TEST_NAME} PROPERTIES LABELS statistical)
+        add_test (NAME statfull_${TEST_NAME} CONFIGURATIONS full
+            COMMAND ${PYTHON_EXECUTABLE} ${OM_STATS_DIR}/check_scenario.py --build-dir ${CMAKE_BINARY_DIR}
+                --replicates -j ${OM_STAT_FULL_JOBS} ${TEST_NAME})
+        set_tests_properties (statfull_${TEST_NAME} PROPERTIES LABELS statistical-full PROCESSORS ${OM_STAT_FULL_JOBS})
+        if (NOT "${CMAKE_CURRENT_SOURCE_DIR}/reference/scenario${TEST_NAME}.csv.gz" IN_LIST OM_STAT_REFERENCES)
+            set_tests_properties (stat_${TEST_NAME} statfull_${TEST_NAME} PROPERTIES DISABLED TRUE)
+            list (APPEND OM_STAT_MISSING ${TEST_NAME})
+        endif ()
+    endforeach (TEST_NAME)
+    if (OM_STAT_MISSING)
+        list (LENGTH OM_STAT_MISSING OM_STAT_MISSING_COUNT)
+        list (JOIN OM_STAT_MISSING " " OM_STAT_MISSING_TEXT)
+        message (STATUS "Statistical tests: ${OM_STAT_MISSING_COUNT} scenarios have no test/reference/scenario<NAME>.csv.gz, "
+            "so their stat_<NAME> and statfull_<NAME> tests are disabled: ${OM_STAT_MISSING_TEXT}")
     endif ()
-endforeach (TEST_NAME)
-if (OM_STAT_MISSING)
-    list (LENGTH OM_STAT_MISSING OM_STAT_MISSING_COUNT)
-    list (JOIN OM_STAT_MISSING " " OM_STAT_MISSING_TEXT)
-    message (STATUS "Statistical tests: ${OM_STAT_MISSING_COUNT} scenarios have no test/reference/scenario<NAME>.csv.gz, "
-        "so their stat_<NAME> and statfull_<NAME> tests are disabled: ${OM_STAT_MISSING_TEXT}")
+
+    add_test (NAME stats_tool_check_scenario COMMAND ${PYTHON_EXECUTABLE} ${OM_STATS_DIR}/test_check_scenario.py)
+    set_tests_properties (stats_tool_check_scenario PROPERTIES LABELS statistical)
 endif ()
 
-add_test (NAME stats_tool_check_scenario COMMAND ${PYTHON_EXECUTABLE} ${OM_STATS_DIR}/test_check_scenario.py)
-set_tests_properties (stats_tool_check_scenario PROPERTIES LABELS statistical)
 find_program (OM_UV_EXECUTABLE uv)
 mark_as_advanced (OM_UV_EXECUTABLE)
 if (OM_UV_EXECUTABLE)
