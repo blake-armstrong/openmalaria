@@ -110,8 +110,8 @@ auto gsl_root_solver_root = gsl_root_fdfsolver_root;
 auto gsl_root_solver_method = gsl_root_fdfsolver_secant;
 // auto gsl_root_solver_method = gsl_root_fdfsolver_steffenson;
 #else
-using gsl_root_solver_type = gsl_root_fsolver_type;
-using gsl_root_solver = gsl_root_fsolver;
+using GslRootSolverType = gsl_root_fsolver_type;
+using GslRootSolver = gsl_root_fsolver;
 auto gsl_root_solver_alloc = gsl_root_fsolver_alloc;
 auto gsl_root_solver_free = gsl_root_fsolver_free;
 auto gsl_root_solver_name = gsl_root_fsolver_name;
@@ -600,11 +600,11 @@ void AnophelesModel::advance_period(double sum_avail, double sigma_df, vector<do
 
         gsl_root_fdfsolver_set(s, &fdf, a_t);
 #else
-        gsl_function F;
-        F.function = &quadratic_f;
-        F.params = &params;
+        gsl_function f;
+        f.function = &quadratic_f;
+        f.params = &params;
 
-        gsl_root_fsolver_set(s, &F, 0.0, 1.0);
+        gsl_root_fsolver_set(s, &f, 0.0, 1.0);
 #endif
 
         do {

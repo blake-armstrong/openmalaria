@@ -301,7 +301,7 @@ public:
         relative_availability_het & stream;
         outside_transmission & stream;
         copula_gaussian_samples & stream;
-        checkpointIntervs(stream);
+        checkpoint_intervs(stream);
     }
     //@}
 
@@ -335,8 +335,8 @@ public:
     std::map<interventions::ComponentId, double> copula_gaussian_samples;
 
 private:
-    void checkpointIntervs(ostream& stream);
-    void checkpointIntervs(istream& stream);
+    void checkpoint_intervs(ostream& stream);
+    void checkpoint_intervs(istream& stream);
 
     vector<unique_ptr<PerHostInterventionData>> active_components;
 

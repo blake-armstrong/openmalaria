@@ -178,13 +178,13 @@ bool PerHost::has_active_interv(interventions::Component::Type type) const {
     return false;
 }
 
-void PerHost::checkpointIntervs(ostream& stream) {
+void PerHost::checkpoint_intervs(ostream& stream) {
     active_components.size() & stream;
     for (auto iter = active_components.begin(); iter != active_components.end(); ++iter) {
         *iter& stream;
     }
 }
-void PerHost::checkpointIntervs(istream& stream) {
+void PerHost::checkpoint_intervs(istream& stream) {
     size_t l;
     l & stream;
     validateListSize(l);
