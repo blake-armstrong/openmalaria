@@ -461,6 +461,7 @@ See `PLAN.md` for the session protocol, chunks and gates. Append one log entry p
   | `model/Host/WithinHost/`: `Genotypes`, `Diagnostic`, `Treatments` | 85edc7ef (D4d) | e67dbef9 + 760980b6 (D4d) |
   | `model/Host/WithinHost/Pathogenesis` | c38704fb + 225947ca's hand rename (D6a) | c2e8281b + c5dc1e95 (D6a) |
   | `model/Clinical/` (not `CMDecisionTree`, D6c) and `model/Host/NeonatalMortality` | a0e9a737 + 18a6f0c2's hand rename (D6b) | 227daa2f + 51663e3e (D6b) |
+  | `model/Clinical/CMDecisionTree.{h,cpp}` | 9e34f002 (D6c) | 9cf1ff5a + c78608b6 (D6c) |
   | `model/Transmission` (not the uncompiled AnophelesModel and MosqLifeCycle suites, F9) | 8b583553 + 529d46cf's hand rename (D7) | f4c2f44c + acec99a5 (D7) |
   | `model/Host/InfectionIncidenceModel.{h,cpp}`, `model/PopulationAgeStructure.{h,cpp}` | 6ac27849 (D7b) | 13d177cc + 9f0a66fe (D7b) |
   | `model/interventions` | 2cee6da6 + 9f5e01f4's hand rename (D8) | da9bfd0f + 9f5e01f4 (D8) |
