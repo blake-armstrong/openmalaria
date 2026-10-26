@@ -82,3 +82,5 @@ da9bfd0f261418c2537985d5dbf949977f53ef07
 442d4c81de0434dcfc922c9d78b1badccf93208e
 # D9a: model/mon safe modernize fix-its (util/style.sh modernize)
 05f577dc1267d82e1936ef74f6debb512408132e
+# D9b2: rename model/Host/Human and model/Population identifiers (util/style.sh rename)
+f995cf6604d45b3e9613163e85c36cbe72a29d4c
