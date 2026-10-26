@@ -36,7 +36,7 @@ class CommandLineOptions;
 namespace OM::interventions {
 class InterventionManager;
 }
-namespace OM::WithinHost {
+namespace OM::WithinHost { // NOLINT(readability-identifier-naming)
 class DiagnosticRegistry;
 class GenotypeRegistry;
 }

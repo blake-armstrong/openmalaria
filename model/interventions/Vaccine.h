@@ -31,7 +31,7 @@ namespace OM {
 namespace Host {
 class Human;
 }
-namespace WithinHost {
+namespace WithinHost { // NOLINT(readability-identifier-naming)
 class GenotypeRegistry;
 }
 namespace interventions {
