@@ -380,6 +380,19 @@ def without_tbv_efficacy(s):
     return s[:i] + re.sub(r"\s*<initialEfficacy [^>]*/>", "", s[i:j]) + s[j:]
 
 
+PEV_S = '<restriction onLocus="x" toAllele="sensitive"/>'
+PEV_R = '<restriction onLocus="x" toAllele="resistant"/>'
+SOLO_LOCUS = '<locus name="solo"><allele name="only" initialFrequency="1" fitness="1"/></locus></parasiteGenetics>'
+
+
+def pev_without_genotype_option(s):
+    s = rep(s, '<option name="VACCINE_GENOTYPE" value="true"/>', '<option name="VACCINE_GENOTYPE" value="false"/>')
+    i = s.index("<PEV>")
+    j = s.index("</PEV>", i)
+    k = s.index("<phenotype", i)
+    return s[:k] + '<initialEfficacy value="1.0"/><initialEfficacy value="0.5"/>' + s[j:]
+
+
 def gvi_in_non_vector(s):
     m = read(MA)
     i = m.index('<component id="GVI"')
@@ -439,6 +452,8 @@ GROUPS = {
         Variant("diagnostics_neither", G, lambda s: rep(s, '<surveys diagnostic="standard">', "<surveys>")),
         Variant("diagnostics_hrp2_monitoring", M, lambda s: rep(s, '<surveys diagnostic="standard">',
                                                               '<surveys diagnostic="RDT">')),
+        Variant("diagnostics_false_positive_log_density", "scenarioPEV.xml",
+                lambda s: rep(s, '<surveys diagnostic="microscopy">', '<surveys diagnostic="RDT">')),
         Variant("diagnostics_unknown_survey", G, lambda s: rep(s, '<surveys diagnostic="standard">',
                                                              '<surveys diagnostic="nope">')),
         Variant("diagnostics_unknown_intervention", M,
@@ -717,6 +732,15 @@ GROUPS = {
         Variant("continuous_target_age_zero", MA, lambda s: rep(s, 'targetAgeYrs="0.01"', 'targetAgeYrs="0"')),
         Variant("continuous_target_age_too_old", MA, lambda s: rep(s, 'targetAgeYrs="0.01"', 'targetAgeYrs="200"')),
         Variant("vaccine_no_initial_efficacy", "scenario5.xml", without_tbv_efficacy),
+        Variant("vaccine_phenotype_unknown_allele", "scenarioPEV.xml",
+                lambda s: rep_first(s, PEV_R, PEV_R.replace('"resistant"', '"nope"'))),
+        Variant("vaccine_phenotype_duplicate", "scenarioPEV.xml", lambda s: rep_first(s, PEV_R, PEV_S)),
+        Variant("vaccine_phenotype_missing", "scenarioPEV.xml", lambda s: rep_first(s, PEV_R, "")),
+        Variant("vaccine_phenotype_code_beyond_genotypes", "scenarioPEV.xml",
+                lambda s: rep_first(rep(s, "</parasiteGenetics>", SOLO_LOCUS), PEV_R,
+                                    PEV_R + '<restriction onLocus="solo" toAllele="only"/>')),
+        Variant("vaccine_no_genotype_option_checkpoint", "scenarioPEV.xml", pev_without_genotype_option,
+                ["--checkpoint"], runs=2),
         Variant("vector_component_non_vector", "scenario5.xml", gvi_in_non_vector),
         Variant("triggered_unknown_component", "scenario5.xml", triggered_by_treatment("nosuch")),
         Variant("dt_cohort_later_component", MA, mda_tree_cohort("PEV")),
