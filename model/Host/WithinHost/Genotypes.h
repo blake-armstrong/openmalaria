@@ -25,6 +25,7 @@
 
 #include "Global.h"
 #include "util/random.h"
+#include <algorithm>
 #include <cstdint>
 #include <iostream>
 #include <map>
@@ -43,6 +44,12 @@ class CommandLineOptions;
 namespace WithinHost {
 
 using util::LocalRng;
+
+inline constexpr size_t GenotypeOutputIdStep = 1000000;
+
+inline int genotype_id_width(size_t n_genotypes) {
+    return static_cast<int>(std::max<size_t>(8, std::to_string((n_genotypes - 1) * GenotypeOutputIdStep).size()));
+}
 
 /// Represent a combination of alleles, each from a different locus
 struct Genotype {

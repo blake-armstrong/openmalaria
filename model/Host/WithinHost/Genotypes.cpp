@@ -188,25 +188,20 @@ void GenotypeRegistry::print_genotypes() const {
         }
     }
 
+    const int id_width = genotype_id_width(genotype_list.size());
     cout << endl; // NOLINT(performance-avoid-endl)
 
     // Table header:
-    cout << "|" << std::setw(8) << "Genotype";
+    cout << "|" << std::setw(id_width) << "Genotype";
     for (const auto& locus : loci)
         cout << "|" << std::setw(static_cast<int>(longest[locus])) << locus;
     cout << "|" << std::setw(9) << "init freq" << "|" << std::setw(7) << "fitness" << "|"
          << endl; // NOLINT(performance-avoid-endl)
 
-    cout << "|" << std::setw(8) << "--------";
-    for (const auto& locus : loci) {
-        if (longest[locus] > 0)
-            cout << "|" << "---------";
-        else
-            cout << "|";
-    }
-
-    cout << "|" << std::setw(9) << "---------" << "|" << std::setw(7) << "-------" << "|"
-         << endl; // NOLINT(performance-avoid-endl)
+    cout << "|" << string(id_width, '-');
+    for (const auto& locus : loci)
+        cout << "|" << string(longest[locus], '-');
+    cout << "|" << string(9, '-') << "|" << string(7, '-') << "|" << endl; // NOLINT(performance-avoid-endl)
 
     cout << std::fixed << setprecision(3);
     for (size_t i = 0; i < genotype_list.size(); ++i) {
@@ -217,13 +212,13 @@ void GenotypeRegistry::print_genotypes() const {
             locus_allele[allele_names[allele].first] = allele_names[allele].second;
         }
 
-        cout << "|" << std::setw(8) << (i * 100000);
+        cout << "|" << std::setw(id_width) << (i * GenotypeOutputIdStep);
         for (const auto& locus : loci) {
             auto la = locus_allele.find(locus);
             assert(la != locus_allele.end());
-            cout << "|" << std::setw(static_cast<int>(longest[locus])) << la->second << "|";
+            cout << "|" << std::setw(static_cast<int>(longest[locus])) << la->second;
         }
-        cout << std::setw(9) << genotype.init_freq << "|" << std::setw(7) << genotype.fitness << "|"
+        cout << "|" << std::setw(9) << genotype.init_freq << "|" << std::setw(7) << genotype.fitness << "|"
              << endl; // NOLINT(performance-avoid-endl)
     }
 }

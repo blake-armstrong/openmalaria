@@ -328,19 +328,28 @@ LSTMDrugType::LSTMDrugType(size_t index, const scnXml::PKPDDrug& drug_data, Drug
 
         if (print_genotypes) {
             // Debug output to see which genotypes correspond to phenotypes
-            cout << endl;
-            cout << "Phenotype mapping: " << endl << "----------" << endl;
-            cout << "|" << setw(8) << "genotype" << "|" << setw(14) << "phenotype" << "|" << endl;
-            cout << "|" << setw(8) << "--------" << "|" << setw(14) << "-------------" << "|" << endl;
-
-            uint32_t genotype = 0;
+            vector<string> phenotype_names;
+            phenotype_names.reserve(genotype_mapping.size());
+            size_t name_width = 14;
             for (const uint32_t phen : genotype_mapping) {
                 const auto& name = pd[phen].getName();
-                const string phenotype_name =
-                    name.present() ? string(static_cast<const string&>(name.get())) : std::format("no: {}", phen);
-                cout << "|" << setw(8) << (genotype * 100000) << "|" << setw(14) << phenotype_name << "|"
+                phenotype_names.push_back(name.present() ? string(static_cast<const string&>(name.get()))
+                                                         : std::format("no: {}", phen));
+                name_width = std::max(name_width, phenotype_names.back().size());
+            }
+            const int id_width = WithinHost::genotype_id_width(genotype_mapping.size());
+            const string title = "Phenotype mapping for drug " + string(drug_data.getAbbrev()) + ":";
+
+            cout << endl;                                               // NOLINT(performance-avoid-endl)
+            cout << title << endl << string(title.size(), '-') << endl; // NOLINT(performance-avoid-endl)
+            cout << "|" << setw(id_width) << "genotype" << "|" << setw(static_cast<int>(name_width)) << "phenotype"
+                 << "|" << endl; // NOLINT(performance-avoid-endl)
+            cout << "|" << string(id_width, '-') << "|" << string(name_width, '-') << "|"
+                 << endl; // NOLINT(performance-avoid-endl)
+            for (size_t genotype = 0; genotype < phenotype_names.size(); ++genotype) {
+                cout << "|" << setw(id_width) << (genotype * WithinHost::GenotypeOutputIdStep) << "|"
+                     << setw(static_cast<int>(name_width)) << phenotype_names[genotype] << "|"
                      << endl; // NOLINT(performance-avoid-endl)
-                genotype += 1;
             }
         }
     }
