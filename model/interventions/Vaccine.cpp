@@ -208,7 +208,7 @@ void PerEffectPerHumanVaccine::checkpoint_het(istream& stream, const Interventio
 void PerHumanVaccine::checkpoint(istream& stream, const InterventionManager& interventions) {
     size_t l = 0;
     l & stream;
-    validateListSize(l);
+    validateListSize(static_cast<long>(l));
     effects.resize(l);
     for (PerEffectPerHumanVaccine& effect : effects) {
         effect.checkpoint(stream, interventions);
