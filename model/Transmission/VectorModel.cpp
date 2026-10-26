@@ -84,7 +84,7 @@ void VectorModel::cts_cb_alpha(const vector<Host::Human>& population, ostream& s
     for (size_t i = 0; i < species_index.size(); ++i) {
         double total = 0.0;
         for (const Host::Human& human : population) {
-            total += human.perHostTransmission.ento_availability_full(i, Sim::in_years(human.age(Sim::now())));
+            total += human.per_host_transmission.ento_availability_full(i, Sim::in_years(human.age(Sim::now())));
         }
         stream << '\t' << total / static_cast<double>(population.size());
     }
@@ -93,7 +93,7 @@ void VectorModel::cts_cb_p_b(const vector<Host::Human>& population, ostream& str
     for (size_t i = 0; i < species_index.size(); ++i) {
         double total = 0.0;
         for (const Host::Human& human : population) {
-            total += human.perHostTransmission.prob_mosq_biting(i);
+            total += human.per_host_transmission.prob_mosq_biting(i);
         }
         stream << '\t' << total / static_cast<double>(population.size());
     }
@@ -102,7 +102,7 @@ void VectorModel::cts_cb_p_cd(const vector<Host::Human>& population, ostream& st
     for (size_t i = 0; i < species_index.size(); ++i) {
         double total = 0.0;
         for (const Host::Human& human : population) {
-            total += human.perHostTransmission.prob_mosq_resting(i);
+            total += human.per_host_transmission.prob_mosq_resting(i);
         }
         stream << '\t' << total / static_cast<double>(population.size());
     }
@@ -238,7 +238,7 @@ void VectorModel::init2(const vector<Host::Human>& population) {
     double sum_relative_availability = 0.0;
     for (const Host::Human& human : population) {
         sum_relative_availability +=
-            human.perHostTransmission.relative_availability_age(Sim::in_years(human.age(Sim::now())));
+            human.per_host_transmission.relative_availability_age(Sim::in_years(human.age(Sim::now())));
     }
     const int pop_size = static_cast<int>(population.size());
     // value should be unimportant when no humans are available, though inf/nan is not acceptable
@@ -253,7 +253,7 @@ void VectorModel::init2(const vector<Host::Human>& population) {
         double sigma_dff = 0.0;
 
         for (const Host::Human& human : population) {
-            const OM::Transmission::PerHost& host = human.perHostTransmission;
+            const OM::Transmission::PerHost& host = human.per_host_transmission;
             double prod = host.ento_availability_full(i, Sim::in_years(human.age(Sim::now())));
             sum_avail += prod;
             prod *= host.prob_mosq_biting(i);
@@ -353,7 +353,7 @@ vector<double> VectorModel::mean_annual_kappa() const {
 void VectorModel::calculate_eir(Host::Human& human, double age_years, vector<double>& genotype_eir_i,
                                 vector<double>& genotype_eir_l) const {
 
-    PerHost& host = human.perHostTransmission;
+    PerHost& host = human.per_host_transmission;
     host.update(human);
     if (simulation_mode == TransientEirKnown) {
         genotype_eir_i.assign(1, 0.0);
@@ -434,8 +434,8 @@ void VectorModel::vector_update(const vector<Host::Human>& population) {
     std::vector<std::vector<double>> sigma_dif_i(species_index.size(), std::vector<double>(num_genotypes())),
         sigma_dif_l(species_index.size(), std::vector<double>(num_genotypes()));
     for (const Host::Human& human : population) {
-        const OM::Transmission::PerHost& host = human.perHostTransmission;
-        const WithinHost::WHInterface& whm = *human.withinHostModel;
+        const OM::Transmission::PerHost& host = human.per_host_transmission;
+        const WithinHost::WHInterface& whm = *human.within_host_model;
 
         prob_transmission_i.assign(num_genotypes(), 0.0);
         prob_transmission_l.assign(num_genotypes(), 0.0);

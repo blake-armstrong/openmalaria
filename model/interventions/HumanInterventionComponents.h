@@ -131,7 +131,7 @@ void HumanIntervention::deploy(Human& human, mon::DeployMethod method, VaccineLi
         const interventions::HumanInterventionComponent& component = *it;
         // we must report first, since it can change cohort and sub-population
         // which may affect what deployment does (at least in the case of reporting deployments)
-        human.addToCohort(component.id(), component.duration());
+        human.add_to_cohort(component.id(), component.duration());
         component.deploy(human, method, vacc_limits);
     }
 }
@@ -217,7 +217,7 @@ public:
 
     void deploy(Human& human, mon::DeployMethod method, VaccineLimits vacc_limits) const override {
         mon::record_deploy(mon::measure("nMassScreenings"), mon::measure("nCtsScreenings"), human, method);
-        if (human.withinHostModel->diagnostic_result(human.intervention_rng, diagnostic)) {
+        if (human.within_host_model->diagnostic_result(human.intervention_rng, diagnostic)) {
             positive.deploy(human, method, vacc_limits);
         } else {
             negative.deploy(human, method, vacc_limits);
@@ -261,7 +261,7 @@ public:
 
     void deploy(Human& human, mon::DeployMethod method, VaccineLimits) const override {
         mon::record_deploy(mon::measure("nMDAs"), mon::measure("nCtsMDA"), human, method);
-        human.withinHostModel->treat_simple(human, time_liver, time_blood);
+        human.within_host_model->treat_simple(human, time_liver, time_blood);
     }
 
     component_types::Type component_type() const override { return component_types::TreatSimple; }
@@ -282,7 +282,7 @@ public:
     void deploy(Human& human, mon::DeployMethod method, VaccineLimits) const override {
         mon::record_deploy(mon::measure("nMDAs"), mon::measure("nCtsMDA"), human, method);
         const double age = Sim::in_years(human.age(Sim::now_or_ts1()));
-        human.withinHostModel->treat_pk_pd(schedule, dosage, age, delay_d);
+        human.within_host_model->treat_pk_pd(schedule, dosage, age, delay_d);
     }
 
     component_types::Type component_type() const override { return component_types::TreatPkpd; }
@@ -304,7 +304,7 @@ public:
     void deploy(Human& human, mon::DeployMethod method, VaccineLimits) const override {
         const Clinical::CMDTOut out =
             tree.exec(Clinical::CMHostData(human, human.intervention_rng, Sim::in_years(human.age(Sim::now_or_ts1())),
-                                           human.clinicalModel->get_latest_state()));
+                                           human.clinical_model->get_latest_state()));
         if (out.treated) {
             mon::record_deploy(mon::measure("nMDAs"), mon::measure("nCtsMDA"), human, method);
         }
@@ -326,7 +326,7 @@ public:
     ClearImmunityComponent(ComponentId id) : HumanInterventionComponent(id) {}
 
     void deploy(Human& human, mon::DeployMethod method, VaccineLimits) const override {
-        human.withinHostModel->clear_immunity();
+        human.within_host_model->clear_immunity();
         //NOTE: not reported
     }
 

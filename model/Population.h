@@ -20,8 +20,8 @@
  * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301, USA.
  */
 
-#ifndef Hmod_Population
-#define Hmod_Population
+#ifndef HMOD_POPULATION
+#define HMOD_POPULATION
 
 #include "Global.h"
 #include "PopulationAgeStructure.h"
@@ -40,20 +40,20 @@ public:
     Population(size_t size, const AgeStructure& age_structure, Host::HumanParams human_params, util::MasterRng& rng);
 
     /** Create the initial population of Humans */
-    void createInitialHumans();
+    void create_initial_humans();
 
     /** Remove dead humans, outmigrate others and introduce babies to
      * while keeping the population size and demography distirbution unchanged. */
     void update();
 
     /** Return the size of the human population */
-    inline size_t getSize() const;
+    inline size_t get_size() const;
 
     /** Return the number of recent births */
-    inline int getRecentBirths() const;
+    inline int get_recent_births() const;
 
     /** Reset the number of recent births to 0 */
-    inline void resetRecentBirths();
+    inline void reset_recent_births();
 
     const interventions::InterventionManager& interventions() const { return *human_params.interventions; }
 
@@ -75,36 +75,36 @@ private:
     size_t size = 0;
 
     /** Births count since last continuous output */
-    int recentBirths = 0;
+    int recent_births = 0;
 };
 
 void register_continuous_population_callbacks(mon::Continuous& continuous);
 
 /// Delegate to print the number of hosts
-void ctsHosts(Population& population, ostream& stream);
+void cts_hosts(Population& population, ostream& stream);
 /// Delegate to print cumulative numbers of hosts under various age limits
-void ctsHostDemography(Population& population, ostream& stream);
+void cts_host_demography(Population& population, ostream& stream);
 /// Delegate to print the number of births since last count
-void ctsRecentBirths(Population& population, ostream& stream);
+void cts_recent_births(Population& population, ostream& stream);
 /// Delegate to print the number of patent hosts
-void ctsPatentHosts(Population& population, ostream& stream);
+void cts_patent_hosts(Population& population, ostream& stream);
 /// Delegate to print immunity's cumulativeh parameter
-void ctsImmunityh(Population& population, ostream& stream);
+void cts_immunity_h(Population& population, ostream& stream);
 /// Delegate to print immunity's cumulativeY parameter (mean across population)
-void ctsImmunityY(Population& population, ostream& stream);
+void cts_immunity_y(Population& population, ostream& stream);
 /// Delegate to print immunity's cumulativeY parameter (median across population)
-void ctsMedianImmunityY(Population& population, ostream& stream);
+void cts_median_immunity_y(Population& population, ostream& stream);
 /// Delegate to print the mean age-based availability reduction of each human relative to an adult
-void ctsMeanAgeAvailEffect(Population& population, ostream& stream);
-void ctsITNCoverage(Population& population, ostream& stream);
-void ctsIRSCoverage(Population& population, ostream& stream);
-void ctsGVICoverage(Population& population, ostream& stream);
+void cts_mean_age_avail_effect(Population& population, ostream& stream);
+void cts_itn_coverage(Population& population, ostream& stream);
+void cts_irs_coverage(Population& population, ostream& stream);
+void cts_gvi_coverage(Population& population, ostream& stream);
 
-inline size_t Population::getSize() const { return size; }
+inline size_t Population::get_size() const { return size; }
 
-inline int Population::getRecentBirths() const { return recentBirths; }
+inline int Population::get_recent_births() const { return recent_births; }
 
-inline void Population::resetRecentBirths() { recentBirths = 0; }
+inline void Population::reset_recent_births() { recent_births = 0; }
 
 }
 #endif

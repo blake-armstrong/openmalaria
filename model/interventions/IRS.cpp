@@ -61,7 +61,7 @@ IRSComponent::IRSComponent(ComponentId id, const scnXml::IRSDescription& elt,
 }
 
 void IRSComponent::deploy(Host::Human& human, mon::DeployMethod method, VaccineLimits) const {
-    human.perHostTransmission.deploy_component(human.intervention_rng, *this);
+    human.per_host_transmission.deploy_component(human.intervention_rng, *this);
     mon::record_deploy(mon::measure("nMassIRS"), mon::measure("nCtsIRS"), human, method);
 }
 

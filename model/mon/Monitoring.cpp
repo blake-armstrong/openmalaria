@@ -344,8 +344,8 @@ void record_stat(Measure measure, double val, size_t species, size_t genotype) {
 }
 
 void record_stat(Measure measure, const Host::Human& human, double val, size_t species, size_t genotype, size_t drug) {
-    record_value(measure, stat_survey_number(), human.monitoringAgeGroup, human.getCohortSet(), species, genotype, drug,
-                 val);
+    record_value(measure, stat_survey_number(), human.monitoring_age_group, human.get_cohort_set(), species, genotype,
+                 drug, val);
 }
 
 void record_event(Measure measure, size_t survey, size_t age, uint32_t cohort) {
@@ -353,7 +353,8 @@ void record_event(Measure measure, size_t survey, size_t age, uint32_t cohort) {
 }
 
 void record_event(Measure measure, const Host::Human& human, double val, int out_id) {
-    record_value(measure, event_survey_number(), human.monitoringAgeGroup, human.getCohortSet(), 0, 0, 0, val, out_id);
+    record_value(measure, event_survey_number(), human.monitoring_age_group, human.get_cohort_set(), 0, 0, 0, val,
+                 out_id);
 }
 
 void record_deploy(Measure timed_measure, Measure cts_measure, const Host::Human& human, DeployMethod method,

@@ -172,7 +172,7 @@ double InfectionIncidenceModel::expected_num_new_infections(OM::Host::Human& hum
     }
 
     double expected_num_infections =
-        get_model_expected_infections(human.host_rng, effective_eir, human.perHostTransmission);
+        get_model_expected_infections(human.host_rng, effective_eir, human.per_host_transmission);
 
     // Only to be consistent with old simulation runs when set to false
     // Setting this option to true will only affect reporting

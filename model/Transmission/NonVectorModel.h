@@ -198,7 +198,7 @@ public:
             throw TRACED_EXCEPTION(msg.str(), util::Error::InitialKappa);
         }
 #endif
-        genotype_eir_l[0] *= human.perHostTransmission.relative_availability_het_age(age_years);
+        genotype_eir_l[0] *= human.per_host_transmission.relative_availability_het_age(age_years);
 
         mon::record_stat(mon::measure("innoculationsPerAgeGroup"), human, genotype_eir_l[0]);
         mon::record_stat(mon::measure("innoculationsPerVector"), human, genotype_eir_l[0]);

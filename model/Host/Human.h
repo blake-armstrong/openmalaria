@@ -20,8 +20,8 @@
  * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301, USA.
  */
 
-#ifndef Hmod_human
-#define Hmod_human
+#ifndef HMOD_HUMAN
+#define HMOD_HUMAN
 #include "Global.h"
 #include "Transmission/PerHost.h"
 #include "InfectionIncidenceModel.h"
@@ -80,32 +80,32 @@ public:
     inline SimTime age(SimTime time) const;
 
     /** Return true if human is a member of the sub-population. */
-    inline bool isInSubPop(interventions::ComponentId id) const;
+    inline bool is_in_sub_pop(interventions::ComponentId id) const;
 
-    inline uint32_t getCohortSet() const;
+    inline uint32_t get_cohort_set() const;
 
     /** Return date of birth */
-    SimTime getDOB() const;
+    SimTime get_dob() const;
 
     /** Return true if dead, false otherwise */
-    bool isDead() const;
+    bool is_dead() const;
 
     /** After this call, isDead() will be true */
     void kill();
 
     /** Add the human to an intervention component's sub-population for the given duration. 
      * A duration of zero implies no effect. */
-    void addToCohort(interventions::ComponentId id, SimTime duration);
+    void add_to_cohort(interventions::ComponentId id, SimTime duration);
 
     /** Remove the human from an intervention component's sub-population */
-    void removeFromCohort(interventions::ComponentId id);
+    void remove_from_cohort(interventions::ComponentId id);
 
     /** Act on "remove from sub-population on first ..." events.
      * This is only for use during a human update. */
-    void removeFirstEvent(interventions::sub_pop_remove::RemoveAtCode code);
+    void remove_first_event(interventions::sub_pop_remove::RemoveAtCode code);
 
     /** Remove host from expired cohorts */
-    void updateCohortSet();
+    void update_cohort_set();
 
     /** Checkpoint (read) */
     void checkpoint(istream& stream);
@@ -114,18 +114,18 @@ public:
     void checkpoint(ostream& stream);
 
     /** Contains per-species vector data (VectorModel only). */
-    Transmission::PerHost perHostTransmission;
+    Transmission::PerHost per_host_transmission;
 
     /** The WithinHostModel models parasite density and immunity */
-    unique_ptr<WithinHost::WHInterface> withinHostModel;
+    unique_ptr<WithinHost::WHInterface> within_host_model;
 
     /** The InfectionIncidenceModel translates per-host EIR into new infections */
-    unique_ptr<InfectionIncidenceModel> infIncidence;
+    unique_ptr<InfectionIncidenceModel> inf_incidence;
 
     /** The ClinicalModel encapsulates pathogenesis (sickness status),
     * case management (medicating drugs)
     * and clinical outcomes (morbidity, reporting). */
-    unique_ptr<Clinical::ClinicalModel> clinicalModel;
+    unique_ptr<Clinical::ClinicalModel> clinical_model;
 
     util::LocalRng host_rng;         // NOLINT(cppcoreguidelines-non-private-member-variables-in-classes)
     util::LocalRng clinical_rng;     // NOLINT(cppcoreguidelines-non-private-member-variables-in-classes)
@@ -136,17 +136,17 @@ public:
     interventions::PerHumanVaccine vaccine;
 
     /** Made persistant to save a lookup each time step (significant performance improvement) */
-    size_t monitoringAgeGroup = 0;
+    size_t monitoring_age_group = 0;
 
     /** The next continuous distribution in the series */
-    uint32_t nextCtsDist = 0;
+    uint32_t next_cts_dist = 0;
 
 private:
-    SimTime dateOfBirth = Sim::never(); // date of birth; humans are always born at the end of a time step
+    SimTime dob = Sim::never(); // date of birth; humans are always born at the end of a time step
     const interventions::InterventionManager* intervention_manager;
 
     /** Cache, updated when human is added to or removed from a sub-population */
-    uint32_t cohortSet = 0;
+    uint32_t cohort_set = 0;
 
     /** The state of he human. A human cannot be revived. */
     bool dead = false;
@@ -164,29 +164,29 @@ private:
     * 1 human update (the next). */
     //TODO(optimisation): it might be better to instead store for each
     // ComponentId of interest the set of humans who are members
-    std::map<interventions::ComponentId, SimTime> subPopExp;
+    std::map<interventions::ComponentId, SimTime> sub_pop_exp;
 };
 
-void summarize(Human& human, bool surveyOnlyNewEp);
+void summarize(Human& human, bool survey_only_new_ep);
 
 void update(Human& human, Transmission::TransmissionModel& transmission, const NeonatalMortality& neonatal_mortality,
             Clinical::InfantMortality& infant_mortality, NewInfections& new_infections);
 
-inline SimTime Human::age(SimTime time) const { return time - dateOfBirth; }
+inline SimTime Human::age(SimTime time) const { return time - dob; }
 
-inline bool Human::isInSubPop(interventions::ComponentId id) const {
-    auto it = subPopExp.find(id);
-    if (it == subPopExp.end())
+inline bool Human::is_in_sub_pop(interventions::ComponentId id) const {
+    auto it = sub_pop_exp.find(id);
+    if (it == sub_pop_exp.end())
         return false; // no history of membership
     else
         return it->second >= Sim::now_or_ts0(); // added: has expired?
 }
 
-inline uint32_t Human::getCohortSet() const { return cohortSet; }
+inline uint32_t Human::get_cohort_set() const { return cohort_set; }
 
-inline SimTime Human::getDOB() const { return dateOfBirth; }
+inline SimTime Human::get_dob() const { return dob; }
 
-inline bool Human::isDead() const { return dead; }
+inline bool Human::is_dead() const { return dead; }
 
 inline void Human::kill() { dead = true; }
 

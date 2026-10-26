@@ -53,7 +53,7 @@ struct CMHostData {
     double age_years; // only cached to save recalculating
     Episode::State pg_state;
     util::LocalRng& rng; // NOLINT(cppcoreguidelines-avoid-const-or-ref-data-members)
-    inline WHInterface& within_host() { return *human.withinHostModel; }
+    inline WHInterface& within_host() { return *human.within_host_model; }
 };
 /** All output data from the decision tree. */
 struct CMDTOut {

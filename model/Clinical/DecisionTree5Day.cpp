@@ -98,7 +98,7 @@ void DecisionTree5Day::uncomplicated_event(Human& human, Episode::State pg_state
             mon::record_event(mon::measure("nTreatDiagnostics"), human);
         }
 
-        human.withinHostModel->optional_pq_treatment(human);
+        human.within_host_model->optional_pq_treatment(human);
     } else {
         // No care sought
     }

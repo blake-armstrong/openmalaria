@@ -102,7 +102,7 @@ void NeonatalMortality::update(vector<Host::Human>& population) {
             break; // Not interested in younger individuals.
 
         n_counter++;
-        if (human.withinHostModel->diagnostic_result(human.clinical_rng, *neonatal_diagnostic)) {
+        if (human.within_host_model->diagnostic_result(human.clinical_rng, *neonatal_diagnostic)) {
             p_counter++;
         }
     }

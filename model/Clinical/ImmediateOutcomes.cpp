@@ -200,7 +200,7 @@ void ImmediateOutcomes::uncomplicated_event(Human& human, Episode::State pg_stat
         if (io.use_diagnostic_uc) {
             mon::record_event(mon::measure("nTreatDiagnostics"), human);
             auto diag = WithinHost::Diagnostics::monitoring_diagnostic();
-            if (!human.withinHostModel->diagnostic_result(human.clinical_rng, diag))
+            if (!human.within_host_model->diagnostic_result(human.clinical_rng, diag))
                 return; // negative outcome: no treatment
         }
 
@@ -213,12 +213,12 @@ void ImmediateOutcomes::uncomplicated_event(Human& human, Episode::State pg_stat
         if (human.clinical_rng.bernoulli(p)) {
             // Could report Episode::Recovery to latestReport,
             // but we don't report out-of-hospital recoveries anyway.
-            human.withinHostModel->treatment(human, io.treatment_uc[regimen]);
+            human.within_host_model->treatment(human, io.treatment_uc[regimen]);
         } else {
             // No change in parasitological status: treated outside of hospital
         }
 
-        human.withinHostModel->optional_pq_treatment(human);
+        human.within_host_model->optional_pq_treatment(human);
     } else {
         // No change in parasitological status: non-treated
     }

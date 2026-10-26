@@ -238,7 +238,7 @@ public:
             if (age >= min_age && age < max_age) {
                 double availability = 0.0;
                 for (size_t i = 0; i < per_host_params().num_species(); ++i)
-                    availability += human.perHostTransmission.anoph_ento_availability[i];
+                    availability += human.per_host_transmission.anoph_ento_availability[i];
 
                 double probability = coverage;
 
@@ -254,7 +254,7 @@ public:
                             throw std::runtime_error("only supports one mosquito species");
 
                         const double ux = per_host_params().get(0).ento_availability->cdf(
-                            human.perHostTransmission.anoph_ento_availability_raw[0]);
+                            human.per_host_transmission.anoph_ento_availability_raw[0]);
                         if (ux < 1) {
                             const double xx = gsl_cdf_ugaussian_Pinv(ux); // Unit interval to Normal
 
@@ -265,12 +265,12 @@ public:
                              * the same component on the same human must use the same gaussian sample. Therefore we store
                              * this value in the human the first time it is calculated. */
                             double g = 0.0;
-                            const auto it = human.perHostTransmission.copula_gaussian_samples.find(cid);
-                            if (it != human.perHostTransmission.copula_gaussian_samples.end())
+                            const auto it = human.per_host_transmission.copula_gaussian_samples.find(cid);
+                            if (it != human.per_host_transmission.copula_gaussian_samples.end())
                                 g = it->second;
                             else {
                                 g = human.intervention_rng.gauss(0.0, 1.0);
-                                human.perHostTransmission.copula_gaussian_samples[cid] = g;
+                                human.per_host_transmission.copula_gaussian_samples[cid] = g;
                             }
                             const double yy = coverage_corr * xx + g * sqrt(1 - coverage_corr * coverage_corr);
 
@@ -295,7 +295,7 @@ public:
 
                 if (availability >= per_host_params().ento_availability_percentile(min_availability) &&
                     availability <= per_host_params().ento_availability_percentile(max_availability)) {
-                    if (sub_pop == ComponentId::whole_pop() || (human.isInSubPop(sub_pop) != complement)) {
+                    if (sub_pop == ComponentId::whole_pop() || (human.is_in_sub_pop(sub_pop) != complement)) {
                         if (human.intervention_rng.bernoulli(probability)) {
                             deploy_to_human(human, mon::DeployMethod::Timed);
                         }
@@ -349,12 +349,12 @@ public:
             if (age >= min_age && age < max_age) {
                 double availability = 0.0;
                 for (size_t i = 0; i < per_host_params().num_species(); ++i)
-                    availability += human.perHostTransmission.anoph_ento_availability[i];
+                    availability += human.per_host_transmission.anoph_ento_availability[i];
                 if (availability >= per_host_params().ento_availability_percentile(min_availability) &&
                     availability <= per_host_params().ento_availability_percentile(max_availability)) {
-                    if (sub_pop == ComponentId::whole_pop() || (human.isInSubPop(sub_pop) != complement)) {
+                    if (sub_pop == ComponentId::whole_pop() || (human.is_in_sub_pop(sub_pop) != complement)) {
                         total += 1;
-                        if (!human.isInSubPop(cum_cov_ind))
+                        if (!human.is_in_sub_pop(cum_cov_ind))
                             unprotected.push_back(&human);
                     }
                 }
@@ -641,13 +641,13 @@ public:
         } else if (deploy_age == age) {
             double availability = 0.0;
             for (size_t i = 0; i < per_host_params().num_species(); ++i)
-                availability += human.perHostTransmission.anoph_ento_availability_raw[i];
+                availability += human.per_host_transmission.anoph_ento_availability_raw[i];
 
             if (availability >= per_host_params().ento_availability_percentile(min_availability) &&
                 availability <= per_host_params().ento_availability_percentile(max_availability)) {
                 auto now = Sim::interv_date();
                 if (begin <= now && now < end &&
-                    (sub_pop == ComponentId::whole_pop() || (human.isInSubPop(sub_pop) != complement)) &&
+                    (sub_pop == ComponentId::whole_pop() || (human.is_in_sub_pop(sub_pop) != complement)) &&
                     human.intervention_rng.uniform_01() < coverage) // RNG call should be last test
                 {
                     deploy_to_human(human, mon::DeployMethod::Cts);

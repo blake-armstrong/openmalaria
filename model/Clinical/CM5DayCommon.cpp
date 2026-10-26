@@ -60,10 +60,10 @@ void CM5DayCommon::do_clinical_update(Human& human, double age_years, WithinHost
         doomed = -Sim::one_ts();
 
     if (t_last_treatment == Sim::ts0())
-        human.removeFirstEvent(interventions::sub_pop_remove::OnFirstTreatment);
+        human.remove_first_event(interventions::sub_pop_remove::OnFirstTreatment);
 
     if (pg_state & Episode::Sick)
-        human.removeFirstEvent(interventions::sub_pop_remove::OnFirstBout);
+        human.remove_first_event(interventions::sub_pop_remove::OnFirstBout);
 }
 
 void CM5DayCommon::severe_malaria(Human& human, Episode::State pg_state, double age_years, int& doomed) {
@@ -129,7 +129,7 @@ void CM5DayCommon::severe_malaria(Human& human, Episode::State pg_state, double 
 
         if (prandom >= q[5]) { // treatment successful at clearing parasites
             // this actually means successful treatment in this case:
-            human.withinHostModel->treatment(human, five_day.treatment_severe);
+            human.within_host_model->treatment(human, five_day.treatment_severe);
 
             if (prandom < q[6]) { // death (despite success in clearing parasites)
                 latest_report.update(human, Episode::State(state_treated | Episode::DirectDeath));

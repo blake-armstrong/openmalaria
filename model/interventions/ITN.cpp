@@ -498,7 +498,7 @@ ITNComponent::ITNComponent(ComponentId id, const scnXml::ITNDescription& elt,
 }
 
 void ITNComponent::deploy(Host::Human& human, mon::DeployMethod method, VaccineLimits) const {
-    human.perHostTransmission.deploy_component(human.intervention_rng, *this);
+    human.per_host_transmission.deploy_component(human.intervention_rng, *this);
     mon::record_deploy(mon::measure("nMassITNs"), mon::measure("nEPI_ITNs"), human, method);
 }
 
@@ -615,7 +615,7 @@ void HumanITN::update(Host::Human& human) {
         // First use is at age 0 relative to ts0()
         if (Sim::ts0() >= disposal_time) {
             deploy_time = Sim::never();
-            human.removeFromCohort(id());
+            human.remove_from_cohort(id());
             return;
         }
 

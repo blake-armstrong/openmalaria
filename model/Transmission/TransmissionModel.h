@@ -246,13 +246,13 @@ public:
             // NOTE: calculate availability relative to age at end of time step;
             // not my preference but consistent with TransmissionModel::getEIR().
             const double avail =
-                human.perHostTransmission.relative_availability_het_age(Sim::in_years(human.age(Sim::ts1())));
+                human.per_host_transmission.relative_availability_het_age(Sim::in_years(human.age(Sim::ts1())));
             sum_weight += avail;
 
             vector<double> prob_trans_genotype_i(num_genotypes());
             vector<double> prob_trans_genotype_l(num_genotypes());
             const double p_transmit =
-                human.withinHostModel->prob_transmission_to_mosquito(prob_trans_genotype_i, prob_trans_genotype_l);
+                human.within_host_model->prob_transmission_to_mosquito(prob_trans_genotype_i, prob_trans_genotype_l);
 
             double risk_trans = 0.0;
 

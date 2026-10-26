@@ -134,7 +134,7 @@ bool ClinicalEventScheduler::is_existing_case() {
 void ClinicalEventScheduler::do_clinical_update(Human& human, double age_years,
                                                 WithinHost::Pathogenesis::StatePair& pg) {
     const EventSchedulerParams& es = params().event_scheduler;
-    WHInterface& within_host_model = *human.withinHostModel;
+    WHInterface& within_host_model = *human.within_host_model;
     const auto new_state = static_cast<Episode::State>(pg.state);
     util::streamValidate((new_state << 16) & pg_state);
 
@@ -163,7 +163,7 @@ void ClinicalEventScheduler::do_clinical_update(Human& human, double age_years,
             pg_state = Episode::None; // recovery (reset to healthy state)
 
             // And returns to transmission (if was removed)
-            human.perHostTransmission.outside_transmission = false;
+            human.per_host_transmission.outside_transmission = false;
         }
     }
 
@@ -357,7 +357,7 @@ void ClinicalEventScheduler::do_clinical_update(Human& human, double age_years,
         // This should have an effect from the start of the next time step.
         // NOTE: This is not very accurate, but considered of little importance.
         if (pg_state & Episode::EventInHospital)
-            human.perHostTransmission.outside_transmission = true;
+            human.per_host_transmission.outside_transmission = true;
 
         if (pg_state & Episode::Complicated) {
             // complicatedCaseDuration should to some respects be associated
@@ -376,10 +376,10 @@ void ClinicalEventScheduler::do_clinical_update(Human& human, double age_years,
 
     // Remove on first models...
     if (time_last_treatment == Sim::ts0())
-        human.removeFirstEvent(interventions::sub_pop_remove::OnFirstTreatment);
+        human.remove_first_event(interventions::sub_pop_remove::OnFirstTreatment);
 
     if (pg_state & Episode::Sick)
-        human.removeFirstEvent(interventions::sub_pop_remove::OnFirstBout);
+        human.remove_first_event(interventions::sub_pop_remove::OnFirstBout);
 }
 
 void ClinicalEventScheduler::checkpoint(istream& stream) {

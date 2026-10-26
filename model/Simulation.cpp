@@ -180,7 +180,7 @@ void Simulation::resume(const std::string& checkpoint_file) {
 
 void Simulation::start_new(const CheckpointOptions& checkpointing) {
     continuous.init(scenario_xml->getMonitoring(), false, command_line.ctsout_name());
-    population_model->createInitialHumans();
+    population_model->create_initial_humans();
     transmission_model->init2(population_model->humans);
 
     /** Calculate ento availability percentiles **/
@@ -217,7 +217,7 @@ void Simulation::start_new(const CheckpointOptions& checkpointing) {
     new_infections.pre_main_sim_init();
     infant_mortality.pre_main_sim_init();
     genotypes.pre_main_sim_init();
-    population_model->resetRecentBirths();
+    population_model->reset_recent_births();
     transmission_model->summarize(); // Only to reset TransmissionModel::inoculationsPerAgeGroup
     mon::init_main_sim();
 
@@ -234,7 +234,7 @@ void Simulation::finish() {
     cerr << '\r' << flush; // clean last line of progress-output
 
     for (Host::Human& human : population_model->humans)
-        human.clinicalModel->flush_reports();
+        human.clinical_model->flush_reports();
 
     mon::write_survey_data(command_line, infant_mortality);
 
@@ -293,7 +293,7 @@ void Simulation::step() {
     neonatal_mortality.update(population.humans);
 
     for (Host::Human& human : population.humans) {
-        if (human.getDOB() + clock.max_human_age() >= warmup_length) // this is last time of possible update
+        if (human.get_dob() + clock.max_human_age() >= warmup_length) // this is last time of possible update
             Host::update(human, transmission, neonatal_mortality, infant_mortality, new_infections);
     }
 

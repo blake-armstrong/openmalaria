@@ -235,7 +235,7 @@ protected:
     }
 
     CMDTOut exec(CMHostData host_data) const override {
-        const Clinical::Episode& latest = host_data.human.clinicalModel->get_latest_report();
+        const Clinical::Episode& latest = host_data.human.clinical_model->get_latest_report();
 
         if (((host_data.pg_state & Episode::Sick) && !(host_data.pg_state & Episode::Complicated)) ||
             (host_data.pg_state & Episode::Malaria)) {
@@ -607,7 +607,7 @@ protected:
         CMDTOut result;
 
         // Rely on the health system memory to not count the same episode twice
-        if (host_data.human.isInSubPop(component))
+        if (host_data.human.is_in_sub_pop(component))
             result = positive.exec(host_data);
         else
             result = negative.exec(host_data);
