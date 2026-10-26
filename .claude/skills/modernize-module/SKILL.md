@@ -105,7 +105,9 @@ util/style.sh modernize <dir> --report
 
 It lists every clang-tidy finding left in the module (the full `.clang-tidy` set minus
 naming, plus `misc-const-correctness`), and text matches for `new`/`delete`,
-`printf`/`stringstream`, `#define` and plain `enum`. Work through them per the policy:
+`printf`/`stringstream`, `#define` and plain `enum`. `misc-const-correctness` is listed as
+one line per file, and the checks in the table below that have a standard treatment print it
+as a `hint:`. Work through them per the policy:
 
 | Item | Do |
 |---|---|

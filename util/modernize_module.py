@@ -48,6 +48,20 @@ def parse_args():
     return p.parse_args()
 
 
+GROUPED_CHECKS = {"misc-const-correctness"}
+CHECK_HINTS = {
+    "misc-const-correctness": "apply per file with util/style.sh tidy -checks='-*,misc-const-correctness' -fix "
+    "<file>, revert other modules' files, then rewrite east const to west const "
+    "(perl -pi -e 's/\\b(double|bool|int|size_t|SimTime) const\\b/const $1/g')",
+    "bugprone-narrowing-conversions": "keep the value: static_cast to the type the implicit conversion produced; "
+    "for a signed/unsigned comparison use std::cmp_less and friends (<utility>); say in the commit why the range fits",
+    "cppcoreguidelines-narrowing-conversions": "as bugprone-narrowing-conversions",
+    "modernize-use-integer-sign-comparison": "std::cmp_less / std::cmp_greater (<utility>); same result whenever both "
+    "values fit the signed type",
+    "modernize-avoid-c-style-cast": "static_cast to the same type",
+}
+
+
 class Modernizer:
     def __init__(self, args):
         self.args = args
@@ -300,8 +314,18 @@ class Modernizer:
         print(f"clang-tidy findings in {self.module}, by check:")
         for check in sorted(by_check, key=lambda c: (-len(by_check[c]), c)):
             print(f"\n[{check}] {len(by_check[check])}")
-            for d in by_check[check]:
-                print(f"  {self.location(d)}: {d['message']}")
+            if check in GROUPED_CHECKS:
+                lines_by_file = collections.defaultdict(list)
+                for d in by_check[check]:
+                    path, _, line = self.location(d).rpartition(":")
+                    lines_by_file[path].append(line)
+                for path, lines in sorted(lines_by_file.items()):
+                    print(f"  {path}: {len(lines)} (lines {', '.join(lines)})")
+            else:
+                for d in by_check[check]:
+                    print(f"  {self.location(d)}: {d['message']}")
+            if check in CHECK_HINTS:
+                print(f"  hint: {CHECK_HINTS[check]}")
         print("\nText patterns for the hand commit:")
         for title, pattern in PATTERNS:
             hits = []

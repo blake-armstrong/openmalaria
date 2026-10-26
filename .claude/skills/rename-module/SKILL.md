@@ -52,7 +52,7 @@ It takes about a minute (two clang-tidy passes over the tree). Review the plan:
 | Look for | Action |
 |---|---|
 | A poor name from case conversion, e.g. `IC50` → `i_c50` | `--map IC50=ic50` (applies to every symbol with that old name, so list each variant: `--map IC50_pow_slope=ic50_pow_slope`) |
-| A collision: the new name already appears in a touched file | Read each one. A struct member access (`p.f`) or a different scope is fine. A local or parameter in the same scope as a renamed member (member `PD` → `pd` in a constructor with a local `pd`) would change which name binds: `--map PD=pd_params`. |
+| A collision: the new name already appears in a touched file | Read each one; the tool prints the source line under it (`| …`), so a member access or another function's local is usually clear without opening the file. A struct member access (`p.f`) or a different scope is fine. A local or parameter in the same scope as a renamed member (member `PD` → `pd` in a constructor with a local `pd`) would change which name binds: `--map PD=pd_params`. |
 | A new name that equals a variable at its use sites (namespace `PkPd` → `pkpd` next to variables named `pkpd`) | Prefer the tool's name (`pk_pd`), which avoids it. |
 | `NO FIX-IT` | clang-tidy refused (a use inside a macro, or a conflict). The tool will not apply. Use `--skip <name>` and list it in the report. |
 | A namespace you expected but that is not listed | Other modules open it too. Leave it. |

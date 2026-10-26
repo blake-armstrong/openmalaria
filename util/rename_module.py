@@ -210,15 +210,19 @@ class Renamer:
 
     def collisions(self, entries):
         texts = {}
+        sources = {}
         found = set()
         for e in entries:
             for path in {path for path, _, _ in e["reps"]}:
                 if path not in texts:
                     texts[path] = self.code(path)
+                    with open(path, encoding="utf-8", errors="replace") as fh:
+                        sources[path] = fh.read().split("\n")
                 for m in re.finditer(rf"\b{re.escape(e['new'])}\b", texts[path]):
                     line = texts[path].count("\n", 0, m.start()) + 1
                     found.add(
                         f"{self.rel(path)}:{line}: '{e['new']}' (new name for {e['kind']} '{e['old']}') already appears"
+                        f"\n      | {sources[path][line - 1].strip()}"
                     )
         olds_by_new = collections.defaultdict(set)
         for e in entries:
