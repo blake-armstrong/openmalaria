@@ -46,7 +46,7 @@ See `PLAN.md` for the session protocol, chunks and gates. Append one log entry p
 | D9a | done | 95266baa, a5f91dd1, 2560b4a4, 442d4c81, 39a676fc, 05f577dc, 8313fa51, 5255cf06, 7dddb242, 1d5dcf74, (this log entry) |
 | D9b | split | D9b1, D9b2 |
 | D9b1 | done | 428b10a9, 6191be63, e691b2a5, fa502292, d099a440, 8a0f1831, (this log entry) |
-| D9b2 | todo | |
+| D9b2 | done | 18ea267a, 69af0838, f995cf66, f5d211ec, dd43e68a, 5b5ddc61, bfd60dbb, da0d7b74, 722cf695, (this log entry) |
 | D9c | todo | |
 | D9d | todo | |
 | D9e | todo | |
@@ -464,6 +464,8 @@ See `PLAN.md` for the session protocol, chunks and gates. Append one log entry p
   | `model/Transmission` (not the uncompiled AnophelesModel and MosqLifeCycle suites, F9) | 8b583553 + 529d46cf's hand rename (D7) | f4c2f44c + acec99a5 (D7) |
   | `model/Host/InfectionIncidenceModel.{h,cpp}`, `model/PopulationAgeStructure.{h,cpp}` | 6ac27849 (D7b) | 13d177cc + 9f0a66fe (D7b) |
   | `model/interventions` | 2cee6da6 + 9f5e01f4's hand rename (D8) | da9bfd0f + 9f5e01f4 (D8) |
+  | `model/mon` | 442d4c81 + 5255cf06's hand rename (D9a) | 05f577dc + 5255cf06 (D9a) |
+  | `model/Host/Human.{h,cpp}`, `model/Population.{h,cpp}` | f995cf66 (D9b2) | dd43e68a + bfd60dbb (D9b2) |
 
   Rows from D4a on were added in D4d; the D4 entries had recorded the commits only in their logs.
 
@@ -1486,3 +1488,30 @@ An inventory at 09eb5134 put D9b at about 35 files of non-mechanical change. The
   - D9e: UnitParse's three `DeprecationWarnings` reads and `AgeGroupInterpolation::outputSamples`' `SampleInterpolations` read, then `CommandLine::option`, its bridge and `CommandLineBinding`.
   - The commented-out penalisation code in `WHFalciparum.cpp` still names `util::ModelOptions::option`, which no longer exists; it is a comment and was left.
 - Next: D9b2.
+
+### D9b2: the object bridges → passed in; `Human` and `Population` renamed and modernised (done, 2026-10-26)
+- Base: 70cb03c3 (D9b1 done). The G-perf and A/B base worktree `../om-bench-base` was moved to 70cb03c3 and rebuilt (Ninja).
+- Inventory at the base: 13 uses of `bridge::intervention_manager()`, `clinical_params()`, `within_host_model()` / `mutable_within_host_model()` and WHVivax's `bridge::command_line()` in `model/` and `unittest/`.
+- Commits:
+  - 18ea267a: **logic, within-host model and clinical params.** `HumanParams` holds the `WithinHostModel` and `ClinicalParams`, whose `create` `Human`'s constructor calls at the old points (host_rng draws in the old order). Each per-human within-host model (`WHFalciparum`, `WHVivax`, through them `CommonWithinHost` and `DescriptiveWithinHostModel`) holds a pointer to the `TreatmentRegistry`, passed by `WithinHostModel::create`. The health-system setup takes the mutable within-host model and the manager: `set_health_system`, `set_immediate_outcomes`, `set_decision_tree_5day` and `get_health_system_treatment_by_name` call `within_host.treatments.add(desc, interventions)` and `within_host.vivax.set_health_system(elt)` where the statics were called, so reads and errors keep their order; `TreatmentRegistry::add` and `Treatments` take the manager for their triggered deployments. `TimedChangeHSDeployment` holds the within-host model and its owning manager; `InterventionManager::init` takes the within-host model in place of its `PkPdParams`. `VivaxParams` stores the deprecation-warnings setting at construction instead of reading the command line in `set_health_system` (the command line is fixed per simulation; the warning is printed in the same cases and at the same point, and changeHS needs no command line). Gone: both bridges, `WithinHostModelBinding`, `ClinicalParamsBinding`, `WHInterface::add_treatment`, `WHInterface::create_within_host_model`, `WHVivax::set_hs_parameters`.
+  - 69af0838: **logic, intervention manager.** `HumanParams` holds the manager and `Human` keeps a pointer to it (`intervention_manager`) for `removeFirstEvent` and its checkpoint read. `PerHost::checkpoint(istream&, manager)` and `PerHumanVaccine::checkpoint(istream&, manager)` replace the template `operator&` on the read side; the shared fields are a `checkpoint_fields` template used by both directions, and the vaccine list read is `checkpoint_containers.h`'s (size, `validateListSize`, resize, each element). `has_active_interv` and `mon::init_cohorts` take the manager. `DecisionTreeLibrary` holds it (passed by `Simulation`, which assigns the library in its constructor body, when the manager member is already constructed) and passes it to the `CMDTDeploy` and `CMDTCohort` constructors; the cohort node still looks its component up after building both children. Gone: the bridge and `InterventionManagerBinding`. Now included in `HumanComponents.h`: `checkpoint_containers.h`, which the non-template read and write need.
+  - f995cf66 + f5d211ec: **rename** of `model/Host/Human.{h,cpp}` and `model/Population.{h,cpp}`, 62 by the tool (21 variable, 13 member, 12 method, 11 function, 2 header guards, 2 parameter, 1 global constant). Maps: `dateOfBirth=dob` (the tool's `date_of_birth` is the constructor's parameter; `dob` matches `get_dob`), `ctsImmunityh=cts_immunity_h`. Collisions reviewed: `within_host_model`, `next_cts_dist` (locals elsewhere; the member is always reached by member access), `exp_it` (another function's local), `update_cohort_set` (the `mon::` function, always called qualified). The disabled `AnophelesModelSuite` still says `perHostTransmission`; it is not compiled and was already stale (F9).
+  - dd43e68a + 5b5ddc61: **modernise, tool:** 3 `use-default-member-init` (HumanHet's constant defaults), 1 `concat-nested-namespaces`, 1 `use-ranges` (the median sort, over doubles), 1 `init-variables`, 1 `use-equals-default`.
+  - bfd60dbb: **modernise, hand:** `misc-const-correctness` (21, west const); `Human` follows the rule of zero (its `unique_ptr` members already make it move-only); `CtsDemogAgeGroups` a `constexpr std::array`; the host-demography ctsout title with `std::format("{:g}")` (same text for 1, 5, 10, 15, 25; ctest's BSV, PEV and TBV compare it); explicit conversions with the same values (`from_ts(static_cast<int>(iage))`, `recent_births += static_cast<int>(size) - cum_pop`, `std::cmp_less(cum_pop, size)` since popSize is an `xml_schema::Int`, `static_cast<double>` divisions, `size % 2` for `mod_nn`). Left: public data members (F6), the checkpoint idiom (H3).
+  - da0d7b74: G-style on lines the chunk changed: an explicit `static_cast<long>` for the vaccine read's `validateListSize`.
+  - 722cf695: FINDINGS F78 note; PLAN.md D9b2 row as built; README's bridge list.
+- Gates:
+  - G-exact / G-unit / G-two-sims: 63/63 (strict) on `build-rework/` (Release) and `build-debug/` (Debug) after each C++ commit.
+  - A/B (`util/ab_scenarios.py <base> <candidate>`, base 70cb03c3): 0 of 275 variants differ after each logic commit and after the hand modernise commit. No variants added: the existing ones reach the moved paths (health-system errors and changeHS under each clinical model, vivax liverStageDrug with pUseUncomplicated with and without deprecation warnings, treatment-triggered deployments, decision-tree cohort and deploy nodes and their errors, each sub-population removal option, the cohort errors, MonitoringAll's ITN, IRS and GVI coverage ctsout). Not reached by any test: the PerHost and vaccine checkpoint reads with deployed interventions (F78), covered by review only.
+  - Planted bugs (then reverted): the vivax deprecation flag ignored → `vivax/lsd_puse`, `lsd_puse_conflict`, `changehs_same`, `changehs_same_checkpoint` differ; the blood-stage effect dropped from the looked-up treatment → 39 ctest scenarios fail; `removeFirstEvent` always reading the onFirstBout list together with `has_active_interv` always matching ITN → 2ITNs and VecFullTest fail and 22 of the 65 `interventions` and `monitoring` variants differ, including `sub_pop_removal_onFirstTreatment` and `_onFirstInfection`.
+  - G-stat: `ctest -L statistical -j4` at da0d7b74: 53 passed, 9 disabled (no reference), as after D9b1.
+  - G-style: `util/style.sh check 70cb03c3` clean at da0d7b74 (one item before it, fixed in that commit). Rename: format half clean, second dry run `nothing to rename`, token check passed, `check f995cf66^` clean. Modernise tool commit: format half clean, second dry run applies nothing, `check dd43e68a^` clean.
+  - G-perf: `util/bench.sh -n 7 --compare ../om-bench-base/build-rework`, candidate da0d7b74, load ~8 at the start (desktop apps, not a job): median per-pair ratio 0.9944 (−0.56%), spreads 13.5% (base) / 4.3%. `Human` and each per-human within-host model gained one pointer.
+- Findings: F78 note only; nothing new.
+- Surprises:
+  - Making the PerHost and vaccine reads non-templates made the container `operator&` a non-dependent call, so `HumanComponents.h` now includes `checkpoint_containers.h` (before, the template found it where `Human.cpp` instantiated it).
+  - The bridge-free lifetimes: `DecisionTreeLibrary` is declared before the manager in `Simulation` and so outlives it during destruction; nothing in the library's destruction reads the manager.
+- Follow-ups:
+  - D9c: `Genotypes` and `Diagnostics`; D9d: the monitoring bridge; D9e: the clock and `CommandLine::option`.
+  - `InterventionManager.h` forward-declares `class ClinicalParams`, which is a struct (harmless; tidy it when the file is next touched).
+- Next: D9c.
