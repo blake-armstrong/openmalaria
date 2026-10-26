@@ -151,10 +151,10 @@ def cmd_next(args):
     order = section(plan, r"^## Recommended order")
     print(order[order.index(PRACTICAL_NOTES):] if PRACTICAL_NOTES in order else "")
     entries = log_entries(progress)
-    if entries:
-        title, start = entries[-1]
+    chunk_entries = [i for i, (t, _) in enumerate(entries) if re.match(r"[A-Z]\d+[a-z]?\d?: .*\(done", t)]
+    for title, start in entries[chunk_entries[-1] if chunk_entries else -1:]:
         entry = entry_text(progress, start)
-        print(f"## Previous log entry: {title}\n")
+        print(f"## Log entry: {title}\n")
         print(bullets(entry, "Follow-ups") + bullets(entry, "Next"))
     for title, start in entries:
         entry = entry_text(progress, start)
