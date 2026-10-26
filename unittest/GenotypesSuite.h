@@ -20,8 +20,8 @@
  * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301, USA.
  */
 
-#ifndef Hmod_GenotypesSuite
-#define Hmod_GenotypesSuite
+#ifndef HMOD_GENOTYPES_SUITE
+#define HMOD_GENOTYPES_SUITE
 
 #include <cxxtest/TestSuite.h>
 #include "UnittestUtil.h"
