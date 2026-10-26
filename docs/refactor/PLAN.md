@@ -46,6 +46,8 @@ The work is split into **small, self-contained chunks**. Each chunk fits in one 
    - `docs/refactor/PLAN.md` (a copy of this file, made by chunk A1): Part 1, the one chunk being done, and the Part 3 reference sections that chunk names
    - `docs/refactor/PROGRESS.md`
    - the open entries in `docs/refactor/FINDINGS.md` that concern the files or modules the chunk touches
+
+   `util/chunk.py next` (the `/next-chunk` skill) prints exactly these parts, about 3–4k tokens; read the files themselves only for something it does not show (`util/chunk.py section NAME` prints one Part 3 section).
 3. **Check the chunk's prerequisites** against `PROGRESS.md`. If any is missing, stop and say so.
 4. **Do only that chunk.** If it is clearly growing beyond one session (more than ~20 files of non-mechanical change), stop at a green point. Split the rest into a new chunk ID (e.g. `D4b`) and record the split in both `PLAN.md` and `PROGRESS.md`.
 5. **Pass the gates the chunk lists** (below).
@@ -136,6 +138,7 @@ Practical notes for every chunk:
 - A chunk that changes behaviour ctest cannot see (error paths, stderr, checkpoint bytes, model paths no scenario reaches) adds variants to `util/ab_scenarios.py` and runs it against the base build, or adds a scenario test whose expected output comes from the base build.
 - Wrap long `ctest` or benchmark runs in `caffeinate -i`. During B1, idle sleep stalled a test run for 990 s.
 - Commit each logical step as it lands, in its own small commit, not one commit per chunk.
+- Tools (added after D9b2): `util/gates.sh` runs the gates and prints one line each (`--all <base>` for every gate; results logged in `build-rework/gates.log`); `util/plant.py` plants a bug, runs the gates that should catch it, and restores the code; `util/bridges.py` lists the remaining bridges and their call sites; `util/chunk.py` prints the chunk briefing (`next`), the commit list and logged gates for PROGRESS (`commits`, `gates`), and checks the docs for drift (`check-docs`). The `/next-chunk` and `/close-chunk` skills use them. Hooks in `.claude/settings.json` deny staging everything and `rm -r` on variable paths, ask before push or discarding changes, and clang-format C++ edited by any tool.
 
 ---
 

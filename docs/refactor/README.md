@@ -79,6 +79,9 @@ cmake --build build-rework -j4
 cd build-rework && ctest -j4                      # G-exact, G-unit, G-stat (single-run)
 ctest -C full -L statistical-full -j1             # G-stat group test, ~6 min
 
+# Or every gate at once, one line each (also builds build-debug; logged in build-rework/gates.log):
+util/gates.sh --all <base commit> --base ../om-base/build-rework   # A/B and G-perf against that build
+
 # A/B of the crafted variants against any earlier commit:
 git worktree add ../om-base <commit>
 cmake -S ../om-base -B ../om-base/build-rework -DCMAKE_BUILD_TYPE=Release

@@ -1516,3 +1516,20 @@ An inventory at 09eb5134 put D9b at about 35 files of non-mechanical change. The
   - D9c: `Genotypes` and `Diagnostics`; D9d: the monitoring bridge; D9e: the clock and `CommandLine::option`.
   - `InterventionManager.h` forward-declares `class ClinicalParams`, which is a struct (harmless; tidy it when the file is next touched).
 - Next: D9c.
+
+### Tooling after D9b2: chunk briefing, gate runner, planted bugs, bridge inventory, drift checks, hooks (2026-10-26)
+A retrospective on D9b2 (at the user's request) found where a chunk session spends tokens and turns: reading PLAN.md and PROGRESS.md at the start (~35k tokens), hand-written build/ctest/A/B pipelines (several broke on this shell's `grep` and `ls` replacements), planted bugs done by hand (one A/B run tested a stale binary after the planted build failed), repeated bridge inventories, and docs drift (the module status table lacked `model/mon` until D9b2 and `CMDecisionTree` until now). The user asked for all of the proposed changes. No model code changed.
+- Commits:
+  - 82eac7c0: `util/bridges.py`, the remaining bridges, their facades (including facades of facades in the bridge's own files, e.g. `mon::record_event` through `record_value`) and qualified call sites. At 08e18352: monitoring 158 sites in 30 files, clock 408 in 61 (with `unittest/` and `test/`), Genotypes 28, Diagnostics 8, `CommandLine::option` 4.
+  - ceaf2483: `util/gates.sh`, the gates with one line each; `--all <base>` adds A/B, G-stat, G-style and G-perf (with the load average); lines logged in `build-rework/gates.log`.
+  - 361323d6: `util/plant.py`, plant (`--replace FILE OLD NEW` or `--patch`), build (a build error stops it, exit 2), ctest and A/B groups, restore and rebuild; "caught" or "NOT CAUGHT". Tried on D9b2's plants (4 vivax variants; 40 of 63 ctest tests, where D9b2's message counted 39 by hand), a non-compiling plant and a no-op.
+  - f5048569: `util/chunk.py` (`next`, `section`, `commits`, `gates`, `check-docs`). `next` for D9c prints ~13 kB. `check-docs` checks README's bridge list against the code, the module status table against the tool commits in `.git-blame-ignore-revs`, and the status table against the log entries.
+  - 0fe5a0af: the module status row for `CMDecisionTree` (D6c), found by `check-docs`.
+  - b23671a2: skills `/next-chunk` and `/close-chunk`, built on the tools above.
+  - 732343be: `util/rename_module.py` prints the source line under each possible collision; `util/modernize_module.py --report` groups `misc-const-correctness` by file and prints the standard treatment under the const, narrowing, sign-comparison and cast checks.
+  - b0580c6d: hooks: `guard-bash.sh` (PreToolUse) denies staging everything and `rm -r` on variable paths, asks before push, stash, clean, `reset --hard` and directory-wide checkouts, and ignores heredoc bodies; `format-after-bash.sh` (PostToolUse) clang-formats C++ changed by in-place Bash edits. The guard denied `git add -A --dry-run` live.
+  - (the next commit): PLAN Part 1 (step 2 and the practical notes) and README's re-run section name the tools; this entry.
+- Not done as proposed: moving PLAN Part 3 to its own file. `util/chunk.py section NAME` gives the same saving without breaking the "Part 3 §" references in PLAN, the skills and this log.
+- Gates: no model code changed. `util/gates.sh --ab vivax --style 70cb03c3` and `--release-only --stat` ran at 82eac7c0 (63/63 on both builds, 0 of 18 vivax variants differ, G-style clean, G-stat 53 passed and 9 disabled). `util/chunk.py check-docs` clean after 0fe5a0af.
+- Next: D9c, started with `/next-chunk`.
+
