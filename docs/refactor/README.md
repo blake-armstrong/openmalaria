@@ -45,9 +45,9 @@ git diff upstream/main throwaway_ai_rework -- model/            # the whole chan
 ```
 
 While the D stage runs, old static accessors still exist as a *bridge*: each delegates through a
-pointer in `namespace bridge` (in `Clock.h`, `util/CommandLine.h`,
-`Host/WithinHost/WithinHostModel.h`, `Clinical/ClinicalParams.h`, `interventions/InterventionManager.h`, `mon/Monitoring.h`, and for the genotype and diagnostic registries `Host/WithinHost/Genotypes.h` and `Diagnostic.h`) to the object `Simulation` owns. D9b2–D9f
-remove them. A call through `bridge::` is a call site not yet migrated, not new design.
+pointer in `namespace bridge` (in `Clock.h`, `util/CommandLine.h`, `mon/Monitoring.h`, and for the
+genotype and diagnostic registries `Host/WithinHost/Genotypes.h` and `Diagnostic.h`) to the object
+`Simulation` owns. D9c–D9f remove them. A call through `bridge::` is a call site not yet migrated, not new design.
 
 ## The evidence that behaviour is unchanged
 
