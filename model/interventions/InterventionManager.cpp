@@ -33,7 +33,7 @@
 #include "Host/WithinHost/Diagnostic.h"
 #include "Transmission/VectorModel.h"
 #include "Clinical/ClinicalParams.h"
-#include "PkPd/PkPdParams.h"
+#include "Host/WithinHost/WithinHostModel.h"
 
 #include <algorithm>
 #include <memory>
@@ -50,9 +50,10 @@ InterventionManager::~InterventionManager() = default;
 
 void InterventionManager::init(const scnXml::Interventions& interv_elt, Transmission::TransmissionModel& transmission,
                                const Transmission::PerHostParams& per_host_params,
-                               const WithinHost::DiagnosticRegistry& diagnostics, const pk_pd::PkPdParams& pk_pd,
-                               Clinical::ClinicalParams& clinical, Clinical::DecisionTreeLibrary& decision_trees,
-                               const util::ModelOptionFlags& options, const util::CommandLineOptions& command_line) {
+                               const WithinHost::DiagnosticRegistry& diagnostics,
+                               WithinHost::WithinHostModel& within_host, Clinical::ClinicalParams& clinical,
+                               Clinical::DecisionTreeLibrary& decision_trees, const util::ModelOptionFlags& options,
+                               const util::CommandLineOptions& command_line) {
     next_timed = 0;
     verbose = command_line.option(util::CommandLine::Verbose);
 
@@ -64,7 +65,8 @@ void InterventionManager::init(const scnXml::Interventions& interv_elt, Transmis
                 try {
                     const SimTime date = UnitParse::readDate(
                         it.getTime(), UnitParse::STEPS /*STEPS is only for backwards compatibility*/);
-                    timed.push_back(std::make_unique<TimedChangeHSDeployment>(date, it, clinical, decision_trees));
+                    timed.push_back(std::make_unique<TimedChangeHSDeployment>(date, it, clinical, decision_trees,
+                                                                              within_host, *this));
                 } catch (const util::format_error& e) {
                     throw util::xml_scenario_error(
                         string("interventions/changeHS/timedDeployment/time: ").append(e.message()));
@@ -136,7 +138,8 @@ void InterventionManager::init(const scnXml::Interventions& interv_elt, Transmis
             } else if (component.getTreatSimple().present()) {
                 hi_component = std::make_unique<TreatSimpleComponent>(id, component.getTreatSimple().get(), options);
             } else if (component.getTreatPKPD().present()) {
-                hi_component = std::make_unique<TreatPKPDComponent>(id, component.getTreatPKPD().get(), pk_pd);
+                hi_component =
+                    std::make_unique<TreatPKPDComponent>(id, component.getTreatPKPD().get(), within_host.common.pk_pd);
             } else if (component.getDecisionTree().present()) {
                 hi_component =
                     std::make_unique<DecisionTreeComponent>(id, component.getDecisionTree().get(), decision_trees);

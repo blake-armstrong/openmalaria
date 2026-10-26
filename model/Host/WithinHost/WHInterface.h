@@ -77,16 +77,6 @@ private:
  */
 class WHInterface {
 public:
-    /// @brief Static methods
-    //@{
-    /** Configure a new treatment option, and return the code used to select
-     * that option later. */
-    static TreatmentId add_treatment(const scnXml::TreatmentOption& desc);
-
-    /// Create an instance using the appropriate model
-    static unique_ptr<WHInterface> create_within_host_model(LocalRng& rng, double comorbidity_factor);
-    //@}
-
     /// @brief Constructors, destructors and checkpointing functions
     //@{
     WHInterface() = default;

@@ -43,13 +43,11 @@ class LiverStageDrug;
 class Model;
 }
 namespace OM {
-namespace util {
-class CommandLineOptions;
-}
 namespace WithinHost {
 namespace Pathogenesis {
 struct PathogenesisParams;
 }
+class TreatmentRegistry;
 
 class HypnozoiteReleaseDistribution {
 public:
@@ -87,11 +85,12 @@ struct VivaxParams {
     std::string vivax_clin_option = " ";
     std::map<double, int> n_hypnozoites_prob_map;
     VivaxHealthSystemParams health_system;
+    bool deprecation_warnings = true;
 
     VivaxParams() = default;
-    VivaxParams(const scnXml::Model& model, SimTime latent_p);
+    VivaxParams(const scnXml::Model& model, SimTime latent_p, bool deprecation_warnings);
 
-    void set_health_system(const scnXml::LiverStageDrug* elt, const util::CommandLineOptions& command_line);
+    void set_health_system(const scnXml::LiverStageDrug* elt);
 
     int sample_n_hypnozoites(LocalRng& rng) const;
     /// Time to hypnozoite release after initial release
@@ -189,16 +188,10 @@ private:
  */
 class WHVivax : public WHInterface {
 public:
-    /** Called when health system parameters are loaded.
-     * 
-     * If no "LiverStageDrug" parameters are present, this is still called but with null pointer.
-     */
-    static void set_hs_parameters(const scnXml::LiverStageDrug*);
-
     /// @brief Constructors, destructors and checkpointing functions
     //@{
-    WHVivax(const VivaxParams& params, const Pathogenesis::PathogenesisParams& pathogenesis, LocalRng& rng,
-            double comorbidity_factor);
+    WHVivax(const VivaxParams& params, const Pathogenesis::PathogenesisParams& pathogenesis,
+            const TreatmentRegistry& treatments, LocalRng& rng, double comorbidity_factor);
     WHVivax(const WHVivax&) = delete;
     WHVivax& operator=(const WHVivax&) = delete;
     WHVivax(WHVivax&&) = delete;
@@ -241,6 +234,7 @@ protected:
 private:
     const VivaxParams* params;
     const Pathogenesis::PathogenesisParams* pathogenesis;
+    const TreatmentRegistry* treatments;
 
     list<VivaxBrood> infections;
 

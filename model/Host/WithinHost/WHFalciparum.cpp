@@ -30,7 +30,6 @@
 #include "Host/WithinHost/Pathogenesis/PathogenesisModel.h"
 #include "Host/WithinHost/Diagnostic.h"
 #include "Host/WithinHost/Treatments.h"
-#include "Host/WithinHost/WithinHostModel.h"
 #include "Host/WithinHost/Genotypes.h"
 #include "mon/Monitoring.h"
 #include "util/random.h"
@@ -64,14 +63,14 @@ FalciparumParams::FalciparumParams(const OM::Parameters& parameters, const util:
 // -----  Non-static  -----
 
 WHFalciparum::WHFalciparum(const FalciparumParams& params, const Pathogenesis::PathogenesisParams& pathogenesis,
-                           LocalRng& rng, double comorbidity_factor)
+                           const TreatmentRegistry& treatments, LocalRng& rng, double comorbidity_factor)
     : WHInterface(),
       // NOTE: negating a Gaussian sample with mean 0 is pointless — except that
       // the individual samples change. In any case the overhead is negligible.
       //FIXME: Should this be allowed to be greater than 1?
       // Oldest code on GoogleCode: _innateImmunity=(double)(W_GAUSS((0), (sigma_i)));
       innate_imm_surv_fact(exp(-rng.gauss(0.0, params.sigma_i))),
-      pathogenesis_model(pathogenesis.create(comorbidity_factor)), falciparum_params(&params) {
+      pathogenesis_model(pathogenesis.create(comorbidity_factor)), falciparum_params(&params), treatments(&treatments) {
     y_lag_imported.resize(params.y_lag_len * Genotypes::count());
     y_lag_local.resize(params.y_lag_len * Genotypes::count());
 }
@@ -179,7 +178,7 @@ bool WHFalciparum::diagnostic_result(LocalRng& rng, const Diagnostic& diagnostic
 }
 
 void WHFalciparum::treatment(Host::Human& human, TreatmentId treat_id) {
-    const Treatments& treat = bridge::within_host_model().treatments.select(treat_id);
+    const Treatments& treat = treatments->select(treat_id);
     treat_simple(human, treat.liver_effect(), treat.blood_effect());
 
     // triggered intervention deployments:

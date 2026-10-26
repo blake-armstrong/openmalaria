@@ -23,7 +23,8 @@
 #include "Host/Human.h"
 #include "Host/InfectionIncidenceModel.h"
 #include "Clinical/ClinicalModel.h"
-#include "Host/WithinHost/WHInterface.h"
+#include "Clinical/ClinicalParams.h"
+#include "Host/WithinHost/WithinHostModel.h"
 
 #include "Transmission/TransmissionModel.h"
 #include "util/ModelOptions.h"
@@ -113,10 +114,10 @@ Human::Human(SimTime date_of_birth, const HumanParams& params, util::MasterRng& 
     assert(date_of_birth == Sim::now_or_ts1() || (Sim::now() == Sim::zero() && date_of_birth < Sim::now()));
 
     HumanHet het = het_sample(host_rng, *params.options);
-    withinHostModel = WithinHost::WHInterface::create_within_host_model(host_rng, het.comorbidityFactor);
+    withinHostModel = params.within_host->create(host_rng, het.comorbidityFactor);
     double ii_factor = infIncidence->get_availability_factor(host_rng, 1.0);
     perHostTransmission.initialise(*params.per_host, host_rng, het.availabilityFactor * ii_factor);
-    clinicalModel = bridge::clinical_params().create(het.treatmentSeekingFactor);
+    clinicalModel = params.clinical->create(het.treatmentSeekingFactor);
 }
 
 void Human::addToCohort(ComponentId id, SimTime duration) {

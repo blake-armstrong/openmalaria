@@ -227,9 +227,7 @@ mon::MonitoringState monitoring;
 MonitoringBinding monitoring_binding{monitoring};
 util::ModelOptionFlags model_options;
 WithinHost::WithinHostModel within_host_model;
-WithinHostModelBinding within_host_model_binding{within_host_model};
 Clinical::ClinicalParams clinical;
-ClinicalParamsBinding clinical_binding{clinical};
 WithinHost::GenotypeRegistry genotypes;
 GenotypesBinding genotypes_binding{genotypes};
 WithinHost::DiagnosticRegistry diagnostics;
@@ -459,7 +457,9 @@ public:
             dateOfBirth,
             Host::HumanParams{.per_host = &unittest_options::per_host_params,
                               .infection_incidence = &unittest_options::infection_incidence,
-                              .options = &unittest_options::model_options},
+                              .options = &unittest_options::model_options,
+                              .within_host = &unittest_options::within_host_model,
+                              .clinical = &unittest_options::clinical},
             master_rngs.population);
     }
     // Set the WithinHost model used by the human, and return a pointer to it. Do not delete this!

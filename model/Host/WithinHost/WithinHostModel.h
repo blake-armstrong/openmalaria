@@ -37,7 +37,6 @@
 #include "util/ModelOptions.h"
 #include "util/random.h"
 
-#include <cassert>
 #include <cstdint>
 #include <memory>
 
@@ -68,39 +67,6 @@ struct WithinHostModel {
 };
 
 }
-
-namespace bridge {
-
-// NOLINTNEXTLINE(cppcoreguidelines-avoid-non-const-global-variables)
-inline WithinHost::WithinHostModel* current_within_host_model = nullptr;
-
-inline const WithinHost::WithinHostModel& within_host_model() {
-    assert(current_within_host_model != nullptr);
-    return *current_within_host_model;
-}
-
-inline WithinHost::WithinHostModel& mutable_within_host_model() {
-    assert(current_within_host_model != nullptr);
-    return *current_within_host_model;
-}
-
-}
-
-class WithinHostModelBinding {
-public:
-    explicit WithinHostModelBinding(WithinHost::WithinHostModel& model) : previous(bridge::current_within_host_model) {
-        bridge::current_within_host_model = &model;
-    }
-    WithinHostModelBinding(const WithinHostModelBinding&) = delete;
-    WithinHostModelBinding& operator=(const WithinHostModelBinding&) = delete;
-    WithinHostModelBinding(WithinHostModelBinding&&) = delete;
-    WithinHostModelBinding& operator=(WithinHostModelBinding&&) = delete;
-    ~WithinHostModelBinding() { bridge::current_within_host_model = previous; }
-
-private:
-    WithinHost::WithinHostModel* previous;
-};
-
 }
 
 #endif

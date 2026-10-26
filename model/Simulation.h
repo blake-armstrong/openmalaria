@@ -96,10 +96,8 @@ private:
     WithinHost::DiagnosticRegistry diagnostics;
     DiagnosticsBinding diagnostics_binding{diagnostics};
     WithinHost::WithinHostModel within_host_model;
-    WithinHostModelBinding within_host_model_binding{within_host_model};
     Clinical::DecisionTreeLibrary decision_trees;
     Clinical::ClinicalParams clinical;
-    ClinicalParamsBinding clinical_binding{clinical};
     Clinical::InfantMortality infant_mortality;
     Host::NeonatalMortality neonatal_mortality;
     Host::InfectionIncidenceParams infection_incidence;

@@ -31,7 +31,6 @@
 #include "util/ModelOptions.h"
 
 #include <array>
-#include <cassert>
 #include <cstdint>
 #include <limits>
 #include <memory>
@@ -47,6 +46,12 @@ class HSEventScheduler;
 }
 
 namespace OM {
+namespace WithinHost {
+struct WithinHostModel;
+}
+namespace interventions {
+class InterventionManager;
+}
 namespace Clinical { // NOLINT(readability-identifier-naming)
 
 class ClinicalModel;
@@ -151,7 +156,9 @@ struct ClinicalParams {
     ClinicalParams(const OM::Parameters& parameters, const util::ModelOptionFlags& options,
                    const util::CommandLineOptions& command_line, const scnXml::Scenario& scenario);
 
-    void set_health_system(const scnXml::HealthSystem& health_system, DecisionTreeLibrary& decision_trees);
+    void set_health_system(const scnXml::HealthSystem& health_system, DecisionTreeLibrary& decision_trees,
+                           WithinHost::WithinHostModel& within_host,
+                           const interventions::InterventionManager& interventions);
 
     std::unique_ptr<ClinicalModel> create(double treatment_seeking_factor) const;
 
@@ -181,38 +188,15 @@ struct ClinicalParams {
     EventSchedulerParams event_scheduler;
 
 private:
-    void set_immediate_outcomes(const scnXml::HSImmediateOutcomes& hs_description);
-    void set_decision_tree_5day(const scnXml::HSDT5Day& hs_description, DecisionTreeLibrary& decision_trees);
+    void set_immediate_outcomes(const scnXml::HSImmediateOutcomes& hs_description,
+                                WithinHost::WithinHostModel& within_host,
+                                const interventions::InterventionManager& interventions);
+    void set_decision_tree_5day(const scnXml::HSDT5Day& hs_description, DecisionTreeLibrary& decision_trees,
+                                WithinHost::WithinHostModel& within_host,
+                                const interventions::InterventionManager& interventions);
 };
 
 }
-
-namespace bridge {
-
-// NOLINTNEXTLINE(cppcoreguidelines-avoid-non-const-global-variables)
-inline const Clinical::ClinicalParams* current_clinical_params = nullptr;
-
-inline const Clinical::ClinicalParams& clinical_params() {
-    assert(current_clinical_params != nullptr);
-    return *current_clinical_params;
-}
-
-}
-
-class ClinicalParamsBinding {
-public:
-    explicit ClinicalParamsBinding(const Clinical::ClinicalParams& params) : previous(bridge::current_clinical_params) {
-        bridge::current_clinical_params = &params;
-    }
-    ClinicalParamsBinding(const ClinicalParamsBinding&) = delete;
-    ClinicalParamsBinding& operator=(const ClinicalParamsBinding&) = delete;
-    ClinicalParamsBinding(ClinicalParamsBinding&&) = delete;
-    ClinicalParamsBinding& operator=(ClinicalParamsBinding&&) = delete;
-    ~ClinicalParamsBinding() { bridge::current_clinical_params = previous; }
-
-private:
-    const Clinical::ClinicalParams* previous;
-};
 
 }
 

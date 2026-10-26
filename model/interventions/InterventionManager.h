@@ -43,9 +43,7 @@ class DecisionTreeLibrary;
 }
 namespace WithinHost {
 class DiagnosticRegistry;
-}
-namespace pk_pd {
-struct PkPdParams;
+struct WithinHostModel;
 }
 namespace Transmission {
 class PerHostParams;
@@ -69,7 +67,7 @@ public:
     /** Read XML descriptions. */
     void init(const scnXml::Interventions& interv_elt, Transmission::TransmissionModel& transmission,
               const Transmission::PerHostParams& per_host_params, const WithinHost::DiagnosticRegistry& diagnostics,
-              const pk_pd::PkPdParams& pk_pd, Clinical::ClinicalParams& clinical,
+              WithinHost::WithinHostModel& within_host, Clinical::ClinicalParams& clinical,
               Clinical::DecisionTreeLibrary& decision_trees, const util::ModelOptionFlags& options,
               const util::CommandLineOptions& command_line);
 

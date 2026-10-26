@@ -91,8 +91,8 @@ class WHFalciparum : public WHInterface {
 public:
     /// @brief Constructors, destructors and checkpointing functions
     //@{
-    WHFalciparum(const FalciparumParams& params, const Pathogenesis::PathogenesisParams& pathogenesis, LocalRng& rng,
-                 double comorbidity_factor);
+    WHFalciparum(const FalciparumParams& params, const Pathogenesis::PathogenesisParams& pathogenesis,
+                 const TreatmentRegistry& treatments, LocalRng& rng, double comorbidity_factor);
     ~WHFalciparum() override;
     //@}
 
@@ -180,6 +180,7 @@ protected:
 
 private:
     const FalciparumParams* falciparum_params;
+    const TreatmentRegistry* treatments;
 
     friend class ::InfectionImmunitySuite;
 };

@@ -57,9 +57,9 @@ CommonWithinHostParams::CommonWithinHostParams(const scnXml::Scenario& scenario,
 }
 
 CommonWithinHost::CommonWithinHost(const FalciparumParams& params, const Pathogenesis::PathogenesisParams& pathogenesis,
-                                   const CommonWithinHostParams& common_params, LocalRng& rng,
-                                   double comorbidity_factor)
-    : WHFalciparum(params, pathogenesis, rng, comorbidity_factor), pkpd_model(common_params.pk_pd),
+                                   const TreatmentRegistry& treatments, const CommonWithinHostParams& common_params,
+                                   LocalRng& rng, double comorbidity_factor)
+    : WHFalciparum(params, pathogenesis, treatments, rng, comorbidity_factor), pkpd_model(common_params.pk_pd),
       common_params(&common_params) {
     assert(Sim::one_ts() == Sim::from_days(1) || Sim::one_ts() == Sim::from_days(5));
 

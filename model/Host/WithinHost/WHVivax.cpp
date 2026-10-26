@@ -21,7 +21,6 @@
  */
 
 #include "Host/WithinHost/WHVivax.h"
-#include "Host/WithinHost/WithinHostModel.h"
 #include "Host/WithinHost/Pathogenesis/PathogenesisModel.h"
 #include "Host/WithinHost/Treatments.h"
 #include "Host/WithinHost/Genotypes.h"
@@ -32,7 +31,6 @@
 #include "util/errors.h"
 #include "util/checkpoint_containers.h"
 #include "util/UnitParse.h"
-#include "util/CommandLine.h"
 #include "util/sampler.h"
 #include <schema/scenario.h>
 #include <algorithm>
@@ -76,7 +74,8 @@ WHVivax* sampleHost = 0;
 VivaxBrood* sampleBrood = 0;
 #endif
 
-VivaxParams::VivaxParams(const scnXml::Model& model, SimTime latent_p) : latent_p(latent_p) {
+VivaxParams::VivaxParams(const scnXml::Model& model, SimTime latent_p, bool deprecation_warnings)
+    : latent_p(latent_p), deprecation_warnings(deprecation_warnings) {
     if (!model.getVivax().present())
         throw util::xml_scenario_error("no vivax model description in scenario XML");
     const scnXml::Vivax& elt = model.getVivax().get();
@@ -126,7 +125,7 @@ VivaxParams::VivaxParams(const scnXml::Model& model, SimTime latent_p) : latent_
     }
 }
 
-void VivaxParams::set_health_system(const scnXml::LiverStageDrug* elt, const util::CommandLineOptions& command_line) {
+void VivaxParams::set_health_system(const scnXml::LiverStageDrug* elt) {
     VivaxHealthSystemParams& hs = health_system;
     const double old_p_het_no_pq = hs.p_het_no_pq;
     if (elt == nullptr) {
@@ -140,7 +139,7 @@ void VivaxParams::set_health_system(const scnXml::LiverStageDrug* elt, const uti
         hs.p_het_no_pq = elt->getPHumanCannotReceive().getValue();
         hs.p_receive_pq = elt->getPUseUncomplicated().present() ? elt->getPUseUncomplicated().get().getValue() : 0.0;
         if (hs.p_receive_pq > 0.0) {
-            if (command_line.option(util::CommandLine::DeprecationWarnings)) {
+            if (deprecation_warnings) {
                 cerr << "Deprecation warning: pUseUncomplicated is deprecated; it is "
                         "suggested to use the liver stage simple treatment option instead."
                      << endl; // NOLINT(performance-avoid-endl)
@@ -310,10 +309,10 @@ void VivaxBrood::treatment_ls() {
 
 // ———  per-host code  ———
 
-WHVivax::WHVivax(const VivaxParams& params, const Pathogenesis::PathogenesisParams& pathogenesis, LocalRng& rng,
-                 double comorbidity_factor)
-    : params(&params), pathogenesis(&pathogenesis), p_event(numeric_limits<double>::quiet_NaN()),
-      p_first_relapse_event(numeric_limits<double>::quiet_NaN()) {
+WHVivax::WHVivax(const VivaxParams& params, const Pathogenesis::PathogenesisParams& pathogenesis,
+                 const TreatmentRegistry& treatments, LocalRng& rng, double comorbidity_factor)
+    : params(&params), pathogenesis(&pathogenesis), treatments(&treatments),
+      p_event(numeric_limits<double>::quiet_NaN()), p_first_relapse_event(numeric_limits<double>::quiet_NaN()) {
     if (comorbidity_factor != 1.0) {
         throw TRACED_EXCEPTION_DEFAULT("This vivax model cannot be used with comorbidity heterogeneity");
     }
@@ -485,7 +484,7 @@ Pathogenesis::StatePair WHVivax::determine_morbidity(Host::Human& human, double 
 void WHVivax::clear_immunity() { throw TRACED_EXCEPTION_DEFAULT("vivax model does not include immune suppression"); }
 
 void WHVivax::treatment(Host::Human& human, TreatmentId treat_id) {
-    const Treatments& treat = bridge::within_host_model().treatments.select(treat_id);
+    const Treatments& treat = treatments->select(treat_id);
     treat_simple(human, treat.liver_effect(), treat.blood_effect());
 
     // triggered intervention deployments:
@@ -588,9 +587,5 @@ void WHVivax::treat_pk_pd(size_t schedule, size_t dosages, double age, double de
 double WHVivax::get_total_density() const { throw TRACED_EXCEPTION(NotImpl, util::Error::WHFeatures); }
 double WHVivax::get_cumulative_h() const { throw TRACED_EXCEPTION(NotImpl, util::Error::WHFeatures); }
 double WHVivax::get_cumulative_y() const { throw TRACED_EXCEPTION(NotImpl, util::Error::WHFeatures); }
-
-void WHVivax::set_hs_parameters(const scnXml::LiverStageDrug* elt) {
-    bridge::mutable_within_host_model().vivax.set_health_system(elt, bridge::command_line());
-}
 
 }

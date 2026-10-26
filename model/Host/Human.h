@@ -33,9 +33,11 @@ namespace OM {
 namespace Clinical {
 class ClinicalModel;
 class InfantMortality;
+struct ClinicalParams;
 }
 namespace WithinHost {
 class WHInterface;
+struct WithinHostModel;
 }
 namespace Transmission {
 class TransmissionModel;
@@ -51,6 +53,8 @@ struct HumanParams {
     const Transmission::PerHostParams* per_host = nullptr;
     const InfectionIncidenceParams* infection_incidence = nullptr;
     const util::ModelOptionFlags* options = nullptr;
+    const WithinHost::WithinHostModel* within_host = nullptr;
+    const Clinical::ClinicalParams* clinical = nullptr;
 };
 
 /** Interface to all sub-models storing data per-human individual.

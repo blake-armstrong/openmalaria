@@ -30,8 +30,9 @@ namespace OM::WithinHost {
 
 // ———  TreatmentRegistry  ———
 
-TreatmentId TreatmentRegistry::add(const scnXml::TreatmentOption& desc) {
-    Treatments treatment(desc);
+TreatmentId TreatmentRegistry::add(const scnXml::TreatmentOption& desc,
+                                   const interventions::InterventionManager& interventions) {
+    Treatments treatment(desc, interventions);
     TreatmentId id(treatments.size());
     treatments.push_back(std::move(treatment));
     return id;
@@ -48,8 +49,8 @@ Treatments::Stages stage_from_string(const std::string& str) {
         return Treatments::BOTH;
     throw util::format_error(std::string("stage must be liver, blood or both, not ").append(str));
 }
-Treatments::Treatments(const scnXml::TreatmentOption& elt)
-    : TriggeredDeployments(elt, bridge::intervention_manager()), time_liver(Sim::zero()), time_blood(Sim::zero()) {
+Treatments::Treatments(const scnXml::TreatmentOption& elt, const interventions::InterventionManager& interventions)
+    : TriggeredDeployments(elt, interventions), time_liver(Sim::zero()), time_blood(Sim::zero()) {
     for (const auto& it : elt.getClearInfections()) {
         try {
             //NOTE: if changing XSD, this should not be called "timesteps" or have a default unit

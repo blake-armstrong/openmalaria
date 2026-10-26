@@ -88,10 +88,12 @@ public:
 class TimedChangeHSDeployment : public TimedDeployment {
 public:
     TimedChangeHSDeployment(SimTime date, const scnXml::ChangeHS::TimedDeploymentType& hs,
-                            Clinical::ClinicalParams& clinical, Clinical::DecisionTreeLibrary& decision_trees)
-        : TimedDeployment(date), new_hs(hs._clone()), clinical(&clinical), decision_trees(&decision_trees) {}
+                            Clinical::ClinicalParams& clinical, Clinical::DecisionTreeLibrary& decision_trees,
+                            WithinHost::WithinHostModel& within_host, const InterventionManager& interventions)
+        : TimedDeployment(date), new_hs(hs._clone()), clinical(&clinical), decision_trees(&decision_trees),
+          within_host(&within_host), interventions(&interventions) {}
     void deploy(vector<Host::Human>& population, Transmission::TransmissionModel& transmission) override {
-        clinical->set_health_system(*new_hs, *decision_trees);
+        clinical->set_health_system(*new_hs, *decision_trees, *within_host, *interventions);
         new_hs.reset();
     }
     void print_details(std::ostream& out) const override { out << "ChangeHS"; }
@@ -100,6 +102,8 @@ private:
     unique_ptr<scnXml::HealthSystem> new_hs;
     Clinical::ClinicalParams* clinical;
     Clinical::DecisionTreeLibrary* decision_trees;
+    WithinHost::WithinHostModel* within_host;
+    const InterventionManager* interventions;
 };
 
 class TimedChangeEIRDeployment : public TimedDeployment {

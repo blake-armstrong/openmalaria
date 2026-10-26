@@ -22,8 +22,7 @@
 
 #include "Clinical/DecisionTree5Day.h"
 #include "Clinical/CMDecisionTree.h"
-#include "Host/WithinHost/WHInterface.h"
-#include "Host/WithinHost/WHVivax.h"
+#include "Host/WithinHost/WithinHostModel.h"
 #include "util/ModelOptions.h"
 #include "util/random.h"
 #include "util/errors.h"
@@ -33,8 +32,9 @@ using namespace ::OM::util;
 
 // ———  static, init  ———
 
-void ClinicalParams::set_decision_tree_5day(const scnXml::HSDT5Day& hs_description,
-                                            DecisionTreeLibrary& decision_trees) {
+void ClinicalParams::set_decision_tree_5day(const scnXml::HSDT5Day& hs_description, DecisionTreeLibrary& decision_trees,
+                                            WithinHost::WithinHostModel& within_host,
+                                            const interventions::InterventionManager& interventions) {
     const double access_uc_official1 = hs_description.getPSeekOfficialCareUncomplicated1().getValue();
     const double access_uc_official2 = hs_description.getPSeekOfficialCareUncomplicated2().getValue();
     // Note: this asymmetry is historical, and probably matters little:
@@ -59,10 +59,10 @@ void ClinicalParams::set_decision_tree_5day(const scnXml::HSDT5Day& hs_descripti
     decision_tree_5day.tree_uc_self_treat = &decision_trees.create(hs_description.getTreeUCSelfTreat(), true);
 
     five_day.cure_rate_severe = hs_description.getCureRateSevere().getValue();
-    five_day.treatment_severe = WHInterface::add_treatment(hs_description.getTreatmentSevere());
+    five_day.treatment_severe = within_host.treatments.add(hs_description.getTreatmentSevere(), interventions);
 
     if (vivax_simple_model) {
-        WithinHost::WHVivax::set_hs_parameters(
+        within_host.vivax.set_health_system(
             hs_description.getLiverStageDrug().present() ? &hs_description.getLiverStageDrug().get() : nullptr);
     } else if (hs_description.getLiverStageDrug().present()) {
         throw util::xml_scenario_error("health-system's liverStageDrug element only supported by vivax");

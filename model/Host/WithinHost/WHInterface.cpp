@@ -21,25 +21,11 @@
  */
 
 #include "Host/WithinHost/WHInterface.h"
-#include "Host/WithinHost/Treatments.h"
-#include "Host/WithinHost/WithinHostModel.h"
 #include "util/errors.h"
 
 namespace OM::WithinHost {
 
 using namespace OM::util;
-
-// -----  static functions  -----
-
-TreatmentId WHInterface::add_treatment(const scnXml::TreatmentOption& desc) {
-    return bridge::mutable_within_host_model().treatments.add(desc);
-}
-
-unique_ptr<WHInterface> WHInterface::create_within_host_model(LocalRng& rng, double comorbidity_factor) {
-    return bridge::within_host_model().create(rng, comorbidity_factor);
-}
-
-// -----  Non-static  -----
 
 void WHInterface::checkpoint(istream& stream) {
     num_infs & stream;

@@ -23,8 +23,7 @@
 #include "Clinical/ImmediateOutcomes.h"
 
 #include <cmath>
-#include "Host/WithinHost/WHInterface.h"
-#include "Host/WithinHost/WHVivax.h"
+#include "Host/WithinHost/WithinHostModel.h"
 #include "util/errors.h"
 #include "util/ModelOptions.h"
 #include "util/random.h"
@@ -80,16 +79,20 @@ get_health_system_treatment_optional(const scnXml::TreatmentActions& treat_acts,
     throw util::xml_scenario_error("healthSystem.drugRegimen: firstLine / secondLine / inpatient has bad value");
 }
 WithinHost::TreatmentId get_health_system_treatment_by_name(const scnXml::TreatmentActions& treat_acts,
-                                                            const string& drug) {
+                                                            const string& drug,
+                                                            WithinHost::WithinHostModel& within_host,
+                                                            const interventions::InterventionManager& interventions) {
     const scnXml::TreatmentActions::CQOptional& elt = get_health_system_treatment_optional(treat_acts, drug);
     if (!elt.present())
         throw util::xml_scenario_error(string("healthSystem.treatmentActions: description required for ").append(drug));
-    return WithinHost::WHInterface::add_treatment(elt.get());
+    return within_host.treatments.add(elt.get(), interventions);
 }
 
 // ———  static, init  ———
 
-void ClinicalParams::set_immediate_outcomes(const scnXml::HSImmediateOutcomes& hs_description) {
+void ClinicalParams::set_immediate_outcomes(const scnXml::HSImmediateOutcomes& hs_description,
+                                            WithinHost::WithinHostModel& within_host,
+                                            const interventions::InterventionManager& interventions) {
     const string &first_line = hs_description.getDrugRegimen().getFirstLine(),
                  &second_line = hs_description.getDrugRegimen().getSecondLine(),
                  &inpatient = hs_description.getDrugRegimen().getInpatient();
@@ -149,27 +152,27 @@ void ClinicalParams::set_immediate_outcomes(const scnXml::HSImmediateOutcomes& h
 
     five_day.cure_rate_severe = get_health_system_acr_by_name(hs_description.getInitialACR(), inpatient);
 
-    immediate_outcomes.treatment_uc[FirstLine] =
-        get_health_system_treatment_by_name(hs_description.getTreatmentActions(), first_line);
+    immediate_outcomes.treatment_uc[FirstLine] = get_health_system_treatment_by_name(
+        hs_description.getTreatmentActions(), first_line, within_host, interventions);
 
     if (second_line == first_line)
         immediate_outcomes.treatment_uc[SecondLine] = immediate_outcomes.treatment_uc[FirstLine];
     else
-        immediate_outcomes.treatment_uc[SecondLine] =
-            get_health_system_treatment_by_name(hs_description.getTreatmentActions(), second_line);
+        immediate_outcomes.treatment_uc[SecondLine] = get_health_system_treatment_by_name(
+            hs_description.getTreatmentActions(), second_line, within_host, interventions);
 
     if (inpatient == first_line)
         five_day.treatment_severe = immediate_outcomes.treatment_uc[FirstLine];
     else if (inpatient == second_line)
         five_day.treatment_severe = immediate_outcomes.treatment_uc[SecondLine];
     else
-        five_day.treatment_severe =
-            get_health_system_treatment_by_name(hs_description.getTreatmentActions(), inpatient);
+        five_day.treatment_severe = get_health_system_treatment_by_name(hs_description.getTreatmentActions(), inpatient,
+                                                                        within_host, interventions);
 
     immediate_outcomes.use_diagnostic_uc = hs_description.getUseDiagnosticUC();
 
     if (vivax_simple_model) {
-        WithinHost::WHVivax::set_hs_parameters(
+        within_host.vivax.set_health_system(
             hs_description.getLiverStageDrug().present() ? &hs_description.getLiverStageDrug().get() : nullptr);
     } else if (hs_description.getLiverStageDrug().present()) {
         throw util::xml_scenario_error("health-system's liverStageDrug element only supported by vivax");

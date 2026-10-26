@@ -64,7 +64,8 @@ WithinHostModel::WithinHostModel(const OM::Parameters& parameters, const util::M
                                  const scnXml::Scenario& scenario) {
     if (options.option(util::VivaxSimpleModel)) {
         kind = Kind::Vivax;
-        vivax = VivaxParams(scenario.getModel(), read_latent_p(scenario.getModel()));
+        vivax = VivaxParams(scenario.getModel(), read_latent_p(scenario.getModel()),
+                            command_line.option(util::CommandLine::DeprecationWarnings));
         pathogenesis = Pathogenesis::PathogenesisParams(parameters, options, scenario.getModel().getClinical(), true);
         return;
     }
@@ -104,11 +105,12 @@ WithinHostModel::WithinHostModel(const OM::Parameters& parameters, const util::M
 std::unique_ptr<WHInterface> WithinHostModel::create(util::LocalRng& rng, double comorbidity_factor) const {
     switch (kind) {
     case Kind::Vivax:
-        return std::make_unique<WHVivax>(vivax, pathogenesis, rng, comorbidity_factor);
+        return std::make_unique<WHVivax>(vivax, pathogenesis, treatments, rng, comorbidity_factor);
     case Kind::Common:
-        return std::make_unique<CommonWithinHost>(falciparum, pathogenesis, common, rng, comorbidity_factor);
+        return std::make_unique<CommonWithinHost>(falciparum, pathogenesis, treatments, common, rng,
+                                                  comorbidity_factor);
     case Kind::Descriptive:
-        return std::make_unique<DescriptiveWithinHostModel>(falciparum, pathogenesis, descriptive, rng,
+        return std::make_unique<DescriptiveWithinHostModel>(falciparum, pathogenesis, treatments, descriptive, rng,
                                                             comorbidity_factor);
     }
     throw TRACED_EXCEPTION_DEFAULT("unknown within-host model kind");

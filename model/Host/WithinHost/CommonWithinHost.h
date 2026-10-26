@@ -60,7 +60,8 @@ struct CommonWithinHostParams {
 class CommonWithinHost : public WHFalciparum {
 public:
     CommonWithinHost(const FalciparumParams& params, const Pathogenesis::PathogenesisParams& pathogenesis,
-                     const CommonWithinHostParams& common_params, LocalRng& rng, double comorbidity_factor);
+                     const TreatmentRegistry& treatments, const CommonWithinHostParams& common_params, LocalRng& rng,
+                     double comorbidity_factor);
 
     void import_infection(LocalRng& rng) override;
 

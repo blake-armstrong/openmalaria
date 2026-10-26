@@ -76,7 +76,9 @@ ClinicalParams::ClinicalParams(const OM::Parameters& parameters, const util::Mod
     vivax_simple_model = options.option(util::VivaxSimpleModel);
 }
 
-void ClinicalParams::set_health_system(const scnXml::HealthSystem& health_system, DecisionTreeLibrary& decision_trees) {
+void ClinicalParams::set_health_system(const scnXml::HealthSystem& health_system, DecisionTreeLibrary& decision_trees,
+                                       WithinHost::WithinHostModel& within_host,
+                                       const interventions::InterventionManager& interventions) {
     case_fatality_rate.set(health_system.getCFR(), "CFR");
     p_sequelae_inpatient.set(health_system.getPSequelaeInpatient(), "pSequelaeInpatient");
     if (kind == Kind::EventScheduler) {
@@ -90,13 +92,13 @@ void ClinicalParams::set_health_system(const scnXml::HealthSystem& health_system
             throw util::xml_scenario_error("Expected ImmediateOutcomes "
                                            "section in healthSystem data (initial or intervention)");
         }
-        set_immediate_outcomes(health_system.getImmediateOutcomes().get());
+        set_immediate_outcomes(health_system.getImmediateOutcomes().get(), within_host, interventions);
     } else {
         if (!health_system.getDecisionTree5Day().present()) {
             throw util::xml_scenario_error("Expected DecisionTree5Day "
                                            "section in healthSystem data (initial or intervention)");
         }
-        set_decision_tree_5day(health_system.getDecisionTree5Day().get(), decision_trees);
+        set_decision_tree_5day(health_system.getDecisionTree5Day().get(), decision_trees, within_host, interventions);
     }
 }
 

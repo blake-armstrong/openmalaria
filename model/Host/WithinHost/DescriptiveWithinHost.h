@@ -48,6 +48,7 @@ class DescriptiveWithinHostModel : public WHFalciparum {
 public:
     /// Create a new WHM
     DescriptiveWithinHostModel(const FalciparumParams& params, const Pathogenesis::PathogenesisParams& pathogenesis,
+                               const TreatmentRegistry& treatments,
                                const DescriptiveWithinHostParams& descriptive_params, LocalRng& rng,
                                double comorbidity_factor);
 
