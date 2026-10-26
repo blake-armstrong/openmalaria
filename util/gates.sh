@@ -108,7 +108,7 @@ if ((ab)); then
         failed=1
     else
         base_head=$(git -C "$BASE/.." rev-parse --short HEAD 2>/dev/null || echo '?')
-        caffeinate -i python3 util/ab_scenarios.py "$BASE/openMalaria" "$RELEASE/openMalaria" "${ab_groups[@]}" >"$out" 2>&1
+        caffeinate -i python3 util/ab_scenarios.py "$BASE/openMalaria" "$RELEASE/openMalaria" ${ab_groups[@]+"${ab_groups[@]}"} >"$out" 2>&1
         status=$?
         summary=$(grep -E 'variants differ' "$out" | tail -1)
         [[ -n "$summary" ]] || summary="did not finish (exit $status)"
