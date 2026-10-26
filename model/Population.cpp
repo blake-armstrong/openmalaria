@@ -38,7 +38,11 @@
 #include <schema/scenario.h>
 
 #include <algorithm>
+#include <array>
 #include <cmath>
+#include <format>
+#include <string>
+#include <utility>
 
 namespace OM {
 using namespace std::placeholders;
@@ -46,7 +50,7 @@ using namespace OM::util;
 using Transmission::TransmissionModel;
 
 /** Variables for continuous reporting */
-const vector<double> CtsDemogAgeGroups = {1.0, 5.0, 10.0, 15.0, 25.0};
+constexpr std::array<double, 5> CtsDemogAgeGroups = {1.0, 5.0, 10.0, 15.0, 25.0};
 
 // -----  non-static methods: creation/destruction, checkpointing  -----
 
@@ -65,7 +69,7 @@ void Population::create_initial_humans() {
          iage_prev = iage, iage -= 1) {
         const int target_pop = age_structure->target_cum_pop(iage, static_cast<int>(size));
         while (cumulative_pop < target_pop) {
-            SimTime dob = Sim::zero() - Sim::from_ts(iage);
+            const SimTime dob = Sim::zero() - Sim::from_ts(static_cast<int>(iage));
             util::streamValidate(dob);
             humans.emplace_back(dob, human_params, *rng);
             ++cumulative_pop;
@@ -83,13 +87,13 @@ void Population::update() {
     int cum_pop = 0;
 
     for (auto it = humans.begin(); it != humans.end();) {
-        bool is_dead = it->is_dead();
+        const bool is_dead = it->is_dead();
 
         // if (Actual number of people so far > target population size for this age)
         // "outmigrate" some to maintain population shape
         //NOTE: better to use age(sim::ts0())? Possibly, but the difference will not be very significant.
         // Also see target_pop = ... comment above
-        bool outmigrate =
+        const bool outmigrate =
             cum_pop >= age_structure->target_cum_pop(Sim::in_steps(it->age(Sim::ts1())), static_cast<int>(size));
 
         if (is_dead || outmigrate) {
@@ -101,8 +105,8 @@ void Population::update() {
     } // end of per-human updates
 
     // increase population size to target_pop
-    recent_births += (size - cum_pop);
-    while (cum_pop < (int)size) {
+    recent_births += static_cast<int>(size) - cum_pop;
+    while (std::cmp_less(cum_pop, size)) {
         // humans born at end of this time step = beginning of next, hence ts1
         humans.emplace_back(Sim::ts1(), human_params, *rng);
         ++cum_pop;
@@ -129,12 +133,12 @@ void Population::checkpoint(ostream& stream) {
 }
 
 void register_continuous_population_callbacks(mon::Continuous& continuous) {
-    ostringstream cts_demog_title;
-    for (double ubound : CtsDemogAgeGroups)
-        cts_demog_title << "\thost % ≤ " << ubound;
+    std::string cts_demog_title;
+    for (const double ubound : CtsDemogAgeGroups)
+        cts_demog_title += std::format("\thost % ≤ {:g}", ubound);
 
     continuous.register_callback("hosts", "\thosts", &cts_hosts);
-    continuous.register_callback("host demography", cts_demog_title.str(), &cts_host_demography);
+    continuous.register_callback("host demography", cts_demog_title, &cts_host_demography);
     continuous.register_callback("recent births", "\trecent births", &cts_recent_births);
     continuous.register_callback("patent hosts", "\tpatent hosts", &cts_patent_hosts);
     continuous.register_callback("immunity h", "\timmunity h", &cts_immunity_h);
@@ -154,7 +158,7 @@ void cts_hosts(Population& population, ostream& stream) {
 void cts_host_demography(Population& population, ostream& stream) {
     auto iter = population.humans.crbegin();
     int cum_count = 0;
-    for (double ubound : CtsDemogAgeGroups) {
+    for (const double ubound : CtsDemogAgeGroups) {
         while (iter != population.humans.crend() && Sim::in_years(iter->age(Sim::now())) < ubound) {
             ++cum_count;
             ++iter;
@@ -183,7 +187,7 @@ void cts_immunity_h(Population& population, ostream& stream) {
     for (const Host::Human& human : population.humans) {
         x += human.within_host_model->get_cumulative_h();
     }
-    x /= population.get_size();
+    x /= static_cast<double>(population.get_size());
     stream << '\t' << x;
 }
 
@@ -192,7 +196,7 @@ void cts_immunity_y(Population& population, ostream& stream) {
     for (const Host::Human& human : population.humans) {
         x += human.within_host_model->get_cumulative_y();
     }
-    x /= population.get_size();
+    x /= static_cast<double>(population.get_size());
     stream << '\t' << x;
 }
 
@@ -204,8 +208,8 @@ void cts_median_immunity_y(Population& population, ostream& stream) {
     }
     std::ranges::sort(list);
     double x = NAN;
-    if (mod_nn(population.get_size(), 2) == 0) {
-        size_t i = population.get_size() / 2;
+    if (population.get_size() % 2 == 0) {
+        const size_t i = population.get_size() / 2;
         x = (list[i - 1] + list[i]) / 2.0;
     } else {
         x = list[population.get_size() / 2];
@@ -216,7 +220,7 @@ void cts_median_immunity_y(Population& population, ostream& stream) {
 void cts_mean_age_avail_effect(Population& population, ostream& stream) {
     int n_humans = 0;
     double avail = 0.0;
-    for (Host::Human& human : population.humans) {
+    for (const Host::Human& human : population.humans) {
         if (!human.per_host_transmission.outside_transmission) {
             ++n_humans;
             avail += human.per_host_transmission.relative_availability_age(Sim::in_years(human.age(Sim::now())));
@@ -231,7 +235,7 @@ void cts_itn_coverage(Population& population, ostream& stream) {
         n_active += human.per_host_transmission.has_active_interv(interventions::component_types::ITN,
                                                                   population.interventions());
     }
-    double coverage = static_cast<double>(n_active) / population.get_size();
+    const double coverage = static_cast<double>(n_active) / static_cast<double>(population.get_size());
     stream << '\t' << coverage;
 }
 
@@ -241,7 +245,7 @@ void cts_irs_coverage(Population& population, ostream& stream) {
         n_active += human.per_host_transmission.has_active_interv(interventions::component_types::IRS,
                                                                   population.interventions());
     }
-    double coverage = static_cast<double>(n_active) / population.get_size();
+    const double coverage = static_cast<double>(n_active) / static_cast<double>(population.get_size());
     stream << '\t' << coverage;
 }
 
@@ -251,7 +255,7 @@ void cts_gvi_coverage(Population& population, ostream& stream) {
         n_active += human.per_host_transmission.has_active_interv(interventions::component_types::GVI,
                                                                   population.interventions());
     }
-    double coverage = static_cast<double>(n_active) / population.get_size();
+    const double coverage = static_cast<double>(n_active) / static_cast<double>(population.get_size());
     stream << '\t' << coverage;
 }
 

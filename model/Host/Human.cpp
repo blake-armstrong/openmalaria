@@ -112,9 +112,9 @@ Human::Human(SimTime date_of_birth, const HumanParams& params, util::MasterRng& 
     // Initial humans are created at time 0 and may have date_of_birth in past. Otherwise date_of_birth must be now.
     assert(date_of_birth == Sim::now_or_ts1() || (Sim::now() == Sim::zero() && date_of_birth < Sim::now()));
 
-    HumanHet het = het_sample(host_rng, *params.options);
+    const HumanHet het = het_sample(host_rng, *params.options);
     within_host_model = params.within_host->create(host_rng, het.comorbidity_factor);
-    double ii_factor = inf_incidence->get_availability_factor(host_rng, 1.0);
+    const double ii_factor = inf_incidence->get_availability_factor(host_rng, 1.0);
     per_host_transmission.initialise(*params.per_host, host_rng, het.availability_factor * ii_factor);
     clinical_model = params.clinical->create(het.treatment_seeking_factor);
 }
@@ -209,7 +209,7 @@ void summarize(Human& human, bool survey_only_new_ep) {
 
     mon::record_stat(mon::measure("nHost"), human);
     mon::record_stat(mon::measure("sumAge"), human, Sim::in_years(human.age(Sim::now())));
-    bool patent = human.within_host_model->summarize(human);
+    const bool patent = human.within_host_model->summarize(human);
     human.inf_incidence->summarize(human);
 
     if (patent && mon::is_reported()) {
@@ -221,7 +221,7 @@ void summarize(Human& human, bool survey_only_new_ep) {
 void update(Human& human, Transmission::TransmissionModel& transmission, const NeonatalMortality& neonatal_mortality,
             Clinical::InfantMortality& infant_mortality, NewInfections& new_infections) {
     // For integer age checks we use age0 to e.g. get 73 steps comparing less than 1 year old
-    SimTime age0 = human.age(Sim::ts0());
+    const SimTime age0 = human.age(Sim::ts0());
     if (human.clinical_model->is_dead(age0)) {
         human.kill();
         return;
@@ -238,24 +238,24 @@ void update(Human& human, Transmission::TransmissionModel& transmission, const N
     // the difference between this and age at the start is not especially
     // important in the model design, but since we parameterised with
     // age1 we should stick with it.
-    double age1 = Sim::in_years(human.age(Sim::ts1()));
+    const double age1 = Sim::in_years(human.age(Sim::ts1()));
 
     // age1 used only in PerHost::relativeAvailabilityAge(); difference to age0 should be minor
     vector<double> eir_per_genotype_i, eir_per_genotype_l;
     transmission.get_eir(human, age0, age1, eir_per_genotype_i, eir_per_genotype_l);
 
-    double eir_i = util::vectors::sum(eir_per_genotype_i);
-    double eir_l = util::vectors::sum(eir_per_genotype_l);
-    double eir = eir_i + eir_l;
+    const double eir_i = util::vectors::sum(eir_per_genotype_i);
+    const double eir_l = util::vectors::sum(eir_per_genotype_l);
+    const double eir = eir_i + eir_l;
 
     double x = 0.0;
 
     if (eir > 0)
         x = eir_i / eir;
 
-    double expected_n_new_infs = human.inf_incidence->expected_num_new_infections(human, eir);
-    double expected_n_new_infs_i = x * expected_n_new_infs;
-    double expected_n_new_infs_l = (1.0 - x) * expected_n_new_infs;
+    const double expected_n_new_infs = human.inf_incidence->expected_num_new_infections(human, eir);
+    const double expected_n_new_infs_i = x * expected_n_new_infs;
+    const double expected_n_new_infs_l = (1.0 - x) * expected_n_new_infs;
 
     // One more rng call if imported infection
     int n_new_infs_l = human.inf_incidence->num_new_infections(human, expected_n_new_infs_l);

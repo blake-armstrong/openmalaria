@@ -68,14 +68,6 @@ public:
     * @param date_of_birth date of birth (usually start of next time step) */
     Human(SimTime date_of_birth, const HumanParams& params, util::MasterRng& rng);
 
-    /// Allow move construction
-    Human(Human&&) = default;
-    Human& operator=(Human&&) = default;
-
-    /// Disable copying
-    Human(const Human&) = delete;
-    Human& operator=(const Human&) = delete;
-
     /** Get human's age with respect to some time. */
     inline SimTime age(SimTime time) const;
 
