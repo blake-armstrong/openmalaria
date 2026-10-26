@@ -145,7 +145,10 @@ GenotypeRegistry::GenotypeRegistry(const scnXml::Scenario& scenario, const util:
 
 void GenotypeRegistry::print_genotypes() const {
     // reorganise allele_codes so that we can look up codes, not names
-    vector<pair<string, string>> allele_names(cum_initial_freqs.size());
+    uint32_t n_allele_codes = 0;
+    for (const Genotype& genotype : genotype_list)
+        n_allele_codes = std::max(n_allele_codes, *genotype.alleles.rbegin() + 1);
+    vector<pair<string, string>> allele_names(n_allele_codes);
     for (const auto& [locus, codes] : allele_codes) {
         for (const auto& [allele, code] : codes) {
             assert(code < allele_names.size());
