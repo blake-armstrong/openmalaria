@@ -31,11 +31,116 @@
 #include "Host/WithinHost/Genotypes.h"
 #include "interventions/InterventionManager.h"
 
-#include <limits>
+#include <algorithm>
 #include <cmath>
+#include <limits>
+#include <map>
+#include <optional>
+#include <set>
+#include <string>
+#include <vector>
 
 namespace OM::interventions {
 using namespace OM::util;
+
+namespace {
+
+using LocusAlleles = vector<vector<uint32_t>>;
+
+string phenotype_name(const scnXml::VaccinePhenotype& phenotype, size_t index) {
+    return phenotype.getName().present() ? string(phenotype.getName().get()) : to_string(index);
+}
+
+set<string> restricted_loci(const scnXml::VaccinePhenotype& phenotype) {
+    set<string> loci;
+    for (const auto& restriction : phenotype.getRestriction())
+        loci.insert(restriction.getOnLocus());
+    return loci;
+}
+
+util::xml_scenario_error loci_mismatch(const string& locus, const string& restricting, const string& other) {
+    return util::xml_scenario_error("Vaccine phenotype: locus " + locus + " included in restriction of phenotype " +
+                                    restricting + " but not " + other);
+}
+
+LocusAlleles read_restrictions(const scnXml::VaccinePhenotype& phenotype,
+                               const WithinHost::GenotypeRegistry& genotypes) {
+    map<string, size_t> locus_index;
+    LocusAlleles alleles;
+    for (const auto& restriction : phenotype.getRestriction()) {
+        const uint32_t allele_code = genotypes.find_allele_code(restriction.getOnLocus(), restriction.getToAllele());
+
+        if (allele_code == numeric_limits<uint32_t>::max()) {
+            throw util::xml_scenario_error("phenotype has "
+                                           "restriction on locus " +
+                                           string(restriction.getOnLocus()) + " allele " +
+                                           string(restriction.getToAllele()) +
+                                           " but this locus/allele "
+                                           "has not been defined in parasiteGenetics section");
+        }
+
+        if (phenotype.getInitialEfficacy().empty())
+            throw util::xml_scenario_error(
+                string("Vaccine phenotype: initialEfficacy is required but is missing for phenotype: " +
+                       string(restriction.getOnLocus() + string(" ") + restriction.getToAllele())));
+
+        const auto [it, inserted] = locus_index.try_emplace(restriction.getOnLocus(), alleles.size());
+        if (inserted)
+            alleles.emplace_back();
+        alleles[it->second].push_back(allele_code);
+    }
+    return alleles;
+}
+
+bool matches(const LocusAlleles& restrictions, const WithinHost::Genotype& genotype) {
+    return std::ranges::all_of(restrictions, [&](const vector<uint32_t>& locus_alleles) {
+        return std::ranges::any_of(locus_alleles, [&](uint32_t allele) { return genotype.alleles.contains(allele); });
+    });
+}
+
+vector<vector<double>> per_genotype_efficacy(const scnXml::VaccineDescription::PhenotypeSequence& phenotypes,
+                                             const WithinHost::GenotypeRegistry& genotypes) {
+    const set<string> loci = phenotypes.empty() ? set<string>{} : restricted_loci(phenotypes[0]);
+    vector<LocusAlleles> restrictions;
+    restrictions.reserve(phenotypes.size());
+    for (size_t i = 0; i < phenotypes.size(); ++i) {
+        const set<string> these_loci = restricted_loci(phenotypes[i]);
+        for (const string& locus : these_loci) {
+            if (!loci.contains(locus))
+                throw loci_mismatch(locus, phenotype_name(phenotypes[i], i), phenotype_name(phenotypes[0], 0));
+        }
+        for (const string& locus : loci) {
+            if (!these_loci.contains(locus))
+                throw loci_mismatch(locus, phenotype_name(phenotypes[0], 0), phenotype_name(phenotypes[i], i));
+        }
+        restrictions.push_back(read_restrictions(phenotypes[i], genotypes));
+    }
+
+    if (loci.empty() && phenotypes.size() > 1)
+        throw util::xml_scenario_error("Vaccine phenotype: restrictions required when num. phenotypes > 1");
+
+    const vector<WithinHost::Genotype>& genotype_list = genotypes.genotypes();
+    vector<vector<double>> efficacy(genotype_list.size());
+    for (size_t g = 0; g < genotype_list.size(); ++g) {
+        optional<size_t> phenotype;
+        for (size_t i = 0; i < phenotypes.size(); ++i) {
+            if (!matches(restrictions[i], genotype_list[g]))
+                continue;
+            if (phenotype.has_value())
+                throw util::xml_scenario_error("Vaccine phenotype: phenotype restrictions not restrictive enough: "
+                                               "multiple phenotypes match some genotype");
+            phenotype = i;
+        }
+        if (!phenotype.has_value())
+            throw util::xml_scenario_error(
+                "Vaccine phenotype: missing restriction for at least one locus and allele pair");
+        for (const auto& value : phenotypes[*phenotype].getInitialEfficacy())
+            efficacy[g].push_back(value.getValue());
+    }
+    return efficacy;
+}
+
+}
 
 VaccineComponent::VaccineComponent(ComponentId component, const scnXml::VaccineDescription& vd, vaccines::Types type,
                                    bool report_deployments, const util::ModelOptionFlags& options,
@@ -63,58 +168,7 @@ VaccineComponent::VaccineComponent(ComponentId component, const scnXml::VaccineD
         throw util::xml_scenario_error( "Vaccine: Phenotype sequence must reference all genotypes" );
     */
     if (opt_vaccine_genotype == true) {
-        per_genotype_initial_mean_efficacy.resize(genotypes.count());
-
-        for (const auto& p : ps) {
-            //cout << "Phenotype: " << ps[i].getName() << endl;
-
-            const scnXml::VaccinePhenotype::RestrictionSequence& restrictions = p.getRestriction();
-            const scnXml::VaccinePhenotype::InitialEfficacySequence& vpies = p.getInitialEfficacy();
-
-            for (const auto& restriction : restrictions) {
-                //cout << "\tonLocus: " << restrictions[j].getOnLocus() << ", " << "toAllelle: " << restrictions[j].getToAllele() << endl;
-                //cout << "\tmatching allelle code: " << WithinHost::Genotypes::findAlleleCode(restrictions[j].getOnLocus(), restrictions[j].getToAllele()) << endl;
-
-                const uint32_t allele_code =
-                    genotypes.find_allele_code(restriction.getOnLocus(), restriction.getToAllele());
-
-                if (allele_code == numeric_limits<uint32_t>::max()) {
-                    throw util::xml_scenario_error("phenotype has "
-                                                   "restriction on locus " +
-                                                   string(restriction.getOnLocus()) + " allele " +
-                                                   string(restriction.getToAllele()) +
-                                                   " but this locus/allele "
-                                                   "has not been defined in parasiteGenetics section");
-                }
-
-                if (allele_code >= genotypes.count())
-                    throw util::xml_scenario_error(string("Vaccine phenotype: Invalid Locus ") +
-                                                   restriction.getOnLocus() + string(" and allele ") +
-                                                   restriction.getToAllele());
-
-                if (per_genotype_initial_mean_efficacy[allele_code].size() != 0)
-                    throw util::xml_scenario_error(
-                        string("Vaccine phenotype: there are multiple restrictions locus " +
-                               string(restriction.getOnLocus() + string(" and allele ") + restriction.getToAllele())));
-
-                if (vpies.size() == 0)
-                    throw util::xml_scenario_error(
-                        string("Vaccine phenotype: initialEfficacy is required but is missing for phenotype: " +
-                               string(restriction.getOnLocus() + string(" ") + restriction.getToAllele())));
-
-                per_genotype_initial_mean_efficacy[allele_code].resize(vpies.size());
-
-                for (size_t k = 0; k < vpies.size(); ++k)
-                    per_genotype_initial_mean_efficacy[allele_code][k] = vpies[k].getValue();
-            }
-        }
-
-        // Check that all genotypes have been adressed
-        for (size_t i = 0; i < genotypes.count(); ++i) {
-            if (per_genotype_initial_mean_efficacy[i].size() == 0)
-                throw util::xml_scenario_error(
-                    "Vaccine phenotype: missing restriction for at least one locus and allele pair");
-        }
+        per_genotype_initial_mean_efficacy = per_genotype_efficacy(ps, genotypes);
     } else {
         per_genotype_initial_mean_efficacy.resize(1);
         per_genotype_initial_mean_efficacy[0].resize(ies.size());
