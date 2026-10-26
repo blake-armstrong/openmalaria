@@ -459,6 +459,10 @@ def survey_repeat_unreported_last(s):
     return rep(s, "<surveyTime>1825t</surveyTime>", '<surveyTime reported="false">1825t</surveyTime>')
 
 
+ONE_ALLELE_FIRST = '<locus name="first"><allele name="only" initialFrequency="1" fitness="1"/></locus>\n    <locus name="mdr">'
+ONE_ALLELE_LAST = '</locus>\n    <locus name="solo"><allele name="only" initialFrequency="1" fitness="1"/></locus>'
+
+
 V = "scenarioVivax.xml"
 G = "scenarioGenotypes.xml"
 M = "scenarioMSAT_HRP2.xml"
@@ -469,6 +473,11 @@ GROUPS = {
                 ["--print-genotypes"]),
         Variant("genotypes_print_molpairwise", "scenarioMolPairwise.xml", args=["--print-genotypes"]),
         Variant("genotypes_print_none", "scenario5.xml", args=["--print-genotypes"]),
+        Variant("genotypes_print_one_allele_first", G, lambda s: rep(s, '<locus name="mdr">', ONE_ALLELE_FIRST),
+                ["--print-genotypes"]),
+        Variant("genotypes_print_one_allele_last", G, lambda s: rep_first(s, "</locus>", ONE_ALLELE_LAST),
+                ["--print-genotypes"]),
+        Variant("genotypes_print_pev_locus_order", "scenarioPEVLocusOrder.xml", args=["--print-genotypes"]),
         Variant("genotypes_tracking_checkpoint", G, args=["--checkpoint"], runs=2),
         Variant("genotypes_initial_checkpoint", G, lambda s: rep(s, 'samplingMode="tracking"', 'samplingMode="initial"'),
                 ["--checkpoint"], runs=2),
