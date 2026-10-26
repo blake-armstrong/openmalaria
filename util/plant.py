@@ -3,8 +3,9 @@
 
 Each --replace FILE OLD NEW replaces the one occurrence of OLD in FILE (it
 must occur exactly once); --patch FILE applies a unified diff instead. The
-touched files are saved first and copied back at the end, whatever happens,
-then the Release build is rebuilt so later gates test the restored code.
+touched files are saved first and their contents copied back at the end,
+whatever happens, with a new mtime so that the Release build, rebuilt next,
+recompiles them and later gates test the restored code.
 
 The planted build must compile: a build error stops the run with exit 2, so
 no gate is ever run against a stale binary. Then ctest (-LE statistical) runs
@@ -112,7 +113,7 @@ def main():
         return status
     finally:
         for f in files:
-            shutil.copy2(os.path.join(saved, f), os.path.join(ROOT, f))
+            shutil.copyfile(os.path.join(saved, f), os.path.join(ROOT, f))
         if any(subprocess.run(["cmp", "-s", os.path.join(saved, f), os.path.join(ROOT, f)]).returncode for f in files):
             print(f"RESTORE FAILED: compare {saved} with the tree", file=sys.stderr)
             status = 3
