@@ -385,6 +385,42 @@ PEV_R = '<restriction onLocus="x" toAllele="resistant"/>'
 SOLO_LOCUS = '<locus name="solo"><allele name="only" initialFrequency="1" fitness="1"/></locus></parasiteGenetics>'
 
 
+SOLO_FIRST = '<locus name="solo"><allele name="only" initialFrequency="1" fitness="1"/></locus>\n        <locus name="x">'
+
+
+def vaccine_phenotype(name, restrictions, efficacy):
+    return (f'<phenotype name="{name}">'
+            + "".join(f'<restriction onLocus="{locus}" toAllele="{allele}"/>' for locus, allele in restrictions)
+            + f'<initialEfficacy value="{efficacy}"/><initialEfficacy value="{efficacy}"/></phenotype>')
+
+
+def with_pev_phenotypes(*phenotypes):
+    def transform(s):
+        i = s.index("<PEV>")
+        j = s.index("</PEV>", i)
+        k = s.index("<phenotype", i)
+        return s[:k] + "".join(phenotypes) + s[j:]
+    return transform
+
+
+def two_loci_pev(*phenotypes):
+    return lambda s: with_pev_phenotypes(*phenotypes)(rep_first(s, "</locus>", SECOND_LOCUS))
+
+
+LOCUS_Y = """</locus>
+        <locus name="y">
+            <allele fitness="1" initialFrequency="0.6" name="a"/>
+            <allele fitness="1" initialFrequency="0.4" name="b"/>
+        </locus>"""
+HRP2_LOST = [("hrp2", "deleted"), ("hrp2", "partial")]
+PEV_TWO_LOCI_SPLIT = [
+    vaccine_phenotype("s_present", [("x", "sensitive"), ("hrp2", "present")], 1.0),
+    vaccine_phenotype("s_lost", [("x", "sensitive")] + HRP2_LOST, 1.0),
+    vaccine_phenotype("r_present", [("x", "resistant"), ("hrp2", "present")], 0.0),
+    vaccine_phenotype("r_lost", [("x", "resistant")] + HRP2_LOST, 0.0),
+]
+
+
 def pev_without_genotype_option(s):
     s = rep(s, '<option name="VACCINE_GENOTYPE" value="true"/>', '<option name="VACCINE_GENOTYPE" value="false"/>')
     i = s.index("<PEV>")
@@ -741,6 +777,25 @@ GROUPS = {
                                     PEV_R + '<restriction onLocus="solo" toAllele="only"/>')),
         Variant("vaccine_no_genotype_option_checkpoint", "scenarioPEV.xml", pev_without_genotype_option,
                 ["--checkpoint"], runs=2),
+        Variant("vaccine_phenotype_no_restrictions", "scenarioPEV.xml",
+                lambda s: rep_first(rep_first(s, PEV_S, ""), PEV_R, "")),
+        Variant("vaccine_phenotype_single_unrestricted", "scenarioPEV.xml",
+                with_pev_phenotypes(vaccine_phenotype("all", [], 0.8))),
+        Variant("vaccine_genotype_locus_order", "scenarioPEV.xml", lambda s: rep(s, '<locus name="x">', SOLO_FIRST)),
+        Variant("vaccine_genotype_two_loci", "scenarioPEV.xml",
+                two_loci_pev(vaccine_phenotype("sensitive", [("x", "sensitive")], 1.0),
+                             vaccine_phenotype("resistant", [("x", "resistant")], 0.0))),
+        Variant("vaccine_genotype_two_loci_split", "scenarioPEV.xml", two_loci_pev(*PEV_TWO_LOCI_SPLIT)),
+        Variant("vaccine_genotype_per_locus_phenotypes", "scenarioPEV.xml",
+                lambda s: with_pev_phenotypes(vaccine_phenotype("s", [("x", "sensitive")], 1.0),
+                                              vaccine_phenotype("r", [("x", "resistant")], 0.0),
+                                              vaccine_phenotype("a", [("y", "a")], 0.3),
+                                              vaccine_phenotype("b", [("y", "b")], 0.7))(
+                    rep_first(s, "</locus>", LOCUS_Y))),
+        Variant("vaccine_genotype_two_loci_hrp2_effect", "scenarioPEV.xml",
+                two_loci_pev(*PEV_TWO_LOCI_SPLIT[:1],
+                             vaccine_phenotype("s_lost", [("x", "sensitive")] + HRP2_LOST, 0.5),
+                             *PEV_TWO_LOCI_SPLIT[2:])),
         Variant("vector_component_non_vector", "scenario5.xml", gvi_in_non_vector),
         Variant("triggered_unknown_component", "scenario5.xml", triggered_by_treatment("nosuch")),
         Variant("dt_cohort_later_component", MA, mda_tree_cohort("PEV")),
