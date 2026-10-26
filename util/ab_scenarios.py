@@ -460,6 +460,10 @@ def survey_repeat_unreported_last(s):
 
 
 ONE_ALLELE_FIRST = '<locus name="first"><allele name="only" initialFrequency="1" fitness="1"/></locus>\n    <locus name="mdr">'
+MANY_GENOTYPES = ("</locus>"
+                  + "".join(f'\n    <locus name="{locus}">'
+                            + "".join(f'<allele name="{locus}{i}" initialFrequency="0.1" fitness="1"/>' for i in range(10))
+                            + "</locus>" for locus in "ab"))
 ONE_ALLELE_LAST = '</locus>\n    <locus name="solo"><allele name="only" initialFrequency="1" fitness="1"/></locus>'
 
 
@@ -478,6 +482,12 @@ GROUPS = {
         Variant("genotypes_print_one_allele_last", G, lambda s: rep_first(s, "</locus>", ONE_ALLELE_LAST),
                 ["--print-genotypes"]),
         Variant("genotypes_print_pev_locus_order", "scenarioPEVLocusOrder.xml", args=["--print-genotypes"]),
+        Variant("genotypes_print_many", G, lambda s: rep_first(s, "</locus>", MANY_GENOTYPES), ["--print-genotypes"]),
+        Variant("genotypes_print_long_phenotype_name", G,
+                lambda s: rep(s, '<phenotype name="resistant">', '<phenotype name="resistant to chloroquine">'),
+                ["--print-genotypes"]),
+        Variant("genotypes_print_unnamed_phenotype", G, lambda s: rep(s, '<phenotype name="resistant">', "<phenotype>"),
+                ["--print-genotypes"]),
         Variant("genotypes_tracking_checkpoint", G, args=["--checkpoint"], runs=2),
         Variant("genotypes_initial_checkpoint", G, lambda s: rep(s, 'samplingMode="tracking"', 'samplingMode="initial"'),
                 ["--checkpoint"], runs=2),
