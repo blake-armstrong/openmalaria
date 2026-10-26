@@ -64,7 +64,8 @@ void init_age_groups(const scnXml::Monitoring& monitoring) {
 
 } // namespace
 
-void init_reporting(const scnXml::Scenario& scenario, const WithinHost::GenotypeRegistry& genotypes) {
+void init_reporting(const scnXml::Scenario& scenario, const WithinHost::DiagnosticRegistry& diagnostics,
+                    const WithinHost::GenotypeRegistry& genotypes) {
     MonitoringState& runtime = bridge::monitoring();
     runtime.report_imr = -1;
     const scnXml::MonitoringOptions& opts_elt = scenario.getMonitoring().getSurveyOptions();
@@ -84,7 +85,7 @@ void init_reporting(const scnXml::Scenario& scenario, const WithinHost::Genotype
             throw util::xml_scenario_error("unrecognised survey option: " + std::string(opt_elt.getName()));
         }
         if ((om.measure == measure("sumlogDens") || om.measure == measure("logDensByGenotype")) &&
-            WithinHost::Diagnostics::monitoring_diagnostic().allows_false_positives()) {
+            diagnostics.monitoring_diagnostic().allows_false_positives()) {
             throw util::xml_scenario_error("measure " + std::string(opt_elt.getName()) +
                                            " may not be used when monitoring diagnostic sensitivity < 1");
         }

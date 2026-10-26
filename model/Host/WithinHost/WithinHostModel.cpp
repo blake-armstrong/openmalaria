@@ -63,7 +63,7 @@ bool any_patent_infected_measure_used() {
 
 WithinHostModel::WithinHostModel(const OM::Parameters& parameters, const util::ModelOptionFlags& options,
                                  const util::CommandLineOptions& command_line, const GenotypeRegistry& genotypes,
-                                 const scnXml::Scenario& scenario) {
+                                 const DiagnosticRegistry& diagnostics, const scnXml::Scenario& scenario) {
     if (options.option(util::VivaxSimpleModel)) {
         assert(genotypes.count() == 1);
         kind = Kind::Vivax;
@@ -73,7 +73,7 @@ WithinHostModel::WithinHostModel(const OM::Parameters& parameters, const util::M
         return;
     }
 
-    falciparum = FalciparumParams(parameters, options, genotypes);
+    falciparum = FalciparumParams(parameters, options, genotypes, diagnostics);
     pathogenesis = Pathogenesis::PathogenesisParams(parameters, options, scenario.getModel().getClinical(), false);
     falciparum.latent_p = read_latent_p(scenario.getModel());
 

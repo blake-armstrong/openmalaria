@@ -48,7 +48,7 @@ namespace OM::WithinHost {
 using namespace OM::util;
 
 FalciparumParams::FalciparumParams(const OM::Parameters& parameters, const util::ModelOptionFlags& options,
-                                   const GenotypeRegistry& genotypes)
+                                   const GenotypeRegistry& genotypes, const DiagnosticRegistry& diagnostics)
     : sigma_i(sqrt(parameters[Parameter::SigmaISq])), imm_penalty_22(1 - exp(parameters[Parameter::ImmunityPenalty])),
       imm_effector_remain(exp(-parameters[Parameter::ImmuneEffectorDecay])),
       asex_imm_remain(exp(-parameters[Parameter::AsexualImmunityDecay])),
@@ -59,7 +59,7 @@ FalciparumParams::FalciparumParams(const OM::Parameters& parameters, const util:
       report_infections_by_genotype(mon::is_used(mon::measure("nInfectByGenotype")) ||
                                     mon::is_used(mon::measure("nPatentByGenotype")) ||
                                     mon::is_used(mon::measure("logDensByGenotype"))),
-      vaccine_genotype(options.option(util::VaccineGenotype)), genotypes(&genotypes) {}
+      vaccine_genotype(options.option(util::VaccineGenotype)), genotypes(&genotypes), diagnostics(&diagnostics) {}
 
 // -----  Non-static  -----
 

@@ -42,7 +42,9 @@ namespace OM::Clinical {
 // -----  simulation-wide parameters  -----
 
 ClinicalParams::ClinicalParams(const OM::Parameters& parameters, const util::ModelOptionFlags& options,
-                               const util::CommandLineOptions& command_line, const scnXml::Scenario& scenario) {
+                               const util::CommandLineOptions& command_line,
+                               const WithinHost::DiagnosticRegistry& diagnostics, const scnXml::Scenario& scenario)
+    : diagnostics(&diagnostics) {
     const scnXml::Clinical& clinical = scenario.getModel().getClinical();
     try {
         indirect_mort_bugfix = options.option(util::IndirectMortalityFix);

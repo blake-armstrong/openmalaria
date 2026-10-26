@@ -113,46 +113,5 @@ private:
 };
 
 }
-
-namespace bridge {
-
-// NOLINTNEXTLINE(cppcoreguidelines-avoid-non-const-global-variables)
-inline const WithinHost::DiagnosticRegistry* current_diagnostics = nullptr;
-
-inline const WithinHost::DiagnosticRegistry& diagnostics() {
-    assert(current_diagnostics != nullptr);
-    return *current_diagnostics;
-}
-
-}
-
-class DiagnosticsBinding {
-public:
-    explicit DiagnosticsBinding(const WithinHost::DiagnosticRegistry& diagnostics)
-        : previous(bridge::current_diagnostics) {
-        bridge::current_diagnostics = &diagnostics;
-    }
-    DiagnosticsBinding(const DiagnosticsBinding&) = delete;
-    DiagnosticsBinding& operator=(const DiagnosticsBinding&) = delete;
-    DiagnosticsBinding(DiagnosticsBinding&&) = delete;
-    DiagnosticsBinding& operator=(DiagnosticsBinding&&) = delete;
-    ~DiagnosticsBinding() { bridge::current_diagnostics = previous; }
-
-private:
-    const WithinHost::DiagnosticRegistry* previous;
-};
-
-namespace WithinHost {
-
-/** Static members to do with Diagnostic: library of parameterised Diagnostic
- * objects. */
-class Diagnostics {
-public:
-    /// Static access functions
-
-    static inline const Diagnostic& monitoring_diagnostic() { return bridge::diagnostics().monitoring_diagnostic(); }
-};
-
-}
 }
 #endif

@@ -88,15 +88,16 @@ Simulation::Simulation(std::unique_ptr<scnXml::Scenario> scenario, util::Command
                                                  *scenario_xml); // Depends on Parameters.
 
     // 5) elements depending on only elements initialised in (4).
-    mon::init_reporting(*scenario_xml, genotypes); // Reporting init depends on diagnostics and monitoring
+    mon::init_reporting(*scenario_xml, diagnostics, genotypes); // Reporting init depends on diagnostics and monitoring
 
     // Init models used by humans
     per_host_params = Transmission::PerHostParams(scenario_xml->getModel().getHuman().getAvailabilityToMosquitoes());
     infection_incidence = Host::InfectionIncidenceParams(parameters, model_options);
     continuous.register_callback("new infections", "\tnew infections",
                                  [this](ostream& stream) { new_infections.report(stream); });
-    within_host_model = WithinHost::WithinHostModel(parameters, model_options, command_line, genotypes, *scenario_xml);
-    clinical = Clinical::ClinicalParams(parameters, model_options, command_line, *scenario_xml);
+    within_host_model =
+        WithinHost::WithinHostModel(parameters, model_options, command_line, genotypes, diagnostics, *scenario_xml);
+    clinical = Clinical::ClinicalParams(parameters, model_options, command_line, diagnostics, *scenario_xml);
     decision_trees = Clinical::DecisionTreeLibrary(diagnostics, within_host_model.common.pk_pd,
                                                    clinical.health_system_memory, intervention_manager);
     infant_mortality = Clinical::InfantMortality(clinical.non_malaria_infant_mortality);
@@ -122,7 +123,7 @@ Simulation::Simulation(std::unique_ptr<scnXml::Scenario> scenario, util::Command
         scenario_xml->getEntomology(), static_cast<int>(pop_size), per_host_params, master_rngs.transmission, genotypes,
         model_options, command_line, continuous);
 
-    register_continuous_population_callbacks(continuous);
+    register_continuous_population_callbacks(continuous, diagnostics);
 
     // Depends on transmission model (for species indexes):
     // MDA1D may depend on health system (too complex to verify)

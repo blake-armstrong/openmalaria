@@ -290,8 +290,8 @@ bool CommonWithinHost::summarize(Host::Human& human) const {
                 else
                     mon::record_stat(mon::measure("totalInfs_Imported"), human, 1, 0, genotype, 0);
 
-                if (Diagnostics::monitoring_diagnostic().is_positive(human.monitoring_rng, infection->get_density(),
-                                                                     std::numeric_limits<double>::quiet_NaN())) {
+                if (diagnostics().monitoring_diagnostic().is_positive(human.monitoring_rng, infection->get_density(),
+                                                                      std::numeric_limits<double>::quiet_NaN())) {
                     mon::record_stat(mon::measure("totalPatentInf"), human, 1, 0, genotype, 0);
                     if (infection->origin() == InfectionOrigin::Indigenous)
                         mon::record_stat(mon::measure("totalPatentInf_Indigenous"), human, 1, 0, genotype, 0);
@@ -324,8 +324,8 @@ bool CommonWithinHost::summarize(Host::Human& human) const {
                 } while (inf != sorted_infs.end() && (*inf)->genotype() == genotype);
                 // we had at least one infection of this genotype
                 mon::record_stat(mon::measure("nInfectByGenotype"), human, 1, 0, genotype, 0);
-                if (Diagnostics::monitoring_diagnostic().is_positive(human.monitoring_rng, dens,
-                                                                     std::numeric_limits<double>::quiet_NaN())) {
+                if (diagnostics().monitoring_diagnostic().is_positive(human.monitoring_rng, dens,
+                                                                      std::numeric_limits<double>::quiet_NaN())) {
                     mon::record_stat(mon::measure("nPatentByGenotype"), human, 1, 0, genotype, 0);
                     mon::record_stat(mon::measure("logDensByGenotype"), human, log(dens), 0, genotype, 0);
                 }
@@ -336,8 +336,8 @@ bool CommonWithinHost::summarize(Host::Human& human) const {
     // Some treatments (simpleTreat with steps=-1) clear infections immediately
     // (and are applied after update()), thus infections.size() may be 0 while
     // totalDensity > 0. Here we report the last calculated density.
-    if (Diagnostics::monitoring_diagnostic().is_positive(human.monitoring_rng, total_density,
-                                                         std::numeric_limits<double>::quiet_NaN())) {
+    if (diagnostics().monitoring_diagnostic().is_positive(human.monitoring_rng, total_density,
+                                                          std::numeric_limits<double>::quiet_NaN())) {
         mon::record_stat(mon::measure("nPatent"), human);
         if (infection_type == InfectionOrigin::Imported)
             mon::record_stat(mon::measure("nPatent_Imported"), human);

@@ -47,6 +47,7 @@ class HSEventScheduler;
 
 namespace OM {
 namespace WithinHost {
+class DiagnosticRegistry;
 struct WithinHostModel;
 }
 namespace interventions {
@@ -154,7 +155,8 @@ struct ClinicalParams {
 
     ClinicalParams() = default;
     ClinicalParams(const OM::Parameters& parameters, const util::ModelOptionFlags& options,
-                   const util::CommandLineOptions& command_line, const scnXml::Scenario& scenario);
+                   const util::CommandLineOptions& command_line, const WithinHost::DiagnosticRegistry& diagnostics,
+                   const scnXml::Scenario& scenario);
 
     void set_health_system(const scnXml::HealthSystem& health_system, DecisionTreeLibrary& decision_trees,
                            WithinHost::WithinHostModel& within_host,
@@ -166,6 +168,8 @@ struct ClinicalParams {
     bool indirect_mort_bugfix = false;
     bool health_system_memory_fix = false;
     bool vivax_simple_model = false;
+
+    const WithinHost::DiagnosticRegistry* diagnostics = nullptr;
 
     /// The maximum age of a sickness bout, for another bout to be considered
     /// part of the same episode.

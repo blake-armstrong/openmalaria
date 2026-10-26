@@ -39,7 +39,6 @@
 namespace OM::Clinical {
 
 using WithinHost::Diagnostic;
-using WithinHost::Diagnostics;
 using namespace OM::util;
 using std::map;
 using std::vector;

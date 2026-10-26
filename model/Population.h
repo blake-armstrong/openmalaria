@@ -33,6 +33,9 @@ namespace OM {
 namespace mon {
 class Continuous;
 }
+namespace WithinHost {
+class DiagnosticRegistry;
+}
 
 /** The simulated human population. */
 class Population {
@@ -78,7 +81,8 @@ private:
     int recent_births = 0;
 };
 
-void register_continuous_population_callbacks(mon::Continuous& continuous);
+void register_continuous_population_callbacks(mon::Continuous& continuous,
+                                              const WithinHost::DiagnosticRegistry& diagnostics);
 
 /// Delegate to print the number of hosts
 void cts_hosts(Population& population, ostream& stream);
@@ -87,7 +91,7 @@ void cts_host_demography(Population& population, ostream& stream);
 /// Delegate to print the number of births since last count
 void cts_recent_births(Population& population, ostream& stream);
 /// Delegate to print the number of patent hosts
-void cts_patent_hosts(Population& population, ostream& stream);
+void cts_patent_hosts(Population& population, const WithinHost::DiagnosticRegistry& diagnostics, ostream& stream);
 /// Delegate to print immunity's cumulativeh parameter
 void cts_immunity_h(Population& population, ostream& stream);
 /// Delegate to print immunity's cumulativeY parameter (mean across population)

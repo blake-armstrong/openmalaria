@@ -37,6 +37,7 @@ using namespace std;
 class InfectionImmunitySuite;
 
 namespace OM::WithinHost {
+class DiagnosticRegistry;
 class GenotypeRegistry;
 namespace Pathogenesis {
 class PathogenesisModel;
@@ -82,10 +83,11 @@ struct FalciparumParams {
     SimTime latent_p = Sim::never();
 
     const GenotypeRegistry* genotypes = nullptr;
+    const DiagnosticRegistry* diagnostics = nullptr;
 
     FalciparumParams() = default;
     FalciparumParams(const OM::Parameters& parameters, const util::ModelOptionFlags& options,
-                     const GenotypeRegistry& genotypes);
+                     const GenotypeRegistry& genotypes, const DiagnosticRegistry& diagnostics);
 };
 
 /**
@@ -182,6 +184,7 @@ protected:
 
     const FalciparumParams& params() const { return *falciparum_params; }
     const GenotypeRegistry& genotypes() const { return *params().genotypes; }
+    const DiagnosticRegistry& diagnostics() const { return *params().diagnostics; }
 
 private:
     const FalciparumParams* falciparum_params;

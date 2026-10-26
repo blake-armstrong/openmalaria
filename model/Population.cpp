@@ -132,7 +132,8 @@ void Population::checkpoint(ostream& stream) {
         human.checkpoint(stream);
 }
 
-void register_continuous_population_callbacks(mon::Continuous& continuous) {
+void register_continuous_population_callbacks(mon::Continuous& continuous,
+                                              const WithinHost::DiagnosticRegistry& diagnostics) {
     std::string cts_demog_title;
     for (const double ubound : CtsDemogAgeGroups)
         cts_demog_title += std::format("\thost % ≤ {:g}", ubound);
@@ -140,7 +141,9 @@ void register_continuous_population_callbacks(mon::Continuous& continuous) {
     continuous.register_callback("hosts", "\thosts", &cts_hosts);
     continuous.register_callback("host demography", cts_demog_title, &cts_host_demography);
     continuous.register_callback("recent births", "\trecent births", &cts_recent_births);
-    continuous.register_callback("patent hosts", "\tpatent hosts", &cts_patent_hosts);
+    continuous.register_callback(
+        "patent hosts", "\tpatent hosts",
+        [&diagnostics](Population& population, ostream& stream) { cts_patent_hosts(population, diagnostics, stream); });
     continuous.register_callback("immunity h", "\timmunity h", &cts_immunity_h);
     continuous.register_callback("immunity Y", "\timmunity Y", &cts_immunity_y);
     continuous.register_callback("median immunity Y", "\tmedian immunity Y", &cts_median_immunity_y);
@@ -172,10 +175,10 @@ void cts_recent_births(Population& population, ostream& stream) {
     population.reset_recent_births();
 }
 
-void cts_patent_hosts(Population& population, ostream& stream) {
+void cts_patent_hosts(Population& population, const WithinHost::DiagnosticRegistry& diagnostics, ostream& stream) {
     int patent = 0;
     for (Host::Human& human : population.humans) {
-        auto diag = WithinHost::Diagnostics::monitoring_diagnostic();
+        auto diag = diagnostics.monitoring_diagnostic();
         if (human.within_host_model->diagnostic_result(human.monitoring_rng, diag))
             ++patent;
     }

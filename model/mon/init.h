@@ -37,13 +37,15 @@ namespace OM::interventions {
 class InterventionManager;
 }
 namespace OM::WithinHost {
+class DiagnosticRegistry;
 class GenotypeRegistry;
 }
 
 namespace OM::mon {
 
 SimTime read_survey_dates(const scnXml::Monitoring& monitoring, const util::CommandLineOptions& command_line);
-void init_reporting(const scnXml::Scenario& scenario, const WithinHost::GenotypeRegistry& genotypes);
+void init_reporting(const scnXml::Scenario& scenario, const WithinHost::DiagnosticRegistry& diagnostics,
+                    const WithinHost::GenotypeRegistry& genotypes);
 void init_cohorts(const scnXml::Monitoring& monitoring, const interventions::InterventionManager& interventions);
 
 } // namespace OM::mon

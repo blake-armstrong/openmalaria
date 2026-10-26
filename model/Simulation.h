@@ -93,7 +93,6 @@ private:
     Parameters parameters;
     WithinHost::GenotypeRegistry genotypes;
     WithinHost::DiagnosticRegistry diagnostics;
-    DiagnosticsBinding diagnostics_binding{diagnostics};
     WithinHost::WithinHostModel within_host_model;
     Clinical::DecisionTreeLibrary decision_trees;
     Clinical::ClinicalParams clinical;
