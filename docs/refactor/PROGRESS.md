@@ -47,7 +47,7 @@ See `PLAN.md` for the session protocol, chunks and gates. Append one log entry p
 | D9b | split | D9b1, D9b2 |
 | D9b1 | done | 428b10a9, 6191be63, e691b2a5, fa502292, d099a440, 8a0f1831, (this log entry) |
 | D9b2 | done | 18ea267a, 69af0838, f995cf66, f5d211ec, dd43e68a, 5b5ddc61, bfd60dbb, da0d7b74, 722cf695, (this log entry) |
-| D9c | todo | |
+| D9c | done | 8123447c, 45755b22, b0222c24, d3e5a936, 38305747, 94f2ae99, c9e4355e, (this log entry) |
 | D9d | todo | |
 | D9e | todo | |
 | D9f | todo | |
@@ -1533,3 +1533,33 @@ A retrospective on D9b2 (at the user's request) found where a chunk session spen
 - Gates: no model code changed. `util/gates.sh --ab vivax --style 70cb03c3` and `--release-only --stat` ran at 82eac7c0 (63/63 on both builds, 0 of 18 vivax variants differ, G-style clean, G-stat 53 passed and 9 disabled). `util/chunk.py check-docs` clean after 0fe5a0af.
 - Next: D9c, started with `/next-chunk`.
 
+### D9c: the genotype and diagnostic registries → passed in (done, 2026-10-26)
+- Base: eadf032a (tooling after D9b2). The G-perf and A/B base worktree `../om-bench-base` was moved to eadf032a and rebuilt.
+- Inventory at the base (`util/bridges.py`): `bridge::genotypes()` behind 5 facades, 28 qualified call sites in 7 files (`Infection::is_hrp2_deficient` per infection per day); `bridge::diagnostics()` behind 1 facade, 8 call sites in 4 files. About 25 files changed, most of them by one line or one signature.
+- Commits:
+  - 8123447c: `util/ab_scenarios.py`, six variants on scenarioPEV for moved paths no ctest scenario reaches: the four VACCINE_GENOTYPE phenotype errors (unknown allele, duplicate restriction, missing restriction, an allele code at or beyond the genotype count from a one-allele second locus), a vaccine without VACCINE_GENOTYPE on two genotypes across a checkpoint, and `logDensByGenotype` with a monitoring diagnostic that allows false positives (the init error). Base against base: 0 of 74 in `registries` and `interventions`.
+  - 45755b22: **logic, genotypes.** `FalciparumParams` holds a `const GenotypeRegistry*`, set by its constructor from `WithinHostModel`'s (which already took the registry for PK/PD). The per-human falciparum models reach it through `WHFalciparum::genotypes()` over the params they already hold, so no per-human member was added: the y_lag sizing, `sample_genotype` for imported and new infections, the y_lag update and `prob_transmission_to_mosquito`. `compute_y_lag` takes the count from its output vector, which its one caller sizes by that count. `Infection::is_hrp2_deficient` takes the registry. `VaccineComponent` takes it for its phenotype checks and keeps the count (`n_genotypes`) for `possibly_vaccinate`'s resize, the same in both modes; `InterventionManager::init` passes it. `mon::init_reporting` takes it and passes the count to `init_stores` and `add_store` next to the species and drug counts. WHVivax's Debug-only one-genotype assert moved from `prob_transmission_to_mosquito` to `WithinHostModel`'s vivax branch: the count is fixed when the registry is built (its checkpoint read restores only the sampling mode), so one check at construction is the same check. Gone: `bridge::genotypes`, `GenotypesBinding`, the `Genotypes` facade, `Genotypes.h`'s `<cassert>` (moved to `Genotypes.cpp`, which uses it) and `WHVivax.cpp`'s include of `Genotypes.h`; `WHInterface.h`'s comment names `GenotypeRegistry::sample_genotype`.
+  - b0222c24: **tooling.** `util/gates.sh --ab` without groups failed under bash 3.2 (F84).
+  - d3e5a936: **logic, diagnostics.** `FalciparumParams` also holds a `const DiagnosticRegistry*` (a pointer to the registry, not to the diagnostic, so a registry assigned after the params, as in the unit tests, is still the one read); `summarize` reads the monitoring diagnostic through `WHFalciparum::diagnostics()`. `ClinicalParams` holds the registry, set by its constructor, for ImmediateOutcomes' uncomplicated-case diagnostic (changeHS needs nothing new). `mon::init_reporting` takes it for the false-positive check on the log-density measures. `register_continuous_population_callbacks` takes it and registers `cts_patent_hosts` through a lambda that passes it. Gone: `bridge::diagnostics`, `DiagnosticsBinding`, the `Diagnostics` facade and `CMDecisionTree.cpp`'s unused using-declaration of it. Unit tests: `UnittestUtil::createHuman` points the within-host params at the test registries; `InfectionImmunitySuite` sets its params' genotype registry.
+  - 38305747: G-style on lines the chunk changed: NOLINT on the `WithinHost` namespace forward declarations in `Vaccine.h` and `mon/init.h`, as D9b1 did for `Clinical`.
+  - 94f2ae99: **tooling.** `util/plant.py` restored with the old mtime, so planted code stayed in the binary (F85).
+  - c9e4355e: FINDINGS F83, F84, F85 and an F78 note; PLAN.md D9c row as built; README's bridge list and A/B row.
+- Rename and modernise: no module to do. Every module the chunk touched is already in the status table (D4a, D4d, D6b, D8, D9a, D9b2). Dry runs on `Genotypes`, `Diagnostic`, `WHFalciparum` and `WithinHostModel`: `nothing to rename`; the modernise dry run finds one `modernize-concat-nested-namespaces` at `WithinHostModel.h:47`, a line the chunk did not change (follow-up).
+- Gates:
+  - G-exact / G-unit / G-two-sims: 63/63 (strict) on `build-rework/` (Release) and `build-debug/` (Debug) at 45755b22 and d3e5a936; Release 63/63 at 38305747 and 94f2ae99, and again after recompiling every Release source (F85).
+  - A/B (`util/gates.sh --ab`, base eadf032a): 0 of 281 variants differ at 45755b22, at d3e5a936, and after the full Release recompile.
+  - Planted bugs (`util/plant.py`, each restored): `is_hrp2_deficient` never true → ctest MSAT_HRP2 and `registries/diagnostics_hrp2_msat`; the vaccine's allele-code check `>=` loosened to `>` → only the new `interventions/vaccine_phenotype_code_beyond_genotypes`; the report stores given one genotype → 7 ctest scenarios (Genotypes, KK_20150612, MSAT_HRP2, PEV, BSV, TBV, PkPdModels) and 5 `registries` variants; the patent-hosts ctsout using the RDT in place of the monitoring diagnostic → ctest PEV, BSV, TBV, PkPdModels. The first run of the last three reported the previous plant's failures (F85); they were rerun after 94f2ae99.
+  - Not reached by any test: `VaccineComponent::n_genotypes`, which sizes a vector seen only in the vaccine checkpoint with deployed vaccines (F78); a plant that set it to 1 (in the first run, on top of the HRP2 plant, F85) added no failure beyond the HRP2 plant's one. Covered by review only.
+  - G-stat: `ctest -L statistical` at 94f2ae99: 53 passed, 9 disabled (no reference), as after D9b2.
+  - G-style: `util/style.sh check eadf032a` clean at 38305747 (two items before it, fixed in that commit).
+  - G-perf: `util/bench.sh -n 7 --compare ../om-bench-base/build-rework`, candidate 94f2ae99, load 4.6 at the start: median per-pair ratio 1.0051 (+0.51%), spreads 11.0% (base) / 5.6%. The per-infection HRP2 lookup and the per-step genotype count now go through the params pointer in place of the bridge's global.
+- Findings: F83 (vaccine phenotypes indexed by allele code but read by genotype code; ask before fixing), F84 and F85 (tooling, fixed), F78 note.
+- Surprises:
+  - Two tooling bugs on their first use in a chunk (F84, F85). F85 made three of four planted-bug results wrong without any error; the duplicated failure lists gave it away.
+  - `--checkpoint` writes before the main phase, so the per-dose vaccine vector's length is unobservable (F78 again).
+- Follow-ups:
+  - D9d: the monitoring bridge; D9e: the clock and `CommandLine::option`; D9f: the bridge namespace and interleaved G-two-sims.
+  - `WithinHostModel.h:47`: `modernize-concat-nested-namespaces` when the file is next modernised.
+  - F83: ask the user whether to fix the vaccine phenotype mapping.
+  - `Population.cpp` includes `Genotypes.h` but uses nothing from it; tidy it when the file is next touched.
+- Next: D9d.
