@@ -35,8 +35,7 @@
 #include "mon/Monitoring.h"
 #include "schema/scenario.h"
 
-namespace OM {
-namespace Host {
+namespace OM::Host {
 using namespace OM::util;
 using interventions::ComponentId;
 
@@ -45,11 +44,11 @@ struct HumanHet {
      * comorbidityFactor (stored in PathogenesisModel)
      * treatmentSeekingFactor (stored in CaseManagementModel)
      * availabilityFactor (stored in Transmission::PerHost) */
-    double comorbidity_factor;
-    double treatment_seeking_factor;
-    double availability_factor;
+    double comorbidity_factor{1.0};
+    double treatment_seeking_factor{1.0};
+    double availability_factor{1.0};
 
-    HumanHet() : comorbidity_factor(1.0), treatment_seeking_factor(1.0), availability_factor(1.0) {}
+    HumanHet() = default;
 };
 
 HumanHet het_sample(util::LocalRng& rng, const util::ModelOptionFlags& options) {
@@ -272,5 +271,4 @@ void update(Human& human, Transmission::TransmissionModel& transmission, const N
     human.clinical_model->update_infant_deaths(age0, infant_mortality);
 }
 
-}
 }

@@ -37,6 +37,7 @@
 #include "util/StreamValidator.h"
 #include <schema/scenario.h>
 
+#include <algorithm>
 #include <cmath>
 
 namespace OM {
@@ -201,8 +202,8 @@ void cts_median_immunity_y(Population& population, ostream& stream) {
     for (const Host::Human& human : population.humans) {
         list.push_back(human.within_host_model->get_cumulative_y());
     }
-    sort(list.begin(), list.end());
-    double x;
+    std::ranges::sort(list);
+    double x = NAN;
     if (mod_nn(population.get_size(), 2) == 0) {
         size_t i = population.get_size() / 2;
         x = (list[i - 1] + list[i]) / 2.0;
