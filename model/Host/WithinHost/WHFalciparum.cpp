@@ -47,7 +47,8 @@ namespace OM::WithinHost {
 
 using namespace OM::util;
 
-FalciparumParams::FalciparumParams(const OM::Parameters& parameters, const util::ModelOptionFlags& options)
+FalciparumParams::FalciparumParams(const OM::Parameters& parameters, const util::ModelOptionFlags& options,
+                                   const GenotypeRegistry& genotypes)
     : sigma_i(sqrt(parameters[Parameter::SigmaISq])), imm_penalty_22(1 - exp(parameters[Parameter::ImmunityPenalty])),
       imm_effector_remain(exp(-parameters[Parameter::ImmuneEffectorDecay])),
       asex_imm_remain(exp(-parameters[Parameter::AsexualImmunityDecay])),
@@ -58,7 +59,7 @@ FalciparumParams::FalciparumParams(const OM::Parameters& parameters, const util:
       report_infections_by_genotype(mon::is_used(mon::measure("nInfectByGenotype")) ||
                                     mon::is_used(mon::measure("nPatentByGenotype")) ||
                                     mon::is_used(mon::measure("logDensByGenotype"))),
-      vaccine_genotype(options.option(util::VaccineGenotype)) {}
+      vaccine_genotype(options.option(util::VaccineGenotype)), genotypes(&genotypes) {}
 
 // -----  Non-static  -----
 
@@ -71,8 +72,8 @@ WHFalciparum::WHFalciparum(const FalciparumParams& params, const Pathogenesis::P
       // Oldest code on GoogleCode: _innateImmunity=(double)(W_GAUSS((0), (sigma_i)));
       innate_imm_surv_fact(exp(-rng.gauss(0.0, params.sigma_i))),
       pathogenesis_model(pathogenesis.create(comorbidity_factor)), falciparum_params(&params), treatments(&treatments) {
-    y_lag_imported.resize(params.y_lag_len * Genotypes::count());
-    y_lag_local.resize(params.y_lag_len * Genotypes::count());
+    y_lag_imported.resize(params.y_lag_len * params.genotypes->count());
+    y_lag_local.resize(params.y_lag_len * params.genotypes->count());
 }
 
 WHFalciparum::~WHFalciparum() = default;
@@ -109,7 +110,7 @@ const double PtmTauPrime = 1.0 / sqrt(1.0 / PtmTau);
 const double PtmMu = -8.1;
 
 inline double compute_y_lag(const vector<double>& y_lag, int y_lag_len, vector<double>& y_lag_g) {
-    const size_t n = Genotypes::count();
+    const size_t n = y_lag_g.size();
 
     // Take weighted sum of total asexual blood stage density 10, 15 and 20 days
     // before. Add y_lag_len to index to ensure positive.
@@ -140,7 +141,7 @@ double WHFalciparum::prob_transmission_to_mosquito(vector<double>& prob_trans_ge
     // model. Description: AJTMH pp.32-33 and p9.
 
     // Note: we don't allow for gametocydal treatments (e.g. Primaquine).
-    const size_t n = Genotypes::count();
+    const size_t n = genotypes().count();
 
     // Sum lagged densities across genotypes:
     vector<double> y_lag_g_i(n), y_lag_g_l(n);

@@ -88,7 +88,7 @@ Simulation::Simulation(std::unique_ptr<scnXml::Scenario> scenario, util::Command
                                                  *scenario_xml); // Depends on Parameters.
 
     // 5) elements depending on only elements initialised in (4).
-    mon::init_reporting(*scenario_xml); // Reporting init depends on diagnostics and monitoring
+    mon::init_reporting(*scenario_xml, genotypes); // Reporting init depends on diagnostics and monitoring
 
     // Init models used by humans
     per_host_params = Transmission::PerHostParams(scenario_xml->getModel().getHuman().getAvailabilityToMosquitoes());
@@ -127,7 +127,7 @@ Simulation::Simulation(std::unique_ptr<scnXml::Scenario> scenario, util::Command
     // Depends on transmission model (for species indexes):
     // MDA1D may depend on health system (too complex to verify)
     intervention_manager.init(scenario_xml->getInterventions(), *transmission_model, per_host_params, diagnostics,
-                              within_host_model, clinical, decision_trees, model_options, command_line);
+                              genotypes, within_host_model, clinical, decision_trees, model_options, command_line);
     clinical.set_health_system(scenario_xml->getHealthSystem(), decision_trees, within_host_model,
                                intervention_manager); // Depends on interventions, PK/PD (from humanPop)
     mon::init_cohorts(scenario_xml->getMonitoring(), intervention_manager); // Depends on interventions

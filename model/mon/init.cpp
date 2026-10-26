@@ -23,6 +23,7 @@
 #include "mon/init.h"
 
 #include "Host/WithinHost/Diagnostic.h"
+#include "Host/WithinHost/Genotypes.h"
 #include "interventions/InterventionManager.h"
 #include "mon/Monitoring.h"
 #include "schema/monitoring.h"
@@ -63,7 +64,7 @@ void init_age_groups(const scnXml::Monitoring& monitoring) {
 
 } // namespace
 
-void init_reporting(const scnXml::Scenario& scenario) {
+void init_reporting(const scnXml::Scenario& scenario, const WithinHost::GenotypeRegistry& genotypes) {
     MonitoringState& runtime = bridge::monitoring();
     runtime.report_imr = -1;
     const scnXml::MonitoringOptions& opts_elt = scenario.getMonitoring().getSurveyOptions();
@@ -126,7 +127,7 @@ void init_reporting(const scnXml::Scenario& scenario) {
                                  : 1;
     const size_t n_drugs =
         scenario.getPharmacology().present() ? scenario.getPharmacology().get().getDrugs().getDrug().size() : 1;
-    internal::init_stores(reported_measures, n_species, n_drugs);
+    internal::init_stores(reported_measures, n_species, genotypes.count(), n_drugs);
 }
 
 SimTime read_survey_dates(const scnXml::Monitoring& monitoring, const util::CommandLineOptions& command_line) {

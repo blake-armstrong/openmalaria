@@ -229,7 +229,6 @@ util::ModelOptionFlags model_options;
 WithinHost::WithinHostModel within_host_model;
 Clinical::ClinicalParams clinical;
 WithinHost::GenotypeRegistry genotypes;
-GenotypesBinding genotypes_binding{genotypes};
 WithinHost::DiagnosticRegistry diagnostics;
 DiagnosticsBinding diagnostics_binding{diagnostics};
 Transmission::PerHostParams per_host_params;
@@ -452,6 +451,7 @@ public:
 
     static unique_ptr<Host::Human> createHuman(SimTime dateOfBirth) {
         static util::MasterRngs master_rngs(0);
+        unittest_options::within_host_model.falciparum.genotypes = &unittest_options::genotypes;
         return std::make_unique<Host::Human>(
             dateOfBirth,
             Host::HumanParams{.per_host = &unittest_options::per_host_params,

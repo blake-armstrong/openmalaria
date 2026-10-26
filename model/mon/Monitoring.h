@@ -96,7 +96,7 @@ struct MonitoringState {
 };
 
 namespace internal {
-void init_stores(const std::vector<OutMeasure>& enabled_measures, size_t n_species, size_t n_drugs);
+void init_stores(const std::vector<OutMeasure>& enabled_measures, size_t n_species, size_t n_genotypes, size_t n_drugs);
 } // namespace internal
 
 } // namespace mon

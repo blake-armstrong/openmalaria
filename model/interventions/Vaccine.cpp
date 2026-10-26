@@ -38,9 +38,10 @@ namespace OM::interventions {
 using namespace OM::util;
 
 VaccineComponent::VaccineComponent(ComponentId component, const scnXml::VaccineDescription& vd, vaccines::Types type,
-                                   bool report_deployments, const util::ModelOptionFlags& options)
+                                   bool report_deployments, const util::ModelOptionFlags& options,
+                                   const WithinHost::GenotypeRegistry& genotypes)
     : HumanInterventionComponent(component), type(type), decay_func(DecayFunction::makeObject(vd.getDecay(), "decay")),
-      efficacy_b(vd.getEfficacyB().getValue()), report_deployments(report_deployments) {
+      n_genotypes(genotypes.count()), efficacy_b(vd.getEfficacyB().getValue()), report_deployments(report_deployments) {
     if (type == vaccines::BSV && options.option(util::VivaxSimpleModel))
         throw util::unimplemented_exception("blood stage vaccines (BSV) cannot be used with vivax model");
 
@@ -62,7 +63,7 @@ VaccineComponent::VaccineComponent(ComponentId component, const scnXml::VaccineD
         throw util::xml_scenario_error( "Vaccine: Phenotype sequence must reference all genotypes" );
     */
     if (opt_vaccine_genotype == true) {
-        per_genotype_initial_mean_efficacy.resize(WithinHost::Genotypes::count());
+        per_genotype_initial_mean_efficacy.resize(genotypes.count());
 
         for (const auto& p : ps) {
             //cout << "Phenotype: " << ps[i].getName() << endl;
@@ -75,7 +76,7 @@ VaccineComponent::VaccineComponent(ComponentId component, const scnXml::VaccineD
                 //cout << "\tmatching allelle code: " << WithinHost::Genotypes::findAlleleCode(restrictions[j].getOnLocus(), restrictions[j].getToAllele()) << endl;
 
                 const uint32_t allele_code =
-                    WithinHost::Genotypes::find_allele_code(restriction.getOnLocus(), restriction.getToAllele());
+                    genotypes.find_allele_code(restriction.getOnLocus(), restriction.getToAllele());
 
                 if (allele_code == numeric_limits<uint32_t>::max()) {
                     throw util::xml_scenario_error("phenotype has "
@@ -86,7 +87,7 @@ VaccineComponent::VaccineComponent(ComponentId component, const scnXml::VaccineD
                                                    "has not been defined in parasiteGenetics section");
                 }
 
-                if (allele_code >= WithinHost::Genotypes::count())
+                if (allele_code >= genotypes.count())
                     throw util::xml_scenario_error(string("Vaccine phenotype: Invalid Locus ") +
                                                    restriction.getOnLocus() + string(" and allele ") +
                                                    restriction.getToAllele());
@@ -109,7 +110,7 @@ VaccineComponent::VaccineComponent(ComponentId component, const scnXml::VaccineD
         }
 
         // Check that all genotypes have been adressed
-        for (size_t i = 0; i < WithinHost::Genotypes::count(); ++i) {
+        for (size_t i = 0; i < genotypes.count(); ++i) {
             if (per_genotype_initial_mean_efficacy[i].size() == 0)
                 throw util::xml_scenario_error(
                     "Vaccine phenotype: missing restriction for at least one locus and allele pair");
@@ -246,7 +247,7 @@ bool PerHumanVaccine::possibly_vaccinate(Host::Human& human, const VaccineCompon
         effect = &effects.back();
     }
 
-    effect->per_genotype_initial_efficacy.resize(WithinHost::Genotypes::count());
+    effect->per_genotype_initial_efficacy.resize(params.n_genotypes);
 
     for (size_t g = 0; g < params.per_genotype_initial_mean_efficacy.size(); g++)
         effect->per_genotype_initial_efficacy[g] =

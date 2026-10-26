@@ -25,7 +25,6 @@
 
 #include "Global.h"
 #include "util/random.h"
-#include <cassert>
 #include <cstdint>
 #include <iostream>
 #include <map>
@@ -116,57 +115,6 @@ private:
     size_t n_genotypes = 1;
     // Mode to use now (until switched) and from the start of the intervention period.
     SampleMode current_mode = SampleMode::First, interv_mode = SampleMode::First;
-};
-
-}
-
-namespace bridge {
-
-// NOLINTNEXTLINE(cppcoreguidelines-avoid-non-const-global-variables)
-inline const WithinHost::GenotypeRegistry* current_genotypes = nullptr;
-
-inline const WithinHost::GenotypeRegistry& genotypes() {
-    assert(current_genotypes != nullptr);
-    return *current_genotypes;
-}
-
-}
-
-class GenotypesBinding {
-public:
-    explicit GenotypesBinding(const WithinHost::GenotypeRegistry& genotypes) : previous(bridge::current_genotypes) {
-        bridge::current_genotypes = &genotypes;
-    }
-    GenotypesBinding(const GenotypesBinding&) = delete;
-    GenotypesBinding& operator=(const GenotypesBinding&) = delete;
-    GenotypesBinding(GenotypesBinding&&) = delete;
-    GenotypesBinding& operator=(GenotypesBinding&&) = delete;
-    ~GenotypesBinding() { bridge::current_genotypes = previous; }
-
-private:
-    const WithinHost::GenotypeRegistry* previous;
-};
-
-namespace WithinHost {
-
-/** Represents infection genotypes. */
-class Genotypes {
-public:
-    using Genotype = WithinHost::Genotype;
-
-    static uint32_t find_allele_code(const string& locus, const string& allele) {
-        return bridge::genotypes().find_allele_code(locus, allele);
-    }
-
-    static const vector<Genotype>& get_genotypes() { return bridge::genotypes().genotypes(); }
-
-    static uint32_t sample_genotype(LocalRng& rng, std::vector<double>& genotype_weights) {
-        return bridge::genotypes().sample_genotype(rng, genotype_weights);
-    }
-
-    static size_t count() { return bridge::genotypes().count(); }
-
-    static double initial_freq(size_t genotype) { return bridge::genotypes().initial_freq(genotype); }
 };
 
 }

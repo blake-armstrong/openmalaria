@@ -21,7 +21,6 @@
  */
 
 #include "mon/Monitoring.h"
-#include "Host/WithinHost/Genotypes.h"
 #include "Clinical/ClinicalModel.h"
 #include "Host/Human.h"
 #include "util/CommandLine.h"
@@ -77,7 +76,7 @@ size_t MeasureStore::index(size_t a, size_t c, size_t sp, size_t g, size_t d) co
 
 namespace {
 
-void add_store(const OutMeasure& om, size_t n_species, size_t n_drugs, bool force_no_categories) {
+void add_store(const OutMeasure& om, size_t n_species, size_t n_genotypes, size_t n_drugs, bool force_no_categories) {
     MonitoringState& runtime = bridge::monitoring();
     assert(om.measure < MeasureCount);
     MeasureStore store;
@@ -90,7 +89,7 @@ void add_store(const OutMeasure& om, size_t n_species, size_t n_drugs, bool forc
     store.n_ages = force_no_categories ? 1 : (om.dims & Dim::Age ? runtime.age_group_upper_bound.size() : 1);
     store.n_cohorts = force_no_categories ? 1 : (om.dims & Dim::Cohort ? runtime.n_cohorts : 1);
     store.n_species = force_no_categories ? 1 : (om.dims & Dim::Species ? n_species : 1);
-    store.n_genotypes = force_no_categories ? 1 : (om.dims & Dim::Genotype ? WithinHost::Genotypes::count() : 1);
+    store.n_genotypes = force_no_categories ? 1 : (om.dims & Dim::Genotype ? n_genotypes : 1);
     store.n_drugs = force_no_categories ? 1 : (om.dims & Dim::Drug ? n_drugs : 1);
     const size_t report_count = store.size() * runtime.n_surveys;
     if (om.is_double)
@@ -103,19 +102,19 @@ void add_store(const OutMeasure& om, size_t n_species, size_t n_drugs, bool forc
 
 } // namespace
 
-void init_stores(const vector<OutMeasure>& enabled_measures, size_t n_species, size_t n_drugs) {
+void init_stores(const vector<OutMeasure>& enabled_measures, size_t n_species, size_t n_genotypes, size_t n_drugs) {
     MonitoringState& runtime = bridge::monitoring();
     runtime.stores.clear();
     runtime.stores_by_measure.assign(MeasureCount, {});
     for (const OutMeasure& om : enabled_measures)
-        add_store(om, n_species, n_drugs, false);
+        add_store(om, n_species, n_genotypes, n_drugs, false);
 }
 
 void ensure_condition_store(const OutMeasure& om) {
     MonitoringState& runtime = bridge::monitoring();
     assert(om.measure < MeasureCount);
     if (runtime.stores_by_measure[om.measure].empty())
-        add_store(om, 1, 1, true);
+        add_store(om, 1, 1, 1, true);
 }
 
 double survey_sum(Measure measure, size_t survey) {

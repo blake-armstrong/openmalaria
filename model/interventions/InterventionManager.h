@@ -42,6 +42,7 @@ class DecisionTreeLibrary;
 }
 namespace WithinHost {
 class DiagnosticRegistry;
+class GenotypeRegistry;
 struct WithinHostModel;
 }
 namespace Transmission {
@@ -66,9 +67,9 @@ public:
     /** Read XML descriptions. */
     void init(const scnXml::Interventions& interv_elt, Transmission::TransmissionModel& transmission,
               const Transmission::PerHostParams& per_host_params, const WithinHost::DiagnosticRegistry& diagnostics,
-              WithinHost::WithinHostModel& within_host, Clinical::ClinicalParams& clinical,
-              Clinical::DecisionTreeLibrary& decision_trees, const util::ModelOptionFlags& options,
-              const util::CommandLineOptions& command_line);
+              const WithinHost::GenotypeRegistry& genotypes, WithinHost::WithinHostModel& within_host,
+              Clinical::ClinicalParams& clinical, Clinical::DecisionTreeLibrary& decision_trees,
+              const util::ModelOptionFlags& options, const util::CommandLineOptions& command_line);
 
     /// Checkpointing
     template <class S> void checkpoint(S& stream) {

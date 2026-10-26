@@ -92,7 +92,6 @@ private:
     util::ModelOptionFlags model_options;
     Parameters parameters;
     WithinHost::GenotypeRegistry genotypes;
-    GenotypesBinding genotypes_binding{genotypes};
     WithinHost::DiagnosticRegistry diagnostics;
     DiagnosticsBinding diagnostics_binding{diagnostics};
     WithinHost::WithinHostModel within_host_model;

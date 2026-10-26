@@ -22,6 +22,7 @@
 
 #include "Host/WithinHost/WithinHostModel.h"
 
+#include "Host/WithinHost/Genotypes.h"
 #include "Host/WithinHost/Infection/CommonInfectionModel.h"
 #include "Host/WithinHost/Infection/DescriptiveInfection.h"
 #include "Host/WithinHost/Pathogenesis/PathogenesisModel.h"
@@ -32,6 +33,7 @@
 
 #include "schema/scenario.h"
 
+#include <cassert>
 #include <string>
 
 namespace OM::WithinHost {
@@ -63,6 +65,7 @@ WithinHostModel::WithinHostModel(const OM::Parameters& parameters, const util::M
                                  const util::CommandLineOptions& command_line, const GenotypeRegistry& genotypes,
                                  const scnXml::Scenario& scenario) {
     if (options.option(util::VivaxSimpleModel)) {
+        assert(genotypes.count() == 1);
         kind = Kind::Vivax;
         vivax = VivaxParams(scenario.getModel(), read_latent_p(scenario.getModel()),
                             command_line.option(util::CommandLine::DeprecationWarnings));
@@ -70,7 +73,7 @@ WithinHostModel::WithinHostModel(const OM::Parameters& parameters, const util::M
         return;
     }
 
-    falciparum = FalciparumParams(parameters, options);
+    falciparum = FalciparumParams(parameters, options, genotypes);
     pathogenesis = Pathogenesis::PathogenesisParams(parameters, options, scenario.getModel().getClinical(), false);
     falciparum.latent_p = read_latent_p(scenario.getModel());
 

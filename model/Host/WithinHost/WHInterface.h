@@ -143,7 +143,7 @@ public:
      *
      * @param nNewInfs Number of inoculations this time-step
      * @param genotype_weights For use in selecting infection genotypes. See
-     *  documentation of Genotypes::sampleGenotype().
+     *  documentation of GenotypeRegistry::sample_genotype().
      * @param ageInYears Age of human
      * @param bsvFactor Parasite survival factor for blood-stage vaccines
      */

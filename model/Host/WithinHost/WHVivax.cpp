@@ -23,7 +23,6 @@
 #include "Host/WithinHost/WHVivax.h"
 #include "Host/WithinHost/Pathogenesis/PathogenesisModel.h"
 #include "Host/WithinHost/Treatments.h"
-#include "Host/WithinHost/Genotypes.h"
 #include "Host/WithinHost/Infection/Infection.h"
 #include "Host/Human.h"
 #include "mon/Monitoring.h"
@@ -337,7 +336,6 @@ WHVivax::~WHVivax() {
 
 double WHVivax::prob_transmission_to_mosquito(vector<double>& prob_trans_genotype_i,
                                               vector<double>& prob_trans_genotype_l) const {
-    assert(WithinHost::Genotypes::count() == 1);
     for (const auto& infection : infections) {
         if (infection.is_patent()) {
             // we have gametocytes from at least one brood

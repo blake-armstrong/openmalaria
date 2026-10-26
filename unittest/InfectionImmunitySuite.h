@@ -42,6 +42,7 @@ public:
         params.inv_cumulative_h_star = 1.0 / 71.676733;
         params.alpha_m = 1.0 - exp(-2.411434);
         params.decay_m = 2.717773; // NOLINT(modernize-use-std-numbers)
+        params.genotypes = &unittest_options::genotypes;
 
         // We need a concrete class deriving from WHFalciparum; this will do
         LocalRng rng(0, 721347520444481703);

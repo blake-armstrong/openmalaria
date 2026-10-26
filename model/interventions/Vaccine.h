@@ -31,6 +31,9 @@ namespace OM {
 namespace Host {
 class Human;
 }
+namespace WithinHost {
+class GenotypeRegistry;
+}
 namespace interventions {
 using util::LocalRng;
 
@@ -45,7 +48,8 @@ using util::LocalRng;
 class VaccineComponent : public HumanInterventionComponent {
 public:
     VaccineComponent(ComponentId id, const scnXml::VaccineDescription& seq, vaccines::Types type,
-                     bool report_deployments, const util::ModelOptionFlags& options);
+                     bool report_deployments, const util::ModelOptionFlags& options,
+                     const WithinHost::GenotypeRegistry& genotypes);
 
     void deploy(Host::Human& human, mon::DeployMethod method, VaccineLimits vacc_limits) const override;
 
@@ -68,6 +72,8 @@ private:
     /* Vaccine type specific parameters
      * Initial mean efficacy, definition depends on vaccine type */
     vector<vector<double>> per_genotype_initial_mean_efficacy;
+
+    size_t n_genotypes;
 
     // Distribution of efficacies among individuals, parameter to sample from beta dist.
     double efficacy_b;

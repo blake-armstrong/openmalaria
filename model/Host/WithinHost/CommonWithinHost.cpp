@@ -116,7 +116,7 @@ void CommonWithinHost::import_infection(LocalRng& rng) {
         // This is a hook, used by interventions. The newly imported infections
         // should use initial frequencies to select genotypes.
         vector<double> weights(0); // zero length: signal to use initial frequencies
-        const uint32_t genotype = Genotypes::sample_genotype(rng, weights);
+        const uint32_t genotype = genotypes().sample_genotype(rng, weights);
         infections.emplace_back(new_infection(rng, genotype, WithinHost::InfectionOrigin::Imported));
     }
     assert(num_infs == static_cast<int>(infections.size()));
@@ -138,7 +138,7 @@ void CommonWithinHost::update(Host::Human& human, LocalRng& rng, int& n_new_infs
 
     int n_new_infs_discarded = 0;
     for (int i = 0; i < n_new_infs_i; ++i) {
-        const uint32_t genotype = Genotypes::sample_genotype(rng, genotype_weights_i);
+        const uint32_t genotype = genotypes().sample_genotype(rng, genotype_weights_i);
 
         // If opt_vaccine_genotype is true the infection is discarded with probability 1-vaccineFactor
         if (opt_vaccine_genotype) {
@@ -156,7 +156,7 @@ void CommonWithinHost::update(Host::Human& human, LocalRng& rng, int& n_new_infs
 
     n_new_infs_discarded = 0;
     for (int i = 0; i < n_new_infs_l; ++i) {
-        const uint32_t genotype = Genotypes::sample_genotype(rng, genotype_weights_l);
+        const uint32_t genotype = genotypes().sample_genotype(rng, genotype_weights_l);
 
         // If opt_vaccine_genotype is true the infection is discarded with probability 1-vaccineFactor
         if (opt_vaccine_genotype) {
@@ -211,7 +211,7 @@ void CommonWithinHost::update(Host::Human& human, LocalRng& rng, int& n_new_infs
             } else {
                 const double density = (*inf)->get_density();
                 total_density += density;
-                if (!(*inf)->is_hrp2_deficient()) {
+                if (!(*inf)->is_hrp2_deficient(genotypes())) {
                     hrp2_density += density;
                 }
                 time_step_max_density = max(time_step_max_density, density);
@@ -237,16 +237,16 @@ void CommonWithinHost::update(Host::Human& human, LocalRng& rng, int& n_new_infs
 
     // Cache total density for infectiousness calculations
     const int y_lag_i = Sim::modulo_steps(Sim::ts1(), params().y_lag_len);
-    for (size_t g = 0; g < Genotypes::count(); ++g) {
-        y_lag_imported[y_lag_i * Genotypes::count() + g] = 0.0;
-        y_lag_local[y_lag_i * Genotypes::count() + g] = 0.0;
+    for (size_t g = 0; g < genotypes().count(); ++g) {
+        y_lag_imported[y_lag_i * genotypes().count() + g] = 0.0;
+        y_lag_local[y_lag_i * genotypes().count() + g] = 0.0;
     }
 
     for (auto& infection : infections) {
         if (infection->origin() == InfectionOrigin::Imported)
-            y_lag_imported[y_lag_i * Genotypes::count() + infection->genotype()] += infection->get_density();
+            y_lag_imported[y_lag_i * genotypes().count() + infection->genotype()] += infection->get_density();
         else
-            y_lag_local[y_lag_i * Genotypes::count() + infection->genotype()] += infection->get_density();
+            y_lag_local[y_lag_i * genotypes().count() + infection->genotype()] += infection->get_density();
     }
 
     // This is a bug, we keep it this way to be consistent with old simulations

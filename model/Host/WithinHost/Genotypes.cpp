@@ -28,6 +28,7 @@
 #include "schema/scenario.h"
 
 #include <algorithm>
+#include <cassert>
 #include <iomanip>
 
 namespace OM::WithinHost {
