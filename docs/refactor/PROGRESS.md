@@ -1589,3 +1589,21 @@ The user asked for F83 to be fixed, with the change to outputs and its tests log
   - G-perf: `util/bench.sh -n 7 --compare ../om-bench-base/build-rework`, load 3.4 at the start: median per-pair ratio 0.9997 (−0.03%), spreads 3.7% (base) / 5.5%. The change runs at initialisation only.
 - Findings: F83 moved to FINDINGS § Closed. F51 (the same allele-code/genotype mix-up in `--print-genotypes`) is still open.
 - Next: D9d.
+
+### D9c follow-up: F51 fixed, with tests (2026-10-26, after the F83 fix)
+The user asked for F51 to be fixed the same way as F83. The A/B and G-perf base is still eadf032a.
+- Commits:
+  - f3a3f5c8: `util/ab_scenarios.py`, three `registries` variants with `--print-genotypes`, added before the fix: a one-allele locus before `mdr` (`genotypes_print_one_allele_first`) and after it (`_last`) in scenarioGenotypes, and scenarioPEVLocusOrder (`genotypes_print_pev_locus_order`, which also prints the PK/PD phenotype mapping). Base against base is not reproducible for these three, which is the bug: the same variant ended in SIGSEGV, SIGBUS, a kill (-9) or, once, exit 0. The other 28 `registries` variants: 0 differ.
+  - c35821cb: **fix.** `print_genotypes` sizes its code-to-name table by one past the highest allele code any genotype carries, instead of `cum_initial_freqs.size()` (the number of distinct cumulative frequencies, about the genotype count). With `parasiteGenetics` that is the number of allele codes (every allele is in some genotype); without, it is 1 (the default genotype's code 0), the old size. The first try, `next_allele_code`, would have been 0 without `parasiteGenetics` (`init_single` takes code 0 without counting it) and broken `genotypes_print_none`; caught by reading `init_single` before testing.
+  - 4ab2f955: `unittest/GenotypesSuite.h`. ctest compares output files, not stdout, so the table is tested in the unit tests: registries built in process with `--print-genotypes`, `std::cout` captured, compared with tables written out by hand for a one-allele locus before and after `mdr`; plus a check that each genotype carries the right allele codes.
+  - 093c91bf: G-style: the suite's header guard in the naming rule's case.
+- How outputs change: only stdout of `--print-genotypes` runs where some locus has a single allele (more allele codes than genotypes). Before: undefined behaviour (a crash, a kill or, by chance, a table). After: the table, exit 0. Every table that printed before prints the same (the old size was never smaller than the codes those scenarios use, and the new table maps every code to the same names): `genotypes_print`, `_two_loci`, `_molpairwise`, `_none` and `pkpd/conversion_three_comp_print`, `print_two_loci` are identical against the base. No ctest output changes (`--print-genotypes` skips the simulation).
+- Check of correctness: with the one-allele column deleted (its header cell, one separator cell and its cell in each row), the fixed build's stdout for `_one_allele_first` and for `_one_allele_last` is byte-identical to the base build's stdout for `genotypes_print` (plain scenarioGenotypes), PK/PD phenotype mapping included. The unit test's expected tables are the same text, derived from the format code.
+- Gates:
+  - G-exact / G-unit / G-two-sims: 65/65 (strict) on Release and Debug; the unit suite now has 72 tests.
+  - A/B (base eadf032a): 12 of 291 differ: F83's ten and two of F51's three. `genotypes_print_one_allele_first` came out the same in that run: the base's out-of-bounds read happened to print the right table.
+  - Planted bug: the old table size → the unit test fails (and the three A/B variants differ).
+  - G-stat: 53 passed, 11 disabled. G-style: `util/style.sh check 3c43577d` clean at 093c91bf (one item before it, fixed there).
+  - G-perf: median per-pair ratio 0.9988 (−0.12%), spreads 1.2% (base) / 4.5%, load 6.2 at the start (the change runs only with `--print-genotypes`).
+- Findings: F51 moved to FINDINGS § Closed; new F86 (the table's formatting quirks, left as they were; ask before fixing).
+- Next: D9d.
