@@ -169,10 +169,11 @@ double PerHost::rel_mosq_fecundity(size_t species) const {
     return rel_fecundity;
 }
 
-bool PerHost::has_active_interv(interventions::component_types::Type type) const {
+bool PerHost::has_active_interv(interventions::component_types::Type type,
+                                const interventions::InterventionManager& interventions) const {
     for (const auto& active_component : active_components) {
         if (active_component->is_deployed()) {
-            if (bridge::intervention_manager().get_component(active_component->id()).component_type() == type)
+            if (interventions.get_component(active_component->id()).component_type() == type)
                 return true;
         }
     }
@@ -185,7 +186,7 @@ void PerHost::checkpoint_intervs(ostream& stream) {
         active_component & stream;
     }
 }
-void PerHost::checkpoint_intervs(istream& stream) {
+void PerHost::checkpoint_intervs(istream& stream, const interventions::InterventionManager& interventions) {
     size_t l = 0;
     l & stream;
     validateListSize(l);
@@ -193,8 +194,7 @@ void PerHost::checkpoint_intervs(istream& stream) {
     for (size_t i = 0; i < l; ++i) {
         const interventions::ComponentId id(stream);
         try {
-            const interventions::HumanInterventionComponent& gen_params =
-                bridge::intervention_manager().get_component(id); // may throw
+            const interventions::HumanInterventionComponent& gen_params = interventions.get_component(id); // may throw
             const auto* params = dynamic_cast<const HumanVectorInterventionComponent*>(&gen_params);
             if (params == nullptr)
                 throw util::base_exception(""); // see catch block below

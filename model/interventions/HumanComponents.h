@@ -27,6 +27,7 @@
 #include "interventions/Interfaces.h"
 #include "util/sampler.h"
 #include "util/DecayFunction.h"
+#include "util/checkpoint_containers.h"
 
 namespace OM {
 namespace Host {
@@ -67,12 +68,13 @@ public:
     PerEffectPerHumanVaccine();
 
     /// Checkpointing
-    template <class S> void operator&(S& stream) {
-        component & stream;
-        num_doses_administered & stream;
-        time_last_deployment & stream;
-        per_genotype_initial_efficacy & stream;
+    void operator&(ostream& stream) {
+        checkpoint_fields(stream);
         checkpoint_het(stream);
+    }
+    void checkpoint(istream& stream, const InterventionManager& interventions) {
+        checkpoint_fields(stream);
+        checkpoint_het(stream, interventions);
     }
 
 private:
@@ -93,8 +95,14 @@ private:
     unique_ptr<util::DecayFunction> het_sample;
     const VaccineComponent* params = nullptr;
 
+    template <class S> void checkpoint_fields(S& stream) {
+        component & stream;
+        num_doses_administered & stream;
+        time_last_deployment & stream;
+        per_genotype_initial_efficacy & stream;
+    }
     void checkpoint_het(ostream& stream);
-    void checkpoint_het(istream& stream);
+    void checkpoint_het(istream& stream, const InterventionManager& interventions);
 
     friend class PerHumanVaccine;
 };
@@ -123,7 +131,8 @@ public:
 #endif
 
     /// Checkpointing
-    template <class S> void operator&(S& stream) { effects & stream; }
+    void operator&(ostream& stream) { effects & stream; }
+    void checkpoint(istream& stream, const InterventionManager& interventions);
 
 private:
     /// Details for each deployed vaccine for this human

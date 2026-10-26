@@ -55,6 +55,8 @@ public:
     /** Reset the number of recent births to 0 */
     inline void resetRecentBirths();
 
+    const interventions::InterventionManager& interventions() const { return *human_params.interventions; }
+
     /** Checkpoint (read) */
     void checkpoint(istream& stream);
 

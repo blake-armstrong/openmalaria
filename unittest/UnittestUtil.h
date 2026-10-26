@@ -234,7 +234,6 @@ WithinHost::DiagnosticRegistry diagnostics;
 DiagnosticsBinding diagnostics_binding{diagnostics};
 Transmission::PerHostParams per_host_params;
 interventions::InterventionManager intervention_manager;
-InterventionManagerBinding intervention_manager_binding{intervention_manager};
 Host::InfectionIncidenceParams infection_incidence;
 // NOLINTEND(cppcoreguidelines-avoid-non-const-global-variables,bugprone-throwing-static-initialization)
 }
@@ -459,7 +458,8 @@ public:
                               .infection_incidence = &unittest_options::infection_incidence,
                               .options = &unittest_options::model_options,
                               .within_host = &unittest_options::within_host_model,
-                              .clinical = &unittest_options::clinical},
+                              .clinical = &unittest_options::clinical,
+                              .interventions = &unittest_options::intervention_manager},
             master_rngs.population);
     }
     // Set the WithinHost model used by the human, and return a pointer to it. Do not delete this!

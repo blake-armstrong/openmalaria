@@ -33,12 +33,15 @@ class Monitoring;
 namespace OM::util {
 class CommandLineOptions;
 }
+namespace OM::interventions {
+class InterventionManager;
+}
 
 namespace OM::mon {
 
 SimTime read_survey_dates(const scnXml::Monitoring& monitoring, const util::CommandLineOptions& command_line);
 void init_reporting(const scnXml::Scenario& scenario);
-void init_cohorts(const scnXml::Monitoring& monitoring);
+void init_cohorts(const scnXml::Monitoring& monitoring, const interventions::InterventionManager& interventions);
 
 } // namespace OM::mon
 

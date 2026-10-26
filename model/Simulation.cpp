@@ -97,8 +97,8 @@ Simulation::Simulation(std::unique_ptr<scnXml::Scenario> scenario, util::Command
                                  [this](ostream& stream) { new_infections.report(stream); });
     within_host_model = WithinHost::WithinHostModel(parameters, model_options, command_line, genotypes, *scenario_xml);
     clinical = Clinical::ClinicalParams(parameters, model_options, command_line, *scenario_xml);
-    decision_trees =
-        Clinical::DecisionTreeLibrary(diagnostics, within_host_model.common.pk_pd, clinical.health_system_memory);
+    decision_trees = Clinical::DecisionTreeLibrary(diagnostics, within_host_model.common.pk_pd,
+                                                   clinical.health_system_memory, intervention_manager);
     infant_mortality = Clinical::InfantMortality(clinical.non_malaria_infant_mortality);
     neonatal_mortality = Host::NeonatalMortality(scenario_xml->getModel().getClinical(), diagnostics, command_line);
     age_structure = AgeStructure(scenario_xml->getDemography());
@@ -115,7 +115,8 @@ Simulation::Simulation(std::unique_ptr<scnXml::Scenario> scenario, util::Command
                                                                       .infection_incidence = &infection_incidence,
                                                                       .options = &model_options,
                                                                       .within_host = &within_host_model,
-                                                                      .clinical = &clinical},
+                                                                      .clinical = &clinical,
+                                                                      .interventions = &intervention_manager},
                                                     master_rngs.population);
     transmission_model = Transmission::create_transmission_model(
         scenario_xml->getEntomology(), static_cast<int>(pop_size), per_host_params, master_rngs.transmission, genotypes,
@@ -129,7 +130,7 @@ Simulation::Simulation(std::unique_ptr<scnXml::Scenario> scenario, util::Command
                               within_host_model, clinical, decision_trees, model_options, command_line);
     clinical.set_health_system(scenario_xml->getHealthSystem(), decision_trees, within_host_model,
                                intervention_manager); // Depends on interventions, PK/PD (from humanPop)
-    mon::init_cohorts(scenario_xml->getMonitoring()); // Depends on interventions
+    mon::init_cohorts(scenario_xml->getMonitoring(), intervention_manager); // Depends on interventions
 
     clock.reset_time();
 

@@ -73,7 +73,8 @@ public:
      */
     double propTreatmentsNReps(int N, const scnXml::DecisionTree& dt) {
         Clinical::DecisionTreeLibrary library(unittest_options::diagnostics, UnittestUtil::pk_pd_params(),
-                                              unittest_options::clinical.health_system_memory);
+                                              unittest_options::clinical.health_system_memory,
+                                              unittest_options::intervention_manager);
         const CMDecisionTree& cmdt = library.create(dt, true);
 
         whm->nTreatments = 0;
@@ -307,7 +308,8 @@ public:
 
 private:
     static Clinical::DecisionTreeLibrary make_library() {
-        return {unittest_options::diagnostics, UnittestUtil::pk_pd_params(), Sim::from_ts(5)};
+        return {unittest_options::diagnostics, UnittestUtil::pk_pd_params(), Sim::from_ts(5),
+                unittest_options::intervention_manager};
     }
 
     static scnXml::DecisionTree no_action() {

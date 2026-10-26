@@ -109,7 +109,7 @@ HumanHet het_sample(util::LocalRng& rng, const util::ModelOptionFlags& options) 
 
 Human::Human(SimTime date_of_birth, const HumanParams& params, util::MasterRng& rng)
     : infIncidence(params.infection_incidence->create()), host_rng(rng), clinical_rng(rng), intervention_rng(rng),
-      monitoring_rng(rng), dateOfBirth(date_of_birth) {
+      monitoring_rng(rng), dateOfBirth(date_of_birth), intervention_manager(params.interventions) {
     // Initial humans are created at time 0 and may have date_of_birth in past. Otherwise date_of_birth must be now.
     assert(date_of_birth == Sim::now_or_ts1() || (Sim::now() == Sim::zero() && date_of_birth < Sim::now()));
 
@@ -130,7 +130,7 @@ void Human::addToCohort(ComponentId id, SimTime duration) {
 void Human::removeFromCohort(interventions::ComponentId id) { subPopExp.erase(id); }
 
 void Human::removeFirstEvent(interventions::sub_pop_remove::RemoveAtCode code) {
-    for (const ComponentId& id : bridge::intervention_manager().remove_at_ids(code)) {
+    for (const ComponentId& id : intervention_manager->remove_at_ids(code)) {
         auto exp_it = subPopExp.find(id);
         if (exp_it != subPopExp.end()) {
             if (exp_it->second >= Sim::now_or_ts0()) {
@@ -167,7 +167,7 @@ void Human::updateCohortSet() {
 }
 
 void Human::checkpoint(istream& stream) {
-    perHostTransmission & stream;
+    perHostTransmission.checkpoint(stream, *intervention_manager);
     infIncidence & stream;
     withinHostModel & stream;
     clinicalModel & stream;
@@ -176,7 +176,7 @@ void Human::checkpoint(istream& stream) {
     intervention_rng.checkpoint(stream);
     monitoring_rng.checkpoint(stream);
     dateOfBirth & stream;
-    vaccine & stream;
+    vaccine.checkpoint(stream, *intervention_manager);
     monitoringAgeGroup & stream;
     cohortSet & stream;
     nextCtsDist & stream;

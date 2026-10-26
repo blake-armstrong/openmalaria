@@ -227,7 +227,8 @@ void ctsMeanAgeAvailEffect(Population& population, ostream& stream) {
 void ctsITNCoverage(Population& population, ostream& stream) {
     int nActive = 0;
     for (const Host::Human& human : population.humans) {
-        nActive += human.perHostTransmission.has_active_interv(interventions::component_types::ITN);
+        nActive += human.perHostTransmission.has_active_interv(interventions::component_types::ITN,
+                                                               population.interventions());
     }
     double coverage = static_cast<double>(nActive) / population.getSize();
     stream << '\t' << coverage;
@@ -236,7 +237,8 @@ void ctsITNCoverage(Population& population, ostream& stream) {
 void ctsIRSCoverage(Population& population, ostream& stream) {
     int nActive = 0;
     for (const Host::Human& human : population.humans) {
-        nActive += human.perHostTransmission.has_active_interv(interventions::component_types::IRS);
+        nActive += human.perHostTransmission.has_active_interv(interventions::component_types::IRS,
+                                                               population.interventions());
     }
     double coverage = static_cast<double>(nActive) / population.getSize();
     stream << '\t' << coverage;
@@ -245,7 +247,8 @@ void ctsIRSCoverage(Population& population, ostream& stream) {
 void ctsGVICoverage(Population& population, ostream& stream) {
     int nActive = 0;
     for (const Host::Human& human : population.humans) {
-        nActive += human.perHostTransmission.has_active_interv(interventions::component_types::GVI);
+        nActive += human.perHostTransmission.has_active_interv(interventions::component_types::GVI,
+                                                               population.interventions());
     }
     double coverage = static_cast<double>(nActive) / population.getSize();
     stream << '\t' << coverage;

@@ -55,6 +55,7 @@ struct HumanParams {
     const util::ModelOptionFlags* options = nullptr;
     const WithinHost::WithinHostModel* within_host = nullptr;
     const Clinical::ClinicalParams* clinical = nullptr;
+    const interventions::InterventionManager* interventions = nullptr;
 };
 
 /** Interface to all sub-models storing data per-human individual.
@@ -142,6 +143,7 @@ public:
 
 private:
     SimTime dateOfBirth = Sim::never(); // date of birth; humans are always born at the end of a time step
+    const interventions::InterventionManager* intervention_manager;
 
     /** Cache, updated when human is added to or removed from a sub-population */
     uint32_t cohortSet = 0;

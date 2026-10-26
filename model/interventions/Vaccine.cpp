@@ -199,10 +199,20 @@ void PerEffectPerHumanVaccine::checkpoint_het(ostream& stream) {
     params->decay_func->checkpointSample(het_sample, stream);
 }
 
-void PerEffectPerHumanVaccine::checkpoint_het(istream& stream) {
-    params = dynamic_cast<const VaccineComponent*>(&bridge::intervention_manager().get_component(component));
+void PerEffectPerHumanVaccine::checkpoint_het(istream& stream, const InterventionManager& interventions) {
+    params = dynamic_cast<const VaccineComponent*>(&interventions.get_component(component));
     assert(params != nullptr);
     params->decay_func->checkpointSample(het_sample, stream);
+}
+
+void PerHumanVaccine::checkpoint(istream& stream, const InterventionManager& interventions) {
+    size_t l = 0;
+    l & stream;
+    validateListSize(l);
+    effects.resize(l);
+    for (PerEffectPerHumanVaccine& effect : effects) {
+        effect.checkpoint(stream, interventions);
+    }
 }
 
 double PerHumanVaccine::get_factor(vaccines::Types type, uint32_t genotype) const {

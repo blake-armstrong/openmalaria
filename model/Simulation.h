@@ -105,7 +105,6 @@ private:
     AgeStructure age_structure;
     Transmission::PerHostParams per_host_params;
     interventions::InterventionManager intervention_manager;
-    InterventionManagerBinding intervention_manager_binding{intervention_manager};
     std::unique_ptr<scnXml::Scenario> scenario_xml;
     std::unique_ptr<Population> population_model;
     std::unique_ptr<Transmission::TransmissionModel> transmission_model;

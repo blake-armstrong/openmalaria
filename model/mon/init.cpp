@@ -205,7 +205,7 @@ SimTime read_survey_dates(const scnXml::Monitoring& monitoring, const util::Comm
     return runtime.survey_dates.back().date;
 }
 
-void init_cohorts(const scnXml::Monitoring& monitoring) {
+void init_cohorts(const scnXml::Monitoring& monitoring, const interventions::InterventionManager& interventions) {
     MonitoringState& runtime = bridge::monitoring();
     runtime.cohort_sub_pop_numbers.clear();
     runtime.cohort_sub_pop_ids.clear();
@@ -215,7 +215,7 @@ void init_cohorts(const scnXml::Monitoring& monitoring) {
     const scnXml::Cohorts mon_cohorts = monitoring.getCohorts().get();
     uint32_t next_id = 0;
     for (const auto& sub_pop : mon_cohorts.getSubPop()) {
-        const interventions::ComponentId comp_id = bridge::intervention_manager().get_component_id(sub_pop.getId());
+        const interventions::ComponentId comp_id = interventions.get_component_id(sub_pop.getId());
         const bool inserted = runtime.cohort_sub_pop_ids.insert(std::make_pair(comp_id, next_id)).second;
         if (!inserted) {
             throw util::xml_scenario_error(std::string("cohort specification uses sub-population \"")

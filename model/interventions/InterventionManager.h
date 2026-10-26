@@ -31,7 +31,6 @@
 #include "schema/interventions.h"
 
 #include <array>
-#include <cassert>
 
 namespace OM {
 namespace Host {
@@ -132,34 +131,6 @@ private:
 };
 
 }
-
-namespace bridge {
-
-// NOLINTNEXTLINE(cppcoreguidelines-avoid-non-const-global-variables)
-inline const interventions::InterventionManager* current_intervention_manager = nullptr;
-
-inline const interventions::InterventionManager& intervention_manager() {
-    assert(current_intervention_manager != nullptr);
-    return *current_intervention_manager;
-}
-
-}
-
-class InterventionManagerBinding {
-public:
-    explicit InterventionManagerBinding(const interventions::InterventionManager& manager)
-        : previous(bridge::current_intervention_manager) {
-        bridge::current_intervention_manager = &manager;
-    }
-    InterventionManagerBinding(const InterventionManagerBinding&) = delete;
-    InterventionManagerBinding& operator=(const InterventionManagerBinding&) = delete;
-    InterventionManagerBinding(InterventionManagerBinding&&) = delete;
-    InterventionManagerBinding& operator=(InterventionManagerBinding&&) = delete;
-    ~InterventionManagerBinding() { bridge::current_intervention_manager = previous; }
-
-private:
-    const interventions::InterventionManager* previous;
-};
 
 }
 #endif

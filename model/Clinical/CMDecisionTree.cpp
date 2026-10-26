@@ -552,8 +552,8 @@ private:
  * interventions to be deployed, though we don't use pointers it finds. */
 class CMDTDeploy : public CMDecisionTree, interventions::HumanIntervention {
 public:
-    CMDTDeploy(const scnXml::DecisionTree::DeploySequence& seq)
-        : HumanIntervention(seq, bridge::intervention_manager()) {}
+    CMDTDeploy(const scnXml::DecisionTree::DeploySequence& seq, const interventions::InterventionManager& interventions)
+        : HumanIntervention(seq, interventions) {}
 
 protected:
     bool operator==(const CMDecisionTree& that) const override {
@@ -617,9 +617,9 @@ protected:
     }
 
 private:
-    CMDTCohort(const std::string& component, const CMDecisionTree& positive, const CMDecisionTree& negative)
-        : component(bridge::intervention_manager().get_component_id(component)), positive(positive),
-          negative(negative) {}
+    CMDTCohort(const interventions::InterventionManager& interventions, const std::string& component,
+               const CMDecisionTree& positive, const CMDecisionTree& negative)
+        : component(interventions.get_component_id(component)), positive(positive), negative(negative) {}
 
     interventions::ComponentId component;
     const CMDecisionTree& positive;
@@ -678,7 +678,7 @@ const CMDecisionTree& DecisionTreeLibrary::create(const scnXml::DecisionTree& no
     if (node.getTreatSimple().size())
         return save(unique_ptr<CMDecisionTree>(new CMDTTreatSimple(node.getTreatSimple())));
     if (node.getDeploy().size())
-        return save(unique_ptr<CMDecisionTree>(new CMDTDeploy(node.getDeploy())));
+        return save(unique_ptr<CMDecisionTree>(new CMDTDeploy(node.getDeploy(), *manager)));
     throw xml_scenario_error("unterminated decision tree");
 }
 
@@ -719,7 +719,8 @@ const CMDecisionTree& CMDTMultiple::create(DecisionTreeLibrary& library, const s
         self->children.push_back(&library.save(unique_ptr<CMDecisionTree>(new CMDTReport(node.getReport()))));
     }
     if (node.getDeploy().size()) {
-        self->children.push_back(&library.save(unique_ptr<CMDecisionTree>(new CMDTDeploy(node.getDeploy()))));
+        self->children.push_back(&library.save(
+            unique_ptr<CMDecisionTree>(new CMDTDeploy(node.getDeploy(), library.intervention_manager()))));
     }
     return library.save(std::move(self));
 }
@@ -759,8 +760,9 @@ const CMDecisionTree& CMDTSevere::create(DecisionTreeLibrary& library, const scn
 }
 
 const CMDecisionTree& CMDTCohort::create(DecisionTreeLibrary& library, const scnXml::DTCohort& node, bool is_uc) {
-    return library.save(unique_ptr<CMDecisionTree>(new CMDTCohort(
-        node.getComponent(), library.create(node.getPositive(), is_uc), library.create(node.getNegative(), is_uc))));
+    return library.save(unique_ptr<CMDecisionTree>(new CMDTCohort(library.intervention_manager(), node.getComponent(),
+                                                                  library.create(node.getPositive(), is_uc),
+                                                                  library.create(node.getNegative(), is_uc))));
 }
 
 const CMDecisionTree& CMDTRandom::create(DecisionTreeLibrary& library, const scnXml::DTRandom& node, bool is_uc) {

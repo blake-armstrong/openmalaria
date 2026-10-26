@@ -293,18 +293,17 @@ public:
      * the given type, where type is one of those interventions deriving the
      * PerHostInterventionData class (in other cases this will always return
      * false). */
-    bool has_active_interv(interventions::component_types::Type type) const;
+    bool has_active_interv(interventions::component_types::Type type,
+                           const interventions::InterventionManager& interventions) const;
 
     /// Checkpointing
-    template <class S> void operator&(S& stream) {
-        anoph_ento_availability_raw & stream;
-        anoph_ento_availability & stream;
-        anoph_prob_mosq_biting & stream;
-        anoph_prob_mosq_resting & stream;
-        relative_availability_het & stream;
-        outside_transmission & stream;
-        copula_gaussian_samples & stream;
+    void operator&(ostream& stream) {
+        checkpoint_fields(stream);
         checkpoint_intervs(stream);
+    }
+    void checkpoint(istream& stream, const interventions::InterventionManager& interventions) {
+        checkpoint_fields(stream);
+        checkpoint_intervs(stream, interventions);
     }
     //@}
 
@@ -338,8 +337,17 @@ public:
     std::map<interventions::ComponentId, double> copula_gaussian_samples;
 
 private:
+    template <class S> void checkpoint_fields(S& stream) {
+        anoph_ento_availability_raw & stream;
+        anoph_ento_availability & stream;
+        anoph_prob_mosq_biting & stream;
+        anoph_prob_mosq_resting & stream;
+        relative_availability_het & stream;
+        outside_transmission & stream;
+        copula_gaussian_samples & stream;
+    }
     void checkpoint_intervs(ostream& stream);
-    void checkpoint_intervs(istream& stream);
+    void checkpoint_intervs(istream& stream, const interventions::InterventionManager& interventions);
 
     vector<unique_ptr<PerHostInterventionData>> active_components;
 
