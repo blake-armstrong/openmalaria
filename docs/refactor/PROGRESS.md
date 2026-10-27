@@ -1607,3 +1607,24 @@ The user asked for F51 to be fixed the same way as F83. The A/B and G-perf base 
   - G-perf: median per-pair ratio 0.9988 (−0.12%), spreads 1.2% (base) / 4.5%, load 6.2 at the start (the change runs only with `--print-genotypes`).
 - Findings: F51 moved to FINDINGS § Closed; new F86 (the table's formatting quirks, left as they were; ask before fixing).
 - Next: D9d.
+
+### D9c follow-up: F86 fixed, with tests (2026-10-27, after the F51 fix)
+The user asked for F86's cosmetic `--print-genotypes` quirks to be fixed. The G-perf and A/B base worktree `../om-bench-base` was moved to 052c8426 (the F51 fix and its docs) and rebuilt, so the A/B shows F86's change and nothing else.
+- Diagnosis corrected before fixing: F86 said the Genotype column should be the plain index. `git log -S` shows the `* 100000` came in with f3b6f08a (2015, Tobias Thüring, "Output genotype id multiple of 1mio and minor format fix"), when `output.txt`'s group column had encoded genotypes as `1000000 * genotype` since 3dddad95 (2014): the intent was output.txt's ID, one zero short. The PK/PD mapping table (0443b016, the same day) has the same factor. So the IDs were fixed to `1000000 * genotype`, not to the index.
+- Commits:
+  - b3c29386: `util/ab_scenarios.py`, three `registries` variants with `--print-genotypes`, added before the fix: 200 genotypes (two extra ten-allele loci, so 9-digit IDs; `genotypes_print_many`), a drug phenotype name longer than the mapping's 14-character column (`_long_phenotype_name`), and an unnamed phenotype (`_unnamed_phenotype`, printed as "no: 1"). Base against base: 0 of 61 in `registries` and `pkpd` (the F51 variants are deterministic on this base).
+  - ebb04229: **fix.** `Genotypes.h` gains `GenotypeOutputIdStep` (1000000) and `genotype_id_width` (the width of the largest ID, at least 8), used by both tables. Genotype table: one `|` before each cell instead of one after each locus cell, separators of one dash per column character. Mapping table: title "Phenotype mapping for drug <abbrev>:" underlined to its length (was "Phenotype mapping: " and 10 dashes), 14 dashes under "phenotype" (was a space and 13), phenotype column as wide as the longest name (at least 14). `Monitoring.cpp`'s literal `1000000` was left as it is (working output code; the user prefers additions to edits there).
+  - beb4cbe1: `GenotypesSuite`: the two genotype tables in the new format, written out by hand, and a third test for the mapping table (drug CQ with phenotypes "sensitive" and "resistant to everything" on mdr, so the title names the drug and the phenotype column widens).
+- How outputs change: only stdout of `--print-genotypes` runs, which skip the simulation; no ctest output moves. A/B against 052c8426: 11 of 294 variants differ, the 11 print variants with at least two genotypes; `genotypes_print_none` (one genotype, ID 0, no drug mapping) is the same. In every table the IDs are ten times larger (0, 1000000, 2000000, …). Single-locus genotype rows are otherwise as before (`|       0|sensitive|    0.500|  1.000|`); multi-locus rows lose the `||`; separators match their columns; mapping tables are titled per drug.
+- Checks of correctness (rerunnable: run base and candidate with `--print-genotypes` on each print variant's scenario, written by the A/B transforms):
+  - Alignment: in every table of the 12 print variants, each line has its `|` at the same character positions. The base fails this in 8 of the 12 (the multi-locus, many-genotype and long-name ones).
+  - Same content: with cells trimmed, empty and dash-only cells dropped and IDs divided by their step (100000 base, 1000000 candidate), base and candidate tables are equal in all 12.
+  - IDs: the genotype group codes in `test/expected/outputGenotypes.txt` (genotype 1 at 1000000) match the printed IDs (0, 1000000).
+- Gates:
+  - G-exact / G-unit / G-two-sims: 65/65 (strict) on Release and Debug; the unit suite has 73 tests.
+  - A/B (base 052c8426): 11 of 294 differ, the 11 listed above.
+  - Planted bugs (`util/plant.py`): the ID step back to 100000 → the unit suite fails; the trailing `|` per locus cell back → the unit suite fails.
+  - G-stat: 53 passed, 11 disabled. G-style: `util/style.sh check 052c8426` clean.
+  - G-perf: median per-pair ratio 0.9909 (−0.91%), spreads 3.1% (base) / 2.3%, load 3.9 at the start (only `--print-genotypes` runs reach the change).
+- Findings: F86 moved to FINDINGS § Closed, with its diagnosis corrected. Left: the empty locus column without `parasiteGenetics`.
+- Next: D9d (its base will be its own HEAD; move `../om-bench-base` again at its start).
