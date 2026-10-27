@@ -55,8 +55,9 @@ int read_checkpoint_num(const string& checkpoint_file_name) {
 void checkpoint(istream& stream, const util::CommandLineOptions& command_line, Clock& clock,
                 util::MasterRngs& master_rngs, WithinHost::GenotypeRegistry& genotypes,
                 Host::NeonatalMortality& neonatal_mortality, Host::NewInfections& new_infections,
-                Clinical::InfantMortality& infant_mortality, mon::Continuous& continuous, SimTime& end_time,
-                SimTime& est_end_time, Population& population, Transmission::TransmissionModel& transmission,
+                Clinical::InfantMortality& infant_mortality, mon::Continuous& continuous,
+                mon::MonitoringState& monitoring, SimTime& end_time, SimTime& est_end_time, Population& population,
+                Transmission::TransmissionModel& transmission,
                 interventions::InterventionManager& intervention_manager) {
     try {
         util::checkpoint::header(stream);
@@ -66,7 +67,7 @@ void checkpoint(istream& stream, const util::CommandLineOptions& command_line, C
         infant_mortality.checkpoint(stream);
         genotypes.checkpoint(stream);
         continuous.checkpoint(stream);
-        mon::checkpoint(stream);
+        mon::checkpoint(monitoring, stream);
 #ifdef OM_STREAM_VALIDATOR
         util::StreamValidator& stream;
 #endif
@@ -100,8 +101,9 @@ void checkpoint(istream& stream, const util::CommandLineOptions& command_line, C
 void checkpoint(ostream& stream, const util::CommandLineOptions& command_line, Clock& clock,
                 util::MasterRngs& master_rngs, WithinHost::GenotypeRegistry& genotypes,
                 Host::NeonatalMortality& neonatal_mortality, Host::NewInfections& new_infections,
-                Clinical::InfantMortality& infant_mortality, mon::Continuous& continuous, SimTime& end_time,
-                SimTime& est_end_time, Population& population, Transmission::TransmissionModel& transmission,
+                Clinical::InfantMortality& infant_mortality, mon::Continuous& continuous,
+                mon::MonitoringState& monitoring, SimTime& end_time, SimTime& est_end_time, Population& population,
+                Transmission::TransmissionModel& transmission,
                 interventions::InterventionManager& intervention_manager) {
     util::checkpoint::header(stream);
     if (!stream.good())
@@ -113,7 +115,7 @@ void checkpoint(ostream& stream, const util::CommandLineOptions& command_line, C
     infant_mortality.checkpoint(stream);
     genotypes.checkpoint(stream);
     continuous.checkpoint(stream);
-    mon::checkpoint(stream);
+    mon::checkpoint(monitoring, stream);
 #ifdef OM_STREAM_VALIDATOR
     util::StreamValidator& stream;
 #endif
@@ -136,8 +138,8 @@ void write_checkpoint(const bool started_from_checkpoint, const string& checkpoi
                       const util::CommandLineOptions& command_line, Clock& clock, util::MasterRngs& master_rngs,
                       WithinHost::GenotypeRegistry& genotypes, Host::NeonatalMortality& neonatal_mortality,
                       Host::NewInfections& new_infections, Clinical::InfantMortality& infant_mortality,
-                      mon::Continuous& continuous, SimTime& end_time, SimTime& est_end_time, Population& population,
-                      Transmission::TransmissionModel& transmission,
+                      mon::Continuous& continuous, mon::MonitoringState& monitoring, SimTime& end_time,
+                      SimTime& est_end_time, Population& population, Transmission::TransmissionModel& transmission,
                       interventions::InterventionManager& intervention_manager) {
     // We alternate between two checkpoints, in case program is closed while writing.
     const int num_checkpoints = 2;
@@ -152,7 +154,7 @@ void write_checkpoint(const bool started_from_checkpoint, const string& checkpoi
         const string name = std::format("{}{}.gz", checkpoint_file_name, checkpoint_num);
         ogzstream out(name.c_str(), ios::out | ios::binary);
         checkpoint(out, command_line, clock, master_rngs, genotypes, neonatal_mortality, new_infections,
-                   infant_mortality, continuous, end_time, est_end_time, population, transmission,
+                   infant_mortality, continuous, monitoring, end_time, est_end_time, population, transmission,
                    intervention_manager);
         out.close();
     }
@@ -177,8 +179,9 @@ void write_checkpoint(const bool started_from_checkpoint, const string& checkpoi
 void read_checkpoint(const string& checkpoint_file_name, const util::CommandLineOptions& command_line, Clock& clock,
                      util::MasterRngs& master_rngs, WithinHost::GenotypeRegistry& genotypes,
                      Host::NeonatalMortality& neonatal_mortality, Host::NewInfections& new_infections,
-                     Clinical::InfantMortality& infant_mortality, mon::Continuous& continuous, SimTime& end_time,
-                     SimTime& est_end_time, Population& population, Transmission::TransmissionModel& transmission,
+                     Clinical::InfantMortality& infant_mortality, mon::Continuous& continuous,
+                     mon::MonitoringState& monitoring, SimTime& end_time, SimTime& est_end_time, Population& population,
+                     Transmission::TransmissionModel& transmission,
                      interventions::InterventionManager& intervention_manager) {
     const int checkpoint_num = read_checkpoint_num(checkpoint_file_name);
 
@@ -189,7 +192,7 @@ void read_checkpoint(const string& checkpoint_file_name, const util::CommandLine
     if (!(in.good() && in.rdbuf()->is_open()))
         throw util::checkpoint_error("Unable to read file");
     checkpoint(in, command_line, clock, master_rngs, genotypes, neonatal_mortality, new_infections, infant_mortality,
-               continuous, end_time, est_end_time, population, transmission, intervention_manager);
+               continuous, monitoring, end_time, est_end_time, population, transmission, intervention_manager);
     in.close();
 
     cerr << clock.in_steps(clock.now()) << "t loaded checkpoint\n";

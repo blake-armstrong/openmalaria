@@ -48,7 +48,8 @@ struct CommonWithinHostParams {
     pk_pd::PkPdParams pk_pd;
 
     CommonWithinHostParams() = default;
-    CommonWithinHostParams(const scnXml::Scenario& scenario, const CommonInfectionModel& infection);
+    CommonWithinHostParams(const scnXml::Scenario& scenario, const CommonInfectionModel& infection,
+                           const mon::MonitoringState& monitoring);
 };
 
 /** Common within-host model functionality.

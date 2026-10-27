@@ -75,7 +75,7 @@ Simulation::Simulation(std::unique_ptr<scnXml::Scenario> scenario, util::Command
     const util::ModelNameProvider model_name_provider(scenario_xml->getModel());
 
     // 2) elements depending on only elements initialised in (1):
-    clock.init(*scenario_xml, model_name_provider, command_line); // Also reads survey dates.
+    clock.init(*scenario_xml, model_name_provider, command_line, monitoring); // Also reads survey dates.
 
     // 3) elements depending on only elements initialised in (2).
     parameters = Parameters(scenario_xml->getModel().getParameters(), model_name_provider,
@@ -88,15 +88,16 @@ Simulation::Simulation(std::unique_ptr<scnXml::Scenario> scenario, util::Command
                                                  *scenario_xml); // Depends on Parameters.
 
     // 5) elements depending on only elements initialised in (4).
-    mon::init_reporting(*scenario_xml, diagnostics, genotypes); // Reporting init depends on diagnostics and monitoring
+    mon::init_reporting(monitoring, *scenario_xml, diagnostics,
+                        genotypes); // Reporting init depends on diagnostics and monitoring
 
     // Init models used by humans
     per_host_params = Transmission::PerHostParams(scenario_xml->getModel().getHuman().getAvailabilityToMosquitoes());
     infection_incidence = Host::InfectionIncidenceParams(parameters, model_options);
     continuous.register_callback("new infections", "\tnew infections",
                                  [this](ostream& stream) { new_infections.report(stream); });
-    within_host_model =
-        WithinHost::WithinHostModel(parameters, model_options, command_line, genotypes, diagnostics, *scenario_xml);
+    within_host_model = WithinHost::WithinHostModel(parameters, model_options, command_line, genotypes, diagnostics,
+                                                    monitoring, *scenario_xml);
     clinical = Clinical::ClinicalParams(parameters, model_options, command_line, diagnostics, *scenario_xml);
     decision_trees = Clinical::DecisionTreeLibrary(diagnostics, within_host_model.common.pk_pd,
                                                    clinical.health_system_memory, intervention_manager);
@@ -128,10 +129,11 @@ Simulation::Simulation(std::unique_ptr<scnXml::Scenario> scenario, util::Command
     // Depends on transmission model (for species indexes):
     // MDA1D may depend on health system (too complex to verify)
     intervention_manager.init(scenario_xml->getInterventions(), *transmission_model, per_host_params, diagnostics,
-                              genotypes, within_host_model, clinical, decision_trees, model_options, command_line);
+                              genotypes, within_host_model, clinical, decision_trees, model_options, command_line,
+                              monitoring);
     clinical.set_health_system(scenario_xml->getHealthSystem(), decision_trees, within_host_model,
                                intervention_manager); // Depends on interventions, PK/PD (from humanPop)
-    mon::init_cohorts(scenario_xml->getMonitoring(), intervention_manager); // Depends on interventions
+    mon::init_cohorts(monitoring, scenario_xml->getMonitoring(), intervention_manager); // Depends on interventions
 
     clock.reset_time();
 
@@ -172,8 +174,8 @@ void Simulation::run(const CheckpointOptions& checkpointing) {
 void Simulation::resume(const std::string& checkpoint_file) {
     continuous.init(scenario_xml->getMonitoring(), true, command_line.ctsout_name());
     read_checkpoint(checkpoint_file, command_line, clock, master_rngs, genotypes, neonatal_mortality, new_infections,
-                    infant_mortality, continuous, end_time, est_end_time, *population_model, *transmission_model,
-                    intervention_manager);
+                    infant_mortality, continuous, monitoring, end_time, est_end_time, *population_model,
+                    *transmission_model, intervention_manager);
 
     /** Calculate ento availability percentiles **/
     per_host_params.calc_availability_percentiles();
@@ -219,13 +221,13 @@ void Simulation::start_new(const CheckpointOptions& checkpointing) {
     infant_mortality.pre_main_sim_init();
     genotypes.pre_main_sim_init();
     population_model->reset_recent_births();
-    transmission_model->summarize(); // Only to reset TransmissionModel::inoculationsPerAgeGroup
-    mon::init_main_sim();
+    transmission_model->summarize(monitoring); // Only to reset TransmissionModel::inoculationsPerAgeGroup
+    mon::init_main_sim(monitoring);
 
     if (checkpointing.enabled) {
         write_checkpoint(false, checkpointing.file_name, command_line, clock, master_rngs, genotypes,
-                         neonatal_mortality, new_infections, infant_mortality, continuous, end_time, est_end_time,
-                         *population_model, *transmission_model, intervention_manager);
+                         neonatal_mortality, new_infections, infant_mortality, continuous, monitoring, end_time,
+                         est_end_time, *population_model, *transmission_model, intervention_manager);
         if (checkpointing.stop_after_write)
             throw util::cmd_exception("Checkpoint test: checkpoint written", util::Error::None);
     }
@@ -237,7 +239,7 @@ void Simulation::finish() {
     for (Host::Human& human : population_model->humans)
         human.clinical_model->flush_reports();
 
-    mon::write_survey_data(command_line, infant_mortality);
+    mon::write_survey_data(monitoring, command_line, infant_mortality);
 
 #ifdef OM_STREAM_VALIDATOR
     util::StreamValidator.saveStream();
@@ -271,11 +273,11 @@ void Simulation::step() {
     // Monitoring. clock.now() gives time of end of last step,
     // and is when reporting happens in our time-series.
     continuous.update(population);
-    if (clock.interv_date() == mon::next_survey_date()) {
+    if (clock.interv_date() == mon::next_survey_date(monitoring)) {
         for (Host::Human& human : population.humans)
             Host::summarize(human, only_new_episode);
-        transmission.summarize();
-        mon::conclude_survey();
+        transmission.summarize(monitoring);
+        mon::conclude_survey(monitoring);
     }
 
     // Deploy interventions, at time clock.now().

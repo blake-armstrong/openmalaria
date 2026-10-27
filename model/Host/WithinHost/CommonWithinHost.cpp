@@ -40,7 +40,8 @@ namespace OM::WithinHost {
 
 // -----  Initialization  -----
 
-CommonWithinHostParams::CommonWithinHostParams(const scnXml::Scenario& scenario, const CommonInfectionModel& infection)
+CommonWithinHostParams::CommonWithinHostParams(const scnXml::Scenario& scenario, const CommonInfectionModel& infection,
+                                               const mon::MonitoringState& monitoring)
     : infection(infection) {
     const scnXml::Human human = scenario.getModel().getHuman();
     if (!human.getWeight().present()) {
@@ -53,7 +54,7 @@ CommonWithinHostParams::CommonWithinHostParams(const scnXml::Scenario& scenario,
     min_het_mass_mult = 0.5 / mass_by_age.eval(0.0);
 
     report_infected_or_patent_infected =
-        mon::is_used(mon::measure("totalInfs")) || mon::is_used(mon::measure("totalPatentInf"));
+        mon::is_used(monitoring, mon::measure("totalInfs")) || mon::is_used(monitoring, mon::measure("totalPatentInf"));
 }
 
 CommonWithinHost::CommonWithinHost(const FalciparumParams& params, const Pathogenesis::PathogenesisParams& pathogenesis,

@@ -53,17 +53,19 @@ SimTime read_latent_p(const scnXml::Model& model) {
     return latent_p;
 }
 
-bool any_patent_infected_measure_used() {
-    return mon::is_used(mon::measure("totalPatentInf")) || mon::is_used(mon::measure("totalPatentInf_Imported")) ||
-           mon::is_used(mon::measure("totalPatentInf_Introduced")) ||
-           mon::is_used(mon::measure("totalPatentInf_Indigenous"));
+bool any_patent_infected_measure_used(const mon::MonitoringState& monitoring) {
+    return mon::is_used(monitoring, mon::measure("totalPatentInf")) ||
+           mon::is_used(monitoring, mon::measure("totalPatentInf_Imported")) ||
+           mon::is_used(monitoring, mon::measure("totalPatentInf_Introduced")) ||
+           mon::is_used(monitoring, mon::measure("totalPatentInf_Indigenous"));
 }
 
 }
 
 WithinHostModel::WithinHostModel(const OM::Parameters& parameters, const util::ModelOptionFlags& options,
                                  const util::CommandLineOptions& command_line, const GenotypeRegistry& genotypes,
-                                 const DiagnosticRegistry& diagnostics, const scnXml::Scenario& scenario) {
+                                 const DiagnosticRegistry& diagnostics, const mon::MonitoringState& monitoring,
+                                 const scnXml::Scenario& scenario) {
     if (options.option(util::VivaxSimpleModel)) {
         assert(genotypes.count() == 1);
         kind = Kind::Vivax;
@@ -73,7 +75,7 @@ WithinHostModel::WithinHostModel(const OM::Parameters& parameters, const util::M
         return;
     }
 
-    falciparum = FalciparumParams(parameters, options, genotypes, diagnostics);
+    falciparum = FalciparumParams(parameters, options, genotypes, diagnostics, monitoring);
     pathogenesis = Pathogenesis::PathogenesisParams(parameters, options, scenario.getModel().getClinical(), false);
     falciparum.latent_p = read_latent_p(scenario.getModel());
 
@@ -98,10 +100,10 @@ WithinHostModel::WithinHostModel(const OM::Parameters& parameters, const util::M
     }
 
     if (kind == Kind::Common) {
-        common = CommonWithinHostParams(scenario, infection);
+        common = CommonWithinHostParams(scenario, infection, monitoring);
         common.pk_pd = pk_pd::PkPdParams(scenario, genotypes, command_line);
     } else {
-        descriptive.report_patent_infected = any_patent_infected_measure_used();
+        descriptive.report_patent_infected = any_patent_infected_measure_used(monitoring);
     }
 }
 

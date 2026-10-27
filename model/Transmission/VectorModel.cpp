@@ -502,11 +502,11 @@ void VectorModel::uninfect_vectors() {
         species[i]->uninfect_vectors();
 }
 
-void VectorModel::summarize() {
-    TransmissionModel::summarize();
+void VectorModel::summarize(mon::MonitoringState& monitoring) {
+    TransmissionModel::summarize(monitoring);
 
     for (size_t i = 0; i < species_index.size(); ++i) {
-        species[i]->summarize(i);
+        species[i]->summarize(monitoring, i);
     }
 }
 

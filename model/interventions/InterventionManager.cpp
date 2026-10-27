@@ -53,7 +53,8 @@ void InterventionManager::init(const scnXml::Interventions& interv_elt, Transmis
                                const WithinHost::DiagnosticRegistry& diagnostics,
                                const WithinHost::GenotypeRegistry& genotypes, WithinHost::WithinHostModel& within_host,
                                Clinical::ClinicalParams& clinical, Clinical::DecisionTreeLibrary& decision_trees,
-                               const util::ModelOptionFlags& options, const util::CommandLineOptions& command_line) {
+                               const util::ModelOptionFlags& options, const util::CommandLineOptions& command_line,
+                               mon::MonitoringState& monitoring) {
     next_timed = 0;
     verbose = command_line.option(util::CommandLine::Verbose);
 
@@ -176,7 +177,8 @@ void InterventionManager::init(const scnXml::Interventions& interv_elt, Transmis
         // 2. Read the list of deployments
         for (const auto& elt : human.getDeployment()) {
             // 2.a intervention components
-            auto intervention = std::make_shared<HumanIntervention>(elt.getComponent(), elt.getCondition(), *this);
+            auto intervention =
+                std::make_shared<HumanIntervention>(elt.getComponent(), elt.getCondition(), *this, monitoring);
 
             // 2.b intervention deployments
             for (const auto& cts_it : elt.getContinuous()) {

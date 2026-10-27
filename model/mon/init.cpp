@@ -48,26 +48,24 @@ namespace {
 
 constexpr uint32_t MaxCohortNumber = uint32_t{1} << 21;
 
-void init_age_groups(const scnXml::Monitoring& monitoring) {
-    MonitoringState& runtime = bridge::monitoring();
+void init_age_groups(MonitoringState& state, const scnXml::Monitoring& monitoring) {
     const scnXml::MonAgeGroup::GroupSequence& groups = monitoring.getAgeGroup().getGroup();
     if (!(monitoring.getAgeGroup().getLowerbound() <= 0.0)) {
         throw util::xml_scenario_error("Expected survey age-group lowerbound of 0");
     }
 
-    runtime.age_group_upper_bound.resize(groups.size() + 1);
+    state.age_group_upper_bound.resize(groups.size() + 1);
     for (size_t i = 0; i < groups.size(); ++i) {
-        runtime.age_group_upper_bound[i] = Sim::from_years_d(groups[i].getUpperbound());
+        state.age_group_upper_bound[i] = Sim::from_years_d(groups[i].getUpperbound());
     }
-    runtime.age_group_upper_bound[groups.size()] = Sim::future();
+    state.age_group_upper_bound[groups.size()] = Sim::future();
 }
 
 } // namespace
 
-void init_reporting(const scnXml::Scenario& scenario, const WithinHost::DiagnosticRegistry& diagnostics,
-                    const WithinHost::GenotypeRegistry& genotypes) {
-    MonitoringState& runtime = bridge::monitoring();
-    runtime.report_imr = -1;
+void init_reporting(MonitoringState& state, const scnXml::Scenario& scenario,
+                    const WithinHost::DiagnosticRegistry& diagnostics, const WithinHost::GenotypeRegistry& genotypes) {
+    state.report_imr = -1;
     const scnXml::MonitoringOptions& opts_elt = scenario.getMonitoring().getSurveyOptions();
     std::vector<OutMeasure> reported_measures;
     reported_measures.reserve(opts_elt.getOption().size());
@@ -116,7 +114,7 @@ void init_reporting(const scnXml::Scenario& scenario, const WithinHost::Diagnost
                                            " used more than once");
         }
         if (om.measure == AllCauseImr) {
-            runtime.report_imr = om.out_id;
+            state.report_imr = om.out_id;
             continue;
         }
         reported_measures.push_back(om);
@@ -128,11 +126,11 @@ void init_reporting(const scnXml::Scenario& scenario, const WithinHost::Diagnost
                                  : 1;
     const size_t n_drugs =
         scenario.getPharmacology().present() ? scenario.getPharmacology().get().getDrugs().getDrug().size() : 1;
-    internal::init_stores(reported_measures, n_species, genotypes.count(), n_drugs);
+    internal::init_stores(state, reported_measures, n_species, genotypes.count(), n_drugs);
 }
 
-SimTime read_survey_dates(const scnXml::Monitoring& monitoring, const util::CommandLineOptions& command_line) {
-    MonitoringState& runtime = bridge::monitoring();
+SimTime read_survey_dates(MonitoringState& state, const scnXml::Monitoring& monitoring,
+                          const util::CommandLineOptions& command_line) {
     const scnXml::Surveys::SurveyTimeSequence& survs = monitoring.getSurveys().getSurveyTime();
     std::map<SimTime, bool> surveys;
 
@@ -173,17 +171,17 @@ SimTime read_survey_dates(const scnXml::Monitoring& monitoring, const util::Comm
         }
     }
 
-    runtime.survey_dates.clear();
-    runtime.survey_dates.reserve(surveys.size());
-    runtime.n_surveys = 0;
+    state.survey_dates.clear();
+    state.survey_dates.reserve(surveys.size());
+    state.n_surveys = 0;
     for (const auto& [date, reporting] : surveys) {
-        const size_t num = reporting ? runtime.n_surveys++ : NotUsed;
-        runtime.survey_dates.push_back({.date = date, .num = num});
+        const size_t num = reporting ? state.n_surveys++ : NotUsed;
+        state.survey_dates.push_back({.date = date, .num = num});
     }
-    if (runtime.survey_dates.empty()) {
+    if (state.survey_dates.empty()) {
         throw util::xml_scenario_error("Scenario defines no surveys; at least one is required.");
     }
-    if (!runtime.survey_dates.back().is_reported()) {
+    if (!state.survey_dates.back().is_reported()) {
         std::cerr
             << "Warning: the last survey is unreported. Having surveys beyond the last reported survey is pointless."
             << std::endl;
@@ -191,7 +189,7 @@ SimTime read_survey_dates(const scnXml::Monitoring& monitoring, const util::Comm
 
     if (command_line.option(util::CommandLine::PrintSurveyTimes)) {
         std::cout << "Survey\tsteps\tdate\n";
-        for (const SurveyDate& survey_date : runtime.survey_dates) {
+        for (const SurveyDate& survey_date : state.survey_dates) {
             if (!survey_date.is_reported())
                 continue;
             std::cout << (survey_date.num + 1) << '\t' << Sim::in_steps(survey_date.date - Sim::start_date()) << '\t'
@@ -199,18 +197,18 @@ SimTime read_survey_dates(const scnXml::Monitoring& monitoring, const util::Comm
         }
     }
 
-    runtime.n_cohorts = 1;
+    state.n_cohorts = 1;
     if (monitoring.getCohorts().present()) {
-        runtime.n_cohorts = static_cast<uint32_t>(1) << monitoring.getCohorts().get().getSubPop().size();
+        state.n_cohorts = static_cast<uint32_t>(1) << monitoring.getCohorts().get().getSubPop().size();
     }
-    init_age_groups(monitoring);
-    return runtime.survey_dates.back().date;
+    init_age_groups(state, monitoring);
+    return state.survey_dates.back().date;
 }
 
-void init_cohorts(const scnXml::Monitoring& monitoring, const interventions::InterventionManager& interventions) {
-    MonitoringState& runtime = bridge::monitoring();
-    runtime.cohort_sub_pop_numbers.clear();
-    runtime.cohort_sub_pop_ids.clear();
+void init_cohorts(MonitoringState& state, const scnXml::Monitoring& monitoring,
+                  const interventions::InterventionManager& interventions) {
+    state.cohort_sub_pop_numbers.clear();
+    state.cohort_sub_pop_ids.clear();
     if (!monitoring.getCohorts().present())
         return;
 
@@ -218,7 +216,7 @@ void init_cohorts(const scnXml::Monitoring& monitoring, const interventions::Int
     uint32_t next_id = 0;
     for (const auto& sub_pop : mon_cohorts.getSubPop()) {
         const interventions::ComponentId comp_id = interventions.get_component_id(sub_pop.getId());
-        const bool inserted = runtime.cohort_sub_pop_ids.insert(std::make_pair(comp_id, next_id)).second;
+        const bool inserted = state.cohort_sub_pop_ids.insert(std::make_pair(comp_id, next_id)).second;
         if (!inserted) {
             throw util::xml_scenario_error(std::string("cohort specification uses sub-population \"")
                                                .append(sub_pop.getId())
@@ -232,7 +230,7 @@ void init_cohorts(const scnXml::Monitoring& monitoring, const interventions::Int
                                                .append("\" a number which is not a power of 2 between 1 and ")
                                                .append(std::to_string(MaxCohortNumber)));
         }
-        runtime.cohort_sub_pop_numbers.push_back(number);
+        state.cohort_sub_pop_numbers.push_back(number);
         next_id += 1;
     }
 }

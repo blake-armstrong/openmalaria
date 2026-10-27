@@ -96,7 +96,8 @@ struct MonitoringState {
 };
 
 namespace internal {
-void init_stores(const std::vector<OutMeasure>& enabled_measures, size_t n_species, size_t n_genotypes, size_t n_drugs);
+void init_stores(MonitoringState& state, const std::vector<OutMeasure>& enabled_measures, size_t n_species,
+                 size_t n_genotypes, size_t n_drugs);
 } // namespace internal
 
 } // namespace mon
@@ -131,43 +132,46 @@ namespace mon {
 
 // ----- info API -----
 
-inline size_t event_survey_number() { return bridge::monitoring().surv_num_event; }
-inline size_t stat_survey_number() {
-    const auto& r = bridge::monitoring();
-    return r.is_init && r.survey_index < r.survey_dates.size() ? r.survey_dates[r.survey_index].num : NotUsed;
+inline size_t event_survey_number(const MonitoringState& state) { return state.surv_num_event; }
+inline size_t stat_survey_number(const MonitoringState& state) {
+    return state.is_init && state.survey_index < state.survey_dates.size() ? state.survey_dates[state.survey_index].num
+                                                                           : NotUsed;
 }
-inline bool is_reported() { return !bridge::monitoring().is_init || stat_survey_number() != NotUsed; }
-inline SimTime next_survey_date() {
-    const auto& r = bridge::monitoring();
-    return r.is_init && r.survey_index < r.survey_dates.size() ? r.survey_dates[r.survey_index].date : Sim::future();
+inline bool is_reported(const MonitoringState& state) { return !state.is_init || stat_survey_number(state) != NotUsed; }
+inline SimTime next_survey_date(const MonitoringState& state) {
+    return state.is_init && state.survey_index < state.survey_dates.size() ? state.survey_dates[state.survey_index].date
+                                                                           : Sim::future();
 }
-size_t setup_condition(const std::string& measure_name, double min_value, double max_value, bool initial_state);
-bool check_condition(size_t condition_key);
-uint32_t update_cohort_set(uint32_t old, interventions::ComponentId sub_pop, bool is_member);
+size_t setup_condition(MonitoringState& state, const std::string& measure_name, double min_value, double max_value,
+                       bool initial_state);
+bool check_condition(const MonitoringState& state, size_t condition_key);
+uint32_t update_cohort_set(const MonitoringState& state, uint32_t old, interventions::ComponentId sub_pop,
+                           bool is_member);
 
 // ----- management API -----
 
-void update_age_group(size_t& index, SimTime age);
-void init_main_sim();
-void conclude_survey();
-void write_survey_data(const util::CommandLineOptions& command_line, const Clinical::InfantMortality& infant_mortality);
+void update_age_group(const MonitoringState& state, size_t& index, SimTime age);
+void init_main_sim(MonitoringState& state);
+void conclude_survey(MonitoringState& state);
+void write_survey_data(const MonitoringState& state, const util::CommandLineOptions& command_line,
+                       const Clinical::InfantMortality& infant_mortality);
 
-template <typename Stream> void checkpoint(Stream& stream);
-extern template void checkpoint<std::ostream>(std::ostream& stream);
-extern template void checkpoint<std::istream>(std::istream& stream);
+template <typename Stream> void checkpoint(MonitoringState& state, Stream& stream);
+extern template void checkpoint<std::ostream>(MonitoringState& state, std::ostream& stream);
+extern template void checkpoint<std::istream>(MonitoringState& state, std::istream& stream);
 
 // ----- direct recording API -----
 
-void record_stat(Measure measure, double val, size_t species = 0, size_t genotype = 0);
+void record_stat(MonitoringState& state, Measure measure, double val, size_t species = 0, size_t genotype = 0);
 void record_stat(Measure measure, const Host::Human& human, double val = 1.0, size_t species = 0, size_t genotype = 0,
                  size_t drug = 0);
-void record_event(Measure measure, size_t survey, size_t age, uint32_t cohort);
+void record_event(MonitoringState& state, Measure measure, size_t survey, size_t age, uint32_t cohort);
 void record_event(Measure measure, const Host::Human& human, double val = 1.0, int out_id = 0);
 void record_deploy(Measure timed_measure, Measure cts_measure, const Host::Human& human, DeployMethod method,
                    double val = 1.0);
-inline bool is_used(Measure measure) {
+inline bool is_used(const MonitoringState& state, Measure measure) {
     assert(measure < MeasureCount);
-    return !bridge::monitoring().stores_by_measure[measure].empty();
+    return !state.stores_by_measure[measure].empty();
 }
 
 } // namespace mon

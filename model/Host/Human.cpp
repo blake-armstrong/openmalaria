@@ -123,7 +123,7 @@ void Human::add_to_cohort(ComponentId id, SimTime duration) {
     if (duration <= Sim::zero())
         return; // nothing to do
     sub_pop_exp[id] = Sim::now_or_ts1() + duration;
-    cohort_set = mon::update_cohort_set(cohort_set, id, true);
+    cohort_set = mon::update_cohort_set(bridge::monitoring(), cohort_set, id, true);
 }
 
 void Human::remove_from_cohort(interventions::ComponentId id) { sub_pop_exp.erase(id); }
@@ -142,7 +142,7 @@ void Human::remove_first_event(interventions::sub_pop_remove::RemoveAtCode code)
                 // report removal due to first infection/bout/treatment
                 mon::record_event(mon::measure("nSubPopRemovalFirstEvent"), *this);
             }
-            cohort_set = mon::update_cohort_set(cohort_set, exp_it->first, false);
+            cohort_set = mon::update_cohort_set(bridge::monitoring(), cohort_set, exp_it->first, false);
             // remove (affects reporting, restrictToSubPop and cumulative deployment):
             sub_pop_exp.erase(exp_it);
         }
@@ -156,7 +156,7 @@ void Human::update_cohort_set() {
             // don't flush reports
             // report removal due to expiry
             mon::record_event(mon::measure("nSubPopRemovalTooOld"), *this);
-            cohort_set = mon::update_cohort_set(cohort_set, exp_it->first, false);
+            cohort_set = mon::update_cohort_set(bridge::monitoring(), cohort_set, exp_it->first, false);
             // erase element, but continue iteration
             exp_it = sub_pop_exp.erase(exp_it);
         } else {
@@ -212,7 +212,7 @@ void summarize(Human& human, bool survey_only_new_ep) {
     const bool patent = human.within_host_model->summarize(human);
     human.inf_incidence->summarize(human);
 
-    if (patent && mon::is_reported()) {
+    if (patent && mon::is_reported(bridge::monitoring())) {
         // this should happen after all other reporting!
         human.remove_first_event(interventions::sub_pop_remove::OnFirstInfection);
     }
@@ -230,7 +230,7 @@ void update(Human& human, Transmission::TransmissionModel& transmission, const N
     util::streamValidate(age0);
 
     // monitoringAgeGroup is the group for the start of the time step.
-    mon::update_age_group(human.monitoring_age_group, age0);
+    mon::update_age_group(bridge::monitoring(), human.monitoring_age_group, age0);
 
     human.update_cohort_set();
 

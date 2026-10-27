@@ -31,7 +31,7 @@
 namespace OM {
 
 void Clock::init(const scnXml::Scenario& scenario, const util::ModelNameProvider& mnp,
-                 const util::CommandLineOptions& command_line) {
+                 const util::CommandLineOptions& command_line, mon::MonitoringState& monitoring) {
     init_interval(scenario, mnp);
     steps_in_year = in_steps(Sim::one_year());
     years_in_step = 1.0 / static_cast<double>(steps_in_year);
@@ -52,7 +52,7 @@ void Clock::init(const scnXml::Scenario& scenario, const util::ModelNameProvider
     }
 
     interv = Sim::never(); // large negative number
-    end = mon::read_survey_dates(mon, command_line);
+    end = mon::read_survey_dates(monitoring, mon, command_line);
 }
 
 void Clock::init_interval(const scnXml::Scenario& scenario, util::ModelNameProvider mnp) {

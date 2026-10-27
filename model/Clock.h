@@ -38,6 +38,9 @@ class Scenario;
 }
 
 namespace OM {
+namespace mon {
+struct MonitoringState;
+}
 namespace util {
 class CommandLineOptions;
 }
@@ -45,7 +48,7 @@ class CommandLineOptions;
 class Clock {
 public:
     void init(const scnXml::Scenario& scenario, const util::ModelNameProvider& mnp,
-              const util::CommandLineOptions& command_line);
+              const util::CommandLineOptions& command_line, mon::MonitoringState& monitoring);
 
     SimTime one_ts() const { return interval; }
     int in_steps(SimTime d) const { return d / interval; }

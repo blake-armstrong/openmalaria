@@ -157,7 +157,7 @@ public:
      * and list of conditions of deployment. **/
     HumanIntervention(const xsd::cxx::tree::sequence<scnXml::Component>& component_list,
                       const xsd::cxx::tree::sequence<scnXml::Condition>& condition_list,
-                      const InterventionManager& manager);
+                      const InterventionManager& manager, mon::MonitoringState& monitoring);
     /** Create from a list of XML elements: list of intervention components
      * with unconditional deployment (for triggered deployments). **/
     HumanIntervention(const xsd::cxx::tree::sequence<scnXml::DTDeploy>& component_list,

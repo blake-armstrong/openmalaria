@@ -72,7 +72,7 @@ HumanIntervention::HumanIntervention(const xsd::cxx::tree::sequence<scnXml::Comp
 }
 HumanIntervention::HumanIntervention(const xsd::cxx::tree::sequence<scnXml::Component>& component_list,
                                      const xsd::cxx::tree::sequence<scnXml::Condition>& condition_list,
-                                     const InterventionManager& manager) {
+                                     const InterventionManager& manager, mon::MonitoringState& monitoring) {
     components.reserve(component_list.size());
     for (const auto& it : component_list) {
         const ComponentId id = manager.get_component_id(it.getId());
@@ -95,7 +95,7 @@ HumanIntervention::HumanIntervention(const xsd::cxx::tree::sequence<scnXml::Comp
     for (const auto& it : condition_list) {
         const double min = it.getMinValue().present() ? it.getMinValue().get() : -numeric_limits<double>::infinity();
         const double max = it.getMaxValue().present() ? it.getMaxValue().get() : numeric_limits<double>::infinity();
-        conditions.push_back(mon::setup_condition(it.getMeasure(), min, max, it.getInitialState()));
+        conditions.push_back(mon::setup_condition(monitoring, it.getMeasure(), min, max, it.getInitialState()));
     }
 }
 HumanIntervention::HumanIntervention(const xsd::cxx::tree::sequence<scnXml::DTDeploy>& component_list,
@@ -123,7 +123,7 @@ HumanIntervention::HumanIntervention(const xsd::cxx::tree::sequence<scnXml::DTDe
 void HumanIntervention::deploy(Human& human, mon::DeployMethod method, VaccineLimits vacc_limits) const {
     for (size_t cond : conditions) {
         // Abort deployment if any condition is false.
-        if (!mon::check_condition(cond))
+        if (!mon::check_condition(bridge::monitoring(), cond))
             return;
     }
 

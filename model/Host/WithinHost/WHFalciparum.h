@@ -36,6 +36,10 @@ using namespace std;
 
 class InfectionImmunitySuite;
 
+namespace OM::mon {
+struct MonitoringState;
+}
+
 namespace OM::WithinHost {
 class DiagnosticRegistry;
 class GenotypeRegistry;
@@ -87,7 +91,8 @@ struct FalciparumParams {
 
     FalciparumParams() = default;
     FalciparumParams(const OM::Parameters& parameters, const util::ModelOptionFlags& options,
-                     const GenotypeRegistry& genotypes, const DiagnosticRegistry& diagnostics);
+                     const GenotypeRegistry& genotypes, const DiagnosticRegistry& diagnostics,
+                     const mon::MonitoringState& monitoring);
 };
 
 /**

@@ -35,6 +35,9 @@
 #include <limits>
 
 namespace OM {
+namespace mon {
+struct MonitoringState;
+}
 
 namespace Transmission::Anopheles {
 using std::numeric_limits;
@@ -362,7 +365,7 @@ public:
     virtual double get_res_requirements() const { return numeric_limits<double>::quiet_NaN(); }
 
     /// Write some per-species summary information.
-    void summarize(size_t species) const;
+    void summarize(mon::MonitoringState& monitoring, size_t species) const;
     //@}
 
     virtual void checkpoint(istream& stream) { (*this) & stream; }

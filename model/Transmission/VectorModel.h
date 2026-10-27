@@ -81,7 +81,7 @@ public:
 
     void uninfect_vectors() override;
 
-    void summarize() override;
+    void summarize(mon::MonitoringState& monitoring) override;
 
 protected:
     void checkpoint(istream& stream) override;
