@@ -882,6 +882,17 @@ GROUPS = {
     ] + [
         Variant("descriptive_no_params_23_27", "scenario5.xml", lambda s: drop_parameter(drop_parameter(s, 23), 27)),
     ],
+    "units": [
+        Variant("sample_interpolations", "scenario5.xml", args=["--sample-interpolations"]),
+        Variant("sample_interpolations_change_hs", "scenario4.xml", args=["--sample-interpolations"]),
+        Variant("change_hs_nodeprec", "scenario4.xml", args=["--no-deprecation-warnings"]),
+        Variant("change_hs_late_date", "scenario4.xml",
+                lambda s: rep(s, '<timedDeployment time="0">', '<timedDeployment time="2600-01-01">')),
+        Variant("decay_steps", ITNS, lambda s: rep(s, '<decay L="4" function="exponential"/>',
+                                                   '<decay L="292t" function="exponential"/>')),
+        Variant("decay_nodeprec", ITNS, args=["--no-deprecation-warnings"]),
+        Variant("decay_checkpoint", ITNS, args=["--checkpoint"], runs=2),
+    ],
 }
 
 
@@ -920,7 +931,7 @@ def run(binary, variant, text, work):
         results.append((p.returncode, p.stdout.replace(work, "WORK"), TRACE.sub("SOURCE", p.stderr.replace(work, "WORK"))))
     files = {}
     for f in sorted(os.listdir(work)):
-        if f.startswith(("output", "ctsout", "checkpoint")):
+        if f.startswith(("output", "ctsout", "checkpoint")) or f.endswith(".csv"):
             with open(os.path.join(work, f), "rb") as fh:
                 files[f] = fh.read()
     return results, files
@@ -929,7 +940,8 @@ def run(binary, variant, text, work):
 def main():
     parser = argparse.ArgumentParser(
         description="Run crafted scenario variants with a base and a candidate openMalaria and compare their "
-                    "stdout, stderr, exit codes, outputs and checkpoint files. The source file and line that a "
+                    "stdout, stderr, exit codes, outputs, checkpoint files and CSV files they write (such as "
+                    "--sample-interpolations'). The source file and line that a "
                     "traced exception reports in stderr are not compared.")
     parser.add_argument("base", help="base openMalaria binary")
     parser.add_argument("candidate", help="candidate openMalaria binary")
