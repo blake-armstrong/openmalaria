@@ -149,7 +149,7 @@ public:
      * Overriding functions should call this base version too. */
     virtual void summarize(mon::MonitoringState& monitoring) {
         mon::record_stat(monitoring, mon::measure("nTransmit"),
-                         lagged_kappa[Sim::modulo_steps(Sim::now(), lagged_kappa.size())]);
+                         lagged_kappa[Sim::modulo_steps(Sim::now(), static_cast<int>(lagged_kappa.size()))]);
         mon::record_stat(monitoring, mon::measure("annAvgK"), annual_average_kappa);
 
         if (!mon::is_reported(monitoring))
