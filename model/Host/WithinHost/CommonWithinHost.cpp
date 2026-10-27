@@ -41,14 +41,15 @@ namespace OM::WithinHost {
 // -----  Initialization  -----
 
 CommonWithinHostParams::CommonWithinHostParams(const scnXml::Scenario& scenario, const CommonInfectionModel& infection,
-                                               const mon::MonitoringState& monitoring)
+                                               const mon::MonitoringState& monitoring, const Clock& clock,
+                                               const util::CommandLineOptions& command_line)
     : infection(infection) {
     const scnXml::Human human = scenario.getModel().getHuman();
     if (!human.getWeight().present()) {
         // Technically this is needed by the PK/PD and Molineaux models
         throw util::xml_scenario_error("model->human->weight element required by certain models");
     }
-    mass_by_age.set(human.getWeight().get(), "weight");
+    mass_by_age.set(human.getWeight().get(), "weight", clock, command_line);
     het_mass_mult_std_dev = human.getWeight().get().getMultStdDev();
     // hetWeightMult must be large enough that birth weight is at least 0.5 kg:
     min_het_mass_mult = 0.5 / mass_by_age.eval(0.0);

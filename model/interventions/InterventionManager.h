@@ -69,7 +69,7 @@ public:
               const Transmission::PerHostParams& per_host_params, const WithinHost::DiagnosticRegistry& diagnostics,
               const WithinHost::GenotypeRegistry& genotypes, WithinHost::WithinHostModel& within_host,
               Clinical::ClinicalParams& clinical, Clinical::DecisionTreeLibrary& decision_trees,
-              const util::ModelOptionFlags& options, const util::CommandLineOptions& command_line,
+              const util::ModelOptionFlags& options, const util::CommandLineOptions& command_line, const Clock& clock,
               mon::MonitoringState& monitoring);
 
     /// Checkpointing

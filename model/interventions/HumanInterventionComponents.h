@@ -236,12 +236,13 @@ private:
 /// Simple treatment: no PK/PD, just remove parasites
 class TreatSimpleComponent : public HumanInterventionComponent {
 public:
-    TreatSimpleComponent(ComponentId id, const scnXml::DTTreatSimple& elt, const util::ModelOptionFlags& options)
+    TreatSimpleComponent(ComponentId id, const scnXml::DTTreatSimple& elt, const util::ModelOptionFlags& options,
+                         const Clock& clock, const util::CommandLineOptions& command_line)
         : HumanInterventionComponent(id) {
         //NOTE: this code is currently identical to that in CMDTTreatSimple
         try {
-            SimTime dur_l = UnitParse::readShortDuration(elt.getDurationLiver(), UnitParse::NONE),
-                    dur_b = UnitParse::readShortDuration(elt.getDurationBlood(), UnitParse::NONE);
+            SimTime dur_l = UnitParse::readShortDuration(elt.getDurationLiver(), UnitParse::NONE, clock, command_line),
+                    dur_b = UnitParse::readShortDuration(elt.getDurationBlood(), UnitParse::NONE, clock, command_line);
             const SimTime neg1 = -Sim::one_ts();
             if (dur_l < neg1 || dur_b < neg1) {
                 throw util::xml_scenario_error("treatSimple: cannot have durationBlood or durationLiver less than -1");

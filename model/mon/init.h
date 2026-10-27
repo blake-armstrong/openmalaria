@@ -30,6 +30,9 @@ class Scenario;
 class Monitoring;
 }
 
+namespace OM {
+class Clock;
+}
 namespace OM::util {
 class CommandLineOptions;
 }
@@ -45,7 +48,7 @@ namespace OM::mon {
 
 struct MonitoringState;
 
-SimTime read_survey_dates(MonitoringState& state, const scnXml::Monitoring& monitoring,
+SimTime read_survey_dates(MonitoringState& state, const scnXml::Monitoring& monitoring, const Clock& clock,
                           const util::CommandLineOptions& command_line);
 void init_reporting(MonitoringState& state, const scnXml::Scenario& scenario,
                     const WithinHost::DiagnosticRegistry& diagnostics, const WithinHost::GenotypeRegistry& genotypes);

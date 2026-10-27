@@ -36,7 +36,8 @@ using util::NormalSampler;
 
 class IRSComponent : public Transmission::HumanVectorInterventionComponent {
 public:
-    IRSComponent(ComponentId id, const scnXml::IRSDescription& elt, const map<string, size_t>& species_name_map);
+    IRSComponent(ComponentId id, const scnXml::IRSDescription& elt, const map<string, size_t>& species_name_map,
+                 const Clock& clock, const util::CommandLineOptions& command_line);
 
     void deploy(Host::Human& human, mon::DeployMethod method, VaccineLimits) const override;
 

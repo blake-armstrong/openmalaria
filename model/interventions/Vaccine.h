@@ -49,7 +49,8 @@ class VaccineComponent : public HumanInterventionComponent {
 public:
     VaccineComponent(ComponentId id, const scnXml::VaccineDescription& seq, vaccines::Types type,
                      bool report_deployments, const util::ModelOptionFlags& options,
-                     const WithinHost::GenotypeRegistry& genotypes);
+                     const WithinHost::GenotypeRegistry& genotypes, const Clock& clock,
+                     const util::CommandLineOptions& command_line);
 
     void deploy(Host::Human& human, mon::DeployMethod method, VaccineLimits vacc_limits) const override;
 

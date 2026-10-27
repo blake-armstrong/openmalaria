@@ -43,13 +43,15 @@ namespace OM::Clinical {
 
 ClinicalParams::ClinicalParams(const OM::Parameters& parameters, const util::ModelOptionFlags& options,
                                const util::CommandLineOptions& command_line,
-                               const WithinHost::DiagnosticRegistry& diagnostics, const scnXml::Scenario& scenario)
+                               const WithinHost::DiagnosticRegistry& diagnostics, const scnXml::Scenario& scenario,
+                               const Clock& clock)
     : diagnostics(&diagnostics) {
     const scnXml::Clinical& clinical = scenario.getModel().getClinical();
     try {
         indirect_mort_bugfix = options.option(util::IndirectMortalityFix);
         //NOTE: if changing XSD, this should not have a default unit:
-        health_system_memory = UnitParse::readShortDuration(clinical.getHealthSystemMemory(), UnitParse::STEPS);
+        health_system_memory =
+            UnitParse::readShortDuration(clinical.getHealthSystemMemory(), UnitParse::STEPS, clock, command_line);
         odds_ratio_threshold = exp(parameters[Parameter::LogOddsRatioCfCommunity]);
         non_malaria_infant_mortality = parameters[Parameter::NonMalariaInfantMortality];
     } catch (const util::format_error& e) {
@@ -58,7 +60,7 @@ ClinicalParams::ClinicalParams(const OM::Parameters& parameters, const util::Mod
 
     if (options.option(util::ClinicalEventScheduler)) {
         kind = Kind::EventScheduler;
-        event_scheduler = EventSchedulerParams(parameters, options, clinical);
+        event_scheduler = EventSchedulerParams(parameters, options, clinical, clock, command_line);
     } else {
         if (scenario.getHealthSystem().getImmediateOutcomes().present()) {
             kind = Kind::ImmediateOutcomes;
@@ -80,27 +82,31 @@ ClinicalParams::ClinicalParams(const OM::Parameters& parameters, const util::Mod
 
 void ClinicalParams::set_health_system(const scnXml::HealthSystem& health_system, DecisionTreeLibrary& decision_trees,
                                        WithinHost::WithinHostModel& within_host,
-                                       const interventions::InterventionManager& interventions) {
-    case_fatality_rate.set(health_system.getCFR(), "CFR");
-    p_sequelae_inpatient.set(health_system.getPSequelaeInpatient(), "pSequelaeInpatient");
+                                       const interventions::InterventionManager& interventions, const Clock& clock,
+                                       const util::CommandLineOptions& command_line) {
+    case_fatality_rate.set(health_system.getCFR(), "CFR", clock, command_line);
+    p_sequelae_inpatient.set(health_system.getPSequelaeInpatient(), "pSequelaeInpatient", clock, command_line);
     if (kind == Kind::EventScheduler) {
         if (!health_system.getEventScheduler().present()) {
             throw util::xml_scenario_error("Expected EventScheduler "
                                            "section in healthSystem data (initial or intervention)");
         }
-        event_scheduler.set_health_system(health_system.getEventScheduler().get(), case_fatality_rate, decision_trees);
+        event_scheduler.set_health_system(health_system.getEventScheduler().get(), case_fatality_rate, decision_trees,
+                                          clock, command_line);
     } else if (kind == Kind::ImmediateOutcomes) {
         if (!health_system.getImmediateOutcomes().present()) {
             throw util::xml_scenario_error("Expected ImmediateOutcomes "
                                            "section in healthSystem data (initial or intervention)");
         }
-        set_immediate_outcomes(health_system.getImmediateOutcomes().get(), within_host, interventions);
+        set_immediate_outcomes(health_system.getImmediateOutcomes().get(), within_host, interventions, clock,
+                               command_line);
     } else {
         if (!health_system.getDecisionTree5Day().present()) {
             throw util::xml_scenario_error("Expected DecisionTree5Day "
                                            "section in healthSystem data (initial or intervention)");
         }
-        set_decision_tree_5day(health_system.getDecisionTree5Day().get(), decision_trees, within_host, interventions);
+        set_decision_tree_5day(health_system.getDecisionTree5Day().get(), decision_trees, within_host, interventions,
+                               clock, command_line);
     }
 }
 

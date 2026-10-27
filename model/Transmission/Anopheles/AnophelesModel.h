@@ -258,10 +258,12 @@ public:
                        double sigma_dff);
 
     /** Set up the non-host-specific interventions. */
-    void init_vector_interv(const scnXml::VectorSpeciesIntervention& elt, size_t instance);
+    void init_vector_interv(const scnXml::VectorSpeciesIntervention& elt, size_t instance, const Clock& clock,
+                            const util::CommandLineOptions& command_line);
 
     /** Set up trap parameters. */
-    void init_vector_trap(const scnXml::Description1& desc, size_t instance);
+    void init_vector_trap(const scnXml::Description1& desc, size_t instance, const Clock& clock,
+                          const util::CommandLineOptions& command_line);
 
     /** Work out whether another interation is needed for initialisation and if
      * so, make necessary changes.

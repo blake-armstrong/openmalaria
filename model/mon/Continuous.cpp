@@ -35,7 +35,8 @@ using util::xml_scenario_error;
 
 /* Initialise: enable outputs registered and requested in XML.
          * Search for Continuous::registerCallback to see outputs available. */
-void Continuous::init(const scnXml::Monitoring& monitoring, bool is_checkpoint, const string& ctsout_name) {
+void Continuous::init(const scnXml::Monitoring& monitoring, bool is_checkpoint, const Clock& clock,
+                      const util::CommandLineOptions& command_line) {
     const scnXml::Monitoring::ContinuousOptional& cts_opt = monitoring.getContinuous();
     if (!cts_opt.present()) {
         cts_period = Sim::zero();
@@ -44,7 +45,7 @@ void Continuous::init(const scnXml::Monitoring& monitoring, bool is_checkpoint, 
     const auto& options = cts_opt.get();
     try {
         //NOTE: if changing XSD, this should not have a default unit:
-        cts_period = UnitParse::readShortDuration(options.getPeriod(), UnitParse::STEPS);
+        cts_period = UnitParse::readShortDuration(options.getPeriod(), UnitParse::STEPS, clock, command_line);
         if (cts_period < Sim::one_ts())
             throw util::format_error("must be >= 1 time step");
     } catch (const util::format_error& e) {
@@ -65,13 +66,13 @@ void Continuous::init(const scnXml::Monitoring& monitoring, bool is_checkpoint, 
 
     if (is_checkpoint) {
         // When loading a check-point, we resume reporting to this file.
-        cts_stream.open(ctsout_name, ios::binary | ios::ate | ios::in | ios::out);
+        cts_stream.open(command_line.ctsout_name(), ios::binary | ios::ate | ios::in | ios::out);
         if (cts_stream.fail())
             throw util::checkpoint_error("Continuous: resume error (no file)");
         return; // checkpoint() sets the saved output position later
     }
 
-    cts_stream.open(ctsout_name, ios::binary | ios::out);
+    cts_stream.open(command_line.ctsout_name(), ios::binary | ios::out);
     cts_stream << "##\t##\n"; // live-graph needs a delimiter specifier when it is not a comma
     if (during_init)
         cts_stream << "simulation time\t";

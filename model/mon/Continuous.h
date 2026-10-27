@@ -61,7 +61,8 @@ public:
 	 * assume we shouldn't overwrite existing files for security reasons).
 	 * 
 	 * Callbacks should be registered before init() is called. */
-    void init(const scnXml::Monitoring& monitoring, bool is_checkpoint, const string& ctsout_name);
+    void init(const scnXml::Monitoring& monitoring, bool is_checkpoint, const Clock& clock,
+              const util::CommandLineOptions& command_line);
 
     void checkpoint(ostream& stream);
     void checkpoint(istream& stream);

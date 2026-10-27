@@ -42,7 +42,7 @@ void Clock::init(const scnXml::Scenario& scenario, const util::ModelNameProvider
     if (mon.getStartDate().present()) {
         try {
             // on failure, this throws or returns sim::never()
-            start = UnitParse::parseDate(mon.getStartDate().get());
+            start = UnitParse::parseDate(mon.getStartDate().get(), *this);
             if (start == Sim::never()) {
                 throw util::format_error("invalid format (expected YYYY-MM-DD)");
             }
@@ -52,7 +52,7 @@ void Clock::init(const scnXml::Scenario& scenario, const util::ModelNameProvider
     }
 
     interv = Sim::never(); // large negative number
-    end = mon::read_survey_dates(monitoring, mon, command_line);
+    end = mon::read_survey_dates(monitoring, mon, *this, command_line);
 }
 
 void Clock::init_interval(const scnXml::Scenario& scenario, util::ModelNameProvider mnp) {

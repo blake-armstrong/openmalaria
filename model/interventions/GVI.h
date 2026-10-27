@@ -43,7 +43,8 @@ public:
      * @param elt Component description from XML
      * @param species_name_map Map of species names to indices.
      */
-    GVIComponent(ComponentId, const scnXml::GVIDescription& elt, const map<string, size_t>& species_name_map);
+    GVIComponent(ComponentId, const scnXml::GVIDescription& elt, const map<string, size_t>& species_name_map,
+                 const Clock& clock, const util::CommandLineOptions& command_line);
 
     void deploy(Host::Human& human, mon::DeployMethod method, VaccineLimits) const override;
 

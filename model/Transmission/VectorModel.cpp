@@ -268,16 +268,18 @@ void VectorModel::init2(const vector<Host::Human>& population) {
 }
 
 void VectorModel::init_vector_interv(const scnXml::Description::AnophelesSequence& list, size_t instance,
-                                     const string& name) {
+                                     const string& name, const Clock& clock,
+                                     const util::CommandLineOptions& command_line) {
     SpeciesIndexChecker checker(name, species_index);
     for (const scnXml::VectorSpeciesIntervention& anoph : list) {
         const string& mosq = anoph.getMosquito();
-        species[checker.getIndex(mosq)]->init_vector_interv(anoph, instance);
+        species[checker.getIndex(mosq)]->init_vector_interv(anoph, instance, clock, command_line);
     }
     checker.checkNoneMissed();
 }
 void VectorModel::init_vector_trap(const scnXml::VectorTrap::DescriptionSequence& list, size_t instance,
-                                   const scnXml::VectorTrap::NameOptional& name_opt) {
+                                   const scnXml::VectorTrap::NameOptional& name_opt, const Clock& clock,
+                                   const util::CommandLineOptions& command_line) {
     stringstream name_ss;
     if (name_opt.present())
         name_ss << name_opt.get();
@@ -287,7 +289,7 @@ void VectorModel::init_vector_trap(const scnXml::VectorTrap::DescriptionSequence
     SpeciesIndexChecker checker(name, species_index);
     for (const scnXml::Description1& anoph : list) {
         const string& mosq = anoph.getMosquito();
-        species[checker.getIndex(mosq)]->init_vector_trap(anoph, instance);
+        species[checker.getIndex(mosq)]->init_vector_trap(anoph, instance, clock, command_line);
     }
     checker.checkNoneMissed();
 }

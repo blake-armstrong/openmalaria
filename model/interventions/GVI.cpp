@@ -31,9 +31,10 @@
 namespace OM::interventions {
 
 GVIComponent::GVIComponent(ComponentId id, const scnXml::GVIDescription& elt,
-                           const map<string, size_t>& species_name_map)
+                           const map<string, size_t>& species_name_map, const Clock& clock,
+                           const util::CommandLineOptions& command_line)
     : Transmission::HumanVectorInterventionComponent(id) {
-    decay = DecayFunction::makeObject(elt.getDecay(), "interventions.human.vector.decay");
+    decay = DecayFunction::makeObject(elt.getDecay(), "interventions.human.vector.decay", clock, command_line);
     // assume usage modifier is 100% if none is specified
     double prop_use = NAN;
     if (elt.getUsage().present()) {

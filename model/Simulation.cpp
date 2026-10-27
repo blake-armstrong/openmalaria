@@ -92,15 +92,17 @@ Simulation::Simulation(std::unique_ptr<scnXml::Scenario> scenario, util::Command
                         genotypes); // Reporting init depends on diagnostics and monitoring
 
     // Init models used by humans
-    per_host_params = Transmission::PerHostParams(scenario_xml->getModel().getHuman().getAvailabilityToMosquitoes());
+    per_host_params = Transmission::PerHostParams(scenario_xml->getModel().getHuman().getAvailabilityToMosquitoes(),
+                                                  clock, command_line);
     infection_incidence = Host::InfectionIncidenceParams(parameters, model_options);
     continuous.register_callback("new infections", "\tnew infections",
                                  [this](ostream& stream) { new_infections.report(stream); });
     within_host_model = WithinHost::WithinHostModel(parameters, model_options, command_line, genotypes, diagnostics,
-                                                    monitoring, *scenario_xml);
-    clinical = Clinical::ClinicalParams(parameters, model_options, command_line, diagnostics, *scenario_xml);
-    decision_trees = Clinical::DecisionTreeLibrary(diagnostics, within_host_model.common.pk_pd,
-                                                   clinical.health_system_memory, intervention_manager);
+                                                    monitoring, *scenario_xml, clock);
+    clinical = Clinical::ClinicalParams(parameters, model_options, command_line, diagnostics, *scenario_xml, clock);
+    decision_trees =
+        Clinical::DecisionTreeLibrary(diagnostics, within_host_model.common.pk_pd, clinical.health_system_memory,
+                                      intervention_manager, clock, command_line);
     infant_mortality = Clinical::InfantMortality(clinical.non_malaria_infant_mortality);
     neonatal_mortality = Host::NeonatalMortality(scenario_xml->getModel().getClinical(), diagnostics, command_line);
     age_structure = AgeStructure(scenario_xml->getDemography());
@@ -131,9 +133,9 @@ Simulation::Simulation(std::unique_ptr<scnXml::Scenario> scenario, util::Command
     // MDA1D may depend on health system (too complex to verify)
     intervention_manager.init(scenario_xml->getInterventions(), *transmission_model, per_host_params, diagnostics,
                               genotypes, within_host_model, clinical, decision_trees, model_options, command_line,
-                              monitoring);
-    clinical.set_health_system(scenario_xml->getHealthSystem(), decision_trees, within_host_model,
-                               intervention_manager); // Depends on interventions, PK/PD (from humanPop)
+                              clock, monitoring);
+    clinical.set_health_system(scenario_xml->getHealthSystem(), decision_trees, within_host_model, intervention_manager,
+                               clock, command_line); // Depends on interventions, PK/PD (from humanPop)
     mon::init_cohorts(monitoring, scenario_xml->getMonitoring(), intervention_manager); // Depends on interventions
 
     clock.reset_time();
@@ -173,7 +175,7 @@ void Simulation::run(const CheckpointOptions& checkpointing) {
 }
 
 void Simulation::resume(const std::string& checkpoint_file) {
-    continuous.init(scenario_xml->getMonitoring(), true, command_line.ctsout_name());
+    continuous.init(scenario_xml->getMonitoring(), true, clock, command_line);
     read_checkpoint(checkpoint_file, command_line, clock, master_rngs, genotypes, neonatal_mortality, new_infections,
                     infant_mortality, continuous, monitoring, end_time, est_end_time, *population_model,
                     *transmission_model, intervention_manager);
@@ -183,7 +185,7 @@ void Simulation::resume(const std::string& checkpoint_file) {
 }
 
 void Simulation::start_new(const CheckpointOptions& checkpointing) {
-    continuous.init(scenario_xml->getMonitoring(), false, command_line.ctsout_name());
+    continuous.init(scenario_xml->getMonitoring(), false, clock, command_line);
     population_model->create_initial_humans();
     transmission_model->init2(population_model->humans);
 

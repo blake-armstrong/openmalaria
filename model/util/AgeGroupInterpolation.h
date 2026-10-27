@@ -29,7 +29,9 @@ namespace scnXml {
 class AgeGroupValues;
 }
 namespace OM {
+class Clock;
 namespace util {
+class CommandLineOptions;
 
 /** This struct is not for external use. Use AgeGroupInterpolator instead.
  * 
@@ -44,7 +46,7 @@ struct AgeGroupInterpolation {
 protected:
     /** Sample interpolator between 0 and max age, outputting to a csv file
      * called name.csv. */
-    void outputSamples(const string name);
+    void outputSamples(const string name, const Clock& clock, const CommandLineOptions& command_line);
 };
 
 /** A class representing deterministic interpolation of data collected
@@ -67,7 +69,8 @@ struct AgeGroupInterpolator {
      * @param ageGroups XML element of per-age-group values
      * @param eltName Name of XML element (for reasonable error reporting)
      */
-    void set(const scnXml::AgeGroupValues& ageGroups, const char* eltName);
+    void set(const scnXml::AgeGroupValues& ageGroups, const char* eltName, const Clock& clock,
+             const CommandLineOptions& command_line);
 
     /** Set back to initial state. */
     void reset();

@@ -34,7 +34,8 @@ using namespace ::OM::util;
 
 void ClinicalParams::set_decision_tree_5day(const scnXml::HSDT5Day& hs_description, DecisionTreeLibrary& decision_trees,
                                             WithinHost::WithinHostModel& within_host,
-                                            const interventions::InterventionManager& interventions) {
+                                            const interventions::InterventionManager& interventions, const Clock& clock,
+                                            const util::CommandLineOptions& command_line) {
     const double access_uc_official1 = hs_description.getPSeekOfficialCareUncomplicated1().getValue();
     const double access_uc_official2 = hs_description.getPSeekOfficialCareUncomplicated2().getValue();
     // Note: this asymmetry is historical, and probably matters little:
@@ -59,7 +60,8 @@ void ClinicalParams::set_decision_tree_5day(const scnXml::HSDT5Day& hs_descripti
     decision_tree_5day.tree_uc_self_treat = &decision_trees.create(hs_description.getTreeUCSelfTreat(), true);
 
     five_day.cure_rate_severe = hs_description.getCureRateSevere().getValue();
-    five_day.treatment_severe = within_host.treatments.add(hs_description.getTreatmentSevere(), interventions);
+    five_day.treatment_severe =
+        within_host.treatments.add(hs_description.getTreatmentSevere(), interventions, clock, command_line);
 
     if (vivax_simple_model) {
         within_host.vivax.set_health_system(

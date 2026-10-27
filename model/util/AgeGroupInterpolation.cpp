@@ -23,6 +23,7 @@
 #include <fstream>
 #include <utility>
 
+#include "Clock.h"
 #include "util/AgeGroupInterpolation.h"
 #include "util/CommandLine.h"
 #include "util/errors.h"
@@ -38,13 +39,14 @@ namespace util {
 
 // ———  AgeGroupInterpolation derivatives  ———
 
-void AgeGroupInterpolation::outputSamples(const string name) {
-    if (!util::CommandLine::option(util::CommandLine::SampleInterpolations)) {
+void AgeGroupInterpolation::outputSamples(const string name, const Clock& clock,
+                                          const CommandLineOptions& command_line) {
+    if (!command_line.option(util::CommandLine::SampleInterpolations)) {
         return;
     }
     ofstream fstream((name + ".csv").c_str());
 
-    double max = Sim::in_years(Sim::max_human_age());
+    double max = Sim::in_years(clock.max_human_age());
     for (double age = 0.0; age < max; age += 0.1) {
         fstream << age << "," << this->eval(age) << endl;
     }
@@ -67,7 +69,8 @@ AgeGroupDummy AgeGroupDummy::singleton;
     ********************************************/
 class AgeGroupPiecewiseConstant : public AgeGroupInterpolation {
 public:
-    AgeGroupPiecewiseConstant(const scnXml::AgeGroupValues& ageGroups, const char* eltName) {
+    AgeGroupPiecewiseConstant(const scnXml::AgeGroupValues& ageGroups, const char* eltName, const Clock& clock,
+                              const CommandLineOptions& command_line) {
         if (ageGroups.getGroup().size() == 0) {
             throw util::xml_scenario_error(string(eltName) + ": at least one age group required");
         }
@@ -90,7 +93,7 @@ public:
         if (dataGroups.begin()->first != 0.0)
             throw util::xml_scenario_error(string(eltName) + ": first lower-bound must be 0");
 
-        outputSamples(eltName);
+        outputSamples(eltName, clock, command_line);
     }
 
     virtual double eval(double ageYears) const {
@@ -127,7 +130,7 @@ protected:
      ********************************************/
 class AgeGroupInterpolationPoints : public AgeGroupInterpolation {
 public:
-    AgeGroupInterpolationPoints(const scnXml::AgeGroupValues& ageGroups, const char* eltName) {
+    AgeGroupInterpolationPoints(const scnXml::AgeGroupValues& ageGroups, const char* eltName, const Clock& clock) {
         // Our read iterator
         auto it = ageGroups.getGroup().begin();
 
@@ -157,7 +160,7 @@ public:
         }
 
         // add a point in middle of last age group (taking upper bound as max-age-years:
-        dataPoints[0.5 * (greatestLbound + Sim::in_years(Sim::max_human_age()))] = lastValue;
+        dataPoints[0.5 * (greatestLbound + Sim::in_years(clock.max_human_age()))] = lastValue;
     }
 
     virtual void scale(double factor) {
@@ -178,14 +181,15 @@ protected:
      ********************************************/
 class AgeGroupPiecewiseLinear : public AgeGroupInterpolationPoints {
 public:
-    AgeGroupPiecewiseLinear(const scnXml::AgeGroupValues& ageGroups, const char* eltName)
-        : AgeGroupInterpolationPoints(ageGroups, eltName) {
+    AgeGroupPiecewiseLinear(const scnXml::AgeGroupValues& ageGroups, const char* eltName, const Clock& clock,
+                            const CommandLineOptions& command_line)
+        : AgeGroupInterpolationPoints(ageGroups, eltName, clock) {
         // Add first point at zero
         dataPoints[0.0] = dataPoints.begin()->second;
         // add a point at infinity to catch remaining values
         dataPoints[numeric_limits<double>::infinity()] = dataPoints.rbegin()->second;
 
-        outputSamples(eltName);
+        outputSamples(eltName, clock, command_line);
     }
 
     virtual double eval(double ageYears) const {
@@ -271,14 +275,15 @@ AgeGroupInterpolator& AgeGroupInterpolator::operator=(AgeGroupInterpolator&& oth
     return *this;
 }
 
-void AgeGroupInterpolator::set(const scnXml::AgeGroupValues& ageGroups, const char* eltName) {
+void AgeGroupInterpolator::set(const scnXml::AgeGroupValues& ageGroups, const char* eltName, const Clock& clock,
+                               const CommandLineOptions& command_line) {
     reset();
     // Type mostly equivalent to a std::string:
     const scnXml::AgeGroupValues::InterpolationOptional& interp = ageGroups.getInterpolation();
     if (!interp.present() || interp.get() == "linear") {
-        obj = new AgeGroupPiecewiseLinear(ageGroups, eltName);
+        obj = new AgeGroupPiecewiseLinear(ageGroups, eltName, clock, command_line);
     } else if (interp.get() == "none") {
-        obj = new AgeGroupPiecewiseConstant(ageGroups, eltName);
+        obj = new AgeGroupPiecewiseConstant(ageGroups, eltName, clock, command_line);
     } else
         throw util::xml_scenario_error(string("age group interpolation ") + interp.get() + " not implemented");
 }

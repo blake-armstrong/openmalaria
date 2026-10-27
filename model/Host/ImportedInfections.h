@@ -45,11 +45,12 @@ public:
          * @param iiElt The scenario element with description of rates
          * @returns True if any infections are imported
          */
-    void init(const scnXml::ImportedInfections& iiElt) {
+    void init(const scnXml::ImportedInfections& iiElt, const Clock& clock,
+              const util::CommandLineOptions& command_line) {
         const scnXml::ImportedInfections::TimedType& tElt = iiElt.getTimed();
         try {
             //NOTE: if changing XSD, this should not have a default unit:
-            period = UnitParse::readDuration(tElt.getPeriod(), UnitParse::STEPS);
+            period = UnitParse::readDuration(tElt.getPeriod(), UnitParse::STEPS, clock, command_line);
             if (period < Sim::zero()) {
                 throw util::format_error("cannot be negative");
             }
@@ -60,8 +61,8 @@ public:
         rate.reserve(tElt.getRate().size());
         try {
             for (auto it = tElt.getRate().begin(); it != tElt.getRate().end(); ++it) {
-                SimTime date =
-                    UnitParse::readDate(it->getTime(), UnitParse::STEPS /*STEPS is only for backwards compatibility*/);
+                SimTime date = UnitParse::readDate(
+                    it->getTime(), UnitParse::STEPS /*STEPS is only for backwards compatibility*/, clock, command_line);
                 // convert to per-time-step, per-person
                 double rateVal = it->getValue() * Sim::years_per_step() * (1.0 / 1000.0);
                 rate.push_back(Rate(date - Sim::start_date(), rateVal));

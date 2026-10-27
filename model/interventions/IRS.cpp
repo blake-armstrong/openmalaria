@@ -32,13 +32,14 @@
 namespace OM::interventions {
 
 IRSComponent::IRSComponent(ComponentId id, const scnXml::IRSDescription& elt,
-                           const map<string, size_t>& species_name_map)
+                           const map<string, size_t>& species_name_map, const Clock& clock,
+                           const util::CommandLineOptions& command_line)
     : Transmission::HumanVectorInterventionComponent(id) {
     initial_insecticide.setParams(elt.getInitialInsecticide());
     const double max_prop = 0.999; //NOTE: this could be exposed in XML, but probably doesn't need to be
     max_insecticide = R::qnorm5(max_prop, initial_insecticide.getMu(), initial_insecticide.getSigma(), true, false);
-    insecticide_decay =
-        DecayFunction::makeObject(elt.getInsecticideDecay(), "interventions.human.IRS.description.insecticideDecay");
+    insecticide_decay = DecayFunction::makeObject(
+        elt.getInsecticideDecay(), "interventions.human.IRS.description.insecticideDecay", clock, command_line);
     // assume usage modifier is 100% if none is specified
     double prop_use = NAN;
     if (elt.getUsage().present()) {

@@ -144,8 +144,10 @@ vector<vector<double>> per_genotype_efficacy(const scnXml::VaccineDescription::P
 
 VaccineComponent::VaccineComponent(ComponentId component, const scnXml::VaccineDescription& vd, vaccines::Types type,
                                    bool report_deployments, const util::ModelOptionFlags& options,
-                                   const WithinHost::GenotypeRegistry& genotypes)
-    : HumanInterventionComponent(component), type(type), decay_func(DecayFunction::makeObject(vd.getDecay(), "decay")),
+                                   const WithinHost::GenotypeRegistry& genotypes, const Clock& clock,
+                                   const util::CommandLineOptions& command_line)
+    : HumanInterventionComponent(component), type(type),
+      decay_func(DecayFunction::makeObject(vd.getDecay(), "decay", clock, command_line)),
       n_genotypes(genotypes.count()), efficacy_b(vd.getEfficacyB().getValue()), report_deployments(report_deployments) {
     if (type == vaccines::BSV && options.option(util::VivaxSimpleModel))
         throw util::unimplemented_exception("blood stage vaccines (BSV) cannot be used with vivax model");

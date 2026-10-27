@@ -37,7 +37,8 @@ using namespace OM::util;
 // -----  simulation-wide parameters  -----
 
 EventSchedulerParams::EventSchedulerParams(const OM::Parameters& parameters, const util::ModelOptionFlags& options,
-                                           const scnXml::Clinical& clinical) {
+                                           const scnXml::Clinical& clinical, const Clock& clock,
+                                           const util::CommandLineOptions& command_line) {
     if (Sim::one_ts() != Sim::one_day())
         throw util::xml_scenario_error("ClinicalEventScheduler is only designed for a 1-day time step.");
 
@@ -59,13 +60,14 @@ EventSchedulerParams::EventSchedulerParams(const OM::Parameters& parameters, con
                                            "prNeedTreatmentNMF elements required in model->clinical->"
                                            "NonMalariaFevers");
         }
-        nmf_need_antibiotic.set(nmf_desc2.getPrNeedTreatmentNMF().get(), "prNeedTreatmentNMF");
-        mf_need_antibiotic.set(nmf_desc2.getPrNeedTreatmentMF().get(), "prNeedTreatmentMF");
+        nmf_need_antibiotic.set(nmf_desc2.getPrNeedTreatmentNMF().get(), "prNeedTreatmentNMF", clock, command_line);
+        mf_need_antibiotic.set(nmf_desc2.getPrNeedTreatmentMF().get(), "prNeedTreatmentMF", clock, command_line);
     }
 }
 
 void EventSchedulerParams::set_parameters(const scnXml::HSEventScheduler& es_data,
-                                          util::AgeGroupInterpolator& case_fatality_rate) {
+                                          util::AgeGroupInterpolator& case_fatality_rate, const Clock& clock,
+                                          const util::CommandLineOptions& command_line) {
     const scnXml::ClinicalOutcomes& co_data = es_data.getClinicalOutcomes();
 
     max_uc_seeking_memory = Sim::from_days(co_data.getMaxUCSeekingMemory());
@@ -108,7 +110,7 @@ void EventSchedulerParams::set_parameters(const scnXml::HSEventScheduler& es_dat
         log_odds_ab_need = log(nmf_desc.getEffectNeed());
         log_odds_ab_informal = log(nmf_desc.getEffectInformal());
         one_minus_efficacy_ab = 1.0 - nmf_desc.getTreatmentEfficacy();
-        severe_nmf_mortality.set(nmf_desc.getCFR(), "CFR");
+        severe_nmf_mortality.set(nmf_desc.getCFR(), "CFR", clock, command_line);
     }
 }
 

@@ -142,7 +142,8 @@ private:
 
 class ITNComponent : public Transmission::HumanVectorInterventionComponent {
 public:
-    ITNComponent(ComponentId id, const scnXml::ITNDescription& elt, const map<string, size_t>& species_name_map);
+    ITNComponent(ComponentId id, const scnXml::ITNDescription& elt, const map<string, size_t>& species_name_map,
+                 const Clock& clock, const util::CommandLineOptions& command_line);
 
     void deploy(Host::Human& human, mon::DeployMethod method, VaccineLimits) const override;
 

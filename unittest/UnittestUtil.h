@@ -237,6 +237,11 @@ Host::InfectionIncidenceParams infection_incidence;
 
 class UnittestUtil {
 public:
+    static Clock& clock() {
+        static Clock instance;
+        return instance;
+    }
+
     static void initTime(int daysPerStep) {
         dummyXML::model.setModelOptions(dummyXML::modelOpts);
         dummyXML::modelParams.setInterval(daysPerStep);
@@ -248,7 +253,7 @@ public:
         dummyXML::monitoring.setSurveys(dummyXML::surveys);
         dummyXML::scenario.setMonitoring(dummyXML::monitoring);
         util::ModelNameProvider modelNameProvider(dummyXML::scenario.getModel());
-        static Clock clock;
+        Clock& clock = UnittestUtil::clock();
         bridge::current_clock = &clock;
         clock.init(dummyXML::scenario, modelNameProvider, unittest_options::command_line, unittest_options::monitoring);
 

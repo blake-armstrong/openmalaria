@@ -464,7 +464,8 @@ double factors::RelativeAttractiveness::relative_attractiveness(double hole_inde
 // —————  main, public classes  —————
 
 ITNComponent::ITNComponent(ComponentId id, const scnXml::ITNDescription& elt,
-                           const map<string, size_t>& species_name_map)
+                           const map<string, size_t>& species_name_map, const Clock& clock,
+                           const util::CommandLineOptions& command_line)
     : Transmission::HumanVectorInterventionComponent(id), rip_factor(elt.getRipFactor().getValue()) {
     initial_insecticide.setParams(elt.getInitialInsecticide());
     const double max_prop = 0.999; //NOTE: this could be exposed in XML, but probably doesn't need to be
@@ -474,8 +475,10 @@ ITNComponent::ITNComponent(ComponentId id, const scnXml::ITNDescription& elt,
     rip_rate = util::createSampler(elt.getRipRate());
     rip_rate->scaleMean(Sim::years_per_step());
 
-    insecticide_decay = DecayFunction::makeObject(elt.getInsecticideDecay(), "ITNDescription.insecticideDecay");
-    attrition_of_nets = DecayFunction::makeObject(elt.getAttritionOfNets(), "ITNDescription.attritionOfNets");
+    insecticide_decay =
+        DecayFunction::makeObject(elt.getInsecticideDecay(), "ITNDescription.insecticideDecay", clock, command_line);
+    attrition_of_nets =
+        DecayFunction::makeObject(elt.getAttritionOfNets(), "ITNDescription.attritionOfNets", clock, command_line);
     // assume usage modifier is 100% if none is specified
     double prop_use = NAN;
     if (elt.getUsage().present()) {

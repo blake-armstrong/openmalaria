@@ -26,6 +26,10 @@
 #include "Global.h"
 
 namespace OM {
+class Clock;
+namespace util {
+class CommandLineOptions;
+}
 
 /** Encapsulation of code to parse times with units from strings.
  * 
@@ -54,26 +58,23 @@ static const int monthStart[] = {
 /** Parse a short duration from a string found in the input document.
      * 
      * Supports units of days (5d), and steps (2t) with integer values,
-     * rounding inputs to the nearest time step.
-     * 
-     * Call sim::init() first. */
-SimTime readShortDuration(const std::string& str, DefaultUnit defUnit);
+     * rounding inputs to the nearest time step. */
+SimTime readShortDuration(const std::string& str, DefaultUnit defUnit, const Clock& clock,
+                          const util::CommandLineOptions& command_line);
 
 /** Like readShortDuration(), but also allow inputs to be in fractional
-     * years.
-     * 
-     * Call sim::init() first. */
-SimTime readDuration(const std::string& str, DefaultUnit defUnit);
+     * years. */
+SimTime readDuration(const std::string& str, DefaultUnit defUnit, const Clock& clock,
+                     const util::CommandLineOptions& command_line);
 
 /** Like readDuration(), but without rounding. Output is in days and may
-     * not be an integer.
-     * 
-     * Call sim::init() first. */
-double durationToDays(const std::string& str, DefaultUnit defUnit);
+     * not be an integer. */
+double durationToDays(const std::string& str, DefaultUnit defUnit, const Clock& clock,
+                      const util::CommandLineOptions& command_line);
 
 /** Returns sim::never() when it doesn't recognise a date. Throws when it does
      * but encounters definite format errors. */
-SimTime parseDate(const std::string& str);
+SimTime parseDate(const std::string& str, const Clock& clock);
 
 /** Read a date or relative time specifier found in the XML; dates are
      * rebased relative to a starting date so that they work the same as other
@@ -84,7 +85,8 @@ SimTime parseDate(const std::string& str);
      * of the intervention period (as readDuration will parse). Returns a time
      * to be compared against sim::intervDate(). Again, the result is rounded to
      * the nearest time step. */
-SimTime readDate(const std::string& str, DefaultUnit defUnit);
+SimTime readDate(const std::string& str, DefaultUnit defUnit, const Clock& clock,
+                 const util::CommandLineOptions& command_line);
 }
 
 }

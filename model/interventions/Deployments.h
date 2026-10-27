@@ -89,11 +89,12 @@ class TimedChangeHSDeployment : public TimedDeployment {
 public:
     TimedChangeHSDeployment(SimTime date, const scnXml::ChangeHS::TimedDeploymentType& hs,
                             Clinical::ClinicalParams& clinical, Clinical::DecisionTreeLibrary& decision_trees,
-                            WithinHost::WithinHostModel& within_host, const InterventionManager& interventions)
+                            WithinHost::WithinHostModel& within_host, const InterventionManager& interventions,
+                            const Clock& clock, const util::CommandLineOptions& command_line)
         : TimedDeployment(date), new_hs(hs._clone()), clinical(&clinical), decision_trees(&decision_trees),
-          within_host(&within_host), interventions(&interventions) {}
+          within_host(&within_host), interventions(&interventions), clock(&clock), command_line(&command_line) {}
     void deploy(vector<Host::Human>& population, Transmission::TransmissionModel& transmission) override {
-        clinical->set_health_system(*new_hs, *decision_trees, *within_host, *interventions);
+        clinical->set_health_system(*new_hs, *decision_trees, *within_host, *interventions, *clock, *command_line);
         new_hs.reset();
     }
     void print_details(std::ostream& out) const override { out << "ChangeHS"; }
@@ -104,6 +105,8 @@ private:
     Clinical::DecisionTreeLibrary* decision_trees;
     WithinHost::WithinHostModel* within_host;
     const InterventionManager* interventions;
+    const Clock* clock;
+    const util::CommandLineOptions* command_line;
 };
 
 class TimedChangeEIRDeployment : public TimedDeployment {
@@ -423,7 +426,8 @@ class TimedNonHumanHostsDeployment : public TimedDeployment {
 public:
     TimedNonHumanHostsDeployment(SimTime date, size_t instance, const string& interv_name,
                                  const scnXml::Description2::AnophelesSequence& list,
-                                 const scnXml::DecayFunction& decay, Transmission::TransmissionModel& transmission)
+                                 const scnXml::DecayFunction& decay, Transmission::TransmissionModel& transmission,
+                                 const Clock& clock, const util::CommandLineOptions& command_line)
         : TimedDeployment(date), instance(instance), interv_name(interv_name) {
         auto* vector_model = dynamic_cast<Transmission::VectorModel*>(&transmission);
         if (vector_model) {
@@ -450,29 +454,32 @@ public:
                     if (decay_func.getInitial() > 1.0)
                         throw util::xml_scenario_error(
                             "availabilityReduction intervention: initial effect must be <= 1");
-                    anoph_model->reduce_nhh_availability[interv_name][instance].set(decay_func.getInitial(), decay,
-                                                                                    "availabilityReduction");
+                    anoph_model->reduce_nhh_availability[interv_name][instance].set(
+                        decay_func.getInitial(), decay, "availabilityReduction", clock, command_line);
                 }
                 if (anoph.getPreprandialKillingEffect().present()) {
                     const scnXml::PreprandialKillingEffect& decay_func = anoph.getPreprandialKillingEffect().get();
                     if (decay_func.getInitial() < 0 || decay_func.getInitial() > 1)
                         throw util::xml_scenario_error(
                             "PreprandialKillingEffect intervention: initial effect must be between 0 and 1");
-                    anoph_model->reduce_p_b_i[interv_name][instance].set(decay_func.getInitial(), decay, "reduceP_B_I");
+                    anoph_model->reduce_p_b_i[interv_name][instance].set(decay_func.getInitial(), decay, "reduceP_B_I",
+                                                                         clock, command_line);
                 }
                 if (anoph.getPostprandialKillingEffect().present()) {
                     const scnXml::PostprandialKillingEffect& decay_func = anoph.getPostprandialKillingEffect().get();
                     if (decay_func.getInitial() < 0 || decay_func.getInitial() > 1)
                         throw util::xml_scenario_error(
                             "PostprandialKillingEffect intervention: initial effect must be between 0 and 1");
-                    anoph_model->reduce_p_c_i[interv_name][instance].set(decay_func.getInitial(), decay, "reduceP_C_I");
+                    anoph_model->reduce_p_c_i[interv_name][instance].set(decay_func.getInitial(), decay, "reduceP_C_I",
+                                                                         clock, command_line);
                 }
                 if (anoph.getRestingKillingEffect().present()) {
                     const scnXml::RestingKillingEffect& decay_func = anoph.getRestingKillingEffect().get();
                     if (decay_func.getInitial() < 0 || decay_func.getInitial() > 1)
                         throw util::xml_scenario_error(
                             "RestingKillingEffect intervention: initial effect must be be between 0 and 1");
-                    anoph_model->reduce_p_d_i[interv_name][instance].set(decay_func.getInitial(), decay, "reduceP_D_I");
+                    anoph_model->reduce_p_d_i[interv_name][instance].set(decay_func.getInitial(), decay, "reduceP_D_I",
+                                                                         clock, command_line);
                 }
                 if (anoph.getFecundityReduction().present()) {
                     const scnXml::FecundityReduction& decay_func = anoph.getFecundityReduction().get();
@@ -480,7 +487,7 @@ public:
                         throw util::xml_scenario_error(
                             "FecundityReduction intervention: initial effect must be be between 0 and 1");
                     anoph_model->reduce_fecundity[interv_name][instance].set(decay_func.getInitial(), decay,
-                                                                             "reduceFecundity");
+                                                                             "reduceFecundity", clock, command_line);
                 }
             }
             checker.checkNoneMissed();

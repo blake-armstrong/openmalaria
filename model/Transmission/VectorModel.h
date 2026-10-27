@@ -59,9 +59,11 @@ public:
     void init2(const vector<Host::Human>& population) override;
 
     virtual void init_vector_interv(const scnXml::Description::AnophelesSequence& list, size_t instance,
-                                    const string& name);
+                                    const string& name, const Clock& clock,
+                                    const util::CommandLineOptions& command_line);
     virtual void init_vector_trap(const scnXml::VectorTrap::DescriptionSequence& list, size_t instance,
-                                  const scnXml::VectorTrap::NameOptional& name_opt);
+                                  const scnXml::VectorTrap::NameOptional& name_opt, const Clock& clock,
+                                  const util::CommandLineOptions& command_line);
 
     void scale_eir(double factor) override;
 

@@ -78,7 +78,8 @@ struct PathogenesisParams {
 
     PathogenesisParams() = default;
     PathogenesisParams(const OM::Parameters& parameters, const util::ModelOptionFlags& options,
-                       const scnXml::Clinical& clinical, bool nmf_only);
+                       const scnXml::Clinical& clinical, bool nmf_only, const Clock& clock,
+                       const util::CommandLineOptions& command_line);
 
     std::unique_ptr<PathogenesisModel> create(double comorbidity_factor) const;
 

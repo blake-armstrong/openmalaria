@@ -31,8 +31,9 @@ namespace OM::WithinHost {
 // ———  TreatmentRegistry  ———
 
 TreatmentId TreatmentRegistry::add(const scnXml::TreatmentOption& desc,
-                                   const interventions::InterventionManager& interventions) {
-    Treatments treatment(desc, interventions);
+                                   const interventions::InterventionManager& interventions, const Clock& clock,
+                                   const util::CommandLineOptions& command_line) {
+    Treatments treatment(desc, interventions, clock, command_line);
     TreatmentId id(treatments.size());
     treatments.push_back(std::move(treatment));
     return id;
@@ -49,12 +50,13 @@ Treatments::Stages stage_from_string(const std::string& str) {
         return Treatments::BOTH;
     throw util::format_error(std::string("stage must be liver, blood or both, not ").append(str));
 }
-Treatments::Treatments(const scnXml::TreatmentOption& elt, const interventions::InterventionManager& interventions)
+Treatments::Treatments(const scnXml::TreatmentOption& elt, const interventions::InterventionManager& interventions,
+                       const Clock& clock, const util::CommandLineOptions& command_line)
     : TriggeredDeployments(elt, interventions), time_liver(Sim::zero()), time_blood(Sim::zero()) {
     for (const auto& it : elt.getClearInfections()) {
         try {
             //NOTE: if changing XSD, this should not be called "timesteps" or have a default unit
-            const SimTime len = UnitParse::readShortDuration(it.getTimesteps(), UnitParse::STEPS);
+            const SimTime len = UnitParse::readShortDuration(it.getTimesteps(), UnitParse::STEPS, clock, command_line);
             if (len < -Sim::one_ts() || len == Sim::zero()) {
                 throw util::format_error("timesteps must be ≥ 1 or have special value -1");
             }

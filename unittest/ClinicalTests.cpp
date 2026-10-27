@@ -80,28 +80,30 @@ scnXml::HSEventScheduler event_scheduler(std::initializer_list<double> daily_pr_
     return {scnXml::DecisionTree(), scnXml::DecisionTree(), outcomes};
 }
 
-OM::util::AgeGroupInterpolator case_fatality_rate() {
+OM::util::AgeGroupInterpolator case_fatality_rate(const OM::Clock& clock,
+                                                  const OM::util::CommandLineOptions& command_line) {
     scnXml::AgeGroupValues values;
     values.setInterpolation("none");
     values.getGroup().push_back(scnXml::Group(0.1, 0.0));
     OM::util::AgeGroupInterpolator cfr;
-    cfr.set(values, "CFR");
+    cfr.set(values, "CFR", clock, command_line);
     return cfr;
 }
 
 TEST_CASE("each health system replaces the event scheduler's dailyPrImmUCTS", "[clinical][F59]") {
     const OM::util::CommandLineOptions command_line;
     const OM::CommandLineBinding command_line_binding{command_line};
-    OM::util::AgeGroupInterpolator cfr = case_fatality_rate();
+    const OM::Clock clock;
+    OM::util::AgeGroupInterpolator cfr = case_fatality_rate(clock, command_line);
     OM::Clinical::EventSchedulerParams params;
 
-    params.set_parameters(event_scheduler({1.0}), cfr);
+    params.set_parameters(event_scheduler({1.0}), cfr, clock, command_line);
     CHECK(params.cum_daily_pr_imm_ucts == std::vector<double>{1.0});
 
-    params.set_parameters(event_scheduler({0.2, 0.8}), cfr);
+    params.set_parameters(event_scheduler({0.2, 0.8}), cfr, clock, command_line);
     CHECK(params.cum_daily_pr_imm_ucts == std::vector<double>{0.2, 1.0});
 
-    params.set_parameters(event_scheduler({1.0}), cfr);
+    params.set_parameters(event_scheduler({1.0}), cfr, clock, command_line);
     CHECK(params.cum_daily_pr_imm_ucts == std::vector<double>{1.0});
 }
 

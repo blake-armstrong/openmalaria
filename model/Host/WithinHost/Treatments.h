@@ -62,7 +62,8 @@ public:
     //@}
 
 private:
-    Treatments(const scnXml::TreatmentOption& elt, const interventions::InterventionManager& interventions);
+    Treatments(const scnXml::TreatmentOption& elt, const interventions::InterventionManager& interventions,
+               const Clock& clock, const util::CommandLineOptions& command_line);
 
     SimTime time_liver, time_blood;
 
@@ -73,7 +74,8 @@ class TreatmentRegistry {
 public:
     /** Configure a new treatment option, and return the code used to select
      * that option later. */
-    TreatmentId add(const scnXml::TreatmentOption& desc, const interventions::InterventionManager& interventions);
+    TreatmentId add(const scnXml::TreatmentOption& desc, const interventions::InterventionManager& interventions,
+                    const Clock& clock, const util::CommandLineOptions& command_line);
 
     /** Return the corresponding treatment description. */
     const Treatments& select(TreatmentId treat_id) const {

@@ -85,7 +85,8 @@ public:
 class PerHostParams {
 public:
     PerHostParams() = default;
-    explicit PerHostParams(const scnXml::AgeGroupValues& availability_to_mosquitoes);
+    PerHostParams(const scnXml::AgeGroupValues& availability_to_mosquitoes, const Clock& clock,
+                  const util::CommandLineOptions& command_line);
 
     void add_species(const scnXml::Mosq& mosq, const util::ModelOptionFlags& options) {
         species.emplace_back(mosq, options);

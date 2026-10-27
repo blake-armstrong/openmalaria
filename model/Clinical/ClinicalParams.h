@@ -88,11 +88,14 @@ struct DecisionTree5DayParams {
 struct EventSchedulerParams {
     EventSchedulerParams() = default;
     EventSchedulerParams(const OM::Parameters& parameters, const util::ModelOptionFlags& options,
-                         const scnXml::Clinical& clinical);
+                         const scnXml::Clinical& clinical, const Clock& clock,
+                         const util::CommandLineOptions& command_line);
 
     void set_health_system(const scnXml::HSEventScheduler& es_data, util::AgeGroupInterpolator& case_fatality_rate,
-                           DecisionTreeLibrary& decision_trees);
-    void set_parameters(const scnXml::HSEventScheduler& es_data, util::AgeGroupInterpolator& case_fatality_rate);
+                           DecisionTreeLibrary& decision_trees, const Clock& clock,
+                           const util::CommandLineOptions& command_line);
+    void set_parameters(const scnXml::HSEventScheduler& es_data, util::AgeGroupInterpolator& case_fatality_rate,
+                        const Clock& clock, const util::CommandLineOptions& command_line);
 
     bool non_malaria_fevers = false;
 
@@ -159,11 +162,12 @@ struct ClinicalParams {
     ClinicalParams() = default;
     ClinicalParams(const OM::Parameters& parameters, const util::ModelOptionFlags& options,
                    const util::CommandLineOptions& command_line, const WithinHost::DiagnosticRegistry& diagnostics,
-                   const scnXml::Scenario& scenario);
+                   const scnXml::Scenario& scenario, const Clock& clock);
 
     void set_health_system(const scnXml::HealthSystem& health_system, DecisionTreeLibrary& decision_trees,
                            WithinHost::WithinHostModel& within_host,
-                           const interventions::InterventionManager& interventions);
+                           const interventions::InterventionManager& interventions, const Clock& clock,
+                           const util::CommandLineOptions& command_line);
 
     std::unique_ptr<ClinicalModel> create(double treatment_seeking_factor, mon::MonitoringState& monitoring) const;
 
@@ -197,10 +201,12 @@ struct ClinicalParams {
 private:
     void set_immediate_outcomes(const scnXml::HSImmediateOutcomes& hs_description,
                                 WithinHost::WithinHostModel& within_host,
-                                const interventions::InterventionManager& interventions);
+                                const interventions::InterventionManager& interventions, const Clock& clock,
+                                const util::CommandLineOptions& command_line);
     void set_decision_tree_5day(const scnXml::HSDT5Day& hs_description, DecisionTreeLibrary& decision_trees,
                                 WithinHost::WithinHostModel& within_host,
-                                const interventions::InterventionManager& interventions);
+                                const interventions::InterventionManager& interventions, const Clock& clock,
+                                const util::CommandLineOptions& command_line);
 };
 
 }

@@ -41,8 +41,9 @@ public:
     SimpleDecayingValue() : initial(0.0), deploy_t(Sim::never()) {}
 
     /** Configure from an XML element. */
-    inline void set(double initial_value, const scnXml::DecayFunction& elt, const char* name) {
-        decay = DecayFunction::makeObject(elt, name);
+    inline void set(double initial_value, const scnXml::DecayFunction& elt, const char* name, const Clock& clock,
+                    const CommandLineOptions& command_line) {
+        decay = DecayFunction::makeObject(elt, name, clock, command_line);
         initial = initial_value;
     }
 

@@ -23,6 +23,7 @@
 #include "Global.h"
 #include "util/errors.h"
 #include "util/ModelOptions.h"
+#include "Clock.h"
 #include "util/CommandLine.h"
 #include "util/UnitParse.h"
 #include "schema/scenario.h"
@@ -45,7 +46,8 @@ template <typename T> int castToInt(T x) {
     return y;
 }
 
-SimTime readShortDuration(const std::string& str, DefaultUnit defUnit) {
+SimTime readShortDuration(const std::string& str, DefaultUnit defUnit, const Clock& clock,
+                          const util::CommandLineOptions& command_line) {
     const char* s = str.c_str();
     char* end = 0;
 
@@ -58,14 +60,14 @@ SimTime readShortDuration(const std::string& str, DefaultUnit defUnit) {
         } else if (defUnit == NONE) {
             throw util::format_error("unit required but not given (try e.g. 5d or 12t)");
         } else {
-            if (util::CommandLine::option(util::CommandLine::DeprecationWarnings)) {
+            if (command_line.option(util::CommandLine::DeprecationWarnings)) {
                 cerr << "Deprecation warning: duration \"" << str
                      << "\" specified without unit; it is recommended to do so (e.g. 5d or 1t)" << endl;
             }
             if (defUnit == DAYS) {
-                return Sim::round_to_ts_from_days(v);
+                return clock.round_to_ts_from_days(v);
             } else if (defUnit == STEPS) {
-                return Sim::from_ts(castToInt(v));
+                return clock.from_ts(castToInt(v));
             } else {
                 throw SWITCH_DEFAULT_EXCEPTION;
             }
@@ -74,9 +76,9 @@ SimTime readShortDuration(const std::string& str, DefaultUnit defUnit) {
         // one extra character found; is this a unit?
         char u = str[len];
         if (u == 'd' || u == 'D') {
-            return Sim::round_to_ts_from_days(v);
+            return clock.round_to_ts_from_days(v);
         } else if (u == 't' || u == 'T') {
-            return Sim::from_ts(castToInt(v));
+            return clock.from_ts(castToInt(v));
         }
         // otherwise, fall through to below
     }
@@ -84,7 +86,7 @@ SimTime readShortDuration(const std::string& str, DefaultUnit defUnit) {
 }
 
 // Parses str, returns v and may set unit
-double parseDurationAndUnit(const std::string& str, DefaultUnit& unit) {
+double parseDurationAndUnit(const std::string& str, DefaultUnit& unit, const util::CommandLineOptions& command_line) {
     const char* s = str.c_str();
     char* end = 0;
 
@@ -107,7 +109,7 @@ double parseDurationAndUnit(const std::string& str, DefaultUnit& unit) {
             unit = DAYS; // special case: 0 does not require a unit; pretend the unit is days
         else if (unit == NONE /*no default set for this value*/) {
             throw util::format_error("unit required but not given (try e.g. 5d or 12t or 2.3y)");
-        } else if (util::CommandLine::option(util::CommandLine::DeprecationWarnings)) {
+        } else if (command_line.option(util::CommandLine::DeprecationWarnings)) {
             cerr << "Deprecation warning: duration \"" << str
                  << "\" specified without unit; it is recommended to do so (e.g. 5d or 1t or 0.5y)" << endl;
         }
@@ -117,37 +119,39 @@ double parseDurationAndUnit(const std::string& str, DefaultUnit& unit) {
     return v;
 }
 
-SimTime readDuration(const std::string& str, DefaultUnit unit) {
-    double v = parseDurationAndUnit(str, unit);
+SimTime readDuration(const std::string& str, DefaultUnit unit, const Clock& clock,
+                     const util::CommandLineOptions& command_line) {
+    double v = parseDurationAndUnit(str, unit, command_line);
 
     if (unit == YEARS)
-        return Sim::from_years_n(v);
+        return clock.from_years_n(v);
     else if (v != std::floor(v)) {
         throw util::format_error("fractional values are only allowed when the unit is years (e.g. 0.25y)");
     } else if (unit == DAYS)
-        return Sim::round_to_ts_from_days(v);
+        return clock.round_to_ts_from_days(v);
     else if (unit == STEPS)
-        return Sim::from_ts(castToInt(v));
+        return clock.from_ts(castToInt(v));
     else
         throw SWITCH_DEFAULT_EXCEPTION;
 }
 
-double durationToDays(const std::string& str, DefaultUnit unit) {
-    double v = parseDurationAndUnit(str, unit);
+double durationToDays(const std::string& str, DefaultUnit unit, const Clock& clock,
+                      const util::CommandLineOptions& command_line) {
+    double v = parseDurationAndUnit(str, unit, command_line);
 
     if (unit == YEARS)
         return v * Sim::one_year();
     else if (unit == DAYS)
         return v;
     else if (unit == STEPS)
-        return v * Sim::one_ts();
+        return v * clock.one_ts();
     else
         throw SWITCH_DEFAULT_EXCEPTION;
 }
 
 /** Returns sim::never() when it doesn't recognise a date. Throws when it does
  * but encounters definite format errors. */
-SimTime parseDate(const std::string& str) {
+SimTime parseDate(const std::string& str, const Clock& clock) {
     std::regex dateRx("(\\d{4})-(\\d{1,2})-(\\d{1,2})");
     std::smatch rx_what;
 
@@ -164,28 +168,29 @@ SimTime parseDate(const std::string& str) {
         // Inconsistency: time "zero" is 0000-01-01, not 0001-01-01. Since
         // dates are always relative to another date, the extra year doesn't
         // actually affect anything.
-        return Sim::origin() + Sim::from_years_i(year) + Sim::round_to_ts_from_days(monthStart[month - 1] + day - 1);
+        return Sim::origin() + Sim::from_years_i(year) + clock.round_to_ts_from_days(monthStart[month - 1] + day - 1);
     } else {
         return Sim::never();
     }
 }
 
-SimTime readDate(const std::string& str, DefaultUnit defUnit) {
-    SimTime date = parseDate(str);
+SimTime readDate(const std::string& str, DefaultUnit defUnit, const Clock& clock,
+                 const util::CommandLineOptions& command_line) {
+    SimTime date = parseDate(str, clock);
     if (date != Sim::never()) {
-        if (date > Sim::start_date() + Sim::from_years_i(500)) {
+        if (date > clock.start_date() + Sim::from_years_i(500)) {
             cerr << "Warning: date is a long time after start date. Did you forget to set monitoring/startDate?"
                  << endl;
-        } else if (date < Sim::start_date()) {
+        } else if (date < clock.start_date()) {
             throw util::format_error("date of event is before the start of monitoring");
         }
         return date;
     } else {
-        if (util::CommandLine::option(util::CommandLine::DeprecationWarnings)) {
+        if (command_line.option(util::CommandLine::DeprecationWarnings)) {
             cerr << "Deprecation warning: time specified via duration \"" << str
                  << "\" where a date could be used; recommended to use a date (e.g. 2011-12-20)" << endl;
         }
-        return Sim::start_date() + readDuration(str, defUnit);
+        return clock.start_date() + readDuration(str, defUnit, clock, command_line);
     }
 }
 

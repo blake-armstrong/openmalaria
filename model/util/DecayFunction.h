@@ -41,12 +41,12 @@ namespace util {
  *****************************************************************************/
 class DecayFunction {
 public:
-    DecayFunction(bool increasing = false, double initialEfficacy = 1.0, double CV = 0.0)
-        : increasing(increasing), initialEfficacy(initialEfficacy),
+    DecayFunction(const Clock& clock, bool increasing, double initialEfficacy, double CV)
+        : clock(&clock), increasing(increasing), initialEfficacy(initialEfficacy),
           het(std::move(LognormalSampler::fromMeanCV(1.0, CV))) {}
 
     DecayFunction(const DecayFunction& other)
-        : increasing(other.increasing), initialEfficacy(other.initialEfficacy),
+        : clock(other.clock), increasing(other.increasing), initialEfficacy(other.initialEfficacy),
           het(other.het ? other.het->clone() : nullptr), hetFactor(other.hetFactor) {}
 
     virtual ~DecayFunction() {}
@@ -56,7 +56,8 @@ public:
      * @param elt XML element specifying which function to use and parameters
      * @param eltName Name of XML element (for reasonable error reporting)
      */
-    static unique_ptr<DecayFunction> makeObject(const scnXml::DecayFunction& elt, const char* eltName);
+    static unique_ptr<DecayFunction> makeObject(const scnXml::DecayFunction& elt, const char* eltName,
+                                                const Clock& clock, const CommandLineOptions& command_line);
 
     /** Sample a DecayFunction value (should be stored per individual).
      * 
@@ -99,11 +100,14 @@ public:
     void checkpointSample(unique_ptr<DecayFunction>& sample, istream& stream) const;
 
 private:
+    const Clock* clock;
     bool increasing;
     double initialEfficacy;
     std::unique_ptr<util::Sampler> het;
 
 protected:
+    SimTime round_to_ts_from_days(double days) const;
+
     virtual unique_ptr<DecayFunction> makeHetSample(double factor) const = 0;
     double hetFactor = 0.0;
 };

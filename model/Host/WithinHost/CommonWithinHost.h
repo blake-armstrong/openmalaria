@@ -49,7 +49,8 @@ struct CommonWithinHostParams {
 
     CommonWithinHostParams() = default;
     CommonWithinHostParams(const scnXml::Scenario& scenario, const CommonInfectionModel& infection,
-                           const mon::MonitoringState& monitoring);
+                           const mon::MonitoringState& monitoring, const Clock& clock,
+                           const util::CommandLineOptions& command_line);
 };
 
 /** Common within-host model functionality.

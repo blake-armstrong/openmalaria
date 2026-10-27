@@ -502,13 +502,16 @@ private:
  */
 class CMDTTreatSimple : public CMDecisionTree {
 public:
-    CMDTTreatSimple(const scnXml::DecisionTree::TreatSimpleSequence& elt)
+    CMDTTreatSimple(const scnXml::DecisionTree::TreatSimpleSequence& elt, const Clock& clock,
+                    const util::CommandLineOptions& command_line)
         : time_liver(Sim::zero()), time_blood(Sim::zero()) {
         for (const auto& treat_elt : elt) {
             //NOTE: this code is currently identical to that in SimpleTreatComponent
             try {
-                SimTime dur_l = UnitParse::readShortDuration(treat_elt.getDurationLiver(), UnitParse::NONE),
-                        dur_b = UnitParse::readShortDuration(treat_elt.getDurationBlood(), UnitParse::NONE);
+                SimTime dur_l = UnitParse::readShortDuration(treat_elt.getDurationLiver(), UnitParse::NONE, clock,
+                                                             command_line),
+                        dur_b = UnitParse::readShortDuration(treat_elt.getDurationBlood(), UnitParse::NONE, clock,
+                                                             command_line);
                 const SimTime neg1 = -Sim::one_ts();
                 if (dur_l < neg1 || dur_b < neg1) {
                     throw util::xml_scenario_error(
@@ -675,7 +678,7 @@ const CMDecisionTree& DecisionTreeLibrary::create(const scnXml::DecisionTree& no
     if (node.getTreatPKPD().size())
         return save(unique_ptr<CMDecisionTree>(new CMDTTreatPKPD(pk_pd().courses, node.getTreatPKPD())));
     if (node.getTreatSimple().size())
-        return save(unique_ptr<CMDecisionTree>(new CMDTTreatSimple(node.getTreatSimple())));
+        return save(unique_ptr<CMDecisionTree>(new CMDTTreatSimple(node.getTreatSimple(), clock(), command_line())));
     if (node.getDeploy().size())
         return save(unique_ptr<CMDecisionTree>(new CMDTDeploy(node.getDeploy(), *manager)));
     throw xml_scenario_error("unterminated decision tree");
@@ -712,7 +715,8 @@ const CMDecisionTree& CMDTMultiple::create(DecisionTreeLibrary& library, const s
             &library.save(unique_ptr<CMDecisionTree>(new CMDTTreatPKPD(library.pk_pd().courses, node.getTreatPKPD()))));
     }
     if (node.getTreatSimple().size()) {
-        self->children.push_back(&library.save(unique_ptr<CMDecisionTree>(new CMDTTreatSimple(node.getTreatSimple()))));
+        self->children.push_back(&library.save(unique_ptr<CMDecisionTree>(
+            new CMDTTreatSimple(node.getTreatSimple(), library.clock(), library.command_line()))));
     }
     if (node.getReport().size()) {
         self->children.push_back(&library.save(unique_ptr<CMDecisionTree>(new CMDTReport(node.getReport()))));
@@ -749,8 +753,9 @@ const CMDecisionTree& CMDTDiagnostic::create(DecisionTreeLibrary& library, const
 const CMDecisionTree& CMDTUncomplicated::create(DecisionTreeLibrary& library, const scnXml::DTUncomplicated& node,
                                                 bool is_uc) {
     return library.save(unique_ptr<CMDecisionTree>(new CMDTUncomplicated(
-        UnitParse::readShortDuration(node.getMemory(), UnitParse::STEPS), library.health_system_memory(),
-        library.create(node.getPositive(), is_uc), library.create(node.getNegative(), is_uc))));
+        UnitParse::readShortDuration(node.getMemory(), UnitParse::STEPS, library.clock(), library.command_line()),
+        library.health_system_memory(), library.create(node.getPositive(), is_uc),
+        library.create(node.getNegative(), is_uc))));
 }
 
 const CMDecisionTree& CMDTSevere::create(DecisionTreeLibrary& library, const scnXml::DTSevere& node, bool is_uc) {

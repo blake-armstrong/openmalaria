@@ -91,9 +91,10 @@ class DecisionTreeLibrary {
 public:
     DecisionTreeLibrary() = default;
     DecisionTreeLibrary(const WithinHost::DiagnosticRegistry& diagnostics, const pk_pd::PkPdParams& pk_pd,
-                        SimTime health_system_memory, const interventions::InterventionManager& interventions)
+                        SimTime health_system_memory, const interventions::InterventionManager& interventions,
+                        const Clock& clock, const util::CommandLineOptions& command_line)
         : diagnostic_registry(&diagnostics), pk_pd_params(&pk_pd), hs_memory(health_system_memory),
-          manager(&interventions) {}
+          manager(&interventions), sim_clock(&clock), cli_options(&command_line) {}
 
     /** Create a user-configured decision from an XML node.
      * 
@@ -110,12 +111,16 @@ public:
     const pk_pd::PkPdParams& pk_pd() const { return *pk_pd_params; }
     SimTime health_system_memory() const { return hs_memory; }
     const interventions::InterventionManager& intervention_manager() const { return *manager; }
+    const Clock& clock() const { return *sim_clock; }
+    const util::CommandLineOptions& command_line() const { return *cli_options; }
 
 private:
     const WithinHost::DiagnosticRegistry* diagnostic_registry = nullptr;
     const pk_pd::PkPdParams* pk_pd_params = nullptr;
     SimTime hs_memory = Sim::never();
     const interventions::InterventionManager* manager = nullptr;
+    const Clock* sim_clock = nullptr;
+    const util::CommandLineOptions* cli_options = nullptr;
     std::vector<std::unique_ptr<CMDecisionTree>> decisions;
 };
 

@@ -40,12 +40,13 @@ namespace OM::WithinHost {
 
 namespace {
 
-SimTime read_latent_p(const scnXml::Model& model) {
+SimTime read_latent_p(const scnXml::Model& model, const Clock& clock, const util::CommandLineOptions& command_line) {
     // Default value to use if no <parameters> element is present in XML.
-    SimTime latent_p = UnitParse::readShortDuration("15d", UnitParse::DAYS);
+    SimTime latent_p = UnitParse::readShortDuration("15d", UnitParse::DAYS, clock, command_line);
     try {
         if (model.getParameters().present()) {
-            latent_p = UnitParse::readShortDuration(model.getParameters().get().getLatentp(), UnitParse::NONE);
+            latent_p = UnitParse::readShortDuration(model.getParameters().get().getLatentp(), UnitParse::NONE, clock,
+                                                    command_line);
         }
     } catch (const util::format_error& e) {
         throw util::xml_scenario_error(std::string("model/parameters/latentP: ").append(e.message()));
@@ -65,19 +66,21 @@ bool any_patent_infected_measure_used(const mon::MonitoringState& monitoring) {
 WithinHostModel::WithinHostModel(const OM::Parameters& parameters, const util::ModelOptionFlags& options,
                                  const util::CommandLineOptions& command_line, const GenotypeRegistry& genotypes,
                                  const DiagnosticRegistry& diagnostics, const mon::MonitoringState& monitoring,
-                                 const scnXml::Scenario& scenario) {
+                                 const scnXml::Scenario& scenario, const Clock& clock) {
     if (options.option(util::VivaxSimpleModel)) {
         assert(genotypes.count() == 1);
         kind = Kind::Vivax;
-        vivax = VivaxParams(scenario.getModel(), read_latent_p(scenario.getModel()),
+        vivax = VivaxParams(scenario.getModel(), read_latent_p(scenario.getModel(), clock, command_line),
                             command_line.option(util::CommandLine::DeprecationWarnings));
-        pathogenesis = Pathogenesis::PathogenesisParams(parameters, options, scenario.getModel().getClinical(), true);
+        pathogenesis = Pathogenesis::PathogenesisParams(parameters, options, scenario.getModel().getClinical(), true,
+                                                        clock, command_line);
         return;
     }
 
     falciparum = FalciparumParams(parameters, options, genotypes, diagnostics, monitoring);
-    pathogenesis = Pathogenesis::PathogenesisParams(parameters, options, scenario.getModel().getClinical(), false);
-    falciparum.latent_p = read_latent_p(scenario.getModel());
+    pathogenesis = Pathogenesis::PathogenesisParams(parameters, options, scenario.getModel().getClinical(), false,
+                                                    clock, command_line);
+    falciparum.latent_p = read_latent_p(scenario.getModel(), clock, command_line);
 
     CommonInfectionModel infection;
     if (options.option(util::DummyWithinHostModel)) {
@@ -100,7 +103,7 @@ WithinHostModel::WithinHostModel(const OM::Parameters& parameters, const util::M
     }
 
     if (kind == Kind::Common) {
-        common = CommonWithinHostParams(scenario, infection, monitoring);
+        common = CommonWithinHostParams(scenario, infection, monitoring, clock, command_line);
         common.pk_pd = pk_pd::PkPdParams(scenario, genotypes, command_line);
     } else {
         descriptive.report_patent_infected = any_patent_infected_measure_used(monitoring);

@@ -46,8 +46,9 @@ PerHostAnophParams::PerHostAnophParams(const scnXml::Mosq& mosq, const util::Mod
     prob_mosq_survival_resting.setParams(mosq.getMosqProbResting());
 }
 
-PerHostParams::PerHostParams(const scnXml::AgeGroupValues& availability_to_mosquitoes) {
-    rel_avail_age.set(availability_to_mosquitoes, "availabilityToMosquitoes");
+PerHostParams::PerHostParams(const scnXml::AgeGroupValues& availability_to_mosquitoes, const Clock& clock,
+                             const util::CommandLineOptions& command_line) {
+    rel_avail_age.set(availability_to_mosquitoes, "availabilityToMosquitoes", clock, command_line);
 }
 
 void PerHostParams::calc_availability_percentiles() {

@@ -38,13 +38,14 @@ namespace OM::WithinHost::Pathogenesis {
 using namespace OM::util;
 
 PathogenesisParams::PathogenesisParams(const OM::Parameters& parameters, const util::ModelOptionFlags& options,
-                                       const scnXml::Clinical& clinical, bool nmf_only) {
+                                       const scnXml::Clinical& clinical, bool nmf_only, const Clock& clock,
+                                       const util::CommandLineOptions& command_line) {
     if (options.option(util::NonMalariaFevers)) {
         if (!clinical.getNonMalariaFevers().present()) {
             throw util::xml_scenario_error("NonMalariaFevers element of model->clinical required");
         }
         const scnXml::Clinical::NonMalariaFeversType& nmf_desc = clinical.getNonMalariaFevers().get();
-        nmf_incidence.set(nmf_desc.getIncidence(), "incidence");
+        nmf_incidence.set(nmf_desc.getIncidence(), "incidence", clock, command_line);
     }
     if (nmf_only)
         return;

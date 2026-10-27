@@ -81,18 +81,21 @@ get_health_system_treatment_optional(const scnXml::TreatmentActions& treat_acts,
 WithinHost::TreatmentId get_health_system_treatment_by_name(const scnXml::TreatmentActions& treat_acts,
                                                             const string& drug,
                                                             WithinHost::WithinHostModel& within_host,
-                                                            const interventions::InterventionManager& interventions) {
+                                                            const interventions::InterventionManager& interventions,
+                                                            const Clock& clock,
+                                                            const util::CommandLineOptions& command_line) {
     const scnXml::TreatmentActions::CQOptional& elt = get_health_system_treatment_optional(treat_acts, drug);
     if (!elt.present())
         throw util::xml_scenario_error(string("healthSystem.treatmentActions: description required for ").append(drug));
-    return within_host.treatments.add(elt.get(), interventions);
+    return within_host.treatments.add(elt.get(), interventions, clock, command_line);
 }
 
 // ———  static, init  ———
 
 void ClinicalParams::set_immediate_outcomes(const scnXml::HSImmediateOutcomes& hs_description,
                                             WithinHost::WithinHostModel& within_host,
-                                            const interventions::InterventionManager& interventions) {
+                                            const interventions::InterventionManager& interventions, const Clock& clock,
+                                            const util::CommandLineOptions& command_line) {
     const string &first_line = hs_description.getDrugRegimen().getFirstLine(),
                  &second_line = hs_description.getDrugRegimen().getSecondLine(),
                  &inpatient = hs_description.getDrugRegimen().getInpatient();
@@ -153,21 +156,21 @@ void ClinicalParams::set_immediate_outcomes(const scnXml::HSImmediateOutcomes& h
     five_day.cure_rate_severe = get_health_system_acr_by_name(hs_description.getInitialACR(), inpatient);
 
     immediate_outcomes.treatment_uc[FirstLine] = get_health_system_treatment_by_name(
-        hs_description.getTreatmentActions(), first_line, within_host, interventions);
+        hs_description.getTreatmentActions(), first_line, within_host, interventions, clock, command_line);
 
     if (second_line == first_line)
         immediate_outcomes.treatment_uc[SecondLine] = immediate_outcomes.treatment_uc[FirstLine];
     else
         immediate_outcomes.treatment_uc[SecondLine] = get_health_system_treatment_by_name(
-            hs_description.getTreatmentActions(), second_line, within_host, interventions);
+            hs_description.getTreatmentActions(), second_line, within_host, interventions, clock, command_line);
 
     if (inpatient == first_line)
         five_day.treatment_severe = immediate_outcomes.treatment_uc[FirstLine];
     else if (inpatient == second_line)
         five_day.treatment_severe = immediate_outcomes.treatment_uc[SecondLine];
     else
-        five_day.treatment_severe = get_health_system_treatment_by_name(hs_description.getTreatmentActions(), inpatient,
-                                                                        within_host, interventions);
+        five_day.treatment_severe = get_health_system_treatment_by_name(
+            hs_description.getTreatmentActions(), inpatient, within_host, interventions, clock, command_line);
 
     immediate_outcomes.use_diagnostic_uc = hs_description.getUseDiagnosticUC();
 

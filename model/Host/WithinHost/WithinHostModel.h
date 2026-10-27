@@ -54,7 +54,7 @@ struct WithinHostModel {
     WithinHostModel(const OM::Parameters& parameters, const util::ModelOptionFlags& options,
                     const util::CommandLineOptions& command_line, const GenotypeRegistry& genotypes,
                     const DiagnosticRegistry& diagnostics, const mon::MonitoringState& monitoring,
-                    const scnXml::Scenario& scenario);
+                    const scnXml::Scenario& scenario, const Clock& clock);
 
     std::unique_ptr<WHInterface> create(util::LocalRng& rng, double comorbidity_factor) const;
 
