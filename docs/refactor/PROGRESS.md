@@ -49,7 +49,12 @@ See `PLAN.md` for the session protocol, chunks and gates. Append one log entry p
 | D9b2 | done | 18ea267a, 69af0838, f995cf66, f5d211ec, dd43e68a, 5b5ddc61, bfd60dbb, da0d7b74, 722cf695, (this log entry) |
 | D9c | done | 8123447c, 45755b22, b0222c24, d3e5a936, 38305747, 94f2ae99, c9e4355e, (this log entry) |
 | D9d | done | ab4475fd, eb0ff5c4, 44481616, d3474e5c, (this log entry) |
-| D9e | todo | |
+| D9e | split | D9e1–D9e5 |
+| D9e1 | todo | |
+| D9e2 | todo | |
+| D9e3 | todo | |
+| D9e4 | todo | |
+| D9e5 | todo | |
 | D9f | todo | |
 | E1 | todo | |
 | E2 | todo | |
@@ -1651,3 +1656,6 @@ The user asked for F86's cosmetic `--print-genotypes` quirks to be fixed. The G-
   - D9e: the clock and `CommandLine::option`; D9f: the bridge namespace and interleaved G-two-sims.
   - `TransmissionModel.h:380`: the implicit `size_t` → `int` conversion when the file is next touched.
 - Next: D9e (its base will be its own HEAD; move `../om-bench-base` again at its start).
+
+### Plan amendment: D9e split (2026-10-27, at the start of D9e)
+An inventory at d4564e41 (`util/bridges.py`): `bridge::clock()` behind 30 facades (21 on `Sim`), 408 qualified call sites in 61 files (`ts0` 64, `one_ts` 63, `ts1` 42, `now` 40, `in_steps` 28, `steps_per_year` 25, the unit tests' `incrTime` 25 and `initTime` 12), many on per-infection hot paths (`Infection::blood_stage`, `DescriptiveInfection::expired`, `VivaxBrood::is_patent`, the GVI/IRS/ITN decay); `bridge::command_line()` behind `CommandLine::option`, 4 call sites in `UnitParse.cpp` and `AgeGroupInterpolation.cpp`, whose callers (about 45) also need the clock. Nothing that reads the clock holds a way to reach it except through the bridge; the transmission model, the intervention manager and its deployments, and the infections hold nothing set by `Simulation`. Three routes, following D9c and D9d: init-time code takes `const Clock&`; run-time objects keep a `const Clock*` in the params or owner they already hold; leaf objects with no params pointer (infections, broods) take the time as an argument, so no per-infection member is added. Split by module: D9e1 (`UnitParse`, `DecayFunction`, `AgeGroupInterpolation` and the CommandLine bridge), D9e2 (Host and Clinical), D9e3 (WithinHost and the infections), D9e4 (Transmission), D9e5 (interventions, mon, the unit tests' direct reads, and the removal of the clock facades, the bridge pointer and `ClockBinding`). Rows in PLAN.md.
