@@ -98,7 +98,7 @@ public:
 
 protected:
     /// Constructor.
-    explicit ClinicalModel(const ClinicalParams& params);
+    ClinicalModel(const ClinicalParams& params, mon::MonitoringState& monitoring);
 
     const ClinicalParams& params() const { return *clinical_params; }
 

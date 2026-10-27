@@ -104,13 +104,14 @@ void ClinicalParams::set_health_system(const scnXml::HealthSystem& health_system
     }
 }
 
-unique_ptr<ClinicalModel> ClinicalParams::create(double treatment_seeking_factor) const {
+unique_ptr<ClinicalModel> ClinicalParams::create(double treatment_seeking_factor,
+                                                 mon::MonitoringState& monitoring) const {
     if (kind == Kind::EventScheduler) {
-        return std::make_unique<ClinicalEventScheduler>(*this, treatment_seeking_factor);
+        return std::make_unique<ClinicalEventScheduler>(*this, treatment_seeking_factor, monitoring);
     } else if (kind == Kind::ImmediateOutcomes) {
-        return std::make_unique<ImmediateOutcomes>(*this, treatment_seeking_factor);
+        return std::make_unique<ImmediateOutcomes>(*this, treatment_seeking_factor, monitoring);
     } else {
-        return std::make_unique<DecisionTree5Day>(*this, treatment_seeking_factor);
+        return std::make_unique<DecisionTree5Day>(*this, treatment_seeking_factor, monitoring);
     }
 }
 
@@ -121,8 +122,9 @@ double ClinicalModel::get_community_cfr(double case_fatality_ratio) const {
 
 // -----  non-static construction, destruction and checkpointing  -----
 
-ClinicalModel::ClinicalModel(const ClinicalParams& params)
-    : latest_report(params.health_system_memory, params.health_system_memory_fix), clinical_params(&params) {}
+ClinicalModel::ClinicalModel(const ClinicalParams& params, mon::MonitoringState& monitoring)
+    : latest_report(monitoring, params.health_system_memory, params.health_system_memory_fix),
+      clinical_params(&params) {}
 
 // -----  other non-static methods  -----
 

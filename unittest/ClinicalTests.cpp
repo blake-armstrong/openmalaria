@@ -46,9 +46,10 @@ using OM::Clinical::Episode;
 constexpr std::byte Poison{0xA5};
 
 template <class Model> Episode::State latest_state_in_poisoned_storage(const ClinicalParams& params) {
+    OM::mon::MonitoringState monitoring;
     alignas(Model) std::array<std::byte, sizeof(Model)> storage{};
     storage.fill(Poison);
-    auto* model = ::new (storage.data()) Model(params, 1.0);
+    auto* model = ::new (storage.data()) Model(params, 1.0, monitoring);
     const Episode::State state = model->get_latest_state();
     std::destroy_at(model);
     return state;
@@ -64,10 +65,11 @@ TEST_CASE("a new clinical model's latest state is None, whatever its memory held
 TEST_CASE("each kind of clinical model from ClinicalParams::create starts in state None", "[clinical][F60]") {
     using Kind = ClinicalParams::Kind;
     ClinicalParams params;
+    OM::mon::MonitoringState monitoring;
     for (const Kind kind : {Kind::DecisionTree5Day, Kind::ImmediateOutcomes, Kind::EventScheduler}) {
         CAPTURE(static_cast<int>(kind));
         params.kind = kind;
-        CHECK(params.create(1.0)->get_latest_state() == Episode::None);
+        CHECK(params.create(1.0, monitoring)->get_latest_state() == Episode::None);
     }
 }
 

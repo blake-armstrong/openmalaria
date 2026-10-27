@@ -123,7 +123,7 @@ HumanIntervention::HumanIntervention(const xsd::cxx::tree::sequence<scnXml::DTDe
 void HumanIntervention::deploy(Human& human, mon::DeployMethod method, VaccineLimits vacc_limits) const {
     for (size_t cond : conditions) {
         // Abort deployment if any condition is false.
-        if (!mon::check_condition(bridge::monitoring(), cond))
+        if (!mon::check_condition(human.monitoring(), cond))
             return;
     }
 

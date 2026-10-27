@@ -100,36 +100,6 @@ void init_stores(MonitoringState& state, const std::vector<OutMeasure>& enabled_
                  size_t n_genotypes, size_t n_drugs);
 } // namespace internal
 
-} // namespace mon
-
-namespace bridge {
-
-inline mon::MonitoringState* current_monitoring = nullptr; // NOLINT(cppcoreguidelines-avoid-non-const-global-variables)
-
-inline mon::MonitoringState& monitoring() {
-    assert(current_monitoring != nullptr);
-    return *current_monitoring;
-}
-
-}
-
-class MonitoringBinding {
-public:
-    explicit MonitoringBinding(mon::MonitoringState& state) : previous(bridge::current_monitoring) {
-        bridge::current_monitoring = &state;
-    }
-    MonitoringBinding(const MonitoringBinding&) = delete;
-    MonitoringBinding& operator=(const MonitoringBinding&) = delete;
-    MonitoringBinding(MonitoringBinding&&) = delete;
-    MonitoringBinding& operator=(MonitoringBinding&&) = delete;
-    ~MonitoringBinding() { bridge::current_monitoring = previous; }
-
-private:
-    mon::MonitoringState* previous;
-};
-
-namespace mon {
-
 // ----- info API -----
 
 inline size_t event_survey_number(const MonitoringState& state) { return state.surv_num_event; }

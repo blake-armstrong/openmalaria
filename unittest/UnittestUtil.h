@@ -224,7 +224,6 @@ namespace unittest_options {
 util::CommandLineOptions command_line;
 CommandLineBinding command_line_binding{command_line};
 mon::MonitoringState monitoring;
-MonitoringBinding monitoring_binding{monitoring};
 util::ModelOptionFlags model_options;
 WithinHost::WithinHostModel within_host_model;
 Clinical::ClinicalParams clinical;
@@ -459,7 +458,8 @@ public:
                               .options = &unittest_options::model_options,
                               .within_host = &unittest_options::within_host_model,
                               .clinical = &unittest_options::clinical,
-                              .interventions = &unittest_options::intervention_manager},
+                              .interventions = &unittest_options::intervention_manager,
+                              .monitoring = &unittest_options::monitoring},
             master_rngs.population);
     }
     // Set the WithinHost model used by the human, and return a pointer to it. Do not delete this!

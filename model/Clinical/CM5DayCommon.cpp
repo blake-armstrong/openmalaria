@@ -35,8 +35,8 @@ using namespace ::OM::util;
 
 // ———  per-human, construction and destruction  ———
 
-CM5DayCommon::CM5DayCommon(const ClinicalParams& params, double tsf)
-    : ClinicalModel(params), treatment_seeking_factor(tsf) {}
+CM5DayCommon::CM5DayCommon(const ClinicalParams& params, double tsf, mon::MonitoringState& monitoring)
+    : ClinicalModel(params, monitoring), treatment_seeking_factor(tsf) {}
 
 // ———  per-human, update  ———
 

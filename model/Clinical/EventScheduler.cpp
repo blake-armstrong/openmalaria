@@ -114,8 +114,9 @@ void EventSchedulerParams::set_parameters(const scnXml::HSEventScheduler& es_dat
 
 // -----  construction, destruction and checkpointing  -----
 
-ClinicalEventScheduler::ClinicalEventScheduler(const ClinicalParams& params, double tsf)
-    : ClinicalModel(params), case_start_time(Sim::never()), time_of_recovery(Sim::never()),
+ClinicalEventScheduler::ClinicalEventScheduler(const ClinicalParams& params, double tsf,
+                                               mon::MonitoringState& monitoring)
+    : ClinicalModel(params, monitoring), case_start_time(Sim::never()), time_of_recovery(Sim::never()),
       time_last_treatment(Sim::never()), previous_density(numeric_limits<double>::quiet_NaN()) {
     if (tsf != 1.0) {
         // p(treatment seeking) is part of tree & handled generically, so we

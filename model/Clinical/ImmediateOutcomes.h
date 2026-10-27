@@ -44,7 +44,8 @@ namespace OM::Clinical {
  */
 class ImmediateOutcomes : public CM5DayCommon {
 public:
-    ImmediateOutcomes(const ClinicalParams& params, double tsf) : CM5DayCommon(params, tsf) {}
+    ImmediateOutcomes(const ClinicalParams& params, double tsf, mon::MonitoringState& monitoring)
+        : CM5DayCommon(params, tsf, monitoring) {}
 
 protected:
     /** Called when a non-severe/complicated malaria sickness occurs. */

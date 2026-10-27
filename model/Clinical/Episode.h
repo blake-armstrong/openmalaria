@@ -81,8 +81,8 @@ public:
         RunCmTree = 0x10000, ///< Flag to indicate that CM tree should be run now or after a delay
     };
 
-    Episode(SimTime health_system_memory, bool health_system_memory_fix)
-        : time(Sim::never()), health_system_memory_fix(health_system_memory_fix),
+    Episode(mon::MonitoringState& monitoring, SimTime health_system_memory, bool health_system_memory_fix)
+        : time(Sim::never()), monitoring(&monitoring), health_system_memory_fix(health_system_memory_fix),
           health_system_memory(health_system_memory) {}
 
     Episode(const Episode&) = delete;
@@ -128,6 +128,7 @@ private:
      * (both in and out of hospital). */
     void report();
 
+    mon::MonitoringState* monitoring;
     bool health_system_memory_fix = false;
     SimTime health_system_memory = Sim::never();
 };

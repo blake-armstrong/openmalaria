@@ -43,7 +43,7 @@ public:
      * 
      * @param tSF Treatment-seeking factor. Normally 1 but allows simple heterogeneity.
      */
-    CM5DayCommon(const ClinicalParams& params, double tsf);
+    CM5DayCommon(const ClinicalParams& params, double tsf, mon::MonitoringState& monitoring);
 
     bool is_existing_case() override {
         // If treated in the recent past:

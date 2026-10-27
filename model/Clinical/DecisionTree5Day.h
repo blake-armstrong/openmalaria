@@ -43,7 +43,8 @@ namespace OM::Clinical {
  */
 class DecisionTree5Day : public CM5DayCommon {
 public:
-    DecisionTree5Day(const ClinicalParams& params, double tsf) : CM5DayCommon(params, tsf) {}
+    DecisionTree5Day(const ClinicalParams& params, double tsf, mon::MonitoringState& monitoring)
+        : CM5DayCommon(params, tsf, monitoring) {}
 
 protected:
     void uncomplicated_event(Human& human, Episode::State pg_state) override;

@@ -84,7 +84,6 @@ private:
     util::CommandLineOptions command_line;
     CommandLineBinding command_line_binding{command_line};
     mon::MonitoringState monitoring;
-    MonitoringBinding monitoring_binding{monitoring};
     mon::Continuous continuous;
     Clock clock;
     ClockBinding clock_binding{clock};

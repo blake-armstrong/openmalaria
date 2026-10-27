@@ -40,7 +40,7 @@ namespace OM::Clinical {
  */
 class ClinicalEventScheduler : public ClinicalModel {
 public:
-    ClinicalEventScheduler(const ClinicalParams& params, double tsf);
+    ClinicalEventScheduler(const ClinicalParams& params, double tsf, mon::MonitoringState& monitoring);
 
     bool is_existing_case() override;
 

@@ -335,7 +335,7 @@ void record_stat(MonitoringState& state, Measure measure, double val, size_t spe
 }
 
 void record_stat(Measure measure, const Host::Human& human, double val, size_t species, size_t genotype, size_t drug) {
-    MonitoringState& state = bridge::monitoring();
+    MonitoringState& state = human.monitoring();
     record_value(state, measure, stat_survey_number(state), human.monitoring_age_group, human.get_cohort_set(), species,
                  genotype, drug, val);
 }
@@ -345,7 +345,7 @@ void record_event(MonitoringState& state, Measure measure, size_t survey, size_t
 }
 
 void record_event(Measure measure, const Host::Human& human, double val, int out_id) {
-    MonitoringState& state = bridge::monitoring();
+    MonitoringState& state = human.monitoring();
     record_value(state, measure, event_survey_number(state), human.monitoring_age_group, human.get_cohort_set(), 0, 0,
                  0, val, out_id);
 }

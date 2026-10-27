@@ -53,6 +53,9 @@ struct WithinHostModel;
 namespace interventions {
 class InterventionManager;
 }
+namespace mon {
+struct MonitoringState;
+}
 namespace Clinical { // NOLINT(readability-identifier-naming)
 
 class ClinicalModel;
@@ -162,7 +165,7 @@ struct ClinicalParams {
                            WithinHost::WithinHostModel& within_host,
                            const interventions::InterventionManager& interventions);
 
-    std::unique_ptr<ClinicalModel> create(double treatment_seeking_factor) const;
+    std::unique_ptr<ClinicalModel> create(double treatment_seeking_factor, mon::MonitoringState& monitoring) const;
 
     Kind kind = Kind::DecisionTree5Day;
     bool indirect_mort_bugfix = false;

@@ -118,7 +118,8 @@ Simulation::Simulation(std::unique_ptr<scnXml::Scenario> scenario, util::Command
                                                                       .options = &model_options,
                                                                       .within_host = &within_host_model,
                                                                       .clinical = &clinical,
-                                                                      .interventions = &intervention_manager},
+                                                                      .interventions = &intervention_manager,
+                                                                      .monitoring = &monitoring},
                                                     master_rngs.population);
     transmission_model = Transmission::create_transmission_model(
         scenario_xml->getEntomology(), static_cast<int>(pop_size), per_host_params, master_rngs.transmission, genotypes,

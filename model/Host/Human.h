@@ -56,6 +56,7 @@ struct HumanParams {
     const WithinHost::WithinHostModel* within_host = nullptr;
     const Clinical::ClinicalParams* clinical = nullptr;
     const interventions::InterventionManager* interventions = nullptr;
+    mon::MonitoringState* monitoring = nullptr;
 };
 
 /** Interface to all sub-models storing data per-human individual.
@@ -75,6 +76,8 @@ public:
     inline bool is_in_sub_pop(interventions::ComponentId id) const;
 
     inline uint32_t get_cohort_set() const;
+
+    mon::MonitoringState& monitoring() const { return *monitoring_state; }
 
     /** Return date of birth */
     SimTime get_dob() const;
@@ -136,6 +139,7 @@ public:
 private:
     SimTime dob = Sim::never(); // date of birth; humans are always born at the end of a time step
     const interventions::InterventionManager* intervention_manager;
+    mon::MonitoringState* monitoring_state;
 
     /** Cache, updated when human is added to or removed from a sub-population */
     uint32_t cohort_set = 0;
