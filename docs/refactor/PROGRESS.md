@@ -1859,3 +1859,9 @@ An inventory at d4564e41 (`util/bridges.py`): `bridge::clock()` behind 30 facade
   - F87 in D9e5, with a Debug A/B variant.
   - F90: delete the dead branches in a clean-up, if the user agrees.
 - Next: D9e4 (its base will be its own HEAD; move `../om-bench-base` again at its start).
+
+### After D9e3: F90's dead code removed (2026-10-28)
+- Commit e7f3607f, at the user's request: the empty `if (blood_stage_clear_date == ts0)` in `VivaxBrood::update`; the `if (true) … else` in `DescriptiveInfection::determine_densities`, keeping the `max_multi_log_normal` sample; and the per-human 5-day interval assert in `DescriptiveWithinHostModel`'s constructor, which `DescriptiveInfectionParams` already checks with a scenario error at init. `InfectionImmunitySuite` set the falciparum params' clock only for that assert, so that line went too.
+- Gates: G-exact / G-unit / G-two-sims 65/65 (strict) in `build-rework/` and `build-debug/`; A/B 0 of 305 variants differ against 6560a389; G-style (`util/style.sh check 89a99138`) clean. No G-perf run: the removed branch never ran, and the assert is compiled out of Release.
+- Findings: F90 moved to § Closed.
+- Next: D9e4.
