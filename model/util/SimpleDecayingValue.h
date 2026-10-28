@@ -26,8 +26,7 @@
 #include "Global.h"
 #include "util/DecayFunction.h"
 
-namespace OM {
-namespace util {
+namespace OM::util {
 
 /** Parameters to for a decaying intervention whose effect can be described
  * by a single scalar output.
@@ -38,7 +37,7 @@ namespace util {
 class SimpleDecayingValue {
 public:
     /** Default construction: always return 0. */
-    SimpleDecayingValue() : initial(0.0), deploy_t(Sim::never()) {}
+    SimpleDecayingValue() : deploy_t(Sim::never()) {}
 
     /** Configure from an XML element. */
     inline void set(double initial_value, const scnXml::DecayFunction& elt, const char* name, const Clock& clock,
@@ -52,7 +51,7 @@ public:
 
     /** Trigger a deployment, if decay function was set. */
     inline void deploy(LocalRng& rng, SimTime time) {
-        if (decay.get() == 0)
+        if (decay.get() == nullptr)
             return; // cannot deploy
         deploy_t = time;
         het = decay->het_sample(rng);
@@ -62,7 +61,7 @@ public:
      * also 0 if no decay function or initial value was set,
      * otherwise between zero and the inital value). */
     inline double current_value(SimTime time) const {
-        if (decay.get() == 0 || het == nullptr)
+        if (decay.get() == nullptr || het == nullptr)
             return 0.0; // decay wasn't set: the always return 0
         else
             return initial * het->eval(time - deploy_t);
@@ -81,7 +80,7 @@ private:
     unique_ptr<util::DecayFunction> decay;
 
     /** Initial value. Is initialised to 0. */
-    double initial;
+    double initial{0.0};
 
     /** Description of larviciding decay. */
     unique_ptr<util::DecayFunction> het;
@@ -91,5 +90,5 @@ private:
 };
 
 }
-}
+
 #endif

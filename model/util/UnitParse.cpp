@@ -33,10 +33,8 @@
 #include <iomanip>
 #include <regex>
 
-namespace OM {
-
 // ———  Unit parsing stuff  ———
-namespace unit_parse {
+namespace OM::unit_parse {
 
 template <typename T> int cast_to_int(T x) {
     int y = static_cast<int>(x);
@@ -49,7 +47,7 @@ template <typename T> int cast_to_int(T x) {
 SimTime read_short_duration(const std::string& str, DefaultUnit def_unit, const Clock& clock,
                             const util::CommandLineOptions& command_line) {
     const char* s = str.c_str();
-    char* end = 0;
+    char* end = nullptr;
 
     long v = std::strtol(s, &end, 10);
     size_t len = end - s;
@@ -89,7 +87,7 @@ SimTime read_short_duration(const std::string& str, DefaultUnit def_unit, const 
 double parse_duration_and_unit(const std::string& str, DefaultUnit& unit,
                                const util::CommandLineOptions& command_line) {
     const char* s = str.c_str();
-    char* end = 0;
+    char* end = nullptr;
 
     double v = std::strtod(s, &end);
     size_t len = end - s;
@@ -196,5 +194,3 @@ SimTime read_date(const std::string& str, DefaultUnit def_unit, const Clock& clo
 }
 
 } // end of UnitParse namespace
-
-}

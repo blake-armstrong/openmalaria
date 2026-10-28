@@ -34,12 +34,11 @@
 #include <gsl_spline.h>
 */
 
-namespace OM {
-namespace util {
+namespace OM::util {
 
 // ———  AgeGroupInterpolation derivatives  ———
 
-void AgeGroupInterpolation::output_samples(const string name, const Clock& clock,
+void AgeGroupInterpolation::output_samples(const string& name, const Clock& clock,
                                            const CommandLineOptions& command_line) {
     if (!command_line.option(util::CommandLine::SampleInterpolations)) {
         return;
@@ -58,9 +57,9 @@ class AgeGroupDummy : public AgeGroupInterpolation {
 public:
     static AgeGroupDummy singleton;
 
-    virtual double eval(double age_years) const { throw TRACED_EXCEPTION_DEFAULT("AgeGroupDummy"); }
-    virtual void scale(double factor) { throw TRACED_EXCEPTION_DEFAULT("AgeGroupDummy"); }
-    virtual double first_global_maximum() { throw TRACED_EXCEPTION_DEFAULT("AgeGroupDummy"); }
+    double eval(double age_years) const override { throw TRACED_EXCEPTION_DEFAULT("AgeGroupDummy"); }
+    void scale(double factor) override { throw TRACED_EXCEPTION_DEFAULT("AgeGroupDummy"); }
+    double first_global_maximum() override { throw TRACED_EXCEPTION_DEFAULT("AgeGroupDummy"); }
 };
 AgeGroupDummy AgeGroupDummy::singleton;
 
@@ -96,25 +95,25 @@ public:
         output_samples(elt_name, clock, command_line);
     }
 
-    virtual double eval(double age_years) const {
+    double eval(double age_years) const override {
         assert(age_years >= 0.0);
         auto it = data_groups.upper_bound(age_years);
         --it; // previous point when ordered by age (it->first <= ageYears < (it+1)->first)
         return it->second;
     }
 
-    virtual void scale(double factor) {
-        for (auto it = data_groups.begin(); it != data_groups.end(); ++it) {
-            it->second *= factor;
+    void scale(double factor) override {
+        for (auto& data_group : data_groups) {
+            data_group.second *= factor;
         }
     }
 
-    virtual double first_global_maximum() {
+    double first_global_maximum() override {
         double age = 0.0, max = numeric_limits<double>::min();
-        for (auto it = data_groups.begin(); it != data_groups.end(); ++it) {
-            if (it->second > max) {
-                max = it->second;
-                age = it->first;
+        for (auto& data_group : data_groups) {
+            if (data_group.second > max) {
+                max = data_group.second;
+                age = data_group.first;
             }
         }
         return age;
@@ -163,9 +162,9 @@ public:
         data_points[0.5 * (greatest_lbound + Sim::in_years(clock.max_human_age()))] = last_value;
     }
 
-    virtual void scale(double factor) {
-        for (auto it = data_points.begin(); it != data_points.end(); ++it) {
-            it->second *= factor;
+    void scale(double factor) override {
+        for (auto& data_point : data_points) {
+            data_point.second *= factor;
         }
     }
 
@@ -192,7 +191,7 @@ public:
         output_samples(elt_name, clock, command_line);
     }
 
-    virtual double eval(double age_years) const {
+    double eval(double age_years) const override {
         assert(age_years >= 0.0);
         //TODO: optimise by putting (f1-f0)/(a1-a0) into the array and checking usage
         // Get the first point with age greater than ageYears:
@@ -206,12 +205,12 @@ public:
         return (age_years - a0) / (a1 - a0) * (f1 - f0) + f0;
     }
 
-    virtual double first_global_maximum() {
+    double first_global_maximum() override {
         double age = 0.0, max = numeric_limits<double>::min();
-        for (auto it = data_points.begin(); it != data_points.end(); ++it) {
-            if (it->second > max) {
-                max = it->second;
-                age = it->first;
+        for (auto& data_point : data_points) {
+            if (data_point.second > max) {
+                max = data_point.second;
+                age = data_point.first;
             }
         }
         return age;
@@ -295,5 +294,4 @@ void AgeGroupInterpolator::reset() {
     }
 }
 bool AgeGroupInterpolator::isSet() const { return obj != &AgeGroupDummy::singleton; }
-}
 }

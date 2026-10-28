@@ -30,8 +30,7 @@
 #include "util/sampler.h"
 #include "util/UnitParse.h"
 
-namespace OM {
-namespace util {
+namespace OM::util {
 
 /** An interface for a few types of decay function (some of which may also be
  * suitible survival functions).
@@ -49,7 +48,7 @@ public:
         : clock(other.clock), increasing(other.increasing), initial_efficacy(other.initial_efficacy),
           het(other.het ? other.het->clone() : nullptr), het_factor(other.het_factor) {}
 
-    virtual ~DecayFunction() {}
+    virtual ~DecayFunction() = default;
 
     /** Return a new decay function, constructed from an XML element.
      * 
@@ -113,5 +112,5 @@ protected:
 };
 
 }
-}
+
 #endif

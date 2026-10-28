@@ -37,7 +37,7 @@ class CommandLineOptions;
  * 
  * It is here to allow the trivial functions below to be inlined. */
 struct AgeGroupInterpolation {
-    virtual ~AgeGroupInterpolation() {}
+    virtual ~AgeGroupInterpolation() = default;
 
     virtual double eval(double age_years) const = 0;
     virtual void scale(double factor) = 0;
@@ -46,7 +46,7 @@ struct AgeGroupInterpolation {
 protected:
     /** Sample interpolator between 0 and max age, outputting to a csv file
      * called name.csv. */
-    void output_samples(const string name, const Clock& clock, const CommandLineOptions& command_line);
+    void output_samples(const string& name, const Clock& clock, const CommandLineOptions& command_line);
 };
 
 /** A class representing deterministic interpolation of data collected
