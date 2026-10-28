@@ -90,3 +90,5 @@ dd43e68aef85fbc3e8fec32a3c32c0e47cb8acbc
 fa76d53c3870f1a2eded8a00857acaea01dea0bf
 # D9e1: model/util UnitParse, DecayFunction, AgeGroupInterpolation, SimpleDecayingValue safe modernize fix-its (util/style.sh modernize)
 0406c6087b9ca9eb66dcd967469b9994d5ca8502
+# D9e2: rename model/Host/ImportedInfections.h identifiers (util/style.sh rename)
+57363da88aa04c59df4bf45604e9297910cec6b4
