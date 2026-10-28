@@ -46,10 +46,10 @@ public:
          * @returns True if any infections are imported
          */
     void init(const scnXml::ImportedInfections& elt, const Clock& clock, const util::CommandLineOptions& command_line) {
-        const scnXml::ImportedInfections::TimedType& tElt = elt.getTimed();
+        const scnXml::ImportedInfections::TimedType& timed_elt = elt.getTimed();
         try {
             //NOTE: if changing XSD, this should not have a default unit:
-            period = unit_parse::read_duration(tElt.getPeriod(), unit_parse::STEPS, clock, command_line);
+            period = unit_parse::read_duration(timed_elt.getPeriod(), unit_parse::STEPS, clock, command_line);
             if (period < Sim::zero()) {
                 throw util::format_error("cannot be negative");
             }
@@ -57,15 +57,15 @@ public:
             throw util::xml_scenario_error(
                 string("interventions/importedInfections/timed/period: ").append(e.message()));
         }
-        rate.reserve(tElt.getRate().size());
+        rate.reserve(timed_elt.getRate().size());
         try {
-            for (auto it = tElt.getRate().begin(); it != tElt.getRate().end(); ++it) {
-                SimTime date = unit_parse::read_date(it->getTime(),
-                                                     unit_parse::STEPS /*STEPS is only for backwards compatibility*/,
-                                                     clock, command_line);
+            for (const auto& rate_elt : timed_elt.getRate()) {
+                const SimTime date = unit_parse::read_date(
+                    rate_elt.getTime(), unit_parse::STEPS /*STEPS is only for backwards compatibility*/, clock,
+                    command_line);
                 // convert to per-time-step, per-person
-                double rateVal = it->getValue() * Sim::years_per_step() * (1.0 / 1000.0);
-                rate.push_back(Rate(date - Sim::start_date(), rateVal));
+                const double rate_val = rate_elt.getValue() * Sim::years_per_step() * (1.0 / 1000.0);
+                rate.emplace_back(date - Sim::start_date(), rate_val);
             }
             sort(rate.begin(), rate.end());
             if (rate.size() > 0) {

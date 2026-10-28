@@ -45,9 +45,14 @@ public:
     void testBad() {
         dfElt.setFunction("unknown");
         string errMsg = "decay function DecayFunctionSuite of type unknown unrecognized";
-        TS_ASSERT_THROWS_EQUALS(df = DecayFunction::make_object(dfElt, "DecayFunctionSuite", UnittestUtil::clock(),
-                                                                unittest_options::command_line),
-                                const std::runtime_error& e, e.what(), errMsg);
+        string message;
+        try {
+            df = DecayFunction::make_object(dfElt, "DecayFunctionSuite", UnittestUtil::clock(),
+                                            unittest_options::command_line);
+        } catch (const std::runtime_error& e) {
+            message = e.what();
+        }
+        TS_ASSERT_EQUALS(message, errMsg);
     }
 
     void testConstant() {
@@ -153,9 +158,14 @@ public:
         dfElt.getDecay().push_back(inner);
 
         string errMsg = "Emax function: IC50 must be > 0, got -1.000000";
-        TS_ASSERT_THROWS_EQUALS(df = DecayFunction::make_object(dfElt, "DecayFunctionSuite", UnittestUtil::clock(),
-                                                                unittest_options::command_line),
-                                const std::runtime_error& e, e.what(), errMsg);
+        string message;
+        try {
+            df = DecayFunction::make_object(dfElt, "DecayFunctionSuite", UnittestUtil::clock(),
+                                            unittest_options::command_line);
+        } catch (const std::runtime_error& e) {
+            message = e.what();
+        }
+        TS_ASSERT_EQUALS(message, errMsg);
     }
 
 private:

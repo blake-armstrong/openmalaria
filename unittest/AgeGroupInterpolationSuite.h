@@ -50,7 +50,13 @@ public:
 
     void testDummy() {
         AgeGroupInterpolator o;
-        TS_ASSERT_THROWS(o.eval(5.7), const std::exception&);
+        bool thrown = false;
+        try {
+            o.eval(5.7);
+        } catch (const std::exception&) {
+            thrown = true;
+        }
+        TS_ASSERT(thrown);
     }
 
     void testPiecewiseConst() {
