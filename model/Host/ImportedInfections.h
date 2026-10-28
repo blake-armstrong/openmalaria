@@ -42,12 +42,11 @@ public:
 
     /** Initialise, passing intervention description
          * 
-         * @param iiElt The scenario element with description of rates
+         * @param elt The scenario element with description of rates
          * @returns True if any infections are imported
          */
-    void init(const scnXml::ImportedInfections& iiElt, const Clock& clock,
-              const util::CommandLineOptions& command_line) {
-        const scnXml::ImportedInfections::TimedType& tElt = iiElt.getTimed();
+    void init(const scnXml::ImportedInfections& elt, const Clock& clock, const util::CommandLineOptions& command_line) {
+        const scnXml::ImportedInfections::TimedType& tElt = elt.getTimed();
         try {
             //NOTE: if changing XSD, this should not have a default unit:
             period = UnitParse::readDuration(tElt.getPeriod(), UnitParse::STEPS, clock, command_line);
