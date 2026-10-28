@@ -50,7 +50,7 @@ See `PLAN.md` for the session protocol, chunks and gates. Append one log entry p
 | D9c | done | 8123447c, 45755b22, b0222c24, d3e5a936, 38305747, 94f2ae99, c9e4355e, (this log entry) |
 | D9d | done | ab4475fd, eb0ff5c4, 44481616, d3474e5c, (this log entry) |
 | D9e | split | D9e1–D9e5 |
-| D9e1 | todo | |
+| D9e1 | done | 9ef04fb2, f346dc08, 9e24d7e8, edf9e0f1, adeefb5d, fa76d53c, 1d1a2d24, 0406c608, 38874769, cbefe9ff, 071caef9, 2658e7d2, 62403eb5, (this log entry) |
 | D9e2 | todo | |
 | D9e3 | todo | |
 | D9e4 | todo | |
@@ -472,6 +472,7 @@ See `PLAN.md` for the session protocol, chunks and gates. Append one log entry p
   | `model/interventions` | 2cee6da6 + 9f5e01f4's hand rename (D8) | da9bfd0f + 9f5e01f4 (D8) |
   | `model/mon` | 442d4c81 + 5255cf06's hand rename (D9a) | 05f577dc + 5255cf06 (D9a) |
   | `model/Host/Human.{h,cpp}`, `model/Population.{h,cpp}` | f995cf66 (D9b2) | dd43e68a + bfd60dbb (D9b2) |
+  | `model/util/UnitParse.{h,cpp}`, `model/util/DecayFunction.{h,cpp}`, `model/util/AgeGroupInterpolation.{h,cpp}`, `model/util/SimpleDecayingValue.h` | fa76d53c + 071caef9's hand rename (D9e1) | 0406c608 + cbefe9ff (D9e1) |
 
   Rows from D4a on were added in D4d; the D4 entries had recorded the commits only in their logs.
 
@@ -1659,3 +1660,88 @@ The user asked for F86's cosmetic `--print-genotypes` quirks to be fixed. The G-
 
 ### Plan amendment: D9e split (2026-10-27, at the start of D9e)
 An inventory at d4564e41 (`util/bridges.py`): `bridge::clock()` behind 30 facades (21 on `Sim`), 408 qualified call sites in 61 files (`ts0` 64, `one_ts` 63, `ts1` 42, `now` 40, `in_steps` 28, `steps_per_year` 25, the unit tests' `incrTime` 25 and `initTime` 12), many on per-infection hot paths (`Infection::blood_stage`, `DescriptiveInfection::expired`, `VivaxBrood::is_patent`, the GVI/IRS/ITN decay); `bridge::command_line()` behind `CommandLine::option`, 4 call sites in `UnitParse.cpp` and `AgeGroupInterpolation.cpp`, whose callers (about 45) also need the clock. Nothing that reads the clock holds a way to reach it except through the bridge; the transmission model, the intervention manager and its deployments, and the infections hold nothing set by `Simulation`. Three routes, following D9c and D9d: init-time code takes `const Clock&`; run-time objects keep a `const Clock*` in the params or owner they already hold; leaf objects with no params pointer (infections, broods) take the time as an argument, so no per-infection member is added. Split by module: D9e1 (`UnitParse`, `DecayFunction`, `AgeGroupInterpolation` and the CommandLine bridge), D9e2 (Host and Clinical), D9e3 (WithinHost and the infections), D9e4 (Transmission), D9e5 (interventions, mon, the unit tests' direct reads, and the removal of the clock facades, the bridge pointer and `ClockBinding`). Rows in PLAN.md.
+
+### D9e1: the conversion layer and the CommandLine bridge → passed in (done, 2026-10-28)
+- Base: d4564e41 (D9d). The G-perf and A/B base worktree `../om-bench-base` was moved to d4564e41 and rebuilt. 9ef04fb2 (the split) changes docs only.
+- Inventory at the base (`util/bridges.py`): `bridge::clock()` behind 30 facades, 408 qualified call sites in 61 files; `bridge::command_line()` behind `CommandLine::option`, 4 call sites in `UnitParse.cpp` and `AgeGroupInterpolation.cpp`. UnitParse, DecayFunction and AgeGroupInterpolation held 22 of the clock's sites; their callers number about 45, in Clock, mon, WithinHost, Clinical, interventions, Transmission and the unit tests. At the end: the CommandLine bridge is gone, and the clock has 386 sites in 58 files. 53 files changed in the threading commit, nearly all by one signature or one argument.
+- Commits:
+  - 9ef04fb2: PLAN and PROGRESS, the D9e split into D9e1–D9e5 (§ Plan amendment: D9e split).
+  - f346dc08: `util/ab_scenarios.py`, a `units` group (7 variants) for moved paths no ctest scenario reaches:
+    - `--sample-interpolations` on scenario5 and on scenario4, whose changeHS rewrites the CSVs;
+    - `--no-deprecation-warnings` through the changeHS and decay parsing;
+    - a changeHS date long after the start;
+    - a decay `L` in steps, also across a checkpoint.
+
+    The script now also compares the CSV files a run writes. Base against base: 0 of 7.
+  - 9e24d7e8: **logic, threading.** Every UnitParse function takes `(const Clock&, const CommandLineOptions&)`; `parse_date` takes the clock only and the file-local `parse_duration_and_unit` the options only. `DecayFunction::make_object` and `AgeGroupInterpolator::set` take both and pass them down their constructors. The callers:
+    - **Clock:** `Clock::init` passes `*this` to `parse_date` and `read_survey_dates`. Both run after `interval` and `start` are set, the same values the bridge gave.
+    - **Monitoring:** `Continuous::init` takes both, in place of D9b1's ctsout name.
+    - **WithinHost:** the `WithinHostModel` constructor takes the clock for `read_latent_p`, `CommonWithinHostParams` (mass by age) and `PathogenesisParams` (NMF incidence); `TreatmentRegistry::add` and `Treatments` take both.
+    - **Clinical:** the `ClinicalParams` constructor takes the clock (for `EventSchedulerParams`). `set_health_system` takes both and passes them to the CFR and sequelae interpolators, the event scheduler's `set_health_system`/`set_parameters`, `set_immediate_outcomes` and `set_decision_tree_5day`. `DecisionTreeLibrary` holds pointers to both next to its manager, for the treatSimple and uncomplicated nodes.
+    - **interventions:** `InterventionManager::init` takes the clock and passes both to `ImportedInfections::init`, `TreatSimpleComponent`, the vaccine, ITN, IRS and GVI components, `VectorModel::init_vector_interv/trap` → `AnophelesModel` → `SimpleDecayingValue::set`, and the non-human-host deployment. The changeHS deployment keeps pointers to both for its run-time `set_health_system`.
+    - **Transmission:** `PerHostParams` takes both.
+
+    `DecayFunction` keeps a `const Clock*`, copied with each het sample, for the eight `sample_age_of_decay` roundings, so `HumanITN` and the unit tests call it unchanged. The unit tests get the fixture clock through `UnittestUtil::clock()`; `ClinicalTests` uses a default `Clock` (a piecewise-constant interpolator without `--sample-interpolations` never reads it). No other facade read changed. One logic commit, not the plan's two: `set_health_system` needed both arguments for the treatments and the interpolators alike.
+  - edf9e0f1: **logic, bridge removed.** Gone: the `CommandLine::option` facade, `bridge::current_command_line`, `bridge::command_line()`, `CommandLineBinding` (Simulation's, the CxxTest fixture's, ClinicalTests'), and `CommandLine.h`'s `<cassert>`.
+  - adeefb5d: G-style, `ImportedInfections::init`'s `iiElt` → `elt` (a changed signature line).
+  - fa76d53c: **tool rename** of the four files, 87 renames, among them namespace `UnitParse` → `unit_parse`. Maps: `IC50=ic50`, `rawIC50=raw_ic50`, `f1hetSample`/`f2hetSample`/`fhetSample` → `f1_het_sample`/`f2_het_sample`/`f_het_sample` (case conversion gave `i_c50`, `f1het_sample`). Skipped: `checkpointSample` (no fix-it). The old names left (`UnitParse::readDate`, `initialEfficacy`) are in the uncompiled R_0 code. 1d1a2d24 lists it in `.git-blame-ignore-revs`.
+  - 0406c608: **tool modernise**: 36 use-override, 5 concat-nested-namespaces, 4 loop-convert (none modifies its map), 4 use-nullptr, 2 use-equals-default, 2 use-std-numbers (`log(2.0)` → `ln2`; G-exact unchanged), 2 init-variables, 1 unnecessary-value-param, 1 use-default-member-init. 38874769 lists it.
+  - cbefe9ff: **hand modernise.**
+    - Done:
+      - const-correctness;
+      - `DefaultUnit` an `enum class : std::uint8_t`, with `using enum` so the callers' `unit_parse::STEPS` stay;
+      - `MonthLen`/`MonthStart` as `constexpr std::array`;
+      - a raw-string date regex;
+      - explicit `long` → `double` casts on whole-day durations;
+      - transparent functors in the operator decay functions;
+      - `DecayFunction`'s copy assignment and moves deleted;
+      - a `static_cast`.
+    - Left, with reasons in the message:
+      - `endl` (flush timing);
+      - `output_samples`' double loop counter (an integer counter would change the sampled ages in the CSV);
+      - `parse_date`'s `atoi` (on regex-matched digits);
+      - the protected data;
+      - `AgeGroupInterpolator`'s sentinel pointer (keeps `eval` branch-free and inline).
+  - 071caef9: hand rename `checkpointSample` → `checkpoint_sample` (13 uses, also in the GVI, IRS, ITN and vaccine components).
+  - 2658e7d2: G-style on changed lines.
+    - `ImportedInfections::init`: `tElt` → `timed_elt`, and the rate loop as a range-for with `const` locals and `emplace_back`, with the same reads in the same order.
+    - Three `TS_ASSERT_THROWS*` in `DecayFunctionSuite` and `AgeGroupInterpolationSuite` became explicit try/catch (F88).
+  - 62403eb5: FINDINGS F87 and F88; PLAN.md D9e1 row as built; README's bridge list (now `Clock.h` only) and A/B row.
+- Rename and modernise: the four conversion-layer files (new status row). `ImportedInfections.h` belongs to D9e2's Host scope; only the lines this chunk changed were brought to G-style.
+- Gates:
+  - G-exact / G-unit / G-two-sims: 65/65 (strict) on `build-rework/` (Release) and `build-debug/` (Debug) after each logic commit, after the rename, after both modernise commits and at 2658e7d2.
+  - A/B (`util/gates.sh --ab`, base d4564e41): 0 of 301 variants differ at 9e24d7e8, at edf9e0f1, at 071caef9 and at 2658e7d2.
+  - Console A/B by hand, because G-cli's `util/ab_cli.sh` arrives with M3: 28 invocations at edf9e0f1, each run twice so the checkpoint ones resume. Scenarios 5, 4, 2ITNs and Vivax, each with default flags, `--verbose --progress`, `--checkpoint`, `--checkpoint-stop`, `--no-deprecation-warnings`, `--sample-interpolations` and `--print-survey-times`. Identical stdout, stderr, exit codes and files, the CSVs included.
+  - Planted bugs (`util/plant.py`, each restored):
+
+    | Planted bug | Caught by |
+    |---|---|
+    | `parse_duration_and_unit`'s deprecation check negated | 22 A/B variants (`units`, `registries`, `clinical`) |
+    | `read_date` without `start_date` | 12 ctest tests (Genotypes, IRS30, KK_20150612, MolPairwise, VecFullTest, NonHumanHosts, PEV, BSV, TBV, PEVLocusOrder, VaccineTwoLoci, PkPdModels) |
+    | `output_samples` ignoring the option | 5 `units` variants |
+    | `sample_age_of_decay` without rounding to a step | 8 ctest tests (2ITNs, LifeNet1, LifeNet2, ITNHoleIndexMaxZero, MSAT, Rach5IC, TrapTest, VecFullTest) and 3 `units` variants |
+  - G-stat: `ctest -L statistical` at 2658e7d2: 53 passed, 11 disabled.
+  - G-style: `util/style.sh check d4564e41` clean at 2658e7d2. At 071caef9 it had found the `ImportedInfections` and CxxTest items fixed in 2658e7d2.
+  - G-perf: `util/bench.sh -n 7 --compare ../om-bench-base/build-rework`, three runs, all under load:
+
+    | Candidate | Load at start | Median per-pair ratio | Spreads (base / candidate) |
+    |---|---|---|---|
+    | edf9e0f1 | 7.35 | 0.9851 | 13.4% / 8.0% |
+    | 071caef9 | 7.22 | 0.9982 | 8.3% / 17.7% |
+    | 2658e7d2 | 13.1 | 1.0048 | 12.2% / 13.5% |
+
+    None is near the limit. The chunk changes init-time code and the deploy-time decay sampling (one more pointer hop), no per-step path.
+- Findings:
+  - F87: a first-time vector intervention deployed during the update reads `Sim::now()`. It is suspected, not reproduced; check it in D9e5 and ask before fixing.
+  - F88: tooling, clang-tidy cannot parse CxxTest's `TS_ASSERT_THROWS`.
+- Surprises:
+  - The four conversion-layer files had never been renamed or modernised. The approved plan said every module was in the status table; it was not, so the chunk did them, per the stage rules.
+  - The plan listed G-cli as a gate, but its script is M3's. The console A/B was done by hand, as in D3.
+  - The first by-hand console run gave every invocation exit 69 (the scenario path is read relative to `--resource-path`) and still compared "same". It was rerun with absolute paths.
+  - Renaming one parameter in `ImportedInfections.h` pulled three more lines into G-style.
+- Follow-ups:
+  - D9e2–D9e5: the clock (386 sites in 58 files); D9f: the bridge namespace and interleaved G-two-sims.
+  - F87 in D9e5, with a Debug A/B variant.
+  - Expect F88 again in D9e5, which changes most suites.
+  - `ImportedInfections.h`: the rest of the file in D9e2's rename and modernise.
+- Next: D9e2 (its base will be its own HEAD; move `../om-bench-base` again at its start).
