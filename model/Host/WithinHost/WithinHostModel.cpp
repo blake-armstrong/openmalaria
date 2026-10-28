@@ -42,11 +42,11 @@ namespace {
 
 SimTime read_latent_p(const scnXml::Model& model, const Clock& clock, const util::CommandLineOptions& command_line) {
     // Default value to use if no <parameters> element is present in XML.
-    SimTime latent_p = UnitParse::readShortDuration("15d", UnitParse::DAYS, clock, command_line);
+    SimTime latent_p = unit_parse::read_short_duration("15d", unit_parse::DAYS, clock, command_line);
     try {
         if (model.getParameters().present()) {
-            latent_p = UnitParse::readShortDuration(model.getParameters().get().getLatentp(), UnitParse::NONE, clock,
-                                                    command_line);
+            latent_p = unit_parse::read_short_duration(model.getParameters().get().getLatentp(), unit_parse::NONE,
+                                                       clock, command_line);
         }
     } catch (const util::format_error& e) {
         throw util::xml_scenario_error(std::string("model/parameters/latentP: ").append(e.message()));

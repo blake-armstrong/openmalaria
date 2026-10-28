@@ -20,8 +20,8 @@
  * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301, USA.
  */
 
-#ifndef Hmod_AgeDistribution
-#define Hmod_AgeDistribution
+#ifndef HMOD_AGE_DISTRIBUTION
+#define HMOD_AGE_DISTRIBUTION
 
 #include "Global.h"
 
@@ -39,14 +39,14 @@ class CommandLineOptions;
 struct AgeGroupInterpolation {
     virtual ~AgeGroupInterpolation() {}
 
-    virtual double eval(double ageYears) const = 0;
+    virtual double eval(double age_years) const = 0;
     virtual void scale(double factor) = 0;
-    virtual double firstGlobalMaximum() = 0;
+    virtual double first_global_maximum() = 0;
 
 protected:
     /** Sample interpolator between 0 and max age, outputting to a csv file
      * called name.csv. */
-    void outputSamples(const string name, const Clock& clock, const CommandLineOptions& command_line);
+    void output_samples(const string name, const Clock& clock, const CommandLineOptions& command_line);
 };
 
 /** A class representing deterministic interpolation of data collected
@@ -69,7 +69,7 @@ struct AgeGroupInterpolator {
      * @param ageGroups XML element of per-age-group values
      * @param eltName Name of XML element (for reasonable error reporting)
      */
-    void set(const scnXml::AgeGroupValues& ageGroups, const char* eltName, const Clock& clock,
+    void set(const scnXml::AgeGroupValues& age_groups, const char* elt_name, const Clock& clock,
              const CommandLineOptions& command_line);
 
     /** Set back to initial state. */
@@ -79,7 +79,7 @@ struct AgeGroupInterpolator {
     bool isSet() const; // NOLINT(readability-identifier-naming)
 
     /** Return a value interpolated for age ageYears. */
-    inline double eval(double ageYears) const { return obj->eval(ageYears); }
+    inline double eval(double age_years) const { return obj->eval(age_years); }
 
     /** Scale function by factor. */
     inline void scale(double factor) { obj->scale(factor); }
@@ -87,7 +87,7 @@ struct AgeGroupInterpolator {
     /** Find the youngest age which is the global maximum (i.e. the age at
      * which individuals are considered adults where all adults have the same
      * same value). */
-    inline double firstGlobalMaximum() const { return obj->firstGlobalMaximum(); }
+    inline double first_global_maximum() const { return obj->first_global_maximum(); }
 
 private:
     AgeGroupInterpolation* obj;

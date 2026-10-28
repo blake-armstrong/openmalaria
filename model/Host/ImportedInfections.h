@@ -49,7 +49,7 @@ public:
         const scnXml::ImportedInfections::TimedType& tElt = elt.getTimed();
         try {
             //NOTE: if changing XSD, this should not have a default unit:
-            period = UnitParse::readDuration(tElt.getPeriod(), UnitParse::STEPS, clock, command_line);
+            period = unit_parse::read_duration(tElt.getPeriod(), unit_parse::STEPS, clock, command_line);
             if (period < Sim::zero()) {
                 throw util::format_error("cannot be negative");
             }
@@ -60,8 +60,9 @@ public:
         rate.reserve(tElt.getRate().size());
         try {
             for (auto it = tElt.getRate().begin(); it != tElt.getRate().end(); ++it) {
-                SimTime date = UnitParse::readDate(
-                    it->getTime(), UnitParse::STEPS /*STEPS is only for backwards compatibility*/, clock, command_line);
+                SimTime date = unit_parse::read_date(it->getTime(),
+                                                     unit_parse::STEPS /*STEPS is only for backwards compatibility*/,
+                                                     clock, command_line);
                 // convert to per-time-step, per-person
                 double rateVal = it->getValue() * Sim::years_per_step() * (1.0 / 1000.0);
                 rate.push_back(Rate(date - Sim::start_date(), rateVal));

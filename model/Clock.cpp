@@ -42,7 +42,7 @@ void Clock::init(const scnXml::Scenario& scenario, const util::ModelNameProvider
     if (mon.getStartDate().present()) {
         try {
             // on failure, this throws or returns sim::never()
-            start = UnitParse::parseDate(mon.getStartDate().get(), *this);
+            start = unit_parse::parse_date(mon.getStartDate().get(), *this);
             if (start == Sim::never()) {
                 throw util::format_error("invalid format (expected YYYY-MM-DD)");
             }

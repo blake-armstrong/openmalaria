@@ -20,8 +20,8 @@
  * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301, USA.
  */
 
-#ifndef Hmod_SimpleDecayingValue
-#define Hmod_SimpleDecayingValue
+#ifndef HMOD_SIMPLE_DECAYING_VALUE
+#define HMOD_SIMPLE_DECAYING_VALUE
 
 #include "Global.h"
 #include "util/DecayFunction.h"
@@ -43,7 +43,7 @@ public:
     /** Configure from an XML element. */
     inline void set(double initial_value, const scnXml::DecayFunction& elt, const char* name, const Clock& clock,
                     const CommandLineOptions& command_line) {
-        decay = DecayFunction::makeObject(elt, name, clock, command_line);
+        decay = DecayFunction::make_object(elt, name, clock, command_line);
         initial = initial_value;
     }
 
@@ -55,7 +55,7 @@ public:
         if (decay.get() == 0)
             return; // cannot deploy
         deploy_t = time;
-        het = decay->hetSample(rng);
+        het = decay->het_sample(rng);
     }
 
     /** Get the value (0 if before any deployment or after complete decay,

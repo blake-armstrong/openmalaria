@@ -34,7 +34,7 @@ GVIComponent::GVIComponent(ComponentId id, const scnXml::GVIDescription& elt,
                            const map<string, size_t>& species_name_map, const Clock& clock,
                            const util::CommandLineOptions& command_line)
     : Transmission::HumanVectorInterventionComponent(id) {
-    decay = DecayFunction::makeObject(elt.getDecay(), "interventions.human.vector.decay", clock, command_line);
+    decay = DecayFunction::make_object(elt.getDecay(), "interventions.human.vector.decay", clock, command_line);
     // assume usage modifier is 100% if none is specified
     double prop_use = NAN;
     if (elt.getUsage().present()) {
@@ -96,7 +96,7 @@ HumanGVI::HumanGVI(LocalRng& rng, const GVIComponent& params)
     : PerHostInterventionData(params.id()), component(&params) {
     // Varience factor of decay is sampled once per human: human is assumed
     // to account for most variance.
-    decay_het = params.decay->hetSample(rng);
+    decay_het = params.decay->het_sample(rng);
 }
 
 void HumanGVI::redeploy(LocalRng& rng, const Transmission::HumanVectorInterventionComponent&) {

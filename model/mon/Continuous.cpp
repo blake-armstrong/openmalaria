@@ -45,7 +45,7 @@ void Continuous::init(const scnXml::Monitoring& monitoring, bool is_checkpoint, 
     const auto& options = cts_opt.get();
     try {
         //NOTE: if changing XSD, this should not have a default unit:
-        cts_period = UnitParse::readShortDuration(options.getPeriod(), UnitParse::STEPS, clock, command_line);
+        cts_period = unit_parse::read_short_duration(options.getPeriod(), unit_parse::STEPS, clock, command_line);
         if (cts_period < Sim::one_ts())
             throw util::format_error("must be >= 1 time step");
     } catch (const util::format_error& e) {

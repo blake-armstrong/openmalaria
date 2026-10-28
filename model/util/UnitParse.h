@@ -20,8 +20,8 @@
  * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301, USA.
  */
 
-#ifndef Hmod_OM_util_timeConversions
-#define Hmod_OM_util_timeConversions
+#ifndef HMOD_OM_UTIL_TIME_CONVERSIONS
+#define HMOD_OM_UTIL_TIME_CONVERSIONS
 
 #include "Global.h"
 
@@ -39,7 +39,7 @@ class CommandLineOptions;
  * Use is being implemented by (a) changing existing values in the schema to
  * use this without breaking backwards compatibility (by allowing the unit to
  * be omitted), and (b) by requiring new values be specified with unit. */
-namespace UnitParse {
+namespace unit_parse {
 enum DefaultUnit {
     NONE,  // error if not specified
     DAYS,  // assume days
@@ -47,9 +47,9 @@ enum DefaultUnit {
     STEPS, // assume steps
 };
 
-static const int monthLen[] = {31, 28, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31};
+static const int MonthLen[] = {31, 28, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31};
 
-static const int monthStart[] = {
+static const int MonthStart[] = {
     // offsets of start of month from start of year
     0 /*Jan*/, 31,           59,  90,  120 /*May*/, 151, 181,
     212,       243 /*Sept*/, 273, 304, 334,         365 /*next year: stop condition in formatDate*/
@@ -59,22 +59,22 @@ static const int monthStart[] = {
      * 
      * Supports units of days (5d), and steps (2t) with integer values,
      * rounding inputs to the nearest time step. */
-SimTime readShortDuration(const std::string& str, DefaultUnit defUnit, const Clock& clock,
-                          const util::CommandLineOptions& command_line);
+SimTime read_short_duration(const std::string& str, DefaultUnit def_unit, const Clock& clock,
+                            const util::CommandLineOptions& command_line);
 
 /** Like readShortDuration(), but also allow inputs to be in fractional
      * years. */
-SimTime readDuration(const std::string& str, DefaultUnit defUnit, const Clock& clock,
-                     const util::CommandLineOptions& command_line);
+SimTime read_duration(const std::string& str, DefaultUnit def_unit, const Clock& clock,
+                      const util::CommandLineOptions& command_line);
 
 /** Like readDuration(), but without rounding. Output is in days and may
      * not be an integer. */
-double durationToDays(const std::string& str, DefaultUnit defUnit, const Clock& clock,
-                      const util::CommandLineOptions& command_line);
+double duration_to_days(const std::string& str, DefaultUnit def_unit, const Clock& clock,
+                        const util::CommandLineOptions& command_line);
 
 /** Returns sim::never() when it doesn't recognise a date. Throws when it does
      * but encounters definite format errors. */
-SimTime parseDate(const std::string& str, const Clock& clock);
+SimTime parse_date(const std::string& str, const Clock& clock);
 
 /** Read a date or relative time specifier found in the XML; dates are
      * rebased relative to a starting date so that they work the same as other
@@ -85,8 +85,8 @@ SimTime parseDate(const std::string& str, const Clock& clock);
      * of the intervention period (as readDuration will parse). Returns a time
      * to be compared against sim::intervDate(). Again, the result is rounded to
      * the nearest time step. */
-SimTime readDate(const std::string& str, DefaultUnit defUnit, const Clock& clock,
-                 const util::CommandLineOptions& command_line);
+SimTime read_date(const std::string& str, DefaultUnit def_unit, const Clock& clock,
+                  const util::CommandLineOptions& command_line);
 }
 
 }

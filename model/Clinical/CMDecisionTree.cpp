@@ -508,10 +508,10 @@ public:
         for (const auto& treat_elt : elt) {
             //NOTE: this code is currently identical to that in SimpleTreatComponent
             try {
-                SimTime dur_l = UnitParse::readShortDuration(treat_elt.getDurationLiver(), UnitParse::NONE, clock,
-                                                             command_line),
-                        dur_b = UnitParse::readShortDuration(treat_elt.getDurationBlood(), UnitParse::NONE, clock,
-                                                             command_line);
+                SimTime dur_l = unit_parse::read_short_duration(treat_elt.getDurationLiver(), unit_parse::NONE, clock,
+                                                                command_line),
+                        dur_b = unit_parse::read_short_duration(treat_elt.getDurationBlood(), unit_parse::NONE, clock,
+                                                                command_line);
                 const SimTime neg1 = -Sim::one_ts();
                 if (dur_l < neg1 || dur_b < neg1) {
                     throw util::xml_scenario_error(
@@ -753,7 +753,7 @@ const CMDecisionTree& CMDTDiagnostic::create(DecisionTreeLibrary& library, const
 const CMDecisionTree& CMDTUncomplicated::create(DecisionTreeLibrary& library, const scnXml::DTUncomplicated& node,
                                                 bool is_uc) {
     return library.save(unique_ptr<CMDecisionTree>(new CMDTUncomplicated(
-        UnitParse::readShortDuration(node.getMemory(), UnitParse::STEPS, library.clock(), library.command_line()),
+        unit_parse::read_short_duration(node.getMemory(), unit_parse::STEPS, library.clock(), library.command_line()),
         library.health_system_memory(), library.create(node.getPositive(), is_uc),
         library.create(node.getNegative(), is_uc))));
 }

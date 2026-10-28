@@ -51,7 +51,7 @@ ClinicalParams::ClinicalParams(const OM::Parameters& parameters, const util::Mod
         indirect_mort_bugfix = options.option(util::IndirectMortalityFix);
         //NOTE: if changing XSD, this should not have a default unit:
         health_system_memory =
-            UnitParse::readShortDuration(clinical.getHealthSystemMemory(), UnitParse::STEPS, clock, command_line);
+            unit_parse::read_short_duration(clinical.getHealthSystemMemory(), unit_parse::STEPS, clock, command_line);
         odds_ratio_threshold = exp(parameters[Parameter::LogOddsRatioCfCommunity]);
         non_malaria_infant_mortality = parameters[Parameter::NonMalariaInfantMortality];
     } catch (const util::format_error& e) {

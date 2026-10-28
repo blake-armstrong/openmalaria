@@ -38,7 +38,7 @@ IRSComponent::IRSComponent(ComponentId id, const scnXml::IRSDescription& elt,
     initial_insecticide.setParams(elt.getInitialInsecticide());
     const double max_prop = 0.999; //NOTE: this could be exposed in XML, but probably doesn't need to be
     max_insecticide = R::qnorm5(max_prop, initial_insecticide.getMu(), initial_insecticide.getSigma(), true, false);
-    insecticide_decay = DecayFunction::makeObject(
+    insecticide_decay = DecayFunction::make_object(
         elt.getInsecticideDecay(), "interventions.human.IRS.description.insecticideDecay", clock, command_line);
     // assume usage modifier is 100% if none is specified
     double prop_use = NAN;
@@ -219,7 +219,7 @@ HumanIRS::HumanIRS(LocalRng& rng, const IRSComponent& params)
       component(&params) {
     // Varience factor of decay is sampled once per human: human is assumed
     // to account for most variance.
-    insecticide_decay_het = params.insecticide_decay->hetSample(rng);
+    insecticide_decay_het = params.insecticide_decay->het_sample(rng);
 }
 
 void HumanIRS::redeploy(LocalRng& rng, const OM::Transmission::HumanVectorInterventionComponent& params) {

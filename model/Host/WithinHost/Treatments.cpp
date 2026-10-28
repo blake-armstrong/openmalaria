@@ -56,7 +56,8 @@ Treatments::Treatments(const scnXml::TreatmentOption& elt, const interventions::
     for (const auto& it : elt.getClearInfections()) {
         try {
             //NOTE: if changing XSD, this should not be called "timesteps" or have a default unit
-            const SimTime len = UnitParse::readShortDuration(it.getTimesteps(), UnitParse::STEPS, clock, command_line);
+            const SimTime len =
+                unit_parse::read_short_duration(it.getTimesteps(), unit_parse::STEPS, clock, command_line);
             if (len < -Sim::one_ts() || len == Sim::zero()) {
                 throw util::format_error("timesteps must be ≥ 1 or have special value -1");
             }

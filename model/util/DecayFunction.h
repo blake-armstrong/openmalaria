@@ -20,8 +20,8 @@
  * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301, USA.
  */
 
-#ifndef Hmod_DecayFunction
-#define Hmod_DecayFunction
+#ifndef HMOD_DECAY_FUNCTION
+#define HMOD_DECAY_FUNCTION
 
 #include <limits>
 #include <memory>
@@ -41,13 +41,13 @@ namespace util {
  *****************************************************************************/
 class DecayFunction {
 public:
-    DecayFunction(const Clock& clock, bool increasing, double initialEfficacy, double CV)
-        : clock(&clock), increasing(increasing), initialEfficacy(initialEfficacy),
-          het(std::move(LognormalSampler::fromMeanCV(1.0, CV))) {}
+    DecayFunction(const Clock& clock, bool increasing, double initial_efficacy, double cv)
+        : clock(&clock), increasing(increasing), initial_efficacy(initial_efficacy),
+          het(std::move(LognormalSampler::fromMeanCV(1.0, cv))) {}
 
     DecayFunction(const DecayFunction& other)
-        : clock(other.clock), increasing(other.increasing), initialEfficacy(other.initialEfficacy),
-          het(other.het ? other.het->clone() : nullptr), hetFactor(other.hetFactor) {}
+        : clock(other.clock), increasing(other.increasing), initial_efficacy(other.initial_efficacy),
+          het(other.het ? other.het->clone() : nullptr), het_factor(other.het_factor) {}
 
     virtual ~DecayFunction() {}
 
@@ -56,23 +56,23 @@ public:
      * @param elt XML element specifying which function to use and parameters
      * @param eltName Name of XML element (for reasonable error reporting)
      */
-    static unique_ptr<DecayFunction> makeObject(const scnXml::DecayFunction& elt, const char* eltName,
-                                                const Clock& clock, const CommandLineOptions& command_line);
+    static unique_ptr<DecayFunction> make_object(const scnXml::DecayFunction& elt, const char* elt_name,
+                                                 const Clock& clock, const CommandLineOptions& command_line);
 
     /** Sample a DecayFunction value (should be stored per individual).
      * 
      * Note that a DecayFunction is needed to call eval() even if heterogeneity
      * is not wanted. If sigma = 0 then the random number stream will not be
      * touched. */
-    unique_ptr<DecayFunction> hetSample(LocalRng& rng) const { return hetSample(het->sample(rng)); }
+    unique_ptr<DecayFunction> het_sample(LocalRng& rng) const { return het_sample(het->sample(rng)); }
 
     /** Generate a DecayFunction value from an existing sample. */
-    std::unique_ptr<DecayFunction> hetSample(NormalSample sample) const { return hetSample(het->sample(sample)); }
+    std::unique_ptr<DecayFunction> het_sample(NormalSample sample) const { return het_sample(het->sample(sample)); }
 
     /** Generate a DecayFunction value from an existing sample. */
-    unique_ptr<DecayFunction> hetSample(double factor) const {
-        unique_ptr<DecayFunction> sample = makeHetSample(factor);
-        sample->hetFactor = factor;
+    unique_ptr<DecayFunction> het_sample(double factor) const {
+        unique_ptr<DecayFunction> sample = make_het_sample(factor);
+        sample->het_factor = factor;
         return sample;
     }
 
@@ -84,16 +84,16 @@ public:
      * This is only valid where mu and sigma parameters are zero.
      * 
      * @returns Age at which an object should decay. */
-    virtual SimTime sampleAgeOfDecay(LocalRng& rng) const = 0;
+    virtual SimTime sample_age_of_decay(LocalRng& rng) const = 0;
 
-    inline double eval(double ageDays) const {
+    inline double eval(double age_days) const {
         if (increasing)
-            return 1.0 - compute(ageDays) * initialEfficacy;
+            return 1.0 - compute(age_days) * initial_efficacy;
         else
-            return compute(ageDays) * initialEfficacy;
+            return compute(age_days) * initial_efficacy;
     }
 
-    virtual double compute(double ageDays) const = 0;
+    virtual double compute(double age_days) const = 0;
 
     /** Checkpoint a sampled copy, recreating it from this configured function. */
     void checkpointSample(const unique_ptr<DecayFunction>& sample, ostream& stream) const;
@@ -102,14 +102,14 @@ public:
 private:
     const Clock* clock;
     bool increasing;
-    double initialEfficacy;
+    double initial_efficacy;
     std::unique_ptr<util::Sampler> het;
 
 protected:
     SimTime round_to_ts_from_days(double days) const;
 
-    virtual unique_ptr<DecayFunction> makeHetSample(double factor) const = 0;
-    double hetFactor = 0.0;
+    virtual unique_ptr<DecayFunction> make_het_sample(double factor) const = 0;
+    double het_factor = 0.0;
 };
 
 }

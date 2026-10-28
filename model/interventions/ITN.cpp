@@ -476,9 +476,9 @@ ITNComponent::ITNComponent(ComponentId id, const scnXml::ITNDescription& elt,
     rip_rate->scaleMean(Sim::years_per_step());
 
     insecticide_decay =
-        DecayFunction::makeObject(elt.getInsecticideDecay(), "ITNDescription.insecticideDecay", clock, command_line);
+        DecayFunction::make_object(elt.getInsecticideDecay(), "ITNDescription.insecticideDecay", clock, command_line);
     attrition_of_nets =
-        DecayFunction::makeObject(elt.getAttritionOfNets(), "ITNDescription.attritionOfNets", clock, command_line);
+        DecayFunction::make_object(elt.getAttritionOfNets(), "ITNDescription.attritionOfNets", clock, command_line);
     // assume usage modifier is 100% if none is specified
     double prop_use = NAN;
     if (elt.getUsage().present()) {
@@ -585,12 +585,13 @@ HumanITN::HumanITN(LocalRng& rng, const ITNComponent& params)
     : HumanITN(rng, params, util::NormalSample::generate(rng)) {}
 
 HumanITN::HumanITN(LocalRng& rng, const ITNComponent& params, util::NormalSample handling)
-    : PerHostInterventionData(params.id()), disposal_time(Sim::now() + params.attrition_of_nets->sampleAgeOfDecay(rng)),
+    : PerHostInterventionData(params.id()),
+      disposal_time(Sim::now() + params.attrition_of_nets->sample_age_of_decay(rng)),
 
       // this is sampled independently: initial insecticide content doesn't depend on handling
       initial_insecticide(params.initial_insecticide.sample(rng)), hole_rate(params.hole_rate->sample(handling)),
-      rip_rate(params.rip_rate->sample(handling)), insecticide_decay_het(params.insecticide_decay->hetSample(handling)),
-      component(&params) {
+      rip_rate(params.rip_rate->sample(handling)),
+      insecticide_decay_het(params.insecticide_decay->het_sample(handling)), component(&params) {
     if (initial_insecticide < 0.0)
         initial_insecticide = 0.0; // avoid negative samples
     if (initial_insecticide > params.max_insecticide)
@@ -601,7 +602,7 @@ void HumanITN::redeploy(LocalRng& rng, const OM::Transmission::HumanVectorInterv
     const ITNComponent& params = *dynamic_cast<const ITNComponent*>(&params0);
 
     deploy_time = Sim::now_or_ts1();
-    disposal_time = Sim::now_or_ts1() + params.attrition_of_nets->sampleAgeOfDecay(rng);
+    disposal_time = Sim::now_or_ts1() + params.attrition_of_nets->sample_age_of_decay(rng);
     n_holes = 0;
     hole_index = 0.0;
     // this is sampled independently: initial insecticide content doesn't depend on handling

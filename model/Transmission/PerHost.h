@@ -117,7 +117,7 @@ public:
 
     /** Get the age at which individuals are considered adults (i.e. where
      * availability to mosquitoes reaches its maximum). */
-    SimTime adult_age() const { return Sim::from_years_d(rel_avail_age.firstGlobalMaximum()); }
+    SimTime adult_age() const { return Sim::from_years_d(rel_avail_age.first_global_maximum()); }
 
 private:
     AgeGroupInterpolator rel_avail_age;

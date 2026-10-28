@@ -148,19 +148,19 @@ SimTime read_survey_dates(MonitoringState& state, const scnXml::Monitoring& moni
             s.erase(
                 std::ranges::find_if(std::views::reverse(s), [](unsigned char ch) { return !std::isspace(ch); }).base(),
                 s.end());
-            SimTime cur = UnitParse::readDate(s, UnitParse::STEPS, clock, command_line);
+            SimTime cur = unit_parse::read_date(s, unit_parse::STEPS, clock, command_line);
             const bool reporting = surv.getReported();
             if (surv.getRepeatStep().present() != surv.getRepeatEnd().present()) {
                 throw util::xml_scenario_error("surveyTime: use of repeatStep or repeatEnd without other");
             }
             if (surv.getRepeatStep().present()) {
                 const SimTime step =
-                    UnitParse::readDuration(surv.getRepeatStep().get(), UnitParse::NONE, clock, command_line);
+                    unit_parse::read_duration(surv.getRepeatStep().get(), unit_parse::NONE, clock, command_line);
                 if (step < Sim::one_ts()) {
                     throw util::xml_scenario_error("surveyTime: repeatStep must be >= 1");
                 }
                 const SimTime end =
-                    UnitParse::readDate(surv.getRepeatEnd().get(), UnitParse::NONE, clock, command_line);
+                    unit_parse::read_date(surv.getRepeatEnd().get(), unit_parse::NONE, clock, command_line);
                 while (cur < end) {
                     add_survey(cur, reporting);
                     cur = cur + step;

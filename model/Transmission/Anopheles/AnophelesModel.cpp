@@ -429,7 +429,7 @@ void AnophelesModel::init_vector_trap(const scnXml::Description1& desc, size_t i
     TrapParams params;
     params.rel_avail = desc.getRelativeAvailability().getValue();
     params.avail_decay =
-        DecayFunction::makeObject(desc.getDecayOfAvailability(), "decayOfAvailability", clock, command_line);
+        DecayFunction::make_object(desc.getDecayOfAvailability(), "decayOfAvailability", clock, command_line);
     trap_params.push_back(std::move(params));
 }
 
@@ -450,7 +450,7 @@ void AnophelesModel::deploy_vector_trap(LocalRng& rng, size_t species, size_t in
     const PerHostAnophParams& anoph_params = per_host_params->get(species);
     const double adult_avail = anoph_params.ento_availability->mean() * anoph_params.ento_availability_factor;
     data.initial_avail = pop_size * adult_avail * trap_params[instance].rel_avail;
-    data.avail_het = trap_params[instance].avail_decay->hetSample(rng);
+    data.avail_het = trap_params[instance].avail_decay->het_sample(rng);
     data.deploy_time = Sim::now();
     data.expiry = Sim::now() + lifespan;
     baited_traps.push_back(std::move(data));
