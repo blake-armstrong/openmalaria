@@ -51,7 +51,7 @@ See `PLAN.md` for the session protocol, chunks and gates. Append one log entry p
 | D9d | done | ab4475fd, eb0ff5c4, 44481616, d3474e5c, (this log entry) |
 | D9e | split | D9e1–D9e5 |
 | D9e1 | done | 9ef04fb2, f346dc08, 9e24d7e8, edf9e0f1, adeefb5d, fa76d53c, 1d1a2d24, 0406c608, 38874769, cbefe9ff, 071caef9, 2658e7d2, 62403eb5, (this log entry) |
-| D9e2 | todo | |
+| D9e2 | done | f926958b, e400add8, 8772e8c8, 57363da8, eafc3b27, 17b8fe96, 4c199670, a5e29b4e, fa9a590d, e6168dde, (this log entry) |
 | D9e3 | todo | |
 | D9e4 | todo | |
 | D9e5 | todo | |
@@ -473,6 +473,7 @@ See `PLAN.md` for the session protocol, chunks and gates. Append one log entry p
   | `model/mon` | 442d4c81 + 5255cf06's hand rename (D9a) | 05f577dc + 5255cf06 (D9a) |
   | `model/Host/Human.{h,cpp}`, `model/Population.{h,cpp}` | f995cf66 (D9b2) | dd43e68a + bfd60dbb (D9b2) |
   | `model/util/UnitParse.{h,cpp}`, `model/util/DecayFunction.{h,cpp}`, `model/util/AgeGroupInterpolation.{h,cpp}`, `model/util/SimpleDecayingValue.h` | fa76d53c + 071caef9's hand rename (D9e1) | 0406c608 + cbefe9ff (D9e1) |
+  | `model/Host/ImportedInfections.h` | 57363da8 (D9e2) | 4c199670 + fa9a590d (D9e2) |
 
   Rows from D4a on were added in D4d; the D4 entries had recorded the commits only in their logs.
 
@@ -1754,3 +1755,62 @@ An inventory at d4564e41 (`util/bridges.py`): `bridge::clock()` behind 30 facade
   - `util/style.sh check d4564e41` is still clean.
 - Findings: F88 moved to § Closed.
 - Next: D9e2. D9e5 no longer needs to rewrite suites' throw checks.
+
+### D9e2: Host and Clinical read the clock passed in (done, 2026-10-28)
+- Base: 9ae01788 (tooling after D9e1). The G-perf and A/B base worktree `../om-bench-base` was moved to 9ae01788 and rebuilt.
+- Inventory at the base (`util/bridges.py`): the clock behind 30 facades, 386 qualified call sites in 58 files; 67 of them in the 15 D9e2 files (EventScheduler 15, Human 8, Population 6, ClinicalModel 5, CM5DayCommon 4, PopulationAgeStructure, NeonatalMortality, ImportedInfections and DecisionTree5Day 3 each, InfectionIncidenceModel, ImmediateOutcomes, Episode and CMDecisionTree 2 each). The constants (`Sim::zero`, `never`, `from_days`, `in_years`, `one_year`, `from_years_i`) do not read the clock and stay. At the end: 319 sites in 43 files, none in Host, Population or Clinical. 25 files changed in the two logic commits, nearly all by one token per site.
+- Commits:
+  - f926958b: **logic, Host and Population.**
+    - `HumanParams` holds the clock; `Human` copies the pointer (as it does the monitoring state) and exposes `Human::clock()` for cohort membership and expiry, `summarize` and `update`.
+    - `Population` reads it from its `HumanParams`; `Population::clock()` serves the ctsout callbacks.
+    - `AgeStructure` and the demography fit take the clock at construction; so does `NeonatalMortality` (the gestational-age vector), whose `update` takes it from `Simulation::step`.
+    - `InfectionIncidenceParams` keeps the clock its constructor takes, for `one_ts` in the two `get_model_expected_infections` that use it (virtual, no `Human` in hand).
+    - `ImportedInfections::init` already took the clock (D9e1); it now uses it for `years_per_step` and `start_date` and keeps it for `import`'s `interv_time`, so `InterventionManager` (D9e5) does not change. `import` returns before reading it when no rates are set.
+    - The unit tests' `createHuman` passes the fixture clock.
+  - e400add8: **logic, Clinical.**
+    - `ClinicalParams` keeps the clock its constructor already took; `ClinicalModel` (age limit, indirect-death countdown, infant-death index), `CM5DayCommon`, `DecisionTree5Day`, `ImmediateOutcomes` and `ClinicalEventScheduler` read it through `params()`. Default-constructed params (ClinicalTests, the CxxTest fixture) never reach a clock read.
+    - `EventSchedulerParams`' and `CMDTTreatSimple`'s constructors use the clock parameter they already had.
+    - `Episode::update` and `CMDTUncomplicated::exec` read `Human::clock()`, so `Episode` gains no member.
+    - `InfantMortality` takes the clock at construction to size its vectors; `all_cause()` loops to `infant_deaths.size()` in place of `steps_per_year()`: the constructor sets that size, and only a checkpoint read resizes it, from a file written with the same size.
+  - 8772e8c8: `util/ab_scenarios.py`, variant `dt_deploy_expiring_cohort`: MonitoringAll's `monitoringCohort` gets `subPopRemoval afterYears="0.1"` and is also deployed by the uncomplicated case tree, so `Human::add_to_cohort` runs during the update (where `now_or_ts0` and `now_or_ts1` differ) and the expiry it sets reaches the cohort reports. Added because a planted `add_to_cohort` from `now_or_ts0` passed every ctest test and 114 A/B variants. Base against base: 0 of 54 (interventions).
+  - 57363da8: **tool rename** of `ImportedInfections.h` (the D9e1 follow-up): 3 renames, member `lastIndex` → `last_index`, variables `lastRate` → `last_rate` and `rateNow` → `rate_now`. No map or skip. eafc3b27 lists it in `.git-blame-ignore-revs`.
+  - 17b8fe96: **hand, before the tool modernise:** the rate sort is `std::ranges::sort(rate, {}, &Rate::time)`. The tool's `modernize-use-ranges` fix, `std::ranges::sort(rate)`, does not compile (`Rate` had only `operator<`, and `ranges::less` needs a totally ordered type); the projection makes the same comparisons. Done by hand first at the user's choice, as D6a did for F58, so the check had nothing left.
+  - 4c199670: **tool modernise:** 1 `use-default-member-init` (`last_index`). a5e29b4e lists it.
+  - fa9a590d: **hand modernise.**
+    - Done:
+      - the repeated-rate loop as `std::ranges::unique` projected on `Rate::value` plus one `erase` (it keeps the first of each run of equal values, which is the entry the loop compared with), which also removes a `bugprone-narrowing-conversions` on the per-element `erase`;
+      - `rate_now` const;
+      - `empty()` for the two size tests;
+      - `period` defaults to `Sim::zero()`, the constructor's value, and the constructor goes;
+      - `Rate::operator<`, unused since 17b8fe96, goes.
+    - Left: the header guard (the report's one macro).
+  - e6168dde: FINDINGS F89; PLAN.md D9e2 row as built; README's A/B row.
+- Rename and modernise: `ImportedInfections.h` (new status row). Every other D9e2 file was already done (D6b, D6c, D7b, D9b2).
+- Gates:
+  - G-exact / G-unit / G-two-sims: 65/65 (strict) on `build-rework/` (Release) and `build-debug/` (Debug) after each logic commit, the A/B variant, the rename, the hand sort, the tool modernise and at fa9a590d.
+  - A/B (`util/gates.sh --ab`, base 9ae01788): 0 of 301 variants differ at e400add8; 0 of 302 at fa9a590d.
+  - Planted bugs (`util/plant.py`, each restored):
+
+    | Planted bug | Caught by |
+    |---|---|
+    | cohort expiry (`update_cohort_set`) at `now_or_ts1` | 2 ctest tests (2ITNs, Rach5IC) |
+    | `add_to_cohort` from `now_or_ts0` | not by ctest or 114 A/B variants (interventions, clinical, monitoring); after 8772e8c8, 1 A/B variant (`dt_deploy_expiring_cohort`) |
+    | imported infections one step late | 1 ctest test (InfectionOrigin) |
+    | neonatal mothers' age at `ts1` | 7 ctest tests (NonHumanHosts, PEV, BSV, TBV, PEVLocusOrder, VaccineTwoLoci, PkPdModels) |
+    | event-scheduler recovery check at `now_or_ts1` | 9 ctest tests (Cohort, EffectiveDrug, Empirical, ESTS, ESChangeHS, Molineaux, MSAT, MSAT_HRP2, Penny) |
+    | `Episode` time at `now_or_ts1` | 47 ctest tests |
+    | `CM5DayCommon::is_existing_case` lower bound `>=` | nothing: equivalent (F89) |
+    | `CM5DayCommon::is_existing_case` upper bound `<` | 1 ctest test (MolPairwise) |
+    | `InfantMortality::all_cause` loop from 1 | 5 ctest tests (4, Penny, TriggeredMSAT, VecFullTest, two_sims) |
+    | heterogeneity workaround with `2 * one_ts` | 1 ctest test (11) |
+  - G-stat: `ctest -L statistical` at fa9a590d: 53 passed, 11 disabled.
+  - G-style: `util/style.sh check 9ae01788` clean at fa9a590d (`/cpp-lint` had nothing to fix). The rename and modernise tool commits passed their skill checks (format half clean, a second dry run with nothing to do, the token check), and `check <tool commit>^` is clean after each ignore-revs commit.
+  - G-perf: `util/bench.sh -n 7 --compare ../om-bench-base/build-rework` at fa9a590d, load 3.67 at start: median per-pair ratio 0.9986, spreads 1.05% / 2.09% (base / candidate). `Human` grows by one pointer; the per-human reads swap a global-pointer load for a member load.
+- Findings: F89, `is_existing_case`'s lower bound is always true.
+- Surprises:
+  - No ctest scenario or A/B variant deployed a cohort with a finite duration during the human update, the one case where `add_to_cohort`'s `now_or_ts1` matters. Now covered (8772e8c8).
+  - The tool's `modernize-use-ranges` fix did not compile, the first time a safe fix-it failed to build; resolved by the hand commit before the tool run.
+- Follow-ups:
+  - D9e3–D9e5: the clock (319 sites in 43 files); D9f: the bridge namespace and interleaved G-two-sims.
+  - F87 in D9e5, with a Debug A/B variant.
+- Next: D9e3 (its base will be its own HEAD; move `../om-bench-base` again at its start).
