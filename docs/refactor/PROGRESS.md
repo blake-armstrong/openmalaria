@@ -52,7 +52,7 @@ See `PLAN.md` for the session protocol, chunks and gates. Append one log entry p
 | D9e | split | D9e1–D9e5 |
 | D9e1 | done | 9ef04fb2, f346dc08, 9e24d7e8, edf9e0f1, adeefb5d, fa76d53c, 1d1a2d24, 0406c608, 38874769, cbefe9ff, 071caef9, 2658e7d2, 62403eb5, (this log entry) |
 | D9e2 | done | f926958b, e400add8, 8772e8c8, 57363da8, eafc3b27, 17b8fe96, 4c199670, a5e29b4e, fa9a590d, e6168dde, (this log entry) |
-| D9e3 | todo | |
+| D9e3 | done | 158a95d2, df7d2356, 4ed5d5c2, 4fbd0019, 5e6f7336, (this log entry) |
 | D9e4 | todo | |
 | D9e5 | todo | |
 | D9f | todo | |
@@ -1814,3 +1814,48 @@ An inventory at d4564e41 (`util/bridges.py`): `bridge::clock()` behind 30 facade
   - D9e3–D9e5: the clock (319 sites in 43 files); D9f: the bridge namespace and interleaved G-two-sims.
   - F87 in D9e5, with a Debug A/B variant.
 - Next: D9e3 (its base will be its own HEAD; move `../om-bench-base` again at its start).
+
+### D9e3: WithinHost and the infections read the clock passed in (done, 2026-10-28)
+- Base: 6560a389 (D9e2's log entry). The G-perf and A/B base worktree `../om-bench-base` was moved to 6560a389 and rebuilt.
+- Inventory at the base (`util/bridges.py`): the clock behind 30 facades, 319 qualified call sites in 43 files; 54 of them in 10 WithinHost files (WHVivax 14, CommonWithinHost 9, WHFalciparum 9, DescriptiveInfection 8, DescriptiveWithinHost 6, Submodels 3, Infection.h 2, and DescriptiveInfection.h, WHVivax.h and Treatments 1 each). At the end: 265 sites in 33 files, none under `model/Host/WithinHost`. 33 files changed in the three logic commits; past the ~20 guideline in count, but most changes add one argument to a constructor and its callers.
+- Rule for the leaf objects: a function that needs one time takes that `SimTime`; one that also needs the step length or a conversion (`in_steps`, `one_ts`) takes `const Clock&`, so no clock arithmetic is copied out of `Clock`.
+- Commits:
+  - 158a95d2: **logic, init time.** `MuellerParams` and `PyrogenParams` take the clock (`years_per_step`, `steps_per_year`, `one_ts`) from `PathogenesisParams`, which already had it; `Treatments` uses the clock its constructor already took; `DescriptiveInfectionParams` takes it for the 5-day check. `FalciparumParams` and `VivaxParams` take it (`y_lag_len`, `blood_stage_protection_latency`) and keep a pointer for the run-time reads.
+  - df7d2356: **logic, falciparum.**
+    - `WHFalciparum::clock()` reads the params' pointer; `CommonWithinHost` and `DescriptiveWithinHostModel` use it for treatment expiry, the y-lag index, the daily loop and `compute_y_lag` (which takes the clock).
+    - The infections hold no clock (no per-infection member): `Infection`'s constructor takes its start date (`now_or_ts0`, as before), `blood_stage` takes `latest_ts0`; the four common infection models and `CommonInfectionModel::create` take the start date; `DescriptiveInfection`'s constructor, `infection_duration` and `determine_densities` take the clock, and `expired` takes `ts0`.
+    - The updates read `ts0` and `latest_ts0` once before their infection loops. `clear_infections` passes `latest_ts0`, not `ts0`: it also runs between steps, from a timed deployment, where the two differ (and `ts0` asserts).
+    - Unit tests: the infection suites pass the fixture clock's `now_or_ts0` to the constructors; `createHuman` and `InfectionImmunitySuite` set the falciparum params' clock. Their other clock reads are D9e5's. The uncompiled `DescriptiveIPTInfection` (F45) and `DescriptiveInfectionSuite` (F9) were not touched.
+  - 4ed5d5c2: **logic, vivax.** `WHVivax` reads its `VivaxParams`' clock; `HypnozoiteReleaseDistribution::sample_release_delay` takes the clock from `VivaxParams::sample_release_delay`. `VivaxBrood`'s constructor and `update` read the clock of the `VivaxParams` they are already handed (no new member or argument, a small departure from the PLAN row's "take the times as arguments"); `is_patent` takes `latest_ts0`, read once before each loop over the broods.
+  - 4fbd0019: `util/ab_scenarios.py`, three variants. `interventions/clear_liver_timed_common` (Penny, 1-day steps) and `clear_liver_timed_descriptive` (NoInterv, 5-day steps) deploy `treatSimple durationLiver="-1t"` every 7 steps, so `clear_infections(LIVER)` runs between steps and the blood-stage test decides which infections go. `vivax/report_n_transmit` reports `nTransmit` in scenarioVivax, so `WHVivax::prob_transmission_to_mosquito` reaches the output. Base against base: 0 of 75 (interventions, vivax).
+  - 5e6f7336: FINDINGS F90; PLAN.md D9e3 row as built; README's A/B row.
+- Rename and modernise: none due. Every file was done in D4a–D4d and D6a, and the new identifiers follow the naming rules (G-style clean).
+- Gates:
+  - G-exact / G-unit / G-two-sims: 65/65 (strict) on `build-rework/` (Release) and `build-debug/` (Debug) after each logic commit and at 4fbd0019.
+  - A/B (`util/gates.sh --all 6560a389`): 0 of 305 variants differ at 4fbd0019.
+  - Planted bugs (`util/plant.py`, each restored):
+
+    | Planted bug | Caught by |
+    |---|---|
+    | common infection start at `now_or_ts1` | 18 ctest tests |
+    | descriptive infection start at `now_or_ts1` | 41 ctest tests |
+    | `DescriptiveInfection::expired` with `>=` | 41 ctest tests |
+    | `compute_y_lag`'s 10-day index from `now_or_ts0` | 54 ctest tests |
+    | falciparum liver-treatment expiry from `now_or_ts0` | 1 ctest test (NoMPDLarviciding) |
+    | vivax brood release from `now_or_ts1` | 4 ctest tests (Vivax, VivaxLiverStage, VivaxPQ, VivaxChangeHS) |
+    | vivax liver-treatment expiry from `now_or_ts0` | 1 ctest test (VivaxChangeHS) |
+    | common `clear_infections` at `now_or_ts0` | not by ctest or 302 A/B variants; after 4fbd0019, 1 A/B variant (`clear_liver_timed_common`) |
+    | descriptive `clear_infections` at `now_or_ts0` | not by ctest or 302 A/B variants; after 4fbd0019, 1 A/B variant (`clear_liver_timed_descriptive`) |
+    | vivax `prob_transmission_to_mosquito`'s `is_patent` at `now_or_ts1` | not by ctest; 2 A/B checkpoint variants (`vivax_nmf_checkpoint`, `changehs_same_checkpoint`), by their checkpoint files only; after 4fbd0019 also `report_n_transmit` |
+  - G-stat: `ctest -L statistical` at 4fbd0019: 53 passed, 11 disabled.
+  - G-style: `util/style.sh check 6560a389` clean at 4fbd0019.
+  - G-perf: `util/bench.sh -n 7 --compare ../om-bench-base/build-rework` at 4fbd0019, load 3.53 at start: median per-pair ratio 1.0019, spreads 8.92% / 12.51% (base / candidate). The spreads are several times D9e2's, so the machine was busy; the ratio is far enough from the limit that no rerun was made. The per-infection reads now take a local hoisted out of the loop in place of a global-pointer load per call; `FalciparumParams` and `VivaxParams` grow by one pointer, no per-human or per-infection object grows.
+- Findings: F90, dead branches in `VivaxBrood::update`, `DescriptiveInfection::determine_densities` and the per-human descriptive interval assert.
+- Surprises:
+  - No ctest scenario or A/B variant cleared infections by stage outside the human update, the one case where `blood_stage`'s `latest_ts0` differs from `now_or_ts0`. Now covered (4fbd0019).
+  - None of the four vivax scenarios reports a measure that reads vivax infectiousness (they use non-vector transmission with `nTransmit` off), so only checkpoint bytes showed a change there. Now covered (4fbd0019).
+- Follow-ups:
+  - D9e4–D9e5: the clock (265 sites in 33 files); D9f: the bridge namespace and interleaved G-two-sims.
+  - F87 in D9e5, with a Debug A/B variant.
+  - F90: delete the dead branches in a clean-up, if the user agrees.
+- Next: D9e4 (its base will be its own HEAD; move `../om-bench-base` again at its start).
