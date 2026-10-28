@@ -40,8 +40,6 @@ namespace Host {
 
 class ImportedInfections {
 public:
-    ImportedInfections() : period(Sim::zero()) {}
-
     /** Initialise, passing intervention description
          * 
          * @param elt The scenario element with description of rates
@@ -71,20 +69,13 @@ public:
                 rate.emplace_back(date - clock.start_date(), rate_val);
             }
             std::ranges::sort(rate, {}, &Rate::time);
-            if (rate.size() > 0) {
+            if (!rate.empty()) {
                 if (period != Sim::zero() && rate[0].time != Sim::zero()) {
                     throw util::xml_scenario_error("must specify rate at time zero when period is not zero");
                 }
                 // remove useless repeated entries from list
-                double last_rate = rate[0].value;
-                for (size_t i = 1; i < rate.size();) {
-                    if (rate[i].value == last_rate) {
-                        rate.erase(rate.begin() + i);
-                    } else {
-                        last_rate = rate[i].value;
-                        ++i;
-                    }
-                }
+                const auto repeated = std::ranges::unique(rate, {}, &Rate::value);
+                rate.erase(repeated.begin(), repeated.end());
             }
         } catch (const util::format_error& e) {
             throw util::xml_scenario_error(string("interventions/importedInfections/timed/time: ").append(e.message()));
@@ -101,7 +92,7 @@ public:
          * 
          * @param pop The Population class encapsulating all humans */
     void import(vector<Human>& population) {
-        if (rate.size() == 0)
+        if (rate.empty())
             return; // no imported infections
         SimTime now = sim_clock->interv_time();
         assert(now >= Sim::zero());
@@ -118,7 +109,7 @@ public:
             }
         }
 
-        double rate_now = rate[last_index].value;
+        const double rate_now = rate[last_index].value;
         if (rate_now > 0.0) {
             for (Human& human : population) {
                 if (human.host_rng.bernoulli(rate_now)) {
@@ -138,14 +129,13 @@ public:
     }
 
 private:
-    SimTime period = Sim::never();
+    SimTime period = Sim::zero();
     uint32_t last_index{0};
     const Clock* sim_clock = nullptr;
     struct Rate {
         Rate(SimTime t, double v) : time(t), value(v) {}
         SimTime time = Sim::never();
         double value;
-        inline bool operator<(const Rate& that) const { return time < that.time; }
     };
     vector<Rate> rate;
 };
