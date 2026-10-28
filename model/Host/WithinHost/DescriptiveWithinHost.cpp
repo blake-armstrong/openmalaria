@@ -44,7 +44,6 @@ DescriptiveWithinHostModel::DescriptiveWithinHostModel(const FalciparumParams& p
                                                        const DescriptiveWithinHostParams& descriptive_params,
                                                        LocalRng& rng, double comorbidity_factor)
     : WHFalciparum(params, pathogenesis, treatments, rng, comorbidity_factor), descriptive_params(&descriptive_params) {
-    assert(clock().one_ts() == Sim::from_days(5));
     opt_vaccine_genotype = params.vaccine_genotype;
 }
 

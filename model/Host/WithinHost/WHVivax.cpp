@@ -238,11 +238,6 @@ VivaxBrood::VivaxBrood(istream& stream) {
 VivaxBrood::UpdResult VivaxBrood::update(LocalRng& rng, const VivaxParams& params) {
     const Clock& clock = *params.clock;
     const SimTime ts0 = clock.ts0();
-    if (blood_stage_clear_date == ts0) {
-        //NOTE: this effectively means that both asexual and sexual stage
-        // parasites self-terminate. It also means the immune system can
-        // protect against new blood-stage infections for a short time.
-    }
 
     UpdResult result;
     while (release_dates.size() > 0 && release_dates.back() == ts0) {

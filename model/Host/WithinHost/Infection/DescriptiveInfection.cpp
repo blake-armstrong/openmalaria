@@ -166,11 +166,7 @@ void DescriptiveInfection::determine_densities(LocalRng& rng, const Clock& clock
             const double meanlog = density - stdlog * stdlog / 2.0;
             density = rng.log_normal(meanlog, stdlog);
             // Calculate additional samples for T-1 days (T=days per step):
-            if (true /*sim::oneTS() > 1, always true for this model*/) {
-                time_step_max_density = rng.max_multi_log_normal(density, clock.one_ts() - 1, meanlog, stdlog);
-            } else {
-                time_step_max_density = density;
-            }
+            time_step_max_density = rng.max_multi_log_normal(density, clock.one_ts() - 1, meanlog, stdlog);
         }
         if (time_step_max_density > MaxDens && not_printed_md_warning) {
             cerr << "TSMD hit limit:\t" << density << ",\t" << time_step_max_density << endl;
