@@ -86,3 +86,5 @@ da9bfd0f261418c2537985d5dbf949977f53ef07
 f995cf6604d45b3e9613163e85c36cbe72a29d4c
 # D9b2: model/Host/Human and model/Population safe modernize fix-its (util/style.sh modernize)
 dd43e68aef85fbc3e8fec32a3c32c0e47cb8acbc
+# D9e1: rename model/util UnitParse, DecayFunction, AgeGroupInterpolation, SimpleDecayingValue identifiers (util/style.sh rename)
+fa76d53c3870f1a2eded8a00857acaea01dea0bf
