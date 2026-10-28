@@ -275,6 +275,13 @@ def wrap_cohort(component):
     return transform
 
 
+def dt_deploy_expiring_cohort(s):
+    s = rep(s, '<component id="monitoringCohort">\n        <recruitmentOnly/>',
+            '<component id="monitoringCohort">\n        <recruitmentOnly/>\n        <subPopRemoval afterYears="0.1"/>')
+    s = rep(s, "<caseType>", '<multiple><deploy component="monitoringCohort"/><caseType>')
+    return rep_first(s, "</caseType>", "</caseType></multiple>")
+
+
 def wrap_es_complicated(before, after):
     def transform(s):
         s = rep(s, "<complicated>", "<complicated>" + before)
@@ -820,6 +827,7 @@ GROUPS = {
         Variant("dt_cohort_later_component", MA, mda_tree_cohort("PEV")),
         Variant("dt_deploy_self", MA, mda_tree_negative('<deploy component="MDA"/>')),
         Variant("dt_deploy_later_component", MA, mda_tree_negative('<deploy component="PEV"/>')),
+        Variant("dt_deploy_expiring_cohort", MA, dt_deploy_expiring_cohort),
         Variant("itn_logit_no_hole_index_max", "scenarioLifeNet2.xml",
                 lambda s: rep(s, '<holeIndexMax value="145200"/>', "")),
         Variant("itn_hole_index_max_tiny", "scenarioLifeNet2.xml",
