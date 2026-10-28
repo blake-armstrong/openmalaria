@@ -47,6 +47,9 @@ public:
     DecayFunction(const DecayFunction& other)
         : clock(other.clock), increasing(other.increasing), initial_efficacy(other.initial_efficacy),
           het(other.het ? other.het->clone() : nullptr), het_factor(other.het_factor) {}
+    DecayFunction& operator=(const DecayFunction&) = delete;
+    DecayFunction(DecayFunction&&) = delete;
+    DecayFunction& operator=(DecayFunction&&) = delete;
 
     virtual ~DecayFunction() = default;
 

@@ -45,7 +45,7 @@ void AgeGroupInterpolation::output_samples(const string& name, const Clock& cloc
     }
     ofstream fstream((name + ".csv").c_str());
 
-    double max = Sim::in_years(clock.max_human_age());
+    const double max = Sim::in_years(clock.max_human_age());
     for (double age = 0.0; age < max; age += 0.1) {
         fstream << age << "," << this->eval(age) << endl;
     }
@@ -79,7 +79,7 @@ public:
 
         double greatest_lbound = -1.0;
         for (const scnXml::Group& group : age_groups.getGroup()) {
-            double lbound = group.getLowerbound();
+            const double lbound = group.getLowerbound();
             if (lbound >= greatest_lbound) {
                 greatest_lbound = lbound;
                 pos = data_groups.insert(pos, make_pair(lbound, group.getValue()));
@@ -147,9 +147,9 @@ public:
         double greatest_lbound = 0.0;       // also last lbound: age groups must be ordered lowest to highest
         double last_value = it->getValue(); // first value is repeated for const start
         for (; it != age_groups.getGroup().end(); ++it) {
-            double lbound = it->getLowerbound();
+            const double lbound = it->getLowerbound();
             if (lbound >= greatest_lbound) {
-                double ins_bound = 0.5 * (greatest_lbound + lbound);
+                const double ins_bound = 0.5 * (greatest_lbound + lbound);
                 pos = data_points.insert(pos, make_pair(ins_bound, last_value));
                 greatest_lbound = lbound;
                 last_value = it->getValue(); // always insert previous value
@@ -197,11 +197,11 @@ public:
         // Get the first point with age greater than ageYears:
         auto it = data_points.upper_bound(age_years);
         assert(it != data_points.end());
-        double a1 = it->first; // a1 > ageYears
-        double f1 = it->second;
-        --it;                  // previous point when ordered by age
-        double a0 = it->first; // a0 ≤ ageYears
-        double f0 = it->second;
+        const double a1 = it->first; // a1 > ageYears
+        const double f1 = it->second;
+        --it;                        // previous point when ordered by age
+        const double a0 = it->first; // a0 ≤ ageYears
+        const double f0 = it->second;
         return (age_years - a0) / (a1 - a0) * (f1 - f0) + f0;
     }
 

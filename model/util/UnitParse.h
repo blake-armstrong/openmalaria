@@ -25,6 +25,9 @@
 
 #include "Global.h"
 
+#include <array>
+#include <cstdint>
+
 namespace OM {
 class Clock;
 namespace util {
@@ -40,16 +43,17 @@ class CommandLineOptions;
  * use this without breaking backwards compatibility (by allowing the unit to
  * be omitted), and (b) by requiring new values be specified with unit. */
 namespace unit_parse {
-enum DefaultUnit {
+enum class DefaultUnit : std::uint8_t {
     NONE,  // error if not specified
     DAYS,  // assume days
     YEARS, // assume years
     STEPS, // assume steps
 };
+using enum DefaultUnit;
 
-static const int MonthLen[] = {31, 28, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31};
+inline constexpr std::array<int, 12> MonthLen = {31, 28, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31};
 
-static const int MonthStart[] = {
+inline constexpr std::array<int, 13> MonthStart = {
     // offsets of start of month from start of year
     0 /*Jan*/, 31,           59,  90,  120 /*May*/, 151, 181,
     212,       243 /*Sept*/, 273, 304, 334,         365 /*next year: stop condition in formatDate*/

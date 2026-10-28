@@ -37,7 +37,7 @@
 namespace OM::unit_parse {
 
 template <typename T> int cast_to_int(T x) {
-    int y = static_cast<int>(x);
+    const int y = static_cast<int>(x);
     if (static_cast<T>(y) != x) {
         throw util::format_error("underflow/overflow");
     }
@@ -49,8 +49,8 @@ SimTime read_short_duration(const std::string& str, DefaultUnit def_unit, const 
     const char* s = str.c_str();
     char* end = nullptr;
 
-    long v = std::strtol(s, &end, 10);
-    size_t len = end - s;
+    const long v = std::strtol(s, &end, 10);
+    const size_t len = end - s;
     if (len == str.size()) {
         // no unit given; examine our policy:
         if (v == 0) { // don't need a unit in this case
@@ -63,7 +63,7 @@ SimTime read_short_duration(const std::string& str, DefaultUnit def_unit, const 
                      << "\" specified without unit; it is recommended to do so (e.g. 5d or 1t)" << endl;
             }
             if (def_unit == DAYS) {
-                return clock.round_to_ts_from_days(v);
+                return clock.round_to_ts_from_days(static_cast<double>(v));
             } else if (def_unit == STEPS) {
                 return clock.from_ts(cast_to_int(v));
             } else {
@@ -72,9 +72,9 @@ SimTime read_short_duration(const std::string& str, DefaultUnit def_unit, const 
         }
     } else if (len + 1 == str.size()) {
         // one extra character found; is this a unit?
-        char u = str[len];
+        const char u = str[len];
         if (u == 'd' || u == 'D') {
-            return clock.round_to_ts_from_days(v);
+            return clock.round_to_ts_from_days(static_cast<double>(v));
         } else if (u == 't' || u == 'T') {
             return clock.from_ts(cast_to_int(v));
         }
@@ -89,11 +89,11 @@ double parse_duration_and_unit(const std::string& str, DefaultUnit& unit,
     const char* s = str.c_str();
     char* end = nullptr;
 
-    double v = std::strtod(s, &end);
-    size_t len = end - s;
+    const double v = std::strtod(s, &end);
+    const size_t len = end - s;
     if (len + 1 == str.size()) {
         // one extra character found; is this a unit?
-        char u = str[len];
+        const char u = str[len];
         if (u == 'y' || u == 'Y')
             unit = YEARS;
         else if (u == 'd' || u == 'D')
@@ -120,7 +120,7 @@ double parse_duration_and_unit(const std::string& str, DefaultUnit& unit,
 
 SimTime read_duration(const std::string& str, DefaultUnit unit, const Clock& clock,
                       const util::CommandLineOptions& command_line) {
-    double v = parse_duration_and_unit(str, unit, command_line);
+    const double v = parse_duration_and_unit(str, unit, command_line);
 
     if (unit == YEARS)
         return clock.from_years_n(v);
@@ -136,7 +136,7 @@ SimTime read_duration(const std::string& str, DefaultUnit unit, const Clock& clo
 
 double duration_to_days(const std::string& str, DefaultUnit unit, const Clock& clock,
                         const util::CommandLineOptions& command_line) {
-    double v = parse_duration_and_unit(str, unit, command_line);
+    const double v = parse_duration_and_unit(str, unit, command_line);
 
     if (unit == YEARS)
         return v * Sim::one_year();
@@ -151,7 +151,7 @@ double duration_to_days(const std::string& str, DefaultUnit unit, const Clock& c
 /** Returns sim::never() when it doesn't recognise a date. Throws when it does
  * but encounters definite format errors. */
 SimTime parse_date(const std::string& str, const Clock& clock) {
-    std::regex date_rx("(\\d{4})-(\\d{1,2})-(\\d{1,2})");
+    const std::regex date_rx(R"((\d{4})-(\d{1,2})-(\d{1,2}))");
     std::smatch rx_what;
 
     if (regex_match(str, rx_what, date_rx)) {
@@ -175,7 +175,7 @@ SimTime parse_date(const std::string& str, const Clock& clock) {
 
 SimTime read_date(const std::string& str, DefaultUnit def_unit, const Clock& clock,
                   const util::CommandLineOptions& command_line) {
-    SimTime date = parse_date(str, clock);
+    const SimTime date = parse_date(str, clock);
     if (date != Sim::never()) {
         if (date > clock.start_date() + Sim::from_years_i(500)) {
             cerr << "Warning: date is a long time after start date. Did you forget to set monitoring/startDate?"

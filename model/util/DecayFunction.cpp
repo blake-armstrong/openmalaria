@@ -147,7 +147,7 @@ public:
           k(elt.getK()) {}
 
     double compute(double effective_age) const override {
-        double p = -pow(effective_age * const_over_lambda * het_factor, k);
+        const double p = -pow(effective_age * const_over_lambda * het_factor, k);
         if (p < -700.0)
             return 0.0;
         else
@@ -327,7 +327,7 @@ private:
 
 // -----  interface / static functions  -----
 void DecayFunction::checkpointSample(const unique_ptr<DecayFunction>& sample, ostream& stream) const {
-    bool present = bool(sample);
+    const bool present = static_cast<bool>(sample);
     present & stream;
     if (present)
         sample->het_factor & stream;
@@ -366,13 +366,13 @@ unique_ptr<DecayFunction> DecayFunction::make_object(const scnXml::DecayFunction
     else if (func == "smooth-compact")
         return make_unique<SmoothCompactDecayFunction>(elt, clock, command_line);
     else if (func == "plus")
-        return make_unique<OperatorDecayFunction<std::plus<double>>>(elt, clock, command_line);
+        return make_unique<OperatorDecayFunction<std::plus<>>>(elt, clock, command_line);
     else if (func == "minus")
-        return make_unique<OperatorDecayFunction<std::minus<double>>>(elt, clock, command_line);
+        return make_unique<OperatorDecayFunction<std::minus<>>>(elt, clock, command_line);
     else if (func == "divides")
-        return make_unique<OperatorDecayFunction<std::divides<double>>>(elt, clock, command_line);
+        return make_unique<OperatorDecayFunction<std::divides<>>>(elt, clock, command_line);
     else if (func == "multiplies")
-        return make_unique<OperatorDecayFunction<std::multiplies<double>>>(elt, clock, command_line);
+        return make_unique<OperatorDecayFunction<std::multiplies<>>>(elt, clock, command_line);
     else if (func == "emax")
         return make_unique<EmaxFunction>(elt, clock, command_line);
     else
