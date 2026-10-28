@@ -38,7 +38,7 @@ namespace Host {
 
 class ImportedInfections {
 public:
-    ImportedInfections() : period(Sim::zero()), lastIndex(0) {}
+    ImportedInfections() : period(Sim::zero()), last_index(0) {}
 
     /** Initialise, passing intervention description
          * 
@@ -74,12 +74,12 @@ public:
                     throw util::xml_scenario_error("must specify rate at time zero when period is not zero");
                 }
                 // remove useless repeated entries from list
-                double lastRate = rate[0].value;
+                double last_rate = rate[0].value;
                 for (size_t i = 1; i < rate.size();) {
-                    if (rate[i].value == lastRate) {
+                    if (rate[i].value == last_rate) {
                         rate.erase(rate.begin() + i);
                     } else {
-                        lastRate = rate[i].value;
+                        last_rate = rate[i].value;
                         ++i;
                     }
                 }
@@ -106,20 +106,20 @@ public:
         if (period > Sim::zero()) {
             now = mod_nn(now, period);
         }
-        if (rate[lastIndex].time > now) {
-            lastIndex = 0; // gone round in a loop: back to start of period
+        if (rate[last_index].time > now) {
+            last_index = 0; // gone round in a loop: back to start of period
         }
-        if (now > rate[lastIndex].time && rate.size() > lastIndex + 1) {
-            if (rate[lastIndex + 1].time <= now) {
-                ++lastIndex;
+        if (now > rate[last_index].time && rate.size() > last_index + 1) {
+            if (rate[last_index + 1].time <= now) {
+                ++last_index;
                 // won't be necessary to do this more than once, since import() is called every time step
             }
         }
 
-        double rateNow = rate[lastIndex].value;
-        if (rateNow > 0.0) {
+        double rate_now = rate[last_index].value;
+        if (rate_now > 0.0) {
             for (Human& human : population) {
-                if (human.host_rng.bernoulli(rateNow)) {
+                if (human.host_rng.bernoulli(rate_now)) {
                     human.within_host_model->import_infection(human.host_rng);
                     mon::record_event(mon::measure("nNewInfections"), human);
                     mon::record_event(mon::measure("nNewInfections_Imported"), human);
@@ -132,12 +132,12 @@ public:
     template <class S> void operator&(S& stream) {
         using namespace OM::util::checkpoint;
         // period and rate are set from XML and not changed
-        lastIndex & stream;
+        last_index & stream;
     }
 
 private:
     SimTime period = Sim::never();
-    uint32_t lastIndex;
+    uint32_t last_index;
     const Clock* sim_clock = nullptr;
     struct Rate {
         Rate(SimTime t, double v) : time(t), value(v) {}
