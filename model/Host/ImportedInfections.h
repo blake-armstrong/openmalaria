@@ -31,6 +31,8 @@
 #include "Host/WithinHost/WHInterface.h"
 #include "Host/WithinHost/Infection/Infection.h"
 
+#include <algorithm>
+
 namespace OM {
 class Population;
 
@@ -68,7 +70,7 @@ public:
                 const double rate_val = rate_elt.getValue() * clock.years_per_step() * (1.0 / 1000.0);
                 rate.emplace_back(date - clock.start_date(), rate_val);
             }
-            sort(rate.begin(), rate.end());
+            std::ranges::sort(rate, {}, &Rate::time);
             if (rate.size() > 0) {
                 if (period != Sim::zero() && rate[0].time != Sim::zero()) {
                     throw util::xml_scenario_error("must specify rate at time zero when period is not zero");
