@@ -238,7 +238,7 @@ protected:
 
         if (((host_data.pg_state & Episode::Sick) && !(host_data.pg_state & Episode::Complicated)) ||
             (host_data.pg_state & Episode::Malaria)) {
-            if (latest.time + memory >= Sim::now_or_ts0())
+            if (latest.time + memory >= host_data.human.clock().now_or_ts0())
                 return positive.exec(host_data);
             else
                 return negative.exec(host_data);
@@ -512,7 +512,7 @@ public:
                                                                 command_line),
                         dur_b = unit_parse::read_short_duration(treat_elt.getDurationBlood(), unit_parse::NONE, clock,
                                                                 command_line);
-                const SimTime neg1 = -Sim::one_ts();
+                const SimTime neg1 = -clock.one_ts();
                 if (dur_l < neg1 || dur_b < neg1) {
                     throw util::xml_scenario_error(
                         "treatSimple: cannot have durationBlood or durationLiver less than -1");

@@ -151,7 +151,7 @@ private:
 class InfantMortality {
 public:
     InfantMortality() = default;
-    explicit InfantMortality(double non_malaria_mortality);
+    InfantMortality(double non_malaria_mortality, const Clock& clock);
 
     void pre_main_sim_init();
 

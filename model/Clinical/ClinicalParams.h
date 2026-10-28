@@ -171,6 +171,8 @@ struct ClinicalParams {
 
     std::unique_ptr<ClinicalModel> create(double treatment_seeking_factor, mon::MonitoringState& monitoring) const;
 
+    const Clock& clock() const { return *sim_clock; }
+
     Kind kind = Kind::DecisionTree5Day;
     bool indirect_mort_bugfix = false;
     bool health_system_memory_fix = false;
@@ -199,6 +201,8 @@ struct ClinicalParams {
     EventSchedulerParams event_scheduler;
 
 private:
+    const Clock* sim_clock = nullptr;
+
     void set_immediate_outcomes(const scnXml::HSImmediateOutcomes& hs_description,
                                 WithinHost::WithinHostModel& within_host,
                                 const interventions::InterventionManager& interventions, const Clock& clock,

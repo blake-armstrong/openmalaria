@@ -39,7 +39,7 @@ using namespace OM::util;
 EventSchedulerParams::EventSchedulerParams(const OM::Parameters& parameters, const util::ModelOptionFlags& options,
                                            const scnXml::Clinical& clinical, const Clock& clock,
                                            const util::CommandLineOptions& command_line) {
-    if (Sim::one_ts() != Sim::one_day())
+    if (clock.one_ts() != Sim::one_day())
         throw util::xml_scenario_error("ClinicalEventScheduler is only designed for a 1-day time step.");
 
     non_malaria_fevers = options.option(util::NonMalariaFevers);
@@ -131,7 +131,8 @@ ClinicalEventScheduler::ClinicalEventScheduler(const ClinicalParams& params, dou
 
 bool ClinicalEventScheduler::is_existing_case() {
     // If treated in the recent past:
-    return Sim::now() > time_last_treatment && Sim::now() <= time_last_treatment + params().health_system_memory;
+    return params().clock().now() > time_last_treatment &&
+           params().clock().now() <= time_last_treatment + params().health_system_memory;
 }
 
 void ClinicalEventScheduler::do_clinical_update(Human& human, double age_years,
@@ -141,7 +142,7 @@ void ClinicalEventScheduler::do_clinical_update(Human& human, double age_years,
     const auto new_state = static_cast<Episode::State>(pg.state);
     util::streamValidate((new_state << 16) & pg_state);
 
-    if (Sim::ts0() == time_of_recovery) {
+    if (params().clock().ts0() == time_of_recovery) {
         if (pg_state & Episode::DirectDeath) {
             // Human dies this time step (last day of risk of death)
             doomed = DoomedComplicated;
@@ -184,14 +185,14 @@ void ClinicalEventScheduler::do_clinical_update(Human& human, double age_years,
                 // previously healthy or UC: progress to severe
                 pg_state = Episode::State(pg_state | new_state | Episode::RunCmTree);
                 indirect_mortality = pg.indirect_mortality;
-                case_start_time = Sim::ts0();
+                case_start_time = params().clock().ts0();
             }
         } else {
             // uncomplicated case (UC/UC2/NMF): is it new?
             if (pg_state & Episode::Sick) {
                 // previously UC; nothing to do
             } else {
-                if (case_start_time < Sim::ts0()) {
+                if (case_start_time < params().clock().ts0()) {
                     // new UC case
                     pg_state = Episode::State(pg_state | new_state | Episode::RunCmTree);
                     indirect_mortality = pg.indirect_mortality;
@@ -204,21 +205,21 @@ void ClinicalEventScheduler::do_clinical_update(Human& human, double age_years,
                     }
                     assert(i < es.cum_daily_pr_imm_ucts.size()); // should have uVariate < 1 = cumDailyPrImmUCTS[len-1]
                     // set start time: current time plus length of delay (days)
-                    case_start_time = Sim::ts0() + Sim::from_days(static_cast<int>(i));
+                    case_start_time = params().clock().ts0() + Sim::from_days(static_cast<int>(i));
                 }
             }
         }
 
         if (indirect_mortality && doomed == NotDoomed)
-            doomed = -Sim::one_ts(); // start indirect mortality countdown
+            doomed = -params().clock().one_ts(); // start indirect mortality countdown
     }
 
-    if (case_start_time == Sim::ts0() && (pg_state & Episode::RunCmTree)) {
+    if (case_start_time == params().clock().ts0() && (pg_state & Episode::RunCmTree)) {
         // OK, we're about to run the CM tree
         pg_state = Episode::State(pg_state & ~Episode::RunCmTree);
 
         // If last treatment prescribed was in recent memory, consider second line.
-        if (time_last_treatment + params().health_system_memory > Sim::ts0()) {
+        if (time_last_treatment + params().health_system_memory > params().clock().ts0()) {
             pg_state = Episode::State(pg_state | Episode::SecondCase);
         }
 
@@ -226,7 +227,7 @@ void ClinicalEventScheduler::do_clinical_update(Human& human, double age_years,
             ESCaseManagement::execute(es, CMHostData(human, human.clinical_rng, age_years, pg_state));
 
         if (aux_out.treated) { // I.E. some treatment was given
-            time_last_treatment = Sim::ts0();
+            time_last_treatment = params().clock().ts0();
             if (pg_state & Episode::Complicated) {
                 mon::record_event(mon::measure("nTreatments3"), human);
             } else {
@@ -328,7 +329,7 @@ void ClinicalEventScheduler::do_clinical_update(Human& human, double age_years,
         // Case fatality rate (subsequent days)
         // Complicated case & at risk of death (note: extraDaysAtRisk <= 0)
         if ((pg_state & Episode::Complicated) && !(pg_state & Episode::DirectDeath) &&
-            (Sim::ts0() < time_of_recovery + es.extra_days_at_risk)) {
+            (params().clock().ts0() < time_of_recovery + es.extra_days_at_risk)) {
             // In complicated episodes, S(t), the probability of survival on
             // subsequent days t, is described by log(S(t)) = -v(Y(t)/Y(t-1)),
             // for parasite density Y(t). v_neg below is -v.
@@ -355,7 +356,7 @@ void ClinicalEventScheduler::do_clinical_update(Human& human, double age_years,
 
     // Start of case. Not necessarily start of sickness due to treatment-seeking
     // delays and travel time.
-    if (case_start_time == Sim::ts0()) {
+    if (case_start_time == params().clock().ts0()) {
         // Patients in hospital are removed from the transmission cycle.
         // This should have an effect from the start of the next time step.
         // NOTE: This is not very accurate, but considered of little importance.
@@ -368,17 +369,17 @@ void ClinicalEventScheduler::do_clinical_update(Human& human, double age_years,
             // exiting hospital are OK and medications terminating before the
             // end of hospitalisation shouldn't matter too much if the person
             // can't recieve new infections due to zero transmission in hospital.
-            time_of_recovery = Sim::ts0() + es.complicated_case_duration;
+            time_of_recovery = params().clock().ts0() + es.complicated_case_duration;
             // Time should be adjusted to end of at-risk period when patient dies:
             if (pg_state & Episode::DirectDeath)                             // death may already have been determined
                 time_of_recovery = time_of_recovery + es.extra_days_at_risk; // ATORWD (search keyword)
         } else {
-            time_of_recovery = Sim::ts0() + es.uncomplicated_case_duration;
+            time_of_recovery = params().clock().ts0() + es.uncomplicated_case_duration;
         }
     }
 
     // Remove on first models...
-    if (time_last_treatment == Sim::ts0())
+    if (time_last_treatment == params().clock().ts0())
         human.remove_first_event(interventions::sub_pop_remove::OnFirstTreatment);
 
     if (pg_state & Episode::Sick)

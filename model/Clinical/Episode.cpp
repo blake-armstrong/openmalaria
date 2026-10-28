@@ -34,15 +34,15 @@ void Episode::flush() {
 }
 
 void Episode::update(const Host::Human& human, Episode::State new_state) {
-    const bool to_report =
-        health_system_memory_fix ? time + health_system_memory <= Sim::ts0() : time + health_system_memory < Sim::ts0();
+    const bool to_report = health_system_memory_fix ? time + health_system_memory <= human.clock().ts0()
+                                                    : time + health_system_memory < human.clock().ts0();
 
     if (to_report) {
         infection_type = human.within_host_model->infection_origin();
 
         report();
 
-        time = Sim::ts0();
+        time = human.clock().ts0();
         survey_period = mon::event_survey_number(*monitoring);
         age_group = human.monitoring_age_group;
         cohort_set = human.get_cohort_set();

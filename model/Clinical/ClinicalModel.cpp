@@ -45,7 +45,7 @@ ClinicalParams::ClinicalParams(const OM::Parameters& parameters, const util::Mod
                                const util::CommandLineOptions& command_line,
                                const WithinHost::DiagnosticRegistry& diagnostics, const scnXml::Scenario& scenario,
                                const Clock& clock)
-    : diagnostics(&diagnostics) {
+    : diagnostics(&diagnostics), sim_clock(&clock) {
     const scnXml::Clinical& clinical = scenario.getModel().getClinical();
     try {
         indirect_mort_bugfix = options.option(util::IndirectMortalityFix);
@@ -135,7 +135,7 @@ ClinicalModel::ClinicalModel(const ClinicalParams& params, mon::MonitoringState&
 // -----  other non-static methods  -----
 
 bool ClinicalModel::is_dead(SimTime age) {
-    if (age >= Sim::max_human_age()) // too old (reached age limit)
+    if (age >= params().clock().max_human_age()) // too old (reached age limit)
         doomed = DoomedTooOld;
     return doomed > NotDoomed; // killed by some means
 }
@@ -143,7 +143,7 @@ bool ClinicalModel::is_dead(SimTime age) {
 void ClinicalModel::update(Human& human, double age_years, bool new_born,
                            const Host::NeonatalMortality& neonatal_mortality) {
     if (doomed < NotDoomed) // Countdown to indirect mortality
-        doomed -= Sim::one_ts();
+        doomed -= params().clock().one_ts();
 
     //indirect death: if this human's about to die, don't worry about further episodes:
     if (doomed <= DoomedExpired) { //clinical bout 6 intervals before
@@ -170,7 +170,7 @@ void ClinicalModel::update(Human& human, double age_years, bool new_born,
 void ClinicalModel::update_infant_deaths(SimTime age, InfantMortality& infant_mortality) {
     // update array for the infant death rates
     if (age < Sim::one_year()) {
-        const size_t index = age / Sim::one_ts();
+        const size_t index = age / params().clock().one_ts();
 
         // Testing doomed == DOOMED_NEXT_TS gives very slightly different results than
         // testing doomed == DOOMED_INDIRECT (due to above if(..))
@@ -190,8 +190,8 @@ void ClinicalModel::checkpoint(ostream& stream) {
 
 // ——— infant mortality ———
 
-InfantMortality::InfantMortality(double non_malaria_mortality)
-    : infant_deaths(Sim::steps_per_year()), infant_intervals_at_risk(Sim::steps_per_year()),
+InfantMortality::InfantMortality(double non_malaria_mortality, const Clock& clock)
+    : infant_deaths(clock.steps_per_year()), infant_intervals_at_risk(clock.steps_per_year()),
       non_malaria_mortality(non_malaria_mortality) {}
 
 void InfantMortality::pre_main_sim_init() {
@@ -216,7 +216,7 @@ void InfantMortality::report_risk(size_t index, bool is_doomed) {
 
 double InfantMortality::all_cause() const {
     double infant_prop_surviving = 1.0; // use to calculate proportion surviving
-    for (size_t i = 0; i < Sim::steps_per_year(); i += 1) {
+    for (size_t i = 0; i < infant_deaths.size(); i += 1) {
         // multiply by proportion of infants surviving at each interval
         infant_prop_surviving *= static_cast<double>(infant_intervals_at_risk[i] - infant_deaths[i]) /
                                  static_cast<double>(infant_intervals_at_risk[i]);

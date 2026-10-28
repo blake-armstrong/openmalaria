@@ -57,9 +57,9 @@ void CM5DayCommon::do_clinical_update(Human& human, double age_years, WithinHost
     }
 
     if (pg.indirect_mortality && doomed == NotDoomed)
-        doomed = -Sim::one_ts();
+        doomed = -params().clock().one_ts();
 
-    if (t_last_treatment == Sim::ts0())
+    if (t_last_treatment == params().clock().ts0())
         human.remove_first_event(interventions::sub_pop_remove::OnFirstTreatment);
 
     if (pg_state & Episode::Sick)
@@ -123,7 +123,7 @@ void CM5DayCommon::severe_malaria(Human& human, Episode::State pg_state, double 
 
     //NOTE: we do not model diagnostics in this case
     if (prandom >= q[2]) { // treated in hospital
-        t_last_treatment = Sim::ts0();
+        t_last_treatment = params().clock().ts0();
         mon::record_event(mon::measure("nTreatments3"), human);
         const auto state_treated = Episode::State(pg_state | Episode::EventInHospital);
 

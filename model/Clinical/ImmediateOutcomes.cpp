@@ -188,7 +188,7 @@ void ImmediateOutcomes::uncomplicated_event(Human& human, Episode::State pg_stat
     const ImmediateOutcomesParams& io = params().immediate_outcomes;
     // If last treatment prescribed was in recent memory, consider second line.
     CaseType regimen = FirstLine;
-    if (t_last_treatment + params().health_system_memory > Sim::ts0()) {
+    if (t_last_treatment + params().health_system_memory > params().clock().ts0()) {
         pg_state = Episode::State(pg_state | Episode::SecondCase);
         regimen = SecondLine;
     }
@@ -207,7 +207,7 @@ void ImmediateOutcomes::uncomplicated_event(Human& human, Episode::State pg_stat
                 return; // negative outcome: no treatment
         }
 
-        t_last_treatment = Sim::ts0();
+        t_last_treatment = params().clock().ts0();
         mon::record_event(TreatmentMeasures[regimen], human);
 
         const double p = (x < params().five_day.access_uc_self_treat[regimen] * treatment_seeking_factor)

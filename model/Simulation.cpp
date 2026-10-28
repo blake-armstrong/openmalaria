@@ -103,7 +103,7 @@ Simulation::Simulation(std::unique_ptr<scnXml::Scenario> scenario, util::Command
     decision_trees =
         Clinical::DecisionTreeLibrary(diagnostics, within_host_model.common.pk_pd, clinical.health_system_memory,
                                       intervention_manager, clock, command_line);
-    infant_mortality = Clinical::InfantMortality(clinical.non_malaria_infant_mortality);
+    infant_mortality = Clinical::InfantMortality(clinical.non_malaria_infant_mortality, clock);
     neonatal_mortality =
         Host::NeonatalMortality(scenario_xml->getModel().getClinical(), diagnostics, command_line, clock);
     age_structure = AgeStructure(scenario_xml->getDemography(), clock);

@@ -47,7 +47,8 @@ public:
 
     bool is_existing_case() override {
         // If treated in the recent past:
-        return Sim::now() > t_last_treatment && Sim::now() <= t_last_treatment + params().health_system_memory;
+        return params().clock().now() > t_last_treatment &&
+               params().clock().now() <= t_last_treatment + params().health_system_memory;
     }
 
 protected:
