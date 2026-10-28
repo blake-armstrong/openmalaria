@@ -45,8 +45,9 @@ public:
         UnittestUtil::initTime(1);
         params = EmpiricalInfectionParams(unittest_options::command_line);
         // pkpdID (1st value) isn't important since we're not using drug model here:
-        infection = new EmpiricalInfection(params, UnittestUtil::infection_latent_p(), m_rng, 0xFFFFFFFF,
-                                           InfectionOrigin::Indigenous, 1);
+        infection =
+            new EmpiricalInfection(params, UnittestUtil::clock().now_or_ts0(), UnittestUtil::infection_latent_p(),
+                                   m_rng, 0xFFFFFFFF, InfectionOrigin::Indigenous, 1);
         for (SimTime d = Sim::ts1(), end = Sim::ts1() + Sim::from_days(15); d < end; d = d + Sim::one_day()) {
             // blood stage starts 15 days after creation
             UnittestUtil::incrTime(Sim::one_day());

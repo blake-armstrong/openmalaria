@@ -36,7 +36,7 @@ public:
     /// For checkpointing (don't use for anything else)
     DummyInfection(SimTime latent_p, istream& stream);
     //! Constructor
-    DummyInfection(SimTime latent_p, LocalRng& rng, uint32_t prot_id, int origin);
+    DummyInfection(SimTime start_date, SimTime latent_p, LocalRng& rng, uint32_t prot_id, int origin);
 
     ~DummyInfection() override = default;
 

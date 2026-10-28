@@ -111,14 +111,14 @@ const double PtmTau = 0.066;
 const double PtmTauPrime = 1.0 / sqrt(1.0 / PtmTau);
 const double PtmMu = -8.1;
 
-inline double compute_y_lag(const vector<double>& y_lag, int y_lag_len, vector<double>& y_lag_g) {
+inline double compute_y_lag(const Clock& clock, const vector<double>& y_lag, int y_lag_len, vector<double>& y_lag_g) {
     const size_t n = y_lag_g.size();
 
     // Take weighted sum of total asexual blood stage density 10, 15 and 20 days
     // before. Add y_lag_len to index to ensure positive.
-    const size_t d10 = mod_nn(y_lag_len + Sim::in_steps(Sim::ts1() - Sim::from_days(10)), y_lag_len);
-    const size_t d15 = mod_nn(y_lag_len + Sim::in_steps(Sim::ts1() - Sim::from_days(15)), y_lag_len);
-    const size_t d20 = mod_nn(y_lag_len + Sim::in_steps(Sim::ts1() - Sim::from_days(20)), y_lag_len);
+    const size_t d10 = mod_nn(y_lag_len + clock.in_steps(clock.ts1() - Sim::from_days(10)), y_lag_len);
+    const size_t d15 = mod_nn(y_lag_len + clock.in_steps(clock.ts1() - Sim::from_days(15)), y_lag_len);
+    const size_t d20 = mod_nn(y_lag_len + clock.in_steps(clock.ts1() - Sim::from_days(20)), y_lag_len);
 
     double y10_sum = 0.0, y15_sum = 0.0, y20_sum = 0.0;
     for (size_t g = 0; g < n; ++g) {
@@ -147,8 +147,8 @@ double WHFalciparum::prob_transmission_to_mosquito(vector<double>& prob_trans_ge
 
     // Sum lagged densities across genotypes:
     vector<double> y_lag_g_i(n), y_lag_g_l(n);
-    const double y_lag_sum_i = compute_y_lag(y_lag_imported, params().y_lag_len, y_lag_g_i);
-    const double y_lag_sum_l = compute_y_lag(y_lag_local, params().y_lag_len, y_lag_g_l);
+    const double y_lag_sum_i = compute_y_lag(clock(), y_lag_imported, params().y_lag_len, y_lag_g_i);
+    const double y_lag_sum_l = compute_y_lag(clock(), y_lag_local, params().y_lag_len, y_lag_g_l);
     const double y_lag_sum = y_lag_sum_i + y_lag_sum_l;
 
     if (y_lag_sum < 0.001)
@@ -192,14 +192,14 @@ bool WHFalciparum::treat_simple(Host::Human& human, SimTime time_liver, SimTime 
         if (time_liver < Sim::zero())
             clear_infections(Treatments::LIVER);
         else
-            treat_expiry_liver = max(treat_expiry_liver, Sim::now_or_ts1() + time_liver);
+            treat_expiry_liver = max(treat_expiry_liver, clock().now_or_ts1() + time_liver);
         mon::record_event(mon::measure("nLiverStageTreatments"), human);
     }
     if (time_blood != Sim::zero()) {
         if (time_blood < Sim::zero())
             clear_infections(Treatments::BLOOD);
         else
-            treat_expiry_blood = max(treat_expiry_blood, Sim::now_or_ts1() + time_blood);
+            treat_expiry_blood = max(treat_expiry_blood, clock().now_or_ts1() + time_blood);
         return true; // blood stage treatment
     }
     return false; // no blood stage treatment

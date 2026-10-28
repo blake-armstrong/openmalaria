@@ -45,7 +45,8 @@ public:
     /// For checkpointing (don't use for anything else)
     CommonInfection(SimTime latent_p, istream& stream) : Infection(latent_p, stream) {}
     /// Per instance initialisation; create new inf.
-    CommonInfection(SimTime latent_p, uint32_t genotype, int origin) : Infection(latent_p, genotype, origin) {}
+    CommonInfection(SimTime start_date, SimTime latent_p, uint32_t genotype, int origin)
+        : Infection(start_date, latent_p, genotype, origin) {}
     ~CommonInfection() override;
     //@}
 

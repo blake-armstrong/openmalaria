@@ -44,7 +44,7 @@ DescriptiveWithinHostModel::DescriptiveWithinHostModel(const FalciparumParams& p
                                                        const DescriptiveWithinHostParams& descriptive_params,
                                                        LocalRng& rng, double comorbidity_factor)
     : WHFalciparum(params, pathogenesis, treatments, rng, comorbidity_factor), descriptive_params(&descriptive_params) {
-    assert(Sim::one_ts() == Sim::from_days(5));
+    assert(clock().one_ts() == Sim::from_days(5));
     opt_vaccine_genotype = params.vaccine_genotype;
 }
 
@@ -52,8 +52,8 @@ DescriptiveWithinHostModel::DescriptiveWithinHostModel(const FalciparumParams& p
 
 std::unique_ptr<DescriptiveInfection> DescriptiveWithinHostModel::new_infection(LocalRng& rng, uint32_t genotype,
                                                                                 int origin) const {
-    return std::make_unique<DescriptiveInfection>(descriptive_params->infection, params().latent_p, rng, genotype,
-                                                  origin);
+    return std::make_unique<DescriptiveInfection>(descriptive_params->infection, clock(), params().latent_p, rng,
+                                                  genotype, origin);
 }
 
 void DescriptiveWithinHostModel::load_infection(istream& stream) {
@@ -62,9 +62,10 @@ void DescriptiveWithinHostModel::load_infection(istream& stream) {
 }
 
 void DescriptiveWithinHostModel::clear_infections(Treatments::Stages stage) {
+    const SimTime latest_ts0 = clock().latest_ts0();
     for (auto inf = infections.begin(); inf != infections.end();) {
-        if (stage == Treatments::BOTH || (stage == Treatments::LIVER && !(*inf)->blood_stage()) ||
-            (stage == Treatments::BLOOD && (*inf)->blood_stage())) {
+        if (stage == Treatments::BOTH || (stage == Treatments::LIVER && !(*inf)->blood_stage(latest_ts0)) ||
+            (stage == Treatments::BLOOD && (*inf)->blood_stage(latest_ts0))) {
             inf = infections.erase(inf);
         } else {
             ++inf;
@@ -145,8 +146,10 @@ void DescriptiveWithinHostModel::update(Host::Human& human, LocalRng& rng, int& 
     hrp2_density = 0.0;
     time_step_max_density = 0.0;
 
-    const bool treatment_liver = treat_expiry_liver > Sim::ts0();
-    const bool treatment_blood = treat_expiry_blood > Sim::ts0();
+    const SimTime ts0 = clock().ts0();
+    const SimTime latest_ts0 = clock().latest_ts0();
+    const bool treatment_liver = treat_expiry_liver > ts0;
+    const bool treatment_blood = treat_expiry_blood > ts0;
 
     for (auto inf = infections.begin(); inf != infections.end();) {
         //NOTE: it would be nice to combine this code with that in
@@ -156,8 +159,8 @@ void DescriptiveWithinHostModel::update(Host::Human& human, LocalRng& rng, int& 
         // any more).
         // SP drug action and the PK/PD model would need to be abstracted
         // behind a common interface.
-        if ((*inf)->expired() /* infection has self-terminated */ ||
-            ((*inf)->blood_stage() ? treatment_blood : treatment_liver)) {
+        if ((*inf)->expired(ts0) /* infection has self-terminated */ ||
+            ((*inf)->blood_stage(latest_ts0) ? treatment_blood : treatment_liver)) {
             inf = infections.erase(inf);
             num_infs--;
             continue;
@@ -170,7 +173,7 @@ void DescriptiveWithinHostModel::update(Host::Human& human, LocalRng& rng, int& 
         const double bsv_factor =
             human.vaccine.get_factor(interventions::vaccines::BSV, opt_vaccine_genotype ? (*inf)->genotype() : 0);
 
-        (*inf)->determine_densities(rng, cumulative_h, inf_step_max_dens, imm_surv_fact, innate_imm_surv_fact,
+        (*inf)->determine_densities(rng, clock(), cumulative_h, inf_step_max_dens, imm_surv_fact, innate_imm_surv_fact,
                                     bsv_factor);
 
         if (descriptive_params->infection.bugfix_max_dens)
@@ -189,14 +192,14 @@ void DescriptiveWithinHostModel::update(Host::Human& human, LocalRng& rng, int& 
     // As in AJTMH p22, cumulative_h (X_h + 1) doesn't include infections added
     // this time-step and cumulative_Y only includes past densities.
     cumulative_h += n_new_infs_i + n_new_infs_l;
-    cumulative_y += Sim::one_ts() * total_density;
+    cumulative_y += clock().one_ts() * total_density;
 
     util::streamValidate(total_density);
     util::streamValidate(hrp2_density);
     assert((std::isfinite)(total_density)); // inf probably wouldn't be a problem but NaN would be
 
     // Cache total density for infectiousness calculations
-    const int y_lag_i = Sim::modulo_steps(Sim::ts1(), params().y_lag_len);
+    const int y_lag_i = clock().modulo_steps(clock().ts1(), params().y_lag_len);
 
     for (size_t g = 0; g < genotypes().count(); ++g) {
         y_lag_imported[y_lag_i * genotypes().count() + g] = 0.0;

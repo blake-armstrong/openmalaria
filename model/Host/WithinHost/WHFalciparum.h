@@ -191,6 +191,7 @@ protected:
     const FalciparumParams& params() const { return *falciparum_params; }
     const GenotypeRegistry& genotypes() const { return *params().genotypes; }
     const DiagnosticRegistry& diagnostics() const { return *params().diagnostics; }
+    const Clock& clock() const { return *params().clock; }
 
 private:
     const FalciparumParams* falciparum_params;

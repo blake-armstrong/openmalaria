@@ -63,7 +63,7 @@ CommonWithinHost::CommonWithinHost(const FalciparumParams& params, const Pathoge
                                    LocalRng& rng, double comorbidity_factor)
     : WHFalciparum(params, pathogenesis, treatments, rng, comorbidity_factor), pkpd_model(common_params.pk_pd),
       common_params(&common_params) {
-    assert(Sim::one_ts() == Sim::from_days(1) || Sim::one_ts() == Sim::from_days(5));
+    assert(clock().one_ts() == Sim::from_days(1) || clock().one_ts() == Sim::from_days(5));
 
     opt_vaccine_genotype = params.vaccine_genotype;
 
@@ -83,9 +83,10 @@ CommonWithinHost::CommonWithinHost(const FalciparumParams& params, const Pathoge
 // -----  Simple infection adders/removers  -----
 
 void CommonWithinHost::clear_infections(Treatments::Stages stage) {
+    const SimTime latest_ts0 = clock().latest_ts0();
     for (auto inf = infections.begin(); inf != infections.end();) {
-        if (stage == Treatments::BOTH || (stage == Treatments::LIVER && !(*inf)->blood_stage()) ||
-            (stage == Treatments::BLOOD && (*inf)->blood_stage())) {
+        if (stage == Treatments::BOTH || (stage == Treatments::LIVER && !(*inf)->blood_stage(latest_ts0)) ||
+            (stage == Treatments::BLOOD && (*inf)->blood_stage(latest_ts0))) {
             inf = infections.erase(inf);
         } else {
             ++inf;
@@ -108,7 +109,7 @@ void CommonWithinHost::clear_immunity() {
     cumulative_y_lag = 0.0;
 }
 std::unique_ptr<CommonInfection> CommonWithinHost::new_infection(LocalRng& rng, uint32_t genotype, int origin) const {
-    return common_params->infection.create(params().latent_p, rng, genotype, origin);
+    return common_params->infection.create(clock().now_or_ts0(), params().latent_p, rng, genotype, origin);
 }
 
 void CommonWithinHost::import_infection(LocalRng& rng) {
@@ -182,12 +183,14 @@ void CommonWithinHost::update(Host::Human& human, LocalRng& rng, int& n_new_infs
     hrp2_density = 0.0;
     time_step_max_density = 0.0;
 
-    const bool treatment_liver = treat_expiry_liver > Sim::ts0();
-    const bool treatment_blood = treat_expiry_blood > Sim::ts0();
+    const SimTime ts0 = clock().ts0();
+    const SimTime latest_ts0 = clock().latest_ts0();
+    const bool treatment_liver = treat_expiry_liver > ts0;
+    const bool treatment_blood = treat_expiry_blood > ts0;
 
     const double body_mass = common_params->mass_by_age.eval(age_in_years) * het_mass_multiplier;
 
-    for (SimTime now = Sim::ts0(), end = Sim::ts0() + Sim::one_ts(); now < end; now = now + Sim::one_day()) {
+    for (SimTime now = ts0, end = ts0 + clock().one_ts(); now < end; now = now + Sim::one_day()) {
         // every day, medicate drugs, update each infection, then decay drugs
         pkpd_model.medicate(rng);
 
@@ -195,7 +198,7 @@ void CommonWithinHost::update(Host::Human& human, LocalRng& rng, int& n_new_infs
 
         for (auto inf = infections.begin(); inf != infections.end();) {
             // Note: this is only one treatment model; there is also the PK/PD model
-            bool expires = ((*inf)->blood_stage() ? treatment_blood : treatment_liver);
+            bool expires = ((*inf)->blood_stage(latest_ts0) ? treatment_blood : treatment_liver);
 
             if (!expires) { /* no expiry due to simple treatment model; do update */
                 const double drug_factor = pkpd_model.get_drug_factor(rng, inf->get(), body_mass);
@@ -238,7 +241,7 @@ void CommonWithinHost::update(Host::Human& human, LocalRng& rng, int& n_new_infs
     assert((std::isfinite)(total_density)); // inf probably wouldn't be a problem but NaN would be
 
     // Cache total density for infectiousness calculations
-    const int y_lag_i = Sim::modulo_steps(Sim::ts1(), params().y_lag_len);
+    const int y_lag_i = clock().modulo_steps(clock().ts1(), params().y_lag_len);
     for (size_t g = 0; g < genotypes().count(); ++g) {
         y_lag_imported[y_lag_i * genotypes().count() + g] = 0.0;
         y_lag_local[y_lag_i * genotypes().count() + g] = 0.0;

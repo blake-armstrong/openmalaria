@@ -44,8 +44,8 @@ enum InfectionOrigin {
 
 class Infection {
 public:
-    Infection(SimTime latent_p, uint32_t genotype, int origin)
-        : start_date(Sim::now_or_ts0()), genotype_code(genotype), origin_code(origin), latent_p(latent_p) {}
+    Infection(SimTime start_date, SimTime latent_p, uint32_t genotype, int origin)
+        : start_date(start_date), genotype_code(genotype), origin_code(origin), latent_p(latent_p) {}
     Infection(SimTime latent_p, istream& stream) : start_date(Sim::never()), latent_p(latent_p) {
         start_date & stream;
         density & stream;
@@ -72,7 +72,7 @@ public:
      * effect), clearance of blood stage infections can only happen after their
      * first update (though due to the latent period densities will still be
      * low). */
-    inline bool blood_stage() const { return Sim::latest_ts0() - start_date > Sim::from_days(5); }
+    inline bool blood_stage(SimTime latest_ts0) const { return latest_ts0 - start_date > Sim::from_days(5); }
 
     /// Get the density of the infection as of the last update
     inline double get_density() const { return density; }

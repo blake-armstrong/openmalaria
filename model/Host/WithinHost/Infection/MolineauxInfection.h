@@ -57,8 +57,8 @@ public:
     //@}
 
     // Initialise. Samples several parameters.
-    MolineauxInfection(const MolineauxInfectionParams& params, SimTime latent_p, LocalRng& rng, uint32_t prot_id,
-                       int origin);
+    MolineauxInfection(const MolineauxInfectionParams& params, SimTime start_date, SimTime latent_p, LocalRng& rng,
+                       uint32_t prot_id, int origin);
     // Load from a checkpoint:
     MolineauxInfection(const MolineauxInfectionParams& params, SimTime latent_p, istream& stream);
     ~MolineauxInfection() override = default;

@@ -27,17 +27,17 @@
 
 namespace OM::WithinHost {
 
-std::unique_ptr<CommonInfection> CommonInfectionModel::create(SimTime latent_p, util::LocalRng& rng, uint32_t genotype,
-                                                              int origin) const {
+std::unique_ptr<CommonInfection> CommonInfectionModel::create(SimTime start_date, SimTime latent_p, util::LocalRng& rng,
+                                                              uint32_t genotype, int origin) const {
     switch (kind) {
     case Kind::Dummy:
-        return std::make_unique<DummyInfection>(latent_p, rng, genotype, origin);
+        return std::make_unique<DummyInfection>(start_date, latent_p, rng, genotype, origin);
     case Kind::Empirical:
-        return std::make_unique<EmpiricalInfection>(empirical, latent_p, rng, genotype, origin, 1);
+        return std::make_unique<EmpiricalInfection>(empirical, start_date, latent_p, rng, genotype, origin, 1);
     case Kind::Molineaux:
-        return std::make_unique<MolineauxInfection>(molineaux, latent_p, rng, genotype, origin);
+        return std::make_unique<MolineauxInfection>(molineaux, start_date, latent_p, rng, genotype, origin);
     case Kind::Penny:
-        return std::make_unique<PennyInfection>(penny, latent_p, rng, genotype, origin);
+        return std::make_unique<PennyInfection>(penny, start_date, latent_p, rng, genotype, origin);
     }
     throw TRACED_EXCEPTION_DEFAULT("unknown infection model kind");
 }

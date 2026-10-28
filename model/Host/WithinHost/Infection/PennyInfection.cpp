@@ -137,9 +137,9 @@ PennyInfectionParams::PennyInfectionParams(const util::ModelOptionFlags& options
     : immune_threshold_gamma(options.option(util::ImmuneThresholdGamma)),
       update_density_gamma(options.option(util::UpdateDensityGamma)) {}
 
-PennyInfection::PennyInfection(const PennyInfectionParams& params, SimTime latent_p, LocalRng& rng, uint32_t prot_id,
-                               int origin)
-    : CommonInfection(latent_p, prot_id, origin), params(&params) {
+PennyInfection::PennyInfection(const PennyInfectionParams& params, SimTime start_date, SimTime latent_p, LocalRng& rng,
+                               uint32_t prot_id, int origin)
+    : CommonInfection(start_date, latent_p, prot_id, origin), params(&params) {
     // assign infection dependent immune thresholds
     if (params.immune_threshold_gamma) /* using gamma distribution */ {
         do {

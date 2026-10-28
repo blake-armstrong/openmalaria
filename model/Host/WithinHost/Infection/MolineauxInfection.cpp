@@ -162,9 +162,9 @@ MolineauxInfectionParams::MolineauxInfectionParams(const Parameters& parameters,
 
 // ———  MolineauxInfection: initialisation  ———
 
-MolineauxInfection::MolineauxInfection(const MolineauxInfectionParams& params, SimTime latent_p, LocalRng& rng,
-                                       uint32_t genotype, int origin)
-    : CommonInfection(latent_p, genotype, origin), params(&params) {
+MolineauxInfection::MolineauxInfection(const MolineauxInfectionParams& params, SimTime start_date, SimTime latent_p,
+                                       LocalRng& rng, uint32_t genotype, int origin)
+    : CommonInfection(start_date, latent_p, genotype, origin), params(&params) {
     for (float& m : mi) {
         // Molineaux paper, equation 11
         if (params.multi_factor_gamma) {

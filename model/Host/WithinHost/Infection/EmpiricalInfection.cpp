@@ -94,9 +94,9 @@ EmpiricalInfectionParams::EmpiricalInfectionParams(const util::CommandLineOption
 
 /* Initialises a new infection by assigning the densities for the last 3 prepatent days
 */
-EmpiricalInfection::EmpiricalInfection(const EmpiricalInfectionParams& params, SimTime latent_p, LocalRng& rng,
-                                       uint32_t prot_id, int origin, double growth_rate_multiplier)
-    : CommonInfection(latent_p, prot_id, origin), patent_growth_rate_multiplier(growth_rate_multiplier),
+EmpiricalInfection::EmpiricalInfection(const EmpiricalInfectionParams& params, SimTime start_date, SimTime latent_p,
+                                       LocalRng& rng, uint32_t prot_id, int origin, double growth_rate_multiplier)
+    : CommonInfection(start_date, latent_p, prot_id, origin), patent_growth_rate_multiplier(growth_rate_multiplier),
       params(&params) {
     //sample the parasite densities for the last 3 prepatent days
     //note that the lag decreases with time

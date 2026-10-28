@@ -68,8 +68,9 @@ public:
         //         out << setprecision(8);
 
         // pkpdID (value) isn't important since we're not using drug model here:
-        auto* infection = new MolineauxInfection(params, UnittestUtil::infection_latent_p(), m_rng, 0xFFFFFFFF,
-                                                 InfectionOrigin::Indigenous);
+        auto* infection =
+            new MolineauxInfection(params, UnittestUtil::clock().now_or_ts0(), UnittestUtil::infection_latent_p(),
+                                   m_rng, 0xFFFFFFFF, InfectionOrigin::Indigenous);
         bool extinct = false;
         size_t day = 0;
         SimTime now = Sim::ts0();
@@ -293,7 +294,8 @@ private:
             vector<double> dens; // time series of density
             for (size_t run = 0; run < N; ++run) {
                 dens.resize(0);
-                auto* infection = new MolineauxInfection(params, UnittestUtil::infection_latent_p(), rng, 0xFFFFFFFF,
+                auto* infection = new MolineauxInfection(params, UnittestUtil::clock().now_or_ts0(),
+                                                         UnittestUtil::infection_latent_p(), rng, 0xFFFFFFFF,
                                                          InfectionOrigin::Indigenous);
                 SimTime now = Sim::ts0();
 

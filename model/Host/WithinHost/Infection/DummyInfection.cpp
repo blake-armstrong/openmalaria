@@ -29,8 +29,8 @@
 
 namespace OM::WithinHost {
 
-DummyInfection::DummyInfection(SimTime latent_p, LocalRng& rng, uint32_t prot_id, int origin)
-    : CommonInfection(latent_p, prot_id, origin) {
+DummyInfection::DummyInfection(SimTime start_date, SimTime latent_p, LocalRng& rng, uint32_t prot_id, int origin)
+    : CommonInfection(start_date, latent_p, prot_id, origin) {
     density = 16; // increased by DH to avoid zeros in initialKappa
 }
 

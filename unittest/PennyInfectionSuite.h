@@ -43,7 +43,7 @@ public:
         UnittestUtil::initTime(1);
         params = PennyInfectionParams(unittest_options::model_options);
         infection = new PennyInfection(
-            params, UnittestUtil::infection_latent_p(), m_rng, 0xFFFFFFFF,
+            params, UnittestUtil::clock().now_or_ts0(), UnittestUtil::infection_latent_p(), m_rng, 0xFFFFFFFF,
             InfectionOrigin::Indigenous); // pkpdID (value) isn't important since we're not using drug model here
     }
     void tearDown() { delete infection; }

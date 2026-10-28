@@ -46,7 +46,8 @@ struct PennyInfectionParams {
 class PennyInfection : public CommonInfection {
 public:
     /// Constructor
-    PennyInfection(const PennyInfectionParams& params, SimTime latent_p, LocalRng& rng, uint32_t prot_id, int origin);
+    PennyInfection(const PennyInfectionParams& params, SimTime start_date, SimTime latent_p, LocalRng& rng,
+                   uint32_t prot_id, int origin);
     /// Resume from a checkpoint
     PennyInfection(const PennyInfectionParams& params, SimTime latent_p, istream& stream);
     /// Destructor

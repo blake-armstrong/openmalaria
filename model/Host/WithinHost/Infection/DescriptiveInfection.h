@@ -85,15 +85,15 @@ public:
     ///@name Constructors
     //@{
     /// Default constructor
-    DescriptiveInfection(const DescriptiveInfectionParams& params, SimTime latent_p, LocalRng& rng, uint32_t genotype,
-                         int origin);
+    DescriptiveInfection(const DescriptiveInfectionParams& params, const Clock& clock, SimTime latent_p, LocalRng& rng,
+                         uint32_t genotype, int origin);
     /// Checkpoint loading constructor
     DescriptiveInfection(const DescriptiveInfectionParams& params, SimTime latent_p, istream& stream);
     //@}
 
     /** Returns true when age reaches the pre-determined duration (i.e. when
     * this infection terminates). */
-    bool expired() { return Sim::ts0() > start_date + duration; }
+    bool expired(SimTime ts0) const { return ts0 > start_date + duration; }
 
     /** Determines parasite density of an individual infection (5-day time step
      * update)
@@ -106,8 +106,8 @@ public:
      * @param innateImmSurvFact Density multiplier for innate immunity.
      * @param bsvFactor Density multiplier for Blood-Stage Vaccine effect.
      */
-    void determine_densities(LocalRng& rng, double cumulativeh, double& time_step_max_density, double imm_surv_fact,
-                             double innate_imm_surv_fact, double bsv_factor);
+    void determine_densities(LocalRng& rng, const Clock& clock, double cumulativeh, double& time_step_max_density,
+                             double imm_surv_fact, double innate_imm_surv_fact, double bsv_factor);
 
     /** Decide on an infection duration and return it.
      * 
@@ -117,7 +117,7 @@ public:
      * normal distribution using parameters for 53 patients from Georgia.
      * Mean log duration of an infection values from AJTM p.9 eq.5.
      */
-    static SimTime infection_duration(LocalRng& rng);
+    static SimTime infection_duration(LocalRng& rng, const Clock& clock);
 
     /// Includes the effect of attenuated infections by SP concentrations, when using IPT
     virtual void ipt_attenuate_asexual_density() {}

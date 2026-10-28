@@ -108,14 +108,14 @@ DescriptiveInfectionParams::DescriptiveInfectionParams(const Parameters& paramet
 
 // ———  non-static init/destruction  ———
 
-DescriptiveInfection::DescriptiveInfection(const DescriptiveInfectionParams& params, SimTime latent_p, LocalRng& rng,
-                                           uint32_t genotype, int origin)
-    : Infection(latent_p, genotype, origin), duration(infection_duration(rng)), not_printed_md_warning(true),
-      params(&params) {
-    assert(Sim::one_ts() == 5);
+DescriptiveInfection::DescriptiveInfection(const DescriptiveInfectionParams& params, const Clock& clock,
+                                           SimTime latent_p, LocalRng& rng, uint32_t genotype, int origin)
+    : Infection(clock.now_or_ts0(), latent_p, genotype, origin), duration(infection_duration(rng, clock)),
+      not_printed_md_warning(true), params(&params) {
+    assert(clock.one_ts() == 5);
 }
 
-SimTime DescriptiveInfection::infection_duration(LocalRng& rng) {
+SimTime DescriptiveInfection::infection_duration(LocalRng& rng, const Clock& clock) {
     // Forgive the excess precision; it just avoids having to update all expected results
     const double dur_mean = 5.1300001144409179688;
     const double dur_sigma = 0.80000001192092895508;
@@ -127,15 +127,16 @@ SimTime DescriptiveInfection::infection_duration(LocalRng& rng) {
     // ((1+floor(dur))/interval); now it says the last interval is:
     // floor((1+dur)/interval)-1 = floor((dur+1-interval)/interval)
     // Is this reasonable, or should we change?
-    return Sim::from_days(static_cast<int>(1.0 + dur)) - Sim::one_ts();
+    return Sim::from_days(static_cast<int>(1.0 + dur)) - clock.one_ts();
 }
 
 // ———  time-step updates  ———
-void DescriptiveInfection::determine_densities(LocalRng& rng, double cumulativeh, double& time_step_max_density,
-                                               double imm_surv_fact, double innate_imm_surv_fact, double bsv_factor) {
+void DescriptiveInfection::determine_densities(LocalRng& rng, const Clock& clock, double cumulativeh,
+                                               double& time_step_max_density, double imm_surv_fact,
+                                               double innate_imm_surv_fact, double bsv_factor) {
     // Age of patent blood stage infection. Note: liver stage is fixed at one
     // 5-day time step and prepatent blood stage is latentp - 1 time steps.
-    const SimTime infage = Sim::ts0() - start_date - latent_period();
+    const SimTime infage = clock.ts0() - start_date - latent_period();
     if (infage < Sim::zero()) {
         density = 0.0;
         if (params->bugfix_max_dens)
@@ -143,8 +144,8 @@ void DescriptiveInfection::determine_densities(LocalRng& rng, double cumulativeh
     } else {
         time_step_max_density = 0.0;
 
-        const int32_t inf_age = min(Sim::in_steps(infage), MaxDurationTs);
-        const int32_t inf_dur = min(Sim::in_steps(duration), MaxDurationTs);
+        const int32_t inf_age = min(clock.in_steps(infage), MaxDurationTs);
+        const int32_t inf_dur = min(clock.in_steps(duration), MaxDurationTs);
         density = max(params->mean_log_parasite_count[inf_age][inf_dur], 0.0);
 
         // The expected parasite density in the non naive host (AJTM p.9 eq. 9)
@@ -166,7 +167,7 @@ void DescriptiveInfection::determine_densities(LocalRng& rng, double cumulativeh
             density = rng.log_normal(meanlog, stdlog);
             // Calculate additional samples for T-1 days (T=days per step):
             if (true /*sim::oneTS() > 1, always true for this model*/) {
-                time_step_max_density = rng.max_multi_log_normal(density, Sim::one_ts() - 1, meanlog, stdlog);
+                time_step_max_density = rng.max_multi_log_normal(density, clock.one_ts() - 1, meanlog, stdlog);
             } else {
                 time_step_max_density = density;
             }
@@ -184,7 +185,7 @@ void DescriptiveInfection::determine_densities(LocalRng& rng, double cumulativeh
         //Include here the effect of blood stage vaccination
         density *= bsv_factor;
 
-        cum_exposure_j += Sim::one_ts() * density;
+        cum_exposure_j += clock.one_ts() * density;
     }
 
     if (params->bugfix_innate_max_dens)

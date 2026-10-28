@@ -41,8 +41,8 @@ public:
     /// For checkpointing (don't use for anything else)
     EmpiricalInfection(const EmpiricalInfectionParams& params, SimTime latent_p, istream& stream);
     /// Per instance initialisation; create new inf.
-    EmpiricalInfection(const EmpiricalInfectionParams& params, SimTime latent_p, LocalRng& rng, uint32_t prot_id,
-                       int origin, double growth_rate_multiplier);
+    EmpiricalInfection(const EmpiricalInfectionParams& params, SimTime start_date, SimTime latent_p, LocalRng& rng,
+                       uint32_t prot_id, int origin, double growth_rate_multiplier);
     /** Destructor
    * 
    * Note: this destructor does nothing in order to allow shallow copying to

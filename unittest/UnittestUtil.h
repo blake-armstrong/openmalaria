@@ -455,6 +455,7 @@ public:
         static util::MasterRngs master_rngs(0);
         unittest_options::within_host_model.falciparum.genotypes = &unittest_options::genotypes;
         unittest_options::within_host_model.falciparum.diagnostics = &unittest_options::diagnostics;
+        unittest_options::within_host_model.falciparum.clock = &clock();
         return std::make_unique<Host::Human>(
             dateOfBirth,
             Host::HumanParams{.per_host = &unittest_options::per_host_params,

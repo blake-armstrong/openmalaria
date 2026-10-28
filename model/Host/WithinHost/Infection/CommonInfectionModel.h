@@ -39,7 +39,8 @@ namespace OM::WithinHost {
 struct CommonInfectionModel {
     enum class Kind : std::uint8_t { Dummy, Empirical, Molineaux, Penny };
 
-    std::unique_ptr<CommonInfection> create(SimTime latent_p, util::LocalRng& rng, uint32_t genotype, int origin) const;
+    std::unique_ptr<CommonInfection> create(SimTime start_date, SimTime latent_p, util::LocalRng& rng,
+                                            uint32_t genotype, int origin) const;
     std::unique_ptr<CommonInfection> load(SimTime latent_p, std::istream& stream) const;
 
     Kind kind = Kind::Dummy;
