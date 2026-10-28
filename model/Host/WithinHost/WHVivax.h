@@ -54,7 +54,7 @@ public:
     explicit HypnozoiteReleaseDistribution(const scnXml::HypnozoiteReleaseDistribution& elt);
 
     /// Sample the time until next release
-    SimTime sample_release_delay(LocalRng& rng) const;
+    SimTime sample_release_delay(LocalRng& rng, const Clock& clock) const;
 
 private:
     std::unique_ptr<util::LognormalSampler> sampler;
@@ -148,7 +148,7 @@ public:
     /** Equivalent to a blood stage existing. We do not model incidence of
      * gametocytes independently, thus this also tests existance of
      * gametocytes. */
-    inline bool is_patent() const { return blood_stage_clear_date > Sim::latest_ts0(); }
+    inline bool is_patent(SimTime latest_ts0) const { return blood_stage_clear_date > latest_ts0; }
 
     /** Fully clear blood stage parasites. */
     void treatment_bs();

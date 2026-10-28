@@ -43,7 +43,7 @@ using namespace OM::util;
 HypnozoiteReleaseDistribution::HypnozoiteReleaseDistribution(const scnXml::HypnozoiteReleaseDistribution& elt)
     : sampler(createSampler(elt)), latent_relapse(elt.getLatentRelapse()) {}
 
-SimTime HypnozoiteReleaseDistribution::sample_release_delay(LocalRng& rng) const {
+SimTime HypnozoiteReleaseDistribution::sample_release_delay(LocalRng& rng, const Clock& clock) const {
     const double liver_stage_maximum_days = 16.0 * 30.0; // maximum of about 16 months in liver stage
     double delay = numeric_limits<double>::quiet_NaN();  // in days
     int count = 0;
@@ -63,7 +63,7 @@ SimTime HypnozoiteReleaseDistribution::sample_release_delay(LocalRng& rng) const
     } while (delay > liver_stage_maximum_days || delay < 0.0);
 
     assert(delay >= 0 && delay < liver_stage_maximum_days);
-    return Sim::round_to_ts_from_days(delay + latent_relapse);
+    return clock.round_to_ts_from_days(delay + latent_relapse);
 }
 
 // ———  parameters  ———
@@ -167,9 +167,9 @@ SimTime VivaxParams::sample_release_delay(LocalRng& rng) const {
     }
 
     if (is_first_release) {
-        return latent_relapse_1st->sample_release_delay(rng);
+        return latent_relapse_1st->sample_release_delay(rng, *clock);
     } else {
-        return latent_relapse_2nd->sample_release_delay(rng);
+        return latent_relapse_2nd->sample_release_delay(rng, *clock);
     }
 }
 
@@ -179,12 +179,13 @@ VivaxBrood::VivaxBrood(LocalRng& rng, const VivaxParams& params, int origin, WHV
     set<SimTime> releases; // used to initialise release_dates; a set is better to use now but a vector later
 
     // primary blood stage plus hypnozoites (relapses)
-    releases.insert(Sim::now_or_ts0() + params.latent_p);
+    const SimTime now = params.clock->now_or_ts0();
+    releases.insert(now + params.latent_p);
     const int number_hypnozoites = params.sample_n_hypnozoites(rng);
 
     for (int i = 0; i < number_hypnozoites;) {
         const SimTime random_release_delay = params.sample_release_delay(rng);
-        const SimTime time_to_release = Sim::now_or_ts0() + params.latent_p + random_release_delay;
+        const SimTime time_to_release = now + params.latent_p + random_release_delay;
         const bool inserted = releases.insert(time_to_release).second;
         if (inserted)
             ++i; // successful
@@ -235,19 +236,21 @@ VivaxBrood::VivaxBrood(istream& stream) {
 }
 
 VivaxBrood::UpdResult VivaxBrood::update(LocalRng& rng, const VivaxParams& params) {
-    if (blood_stage_clear_date == Sim::ts0()) {
+    const Clock& clock = *params.clock;
+    const SimTime ts0 = clock.ts0();
+    if (blood_stage_clear_date == ts0) {
         //NOTE: this effectively means that both asexual and sexual stage
         // parasites self-terminate. It also means the immune system can
         // protect against new blood-stage infections for a short time.
     }
 
     UpdResult result;
-    while (release_dates.size() > 0 && release_dates.back() == Sim::ts0()) {
+    while (release_dates.size() > 0 && release_dates.back() == ts0) {
         release_dates.pop_back();
 
 #ifdef WHVivaxSamples
         if (sampleBrood == this) {
-            cout << "Time\t" << Sim::ts0();
+            cout << "Time\t" << ts0;
             for (auto it = release_dates.begin(); it != release_dates.end(); ++it)
                 cout << '\t' << *it;
             cout << endl;
@@ -257,7 +260,7 @@ VivaxBrood::UpdResult VivaxBrood::update(LocalRng& rng, const VivaxParams& param
         // an existing or recently terminated blood stage from the same brood
         // protects against a newly released hypnozoite for relapse classification B
         if ((params.vivax_clin_option == "B1j" || params.vivax_clin_option == "B2j") &&
-            (blood_stage_clear_date + params.blood_stage_protection_latency >= Sim::ts0()))
+            (blood_stage_clear_date + params.blood_stage_protection_latency >= ts0))
             continue;
 
         if (!relapseb_has_started && relapse_has_started) {
@@ -275,12 +278,12 @@ VivaxBrood::UpdResult VivaxBrood::update(LocalRng& rng, const VivaxParams& param
         result.new_bs = true;
 
         const double length_days = params.blood_stage_length.sample(rng);
-        blood_stage_clear_date = Sim::ts0() + Sim::round_to_ts_from_days(length_days);
+        blood_stage_clear_date = ts0 + clock.round_to_ts_from_days(length_days);
         // Assume gametocytes emerge at the same time (they mature quickly and
         // we have little data, thus assume coincedence of start)
     }
 
-    result.is_finished = (!is_patent()) && (release_dates.size() == 0);
+    result.is_finished = (!is_patent(clock.latest_ts0())) && (release_dates.size() == 0);
     return result;
 }
 
@@ -336,8 +339,9 @@ WHVivax::~WHVivax() {
 
 double WHVivax::prob_transmission_to_mosquito(vector<double>& prob_trans_genotype_i,
                                               vector<double>& prob_trans_genotype_l) const {
+    const SimTime latest_ts0 = params->clock->latest_ts0();
     for (const auto& infection : infections) {
-        if (infection.is_patent()) {
+        if (infection.is_patent(latest_ts0)) {
             // we have gametocytes from at least one brood
             return params->prob_blood_stage_infectious_to_mosq;
         }
@@ -353,8 +357,9 @@ bool WHVivax::summarize(Host::Human& human) const {
     // (patent) infections are reported by genotype, even though we don't have
     // genotype in this model
     mon::record_stat(mon::measure("totalInfs"), human, static_cast<int>(infections.size()));
+    const SimTime latest_ts0 = params->clock->latest_ts0();
     for (const auto& infection : infections) {
-        if (infection.is_patent()) {
+        if (infection.is_patent(latest_ts0)) {
             mon::record_stat(mon::measure("totalPatentInf"), human);
             patent_host = true;
         }
@@ -384,8 +389,8 @@ void WHVivax::update(Host::Human& human, LocalRng& rng, int& n_new_infs_i, int& 
     // NOTE: currently no BSV model
     morbidity = Pathogenesis::None;
     const uint32_t old_cum_inf = cum_prim_inf;
-    const bool treatment_liver = treat_expiry_liver > Sim::ts0();
-    const bool treatment_blood = treat_expiry_blood > Sim::ts0();
+    const bool treatment_liver = treat_expiry_liver > params->clock->ts0();
+    const bool treatment_blood = treat_expiry_blood > params->clock->ts0();
     const double mat_imm_clin = 1 - (0.90 * exp(-2.53 * age_in_years));
     //double matImmClin = 1 - (1 * exp(-(0.639*8*ageInYears)/2.53));
     auto inf = infections.begin();
@@ -465,8 +470,9 @@ void WHVivax::update(Host::Human& human, LocalRng& rng, int& n_new_infs_i, int& 
 bool WHVivax::diagnostic_result(LocalRng& rng, const Diagnostic& diagnostic) const {
     //TODO(monitoring): this shouldn't ignore the diagnostic (especially since
     // it should always return true if diagnostic.density=0)
+    const SimTime latest_ts0 = params->clock->latest_ts0();
     for (const auto& infection : infections) {
-        if (infection.is_patent())
+        if (infection.is_patent(latest_ts0))
             return true; // at least one patent infection
     }
     return false;
@@ -519,7 +525,7 @@ bool WHVivax::treat_simple(Host::Human& human, SimTime time_liver, SimTime time_
         if ((hs.ignore_no_pq || !no_pq) &&
             (hs.effectiveness_pq == 1.0 || human.host_rng.bernoulli(hs.effectiveness_pq))) {
             if (time_liver >= Sim::zero()) {
-                treat_expiry_liver = max(treat_expiry_liver, Sim::now_or_ts1() + time_liver);
+                treat_expiry_liver = max(treat_expiry_liver, params->clock->now_or_ts1() + time_liver);
             } else {
                 for (auto& infection : infections) {
                     infection.treatment_ls();
@@ -537,7 +543,7 @@ bool WHVivax::treat_simple(Host::Human& human, SimTime time_liver, SimTime time_
                 infection.treatment_bs();
             }
         } else {
-            treat_expiry_blood = max(treat_expiry_blood, Sim::now_or_ts1() + time_blood);
+            treat_expiry_blood = max(treat_expiry_blood, params->clock->now_or_ts1() + time_blood);
         }
         return true; // blood stage treatment
     }
