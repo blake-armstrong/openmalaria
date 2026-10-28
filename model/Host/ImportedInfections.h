@@ -40,7 +40,7 @@ namespace Host {
 
 class ImportedInfections {
 public:
-    ImportedInfections() : period(Sim::zero()), last_index(0) {}
+    ImportedInfections() : period(Sim::zero()) {}
 
     /** Initialise, passing intervention description
          * 
@@ -139,7 +139,7 @@ public:
 
 private:
     SimTime period = Sim::never();
-    uint32_t last_index;
+    uint32_t last_index{0};
     const Clock* sim_clock = nullptr;
     struct Rate {
         Rate(SimTime t, double v) : time(t), value(v) {}
