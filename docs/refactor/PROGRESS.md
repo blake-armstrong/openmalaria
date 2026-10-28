@@ -1745,3 +1745,12 @@ An inventory at d4564e41 (`util/bridges.py`): `bridge::clock()` behind 30 facade
   - Expect F88 again in D9e5, which changes most suites.
   - `ImportedInfections.h`: the rest of the file in D9e2's rename and modernise.
 - Next: D9e2 (its base will be its own HEAD; move `../om-bench-base` again at its start).
+
+### Tooling after D9e1: F88 fixed (2026-10-28)
+- Commit a113f1b6: `util/style.sh` passes `-D_CXXTEST_HAVE_EH` to clang-tidy (both `tidy` and the clang-tidy-diff behind `check` and `fix`), as the generated CxxTest runner defines it, so a changed suite header's `TS_ASSERT_THROWS*` parse. Cause: clang-tidy-diff analyses the header with a compile command borrowed from another unittest file, which lacks the runner's defines; without `_CXXTEST_HAVE_EH` the macro is a `try` with no `catch`.
+- Checks:
+  - The pre-D9e1 `AgeGroupInterpolationSuite.h` and `DecayFunctionSuite.h`, run through clang-tidy as a probe file, parse with the define and get only their real findings, none on the macro lines; without it, `expected catch` at line 53.
+  - With the old `TS_ASSERT_THROWS` put back into `AgeGroupInterpolationSuite` (uncommitted, then restored), `util/style.sh check HEAD` is clean.
+  - `util/style.sh check d4564e41` is still clean.
+- Findings: F88 moved to § Closed.
+- Next: D9e2. D9e5 no longer needs to rewrite suites' throw checks.
