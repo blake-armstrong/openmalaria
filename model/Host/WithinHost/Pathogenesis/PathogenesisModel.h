@@ -55,7 +55,7 @@ struct MuellerParams {
     double density_exponent_32 = 0.0;
 
     MuellerParams() = default;
-    explicit MuellerParams(const OM::Parameters& parameters);
+    MuellerParams(const OM::Parameters& parameters, const Clock& clock);
 };
 
 struct PyrogenParams {
@@ -70,7 +70,7 @@ struct PyrogenParams {
     double ystar1_26 = 0.0;
 
     PyrogenParams() = default;
-    explicit PyrogenParams(const OM::Parameters& parameters);
+    PyrogenParams(const OM::Parameters& parameters, const Clock& clock);
 };
 
 struct PathogenesisParams {

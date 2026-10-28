@@ -73,8 +73,8 @@ WHVivax* sampleHost = 0;
 VivaxBrood* sampleBrood = 0;
 #endif
 
-VivaxParams::VivaxParams(const scnXml::Model& model, SimTime latent_p, bool deprecation_warnings)
-    : latent_p(latent_p), deprecation_warnings(deprecation_warnings) {
+VivaxParams::VivaxParams(const scnXml::Model& model, SimTime latent_p, bool deprecation_warnings, const Clock& clock)
+    : latent_p(latent_p), deprecation_warnings(deprecation_warnings), clock(&clock) {
     if (!model.getVivax().present())
         throw util::xml_scenario_error("no vivax model description in scenario XML");
     const scnXml::Vivax& elt = model.getVivax().get();
@@ -88,7 +88,7 @@ VivaxParams::VivaxParams(const scnXml::Model& model, SimTime latent_p, bool depr
         p_second_release = hr.getPSecondRelease();
         assert(p_second_release >= 0 && p_second_release <= 1);
     } // else p_second_release is NaN and other values don't get used
-    blood_stage_protection_latency = Sim::round_to_ts_from_days(elt.getBloodStageProtectionLatency().getValue());
+    blood_stage_protection_latency = clock.round_to_ts_from_days(elt.getBloodStageProtectionLatency().getValue());
     blood_stage_length.setParams(elt.getBloodStageLengthDays());
 
     const scnXml::ClinicalEvents& ce = elt.getClinicalEvents();

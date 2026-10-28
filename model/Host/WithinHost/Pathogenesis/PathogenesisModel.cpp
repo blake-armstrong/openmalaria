@@ -58,13 +58,13 @@ PathogenesisParams::PathogenesisParams(const OM::Parameters& parameters, const u
     if (options.option(util::PredeterminedEpisodes)) {
         kind = Kind::Predetermined;
         //no separate init:
-        pyrogen = PyrogenParams(parameters);
+        pyrogen = PyrogenParams(parameters, clock);
     } else {
         if (options.option(util::MuellerPresentationModel)) {
             kind = Kind::Mueller;
-            mueller = MuellerParams(parameters);
+            mueller = MuellerParams(parameters, clock);
         } else {
-            pyrogen = PyrogenParams(parameters);
+            pyrogen = PyrogenParams(parameters, clock);
         }
     }
 }

@@ -49,18 +49,19 @@ using namespace OM::util;
 
 FalciparumParams::FalciparumParams(const OM::Parameters& parameters, const util::ModelOptionFlags& options,
                                    const GenotypeRegistry& genotypes, const DiagnosticRegistry& diagnostics,
-                                   const mon::MonitoringState& monitoring)
+                                   const mon::MonitoringState& monitoring, const Clock& clock)
     : sigma_i(sqrt(parameters[Parameter::SigmaISq])), imm_penalty_22(1 - exp(parameters[Parameter::ImmunityPenalty])),
       imm_effector_remain(exp(-parameters[Parameter::ImmuneEffectorDecay])),
       asex_imm_remain(exp(-parameters[Parameter::AsexualImmunityDecay])),
       inv_cumulative_y_star(1.0 / parameters[Parameter::CumulativeYStar]),
       inv_cumulative_h_star(1.0 / parameters[Parameter::CumulativeHStar]),
       alpha_m(1.0 - exp(-parameters[Parameter::NegLogOneMinusAlphaM])), decay_m(parameters[Parameter::DecayM]),
-      y_lag_len(Sim::in_steps(Sim::from_days(20)) + 1),
+      y_lag_len(clock.in_steps(Sim::from_days(20)) + 1),
       report_infections_by_genotype(mon::is_used(monitoring, mon::measure("nInfectByGenotype")) ||
                                     mon::is_used(monitoring, mon::measure("nPatentByGenotype")) ||
                                     mon::is_used(monitoring, mon::measure("logDensByGenotype"))),
-      vaccine_genotype(options.option(util::VaccineGenotype)), genotypes(&genotypes), diagnostics(&diagnostics) {}
+      vaccine_genotype(options.option(util::VaccineGenotype)), genotypes(&genotypes), diagnostics(&diagnostics),
+      clock(&clock) {}
 
 // -----  Non-static  -----
 

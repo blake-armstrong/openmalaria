@@ -58,7 +58,7 @@ Treatments::Treatments(const scnXml::TreatmentOption& elt, const interventions::
             //NOTE: if changing XSD, this should not be called "timesteps" or have a default unit
             const SimTime len =
                 unit_parse::read_short_duration(it.getTimesteps(), unit_parse::STEPS, clock, command_line);
-            if (len < -Sim::one_ts() || len == Sim::zero()) {
+            if (len < -clock.one_ts() || len == Sim::zero()) {
                 throw util::format_error("timesteps must be ≥ 1 or have special value -1");
             }
             const Stages stage = stage_from_string(it.getStage());

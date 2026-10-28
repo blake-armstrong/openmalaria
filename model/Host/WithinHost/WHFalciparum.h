@@ -88,11 +88,12 @@ struct FalciparumParams {
 
     const GenotypeRegistry* genotypes = nullptr;
     const DiagnosticRegistry* diagnostics = nullptr;
+    const Clock* clock = nullptr;
 
     FalciparumParams() = default;
     FalciparumParams(const OM::Parameters& parameters, const util::ModelOptionFlags& options,
                      const GenotypeRegistry& genotypes, const DiagnosticRegistry& diagnostics,
-                     const mon::MonitoringState& monitoring);
+                     const mon::MonitoringState& monitoring, const Clock& clock);
 };
 
 /**

@@ -31,8 +31,8 @@ namespace OM::WithinHost::Pathogenesis {
 
 // ———  Müller presentation model  ———
 
-MuellerParams::MuellerParams(const OM::Parameters& parameters)
-    : rate_multiplier_31(parameters[Parameter::MuellerRateMultiplier] * Sim::years_per_step()),
+MuellerParams::MuellerParams(const OM::Parameters& parameters, const Clock& clock)
+    : rate_multiplier_31(parameters[Parameter::MuellerRateMultiplier] * clock.years_per_step()),
       density_exponent_32(parameters[Parameter::MuellerDensityExponent]) {}
 
 double MuellerPathogenesis::get_p_episode(double, double total_density) {
@@ -48,25 +48,26 @@ constexpr size_t NumCategories = 11;
 
 namespace {
 
-double pyrogen_b(const OM::Parameters& parameters) {
+double pyrogen_b(const OM::Parameters& parameters, const Clock& clock) {
     const double delt = 1.0 / static_cast<double>(NumCategories);
     const double smu_y =
-        -log(0.5) / (static_cast<double>(Sim::steps_per_year()) * parameters[Parameter::YStarHalfLife]);
+        -log(0.5) / (static_cast<double>(clock.steps_per_year()) * parameters[Parameter::YStarHalfLife]);
     return -smu_y * delt;
 }
 
-double pyrogen_a(const OM::Parameters& parameters) {
+double pyrogen_a(const OM::Parameters& parameters, const Clock& clock) {
     const double delt = 1.0 / static_cast<double>(NumCategories);
     //alpha: factor determining increase in pyrogenic threshold
     const double alpha14 = parameters[Parameter::Alpha];
-    return alpha14 * Sim::one_ts() * delt;
+    return alpha14 * clock.one_ts() * delt;
 }
 
 }
 
-PyrogenParams::PyrogenParams(const OM::Parameters& parameters)
-    : init_pyro_thres(parameters[Parameter::YStar0]), b(pyrogen_b(parameters)),
-      ystar2_13(parameters[Parameter::YStarSq]), a(pyrogen_a(parameters)), ystar1_26(parameters[Parameter::YStar1]) {}
+PyrogenParams::PyrogenParams(const OM::Parameters& parameters, const Clock& clock)
+    : init_pyro_thres(parameters[Parameter::YStar0]), b(pyrogen_b(parameters, clock)),
+      ystar2_13(parameters[Parameter::YStarSq]), a(pyrogen_a(parameters, clock)),
+      ystar1_26(parameters[Parameter::YStar1]) {}
 
 PyrogenPathogenesis::PyrogenPathogenesis(const PathogenesisParams& params, double comorbidity_factor)
     : PathogenesisModel(params, comorbidity_factor), pyrogen_thres(params.pyrogen.init_pyro_thres) {}

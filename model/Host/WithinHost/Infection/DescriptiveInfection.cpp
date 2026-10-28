@@ -39,9 +39,10 @@ using namespace util;
 
 DescriptiveInfectionParams::DescriptiveInfectionParams(const Parameters& parameters,
                                                        const util::ModelOptionFlags& options,
-                                                       const util::CommandLineOptions& command_line) {
+                                                       const util::CommandLineOptions& command_line,
+                                                       const Clock& clock) {
     // Error checks
-    if (Sim::one_ts() != 5) {
+    if (clock.one_ts() != 5) {
         // To support non-5-day time-step models, either different data would
         // be needed or times need to be adjusted when accessing
         // mean_log_parasite_count. Probably the rest would be fine.

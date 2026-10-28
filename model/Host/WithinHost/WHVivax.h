@@ -86,9 +86,10 @@ struct VivaxParams {
     std::map<double, int> n_hypnozoites_prob_map;
     VivaxHealthSystemParams health_system;
     bool deprecation_warnings = true;
+    const Clock* clock = nullptr;
 
     VivaxParams() = default;
-    VivaxParams(const scnXml::Model& model, SimTime latent_p, bool deprecation_warnings);
+    VivaxParams(const scnXml::Model& model, SimTime latent_p, bool deprecation_warnings, const Clock& clock);
 
     void set_health_system(const scnXml::LiverStageDrug* elt);
 

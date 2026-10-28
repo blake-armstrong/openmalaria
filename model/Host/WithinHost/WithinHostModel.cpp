@@ -71,13 +71,13 @@ WithinHostModel::WithinHostModel(const OM::Parameters& parameters, const util::M
         assert(genotypes.count() == 1);
         kind = Kind::Vivax;
         vivax = VivaxParams(scenario.getModel(), read_latent_p(scenario.getModel(), clock, command_line),
-                            command_line.option(util::CommandLine::DeprecationWarnings));
+                            command_line.option(util::CommandLine::DeprecationWarnings), clock);
         pathogenesis = Pathogenesis::PathogenesisParams(parameters, options, scenario.getModel().getClinical(), true,
                                                         clock, command_line);
         return;
     }
 
-    falciparum = FalciparumParams(parameters, options, genotypes, diagnostics, monitoring);
+    falciparum = FalciparumParams(parameters, options, genotypes, diagnostics, monitoring, clock);
     pathogenesis = Pathogenesis::PathogenesisParams(parameters, options, scenario.getModel().getClinical(), false,
                                                     clock, command_line);
     falciparum.latent_p = read_latent_p(scenario.getModel(), clock, command_line);
@@ -99,7 +99,8 @@ WithinHostModel::WithinHostModel(const OM::Parameters& parameters, const util::M
         infection.kind = CommonInfectionModel::Kind::Penny;
         infection.penny = PennyInfectionParams(options);
     } else {
-        descriptive.infection = DescriptiveInfectionParams(parameters, options, command_line); // 5-day time step check
+        descriptive.infection =
+            DescriptiveInfectionParams(parameters, options, command_line, clock); // 5-day time step check
     }
 
     if (kind == Kind::Common) {

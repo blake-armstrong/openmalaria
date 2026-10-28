@@ -67,7 +67,7 @@ struct DescriptiveInfectionParams {
      * those models documented in the referenced publication).
      */
     DescriptiveInfectionParams(const OM::Parameters& parameters, const util::ModelOptionFlags& options,
-                               const util::CommandLineOptions& command_line);
+                               const util::CommandLineOptions& command_line, const Clock& clock);
 };
 
 /** A model of Plasmodium Falciparum infections. Described in AJTMH 75(2)
