@@ -452,6 +452,16 @@ def vivax_with_component(component):
     return transform
 
 
+def with_repeated_component(no_interventions, component):
+    return lambda s: rep(s, no_interventions,
+                         '<interventions name="one component"><human><component id="c">' + component
+                         + '</component><deployment><component id="c"/><timed>'
+                         + '<deploy coverage="0.5" time="2t" repeatStep="7t" repeatEnd="400t"/>'
+                         + "</timed></deployment></human></interventions>")
+
+
+CLEAR_LIVER = '<treatSimple durationLiver="-1t" durationBlood="0"/>'
+
 BSV_ELT = ('<BSV><decay L="7.32" k="0.69" function="weibull"/><efficacyB value="10.0"/>'
            '<initialEfficacy value="1.0"/></BSV>')
 
@@ -554,6 +564,8 @@ GROUPS = {
         Variant("latentp_bad", V, lambda s: rep(s, 'latentp="10d"', 'latentp="abc"')),
         Variant("latentp_steps", V, lambda s: rep(s, 'latentp="10d"', 'latentp="3t"')),
         Variant("no_vivax", V, lambda s: drop_element(s, "<vivax>", "</vivax>")),
+        Variant("report_n_transmit", V, lambda s: rep(s, '<option name="nTransmit" value="false"/>',
+                                                     '<option name="nTransmit" value="true"/>')),
     ],
     "pkpd": [
         Variant("conversion_three_comp", G, with_drugs(DHA, artesunate(), piperaquine())),
@@ -839,6 +851,10 @@ GROUPS = {
                 vivax_with_component('<treatSimple durationLiver="0" durationBlood="-1t"/>')),
         Variant("vivax_treat_simple_liver", "scenarioVivax.xml",
                 vivax_with_component('<treatSimple durationLiver="-1t" durationBlood="-1t"/>')),
+        Variant("clear_liver_timed_common", "scenarioPenny.xml",
+                with_repeated_component('<interventions name="none"/>', CLEAR_LIVER)),
+        Variant("clear_liver_timed_descriptive", "scenarioNoInterv.xml",
+                with_repeated_component('<interventions name="No interventions"/>', CLEAR_LIVER)),
     ],
     "monitoring": [
         Variant("cts_during_init_checkpoint", "scenarioSimpleMPDTest.xml", args=["--checkpoint"], runs=2),
