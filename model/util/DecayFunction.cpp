@@ -326,14 +326,14 @@ private:
 };
 
 // -----  interface / static functions  -----
-void DecayFunction::checkpointSample(const unique_ptr<DecayFunction>& sample, ostream& stream) const {
+void DecayFunction::checkpoint_sample(const unique_ptr<DecayFunction>& sample, ostream& stream) const {
     const bool present = static_cast<bool>(sample);
     present & stream;
     if (present)
         sample->het_factor & stream;
 }
 
-void DecayFunction::checkpointSample(unique_ptr<DecayFunction>& sample, istream& stream) const {
+void DecayFunction::checkpoint_sample(unique_ptr<DecayFunction>& sample, istream& stream) const {
     bool present = false;
     present & stream;
     if (present) {

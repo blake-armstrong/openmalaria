@@ -71,7 +71,7 @@ public:
      * set-up. */
     template <class S> void operator&(S& stream) {
         if (decay)
-            decay->checkpointSample(het, stream);
+            decay->checkpoint_sample(het, stream);
         deploy_t & stream;
     }
 

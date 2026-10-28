@@ -134,12 +134,12 @@ double HumanGVI::rel_fecundity(size_t species_index) const {
 
 void HumanGVI::checkpoint(ostream& stream) {
     deploy_time & stream;
-    component->decay->checkpointSample(decay_het, stream);
+    component->decay->checkpoint_sample(decay_het, stream);
 }
 HumanGVI::HumanGVI(istream& stream, ComponentId id, const GVIComponent& params)
     : PerHostInterventionData(id), component(&params) {
     deploy_time & stream;
-    component->decay->checkpointSample(decay_het, stream);
+    component->decay->checkpoint_sample(decay_het, stream);
 }
 
 }

@@ -253,13 +253,13 @@ PerEffectPerHumanVaccine::PerEffectPerHumanVaccine(LocalRng& rng, const VaccineC
 }
 
 void PerEffectPerHumanVaccine::checkpoint_het(ostream& stream) {
-    params->decay_func->checkpointSample(het_sample, stream);
+    params->decay_func->checkpoint_sample(het_sample, stream);
 }
 
 void PerEffectPerHumanVaccine::checkpoint_het(istream& stream, const InterventionManager& interventions) {
     params = dynamic_cast<const VaccineComponent*>(&interventions.get_component(component));
     assert(params != nullptr);
-    params->decay_func->checkpointSample(het_sample, stream);
+    params->decay_func->checkpoint_sample(het_sample, stream);
 }
 
 void PerHumanVaccine::checkpoint(istream& stream, const InterventionManager& interventions) {

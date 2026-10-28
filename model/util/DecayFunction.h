@@ -98,8 +98,8 @@ public:
     virtual double compute(double age_days) const = 0;
 
     /** Checkpoint a sampled copy, recreating it from this configured function. */
-    void checkpointSample(const unique_ptr<DecayFunction>& sample, ostream& stream) const;
-    void checkpointSample(unique_ptr<DecayFunction>& sample, istream& stream) const;
+    void checkpoint_sample(const unique_ptr<DecayFunction>& sample, ostream& stream) const;
+    void checkpoint_sample(unique_ptr<DecayFunction>& sample, istream& stream) const;
 
 private:
     const Clock* clock;
