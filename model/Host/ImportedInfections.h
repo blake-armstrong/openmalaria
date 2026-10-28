@@ -46,6 +46,7 @@ public:
          * @returns True if any infections are imported
          */
     void init(const scnXml::ImportedInfections& elt, const Clock& clock, const util::CommandLineOptions& command_line) {
+        sim_clock = &clock;
         const scnXml::ImportedInfections::TimedType& timed_elt = elt.getTimed();
         try {
             //NOTE: if changing XSD, this should not have a default unit:
@@ -64,8 +65,8 @@ public:
                     rate_elt.getTime(), unit_parse::STEPS /*STEPS is only for backwards compatibility*/, clock,
                     command_line);
                 // convert to per-time-step, per-person
-                const double rate_val = rate_elt.getValue() * Sim::years_per_step() * (1.0 / 1000.0);
-                rate.emplace_back(date - Sim::start_date(), rate_val);
+                const double rate_val = rate_elt.getValue() * clock.years_per_step() * (1.0 / 1000.0);
+                rate.emplace_back(date - clock.start_date(), rate_val);
             }
             sort(rate.begin(), rate.end());
             if (rate.size() > 0) {
@@ -100,7 +101,7 @@ public:
     void import(vector<Human>& population) {
         if (rate.size() == 0)
             return; // no imported infections
-        SimTime now = Sim::interv_time();
+        SimTime now = sim_clock->interv_time();
         assert(now >= Sim::zero());
         if (period > Sim::zero()) {
             now = mod_nn(now, period);
@@ -137,6 +138,7 @@ public:
 private:
     SimTime period = Sim::never();
     uint32_t lastIndex;
+    const Clock* sim_clock = nullptr;
     struct Rate {
         Rate(SimTime t, double v) : time(t), value(v) {}
         SimTime time = Sim::never();

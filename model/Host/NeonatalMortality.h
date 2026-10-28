@@ -49,7 +49,7 @@ class NeonatalMortality {
 public:
     NeonatalMortality() = default;
     NeonatalMortality(const scnXml::Clinical& clinical, const WithinHost::DiagnosticRegistry& diagnostics,
-                      const util::CommandLineOptions& command_line);
+                      const util::CommandLineOptions& command_line, const Clock& clock);
 
     void checkpoint(istream& stream);
     void checkpoint(ostream& stream);
@@ -59,7 +59,7 @@ public:
     bool event_neonatal_mortality(LocalRng& rng) const;
 
     /** Calculate risk of a neonatal mortality based on humans 20-25 years old. */
-    void update(vector<Human>& population);
+    void update(vector<Human>& population, const Clock& clock);
 
 private:
     /// Probability for a newborn to die (indirect death) because the mother is infected.

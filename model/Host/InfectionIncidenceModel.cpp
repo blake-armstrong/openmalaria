@@ -37,13 +37,13 @@ namespace OM::Host {
 using namespace OM::util;
 
 InfectionIncidenceParams::InfectionIncidenceParams(const Parameters& parameters,
-                                                   const util::ModelOptionFlags& model_options)
+                                                   const util::ModelOptionFlags& model_options, const Clock& clock)
     : baseline_avail_shape_param(parameters[Parameter::BaselineAvailabilityShape]),
       baseline_avail_offset(0.5 * pow(baseline_avail_shape_param, 2)), gamma_p(parameters[Parameter::GammaP]),
       s_inf(1 - exp(-parameters[Parameter::NegLogOneMinusSinf])), s_imm(parameters[Parameter::Simm]),
       e_star_inv(1.0 / parameters[Parameter::EStar]), x_star_p_inv(1.0 / parameters[Parameter::XStarP]),
       no_pre_erythrocytic(model_options.option(util::NoPreErythrocytic)),
-      vaccine_genotype(model_options.option(util::VaccineGenotype)) {
+      vaccine_genotype(model_options.option(util::VaccineGenotype)), sim_clock(&clock) {
     //! constant defining the constraint for the Gamma shape parameters
     /// Used for the case where availability is assumed gamma distributed
     /*
@@ -125,14 +125,15 @@ double InfectionIncidenceModel::get_model_expected_infections(LocalRng& rng, dou
                                                               const Transmission::PerHost& ph_trans) {
     // First two lines are availability adjustment: S_1(i,t) from AJTMH 75 (suppl 2) p12 eqn. (5)
     // Note that NegBinomMAII and LogNormalMAII supercede this model; see below
-    return (params().s_inf + (1 - params().s_inf) / (1 + effective_eir / Sim::one_ts() * params().e_star_inv)) *
+    return (params().s_inf +
+            (1 - params().s_inf) / (1 + effective_eir / params().clock().one_ts() * params().e_star_inv)) *
            susceptibility() * effective_eir;
 }
 double HeterogeneityWorkaroundII::get_model_expected_infections(LocalRng& rng, double effective_eir,
                                                                 const Transmission::PerHost& ph_trans) {
-    return (params().s_inf +
-            (1 - params().s_inf) /
-                (1 + effective_eir / (Sim::one_ts() * ph_trans.relative_availability_het) * params().e_star_inv)) *
+    return (params().s_inf + (1 - params().s_inf) /
+                                 (1 + effective_eir / (params().clock().one_ts() * ph_trans.relative_availability_het) *
+                                          params().e_star_inv)) *
            susceptibility() * effective_eir;
 }
 double NegBinomMAII::get_model_expected_infections(LocalRng& rng, double effective_eir, const Transmission::PerHost&) {

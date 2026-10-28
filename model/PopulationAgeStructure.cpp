@@ -39,7 +39,7 @@ struct DemographyFit {
     explicit DemographyFit(const scnXml::Demography& demography);
 
     double set_demo_parameters(double param1, double param2);
-    void calc_cum_age_prop(vector<double>& cum_age_prop) const;
+    void calc_cum_age_prop(vector<double>& cum_age_prop, const Clock& clock) const;
 
     vector<double> age_group_bounds;
     vector<double> age_group_percent;
@@ -169,16 +169,16 @@ double DemographyFit::set_demo_parameters(double param1, double param2) {
     return result;
 }
 
-void DemographyFit::calc_cum_age_prop(vector<double>& cum_age_prop) const {
+void DemographyFit::calc_cum_age_prop(vector<double>& cum_age_prop, const Clock& clock) const {
     cum_age_prop[0] = 0.0;
     for (size_t j = 1; j < cum_age_prop.size(); ++j) {
-        const SimTime age = Sim::from_ts(static_cast<int>(cum_age_prop.size() - j - 1));
+        const SimTime age = clock.from_ts(static_cast<int>(cum_age_prop.size() - j - 1));
         const double age_years = Sim::in_years(age);
         const double m1s = (mu0 * (1.0 - exp(-alpha0 * age_years)) / alpha0);
         const double m2s = (mu1 * (exp(alpha1 * age_years) - 1.0) / alpha1);
         const double ms = m1s + m2s;
         double predperc = exp(-Rho * age_years - ms);
-        if (age >= Sim::max_human_age()) {
+        if (age >= clock.max_human_age()) {
             predperc = 0.0;
         }
         cum_age_prop[j] = cum_age_prop[j - 1] + predperc;
@@ -192,12 +192,12 @@ void DemographyFit::calc_cum_age_prop(vector<double>& cum_age_prop) const {
 
 }
 
-AgeStructure::AgeStructure(const scnXml::Demography& demography) {
+AgeStructure::AgeStructure(const scnXml::Demography& demography, const Clock& clock) {
     // this number of cells are needed:
-    cum_age_prop.resize(Sim::in_steps(Sim::max_human_age()) + 1);
+    cum_age_prop.resize(clock.in_steps(clock.max_human_age()) + 1);
 
     const DemographyFit fit(demography);
-    fit.calc_cum_age_prop(cum_age_prop);
+    fit.calc_cum_age_prop(cum_age_prop, clock);
 }
 
 int AgeStructure::target_cum_pop(size_t age_steps, int target_pop) const {

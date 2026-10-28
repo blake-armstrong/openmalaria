@@ -33,7 +33,7 @@ namespace OM {
 class AgeStructure {
 public:
     AgeStructure() = default;
-    explicit AgeStructure(const scnXml::Demography& demography);
+    AgeStructure(const scnXml::Demography& demography, const Clock& clock);
 
     size_t max_steps_per_life() const { return cum_age_prop.size(); }
 

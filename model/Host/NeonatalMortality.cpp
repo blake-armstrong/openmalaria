@@ -48,9 +48,9 @@ const double Z = -1.0 / CritPrev2025;
 
 NeonatalMortality::NeonatalMortality(const scnXml::Clinical& clinical,
                                      const WithinHost::DiagnosticRegistry& diagnostics,
-                                     const util::CommandLineOptions& command_line) {
+                                     const util::CommandLineOptions& command_line, const Clock& clock) {
     const SimTime five_months = Sim::from_days(5 * 30);
-    prev_by_gestational_age.assign(Sim::in_steps(five_months), 0.0);
+    prev_by_gestational_age.assign(clock.in_steps(five_months), 0.0);
 
     if (clinical.getNeonatalMortality().present()) {
         neonatal_diagnostic = &diagnostics.get(clinical.getNeonatalMortality().get().getDiagnostic());
@@ -79,7 +79,7 @@ bool NeonatalMortality::event_neonatal_mortality(LocalRng& rng) const {
     return rng.uniform_01() <= risk_from_maternal_infection;
 }
 
-void NeonatalMortality::update(vector<Host::Human>& population) {
+void NeonatalMortality::update(vector<Host::Human>& population, const Clock& clock) {
     // ———  find potential mothers and their prevalence  ———
     // For individuals in the age range 20-25, we sum:
     int n_counter = 0; // total number
@@ -91,7 +91,7 @@ void NeonatalMortality::update(vector<Host::Human>& population) {
     for (Human& human : population) {
         // diagnosticDefault() gives patency after the last time step's
         // update, so it's appropriate to use age at the beginning of this step.
-        const SimTime age = human.age(Sim::ts0());
+        const SimTime age = human.age(clock.ts0());
 
         // Note: since we're using a linked list, we have to iterate until we reach
         // the individuals we're interested in. Due to population structure, it's
@@ -115,7 +115,7 @@ void NeonatalMortality::update(vector<Host::Human>& population) {
 
     double max_prev = prev2025;
     //update the vector containing the prevalence by gestational age
-    const size_t index = Sim::modulo_steps(Sim::ts0(), static_cast<int>(prev_by_gestational_age.size()));
+    const size_t index = clock.modulo_steps(clock.ts0(), static_cast<int>(prev_by_gestational_age.size()));
     prev_by_gestational_age[index] = prev2025;
     for (const double prev : prev_by_gestational_age) {
         if (prev > max_prev) {

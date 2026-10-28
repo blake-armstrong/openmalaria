@@ -60,6 +60,8 @@ public:
 
     const interventions::InterventionManager& interventions() const { return *human_params.interventions; }
 
+    const Clock& clock() const { return *human_params.clock; }
+
     /** Checkpoint (read) */
     void checkpoint(istream& stream);
 

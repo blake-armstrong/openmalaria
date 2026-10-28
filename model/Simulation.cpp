@@ -94,7 +94,7 @@ Simulation::Simulation(std::unique_ptr<scnXml::Scenario> scenario, util::Command
     // Init models used by humans
     per_host_params = Transmission::PerHostParams(scenario_xml->getModel().getHuman().getAvailabilityToMosquitoes(),
                                                   clock, command_line);
-    infection_incidence = Host::InfectionIncidenceParams(parameters, model_options);
+    infection_incidence = Host::InfectionIncidenceParams(parameters, model_options, clock);
     continuous.register_callback("new infections", "\tnew infections",
                                  [this](ostream& stream) { new_infections.report(stream); });
     within_host_model = WithinHost::WithinHostModel(parameters, model_options, command_line, genotypes, diagnostics,
@@ -104,8 +104,9 @@ Simulation::Simulation(std::unique_ptr<scnXml::Scenario> scenario, util::Command
         Clinical::DecisionTreeLibrary(diagnostics, within_host_model.common.pk_pd, clinical.health_system_memory,
                                       intervention_manager, clock, command_line);
     infant_mortality = Clinical::InfantMortality(clinical.non_malaria_infant_mortality);
-    neonatal_mortality = Host::NeonatalMortality(scenario_xml->getModel().getClinical(), diagnostics, command_line);
-    age_structure = AgeStructure(scenario_xml->getDemography());
+    neonatal_mortality =
+        Host::NeonatalMortality(scenario_xml->getModel().getClinical(), diagnostics, command_line, clock);
+    age_structure = AgeStructure(scenario_xml->getDemography(), clock);
 
     // 3) elements depending on other elements; dependencies on (1) are not mentioned:
     // Transmission model initialisation depends on Transmission::PerHost and
@@ -121,7 +122,8 @@ Simulation::Simulation(std::unique_ptr<scnXml::Scenario> scenario, util::Command
                                                                       .within_host = &within_host_model,
                                                                       .clinical = &clinical,
                                                                       .interventions = &intervention_manager,
-                                                                      .monitoring = &monitoring},
+                                                                      .monitoring = &monitoring,
+                                                                      .clock = &clock},
                                                     master_rngs.population);
     transmission_model = Transmission::create_transmission_model(
         scenario_xml->getEntomology(), static_cast<int>(pop_size), per_host_params, master_rngs.transmission, genotypes,
@@ -296,7 +298,7 @@ void Simulation::step() {
 
     // NOTE: no neonatal mortalities will occur in the first 20 years of warmup
     // (until humans old enough to be pregnate get updated and can be infected).
-    neonatal_mortality.update(population.humans);
+    neonatal_mortality.update(population.humans, clock);
 
     for (Host::Human& human : population.humans) {
         if (human.get_dob() + clock.max_human_age() >= warmup_length) // this is last time of possible update

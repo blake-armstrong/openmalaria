@@ -46,9 +46,12 @@ public:
     enum class Kind : std::uint8_t { Default, HeterogeneityWorkaround, NegativeBinomial, LogNormal };
 
     InfectionIncidenceParams() = default;
-    InfectionIncidenceParams(const Parameters& parameters, const util::ModelOptionFlags& model_options);
+    InfectionIncidenceParams(const Parameters& parameters, const util::ModelOptionFlags& model_options,
+                             const Clock& clock);
 
     std::unique_ptr<InfectionIncidenceModel> create() const;
+
+    const Clock& clock() const { return *sim_clock; }
 
     Kind kind = Kind::Default;
     double baseline_avail_shape_param = 0.0;
@@ -62,6 +65,9 @@ public:
     double inf_rate_offset = 0.0;
     bool no_pre_erythrocytic = false;
     bool vaccine_genotype = false;
+
+private:
+    const Clock* sim_clock = nullptr;
 };
 
 class NewInfections {

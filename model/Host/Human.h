@@ -57,6 +57,7 @@ struct HumanParams {
     const Clinical::ClinicalParams* clinical = nullptr;
     const interventions::InterventionManager* interventions = nullptr;
     mon::MonitoringState* monitoring = nullptr;
+    const Clock* clock = nullptr;
 };
 
 /** Interface to all sub-models storing data per-human individual.
@@ -78,6 +79,8 @@ public:
     inline uint32_t get_cohort_set() const;
 
     mon::MonitoringState& monitoring() const { return *monitoring_state; }
+
+    const Clock& clock() const { return *sim_clock; }
 
     /** Return date of birth */
     SimTime get_dob() const;
@@ -140,6 +143,7 @@ private:
     SimTime dob = Sim::never(); // date of birth; humans are always born at the end of a time step
     const interventions::InterventionManager* intervention_manager;
     mon::MonitoringState* monitoring_state;
+    const Clock* sim_clock;
 
     /** Cache, updated when human is added to or removed from a sub-population */
     uint32_t cohort_set = 0;
@@ -175,7 +179,7 @@ inline bool Human::is_in_sub_pop(interventions::ComponentId id) const {
     if (it == sub_pop_exp.end())
         return false; // no history of membership
     else
-        return it->second >= Sim::now_or_ts0(); // added: has expired?
+        return it->second >= clock().now_or_ts0(); // added: has expired?
 }
 
 inline uint32_t Human::get_cohort_set() const { return cohort_set; }

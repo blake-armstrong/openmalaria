@@ -109,9 +109,9 @@ HumanHet het_sample(util::LocalRng& rng, const util::ModelOptionFlags& options) 
 Human::Human(SimTime date_of_birth, const HumanParams& params, util::MasterRng& rng)
     : inf_incidence(params.infection_incidence->create()), host_rng(rng), clinical_rng(rng), intervention_rng(rng),
       monitoring_rng(rng), dob(date_of_birth), intervention_manager(params.interventions),
-      monitoring_state(params.monitoring) {
+      monitoring_state(params.monitoring), sim_clock(params.clock) {
     // Initial humans are created at time 0 and may have date_of_birth in past. Otherwise date_of_birth must be now.
-    assert(date_of_birth == Sim::now_or_ts1() || (Sim::now() == Sim::zero() && date_of_birth < Sim::now()));
+    assert(date_of_birth == clock().now_or_ts1() || (clock().now() == Sim::zero() && date_of_birth < clock().now()));
 
     const HumanHet het = het_sample(host_rng, *params.options);
     within_host_model = params.within_host->create(host_rng, het.comorbidity_factor);
@@ -123,7 +123,7 @@ Human::Human(SimTime date_of_birth, const HumanParams& params, util::MasterRng& 
 void Human::add_to_cohort(ComponentId id, SimTime duration) {
     if (duration <= Sim::zero())
         return; // nothing to do
-    sub_pop_exp[id] = Sim::now_or_ts1() + duration;
+    sub_pop_exp[id] = clock().now_or_ts1() + duration;
     cohort_set = mon::update_cohort_set(monitoring(), cohort_set, id, true);
 }
 
@@ -133,7 +133,7 @@ void Human::remove_first_event(interventions::sub_pop_remove::RemoveAtCode code)
     for (const ComponentId& id : intervention_manager->remove_at_ids(code)) {
         auto exp_it = sub_pop_exp.find(id);
         if (exp_it != sub_pop_exp.end()) {
-            if (exp_it->second >= Sim::now_or_ts0()) {
+            if (exp_it->second >= clock().now_or_ts0()) {
                 // removeFirstEvent() is used for onFirstBout, onFirstTreatment
                 // and onFirstInfection cohort options. Health system memory must
                 // be reset for this to work properly; in theory the memory should
@@ -153,7 +153,7 @@ void Human::remove_first_event(interventions::sub_pop_remove::RemoveAtCode code)
 void Human::update_cohort_set() {
     // check sub-pop expiry
     for (auto exp_it = sub_pop_exp.begin(), exp_end = sub_pop_exp.end(); exp_it != exp_end;) {
-        if (!(exp_it->second >= Sim::ts0())) { // membership expired
+        if (!(exp_it->second >= clock().ts0())) { // membership expired
             // don't flush reports
             // report removal due to expiry
             mon::record_event(mon::measure("nSubPopRemovalTooOld"), *this);
@@ -209,7 +209,7 @@ void summarize(Human& human, bool survey_only_new_ep) {
     }
 
     mon::record_stat(mon::measure("nHost"), human);
-    mon::record_stat(mon::measure("sumAge"), human, Sim::in_years(human.age(Sim::now())));
+    mon::record_stat(mon::measure("sumAge"), human, Sim::in_years(human.age(human.clock().now())));
     const bool patent = human.within_host_model->summarize(human);
     human.inf_incidence->summarize(human);
 
@@ -222,7 +222,7 @@ void summarize(Human& human, bool survey_only_new_ep) {
 void update(Human& human, Transmission::TransmissionModel& transmission, const NeonatalMortality& neonatal_mortality,
             Clinical::InfantMortality& infant_mortality, NewInfections& new_infections) {
     // For integer age checks we use age0 to e.g. get 73 steps comparing less than 1 year old
-    const SimTime age0 = human.age(Sim::ts0());
+    const SimTime age0 = human.age(human.clock().ts0());
     if (human.clinical_model->is_dead(age0)) {
         human.kill();
         return;
@@ -239,7 +239,7 @@ void update(Human& human, Transmission::TransmissionModel& transmission, const N
     // the difference between this and age at the start is not especially
     // important in the model design, but since we parameterised with
     // age1 we should stick with it.
-    const double age1 = Sim::in_years(human.age(Sim::ts1()));
+    const double age1 = Sim::in_years(human.age(human.clock().ts1()));
 
     // age1 used only in PerHost::relativeAvailabilityAge(); difference to age0 should be minor
     vector<double> eir_per_genotype_i, eir_per_genotype_l;
