@@ -57,7 +57,8 @@ require_uvx() {
     command -v uvx >/dev/null || { echo "uvx not found; install uv (https://docs.astral.sh/uv/)" >&2; exit 2; }
 }
 
-sysroot_args() {
+tidy_args() {
+    echo "-extra-arg=-D_CXXTEST_HAVE_EH"
     if [[ "$(uname)" == Darwin ]]; then
         echo "-extra-arg-before=-isysroot$(xcrun --show-sdk-path)"
     fi
@@ -74,7 +75,7 @@ run_format() {
 
 run_tidy() {
     compile_db
-    uvx --from "clang-tidy==$LLVM_VERSION" clang-tidy -p "$ROOT/$BUILD_DIR" $(sysroot_args) "$@"
+    uvx --from "clang-tidy==$LLVM_VERSION" clang-tidy -p "$ROOT/$BUILD_DIR" $(tidy_args) "$@"
 }
 
 changed_files() {
@@ -90,7 +91,7 @@ tidy_diff() {
     git -C "$ROOT" diff -U0 "$base" -- $(changed_files "$base") |
         python3 "$ROOT/util/tidy_diff_filter.py" "$base" |
         uvx --from "clang-tidy==$LLVM_VERSION" clang-tidy-diff.py -p1 -quiet \
-            -path "$ROOT/$BUILD_DIR" -clang-tidy-binary clang-tidy $(sysroot_args) \
+            -path "$ROOT/$BUILD_DIR" -clang-tidy-binary clang-tidy $(tidy_args) \
             -regex '(model|unittest)/.*\.(cpp|h)' "$@"
 }
 
