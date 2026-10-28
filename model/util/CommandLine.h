@@ -27,7 +27,6 @@
 #include <string>
 #include <set>
 #include <bitset>
-#include <cassert>
 #include <iosfwd>
 #include <limits>
 #include <span>
@@ -85,9 +84,6 @@ public:
 	* Throws cmd_exit in the case a help message is printed. Help
 	* is printed to cout. */
     static CommandLineOptions parse(std::span<char* const> args);
-
-    /** Return true if given option (from CommandLine::Options) is active. */
-    static bool option(size_t code);
 };
 
 class CommandLineOptions {
@@ -116,35 +112,5 @@ private:
 };
 }
 
-namespace bridge {
-
-// NOLINTNEXTLINE(cppcoreguidelines-avoid-non-const-global-variables)
-inline const util::CommandLineOptions* current_command_line = nullptr;
-
-inline const util::CommandLineOptions& command_line() {
-    assert(current_command_line != nullptr);
-    return *current_command_line;
-}
-
-}
-
-class CommandLineBinding {
-public:
-    explicit CommandLineBinding(const util::CommandLineOptions& options) : previous(bridge::current_command_line) {
-        bridge::current_command_line = &options;
-    }
-    CommandLineBinding(const CommandLineBinding&) = delete;
-    CommandLineBinding& operator=(const CommandLineBinding&) = delete;
-    CommandLineBinding(CommandLineBinding&&) = delete;
-    CommandLineBinding& operator=(CommandLineBinding&&) = delete;
-    ~CommandLineBinding() { bridge::current_command_line = previous; }
-
-private:
-    const util::CommandLineOptions* previous;
-};
-
-namespace util {
-inline bool CommandLine::option(size_t code) { return bridge::command_line().option(code); }
-}
 }
 #endif

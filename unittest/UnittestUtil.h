@@ -222,7 +222,6 @@ scnXml::Scenario scenario(demography, monitoring, interventions, healthSystem, e
 namespace unittest_options {
 // NOLINTBEGIN(cppcoreguidelines-avoid-non-const-global-variables,bugprone-throwing-static-initialization)
 util::CommandLineOptions command_line;
-CommandLineBinding command_line_binding{command_line};
 mon::MonitoringState monitoring;
 util::ModelOptionFlags model_options;
 WithinHost::WithinHostModel within_host_model;

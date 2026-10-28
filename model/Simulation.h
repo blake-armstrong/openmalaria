@@ -82,7 +82,6 @@ private:
     void finish();
 
     util::CommandLineOptions command_line;
-    CommandLineBinding command_line_binding{command_line};
     mon::MonitoringState monitoring;
     mon::Continuous continuous;
     Clock clock;

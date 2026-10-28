@@ -92,7 +92,6 @@ OM::util::AgeGroupInterpolator case_fatality_rate(const OM::Clock& clock,
 
 TEST_CASE("each health system replaces the event scheduler's dailyPrImmUCTS", "[clinical][F59]") {
     const OM::util::CommandLineOptions command_line;
-    const OM::CommandLineBinding command_line_binding{command_line};
     const OM::Clock clock;
     OM::util::AgeGroupInterpolator cfr = case_fatality_rate(clock, command_line);
     OM::Clinical::EventSchedulerParams params;
