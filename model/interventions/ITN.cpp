@@ -585,7 +585,7 @@ HumanITN::HumanITN(LocalRng& rng, const ITNComponent& params)
     : HumanITN(rng, params, util::NormalSample::generate(rng)) {}
 
 HumanITN::HumanITN(LocalRng& rng, const ITNComponent& params, util::NormalSample handling)
-    : PerHostInterventionData(params.id()),
+    : PerHostInterventionData(params.id(), Sim::now()),
       disposal_time(Sim::now() + params.attrition_of_nets->sample_age_of_decay(rng)),
 
       // this is sampled independently: initial insecticide content doesn't depend on handling
@@ -678,7 +678,7 @@ void HumanITN::checkpoint(ostream& stream) {
     component->insecticide_decay->checkpoint_sample(insecticide_decay_het, stream);
 }
 HumanITN::HumanITN(istream& stream, ComponentId id, const ITNComponent& params)
-    : PerHostInterventionData(id), component(&params) {
+    : PerHostInterventionData(id, Sim::now()), component(&params) {
     deploy_time & stream;
     disposal_time & stream;
     n_holes & stream;

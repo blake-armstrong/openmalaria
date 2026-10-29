@@ -176,7 +176,8 @@ public:
 
 protected:
     /// Set the component id
-    explicit PerHostInterventionData(interventions::ComponentId id) : deploy_time(Sim::now()), component_id(id) {}
+    PerHostInterventionData(interventions::ComponentId id, SimTime deploy_time)
+        : deploy_time(deploy_time), component_id(id) {}
 
     /// Checkpointing: write
     virtual void checkpoint(ostream& stream) = 0;

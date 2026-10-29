@@ -93,7 +93,7 @@ void GVIComponent::GVIAnopheles::init(const scnXml::GVIDescription::AnophelesPar
 
 // ———  per-human data  ———
 HumanGVI::HumanGVI(LocalRng& rng, const GVIComponent& params)
-    : PerHostInterventionData(params.id()), component(&params) {
+    : PerHostInterventionData(params.id(), Sim::now()), component(&params) {
     // Varience factor of decay is sampled once per human: human is assumed
     // to account for most variance.
     decay_het = params.decay->het_sample(rng);
@@ -137,7 +137,7 @@ void HumanGVI::checkpoint(ostream& stream) {
     component->decay->checkpoint_sample(decay_het, stream);
 }
 HumanGVI::HumanGVI(istream& stream, ComponentId id, const GVIComponent& params)
-    : PerHostInterventionData(id), component(&params) {
+    : PerHostInterventionData(id, Sim::now()), component(&params) {
     deploy_time & stream;
     component->decay->checkpoint_sample(decay_het, stream);
 }

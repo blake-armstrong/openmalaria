@@ -215,7 +215,7 @@ double IRSComponent::sample_initial_insecticide(LocalRng& rng) const {
 
 // ———  per-human data  ———
 HumanIRS::HumanIRS(LocalRng& rng, const IRSComponent& params)
-    : PerHostInterventionData(params.id()), initial_insecticide(params.sample_initial_insecticide(rng)),
+    : PerHostInterventionData(params.id(), Sim::now()), initial_insecticide(params.sample_initial_insecticide(rng)),
       component(&params) {
     // Varience factor of decay is sampled once per human: human is assumed
     // to account for most variance.
@@ -264,7 +264,7 @@ void HumanIRS::checkpoint(ostream& stream) {
     component->insecticide_decay->checkpoint_sample(insecticide_decay_het, stream);
 }
 HumanIRS::HumanIRS(istream& stream, ComponentId id, const IRSComponent& params)
-    : PerHostInterventionData(id), component(&params) {
+    : PerHostInterventionData(id, Sim::now()), component(&params) {
     deploy_time & stream;
     initial_insecticide & stream;
     component->insecticide_decay->checkpoint_sample(insecticide_decay_het, stream);
