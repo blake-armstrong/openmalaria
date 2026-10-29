@@ -54,7 +54,7 @@ See `PLAN.md` for the session protocol, chunks and gates. Append one log entry p
 | D9e2 | done | f926958b, e400add8, 8772e8c8, 57363da8, eafc3b27, 17b8fe96, 4c199670, a5e29b4e, fa9a590d, e6168dde, (this log entry) |
 | D9e3 | done | 158a95d2, df7d2356, 4ed5d5c2, 4fbd0019, 5e6f7336, (this log entry) |
 | D9e4 | done | 30c38e1b, 164cd0ff, 894bbcb0, 9b1b1bd1, 2dd6c2b6, 7596392f, (this log entry) |
-| D9e5 | todo | |
+| D9e5 | done | 2aca6412, 56dfb444, 914138d2, 4c8495d1, 00af5174, c11e899e, 78e6c26e, 6328c63b, (this log entry) |
 | D9f | todo | |
 | E1 | todo | |
 | E2 | todo | |
@@ -1924,3 +1924,67 @@ An inventory at d4564e41 (`util/bridges.py`): `bridge::clock()` behind 30 facade
   - D9e5: the clock (157 sites in 25 files: interventions, mon, the unit tests' direct reads), including the six `Sim::now()` reads 894bbcb0 moved into GVI, IRS and ITN (F87, with a Debug A/B variant); then remove the clock facades, the bridge pointer and `ClockBinding`. D9f: the bridge namespace and interleaved G-two-sims.
   - F91 and F92's message: change only with the user's agreement (both change output).
 - Next: D9e5 (its base will be its own HEAD; move `../om-bench-base` again at its start).
+
+### D9e5: interventions and mon read the clock passed in; the clock bridge goes (done, 2026-10-29)
+- Base: c54c0399 (the D9e4 log entry). The G-perf and A/B base worktree `../om-bench-base` was moved to c54c0399 and rebuilt. A Debug base build was added beside it (`../om-bench-base/build-debug`, the options of `build-debug/`) for F87.
+- Inventory at the base (`util/bridges.py`): 157 qualified call sites in 25 files, in `model/interventions` (Deployments.h 20, InterventionManager.cpp 9, ITN 9, HumanInterventionComponents.h 6, GVI 4, IRS 4, Vaccine.cpp 2), `model/mon` (Continuous.cpp 9, init.cpp 4) and the unit-test suites (about 90, plus `UnittestUtil`'s direct use of the bridge). At the end: `no bridges left`. The non-mechanical change is in under 20 files, so no split.
+- Commits:
+  - 2aca6412: `util/ab_scenarios.py`, F87's variants, before any C++ change. `triggered_itn_by_treatment`, `triggered_irs_by_treatment` and `triggered_gvi_by_treatment` add a treatment-triggered deployment of each component to scenarioIRS30.
+    - Release base against base: 0 of 60 (interventions), and each variant's output differs from plain IRS30.
+    - A Debug base against itself: all three abort (exit -6) on `now()`'s `assert(!in_update)`, which reproduces F87.
+  - 56dfb444: **logic, the intervention components.**
+    - The ITN, IRS, GVI and vaccine components keep the clock their constructors already took (`sim_clock`, `clock()`). The per-human objects read their component's clock: `params.clock().now()` in the constructors and `disposal_time` (as before, F87), `now_or_ts1()` in `redeploy` and the effect getters, `ts0()` in `HumanITN::update`, and `ts1()` in `PerHumanVaccine::get_factor`, so its callers in WithinHost and Transmission are unchanged. No per-human object grows.
+    - `TriggeredDeployments` and its sub-lists take the clock at construction (`Treatments` passes it). `SubList::deploy`, `TreatPKPDComponent` and `DecisionTreeComponent` read `human.clock()`.
+  - 914138d2: **logic, the deployments and the manager.**
+    - The `TimedDeployment` base takes the clock with the date it checks against `start_date`/`end_date`, and keeps it (`clock()`). Every derived constructor forwards it, `DummyTimedDeployment` included. `TimedChangeHSDeployment` drops its own clock member.
+    - The human deploys read `now()` once, before their loop.
+    - `ContinuousHumanDeployment` keeps the clock its constructor takes. `InterventionManager` sets `sim_clock` at the top of `init`, which otherwise reads its parameter; `deploy` and `load_from_checkpoint` read `clock()`.
+  - 4c8495d1: **logic, mon.** `Continuous` sets `sim_clock` in `init` and `update` reads it. `read_survey_dates` passes its clock to `init_age_groups`. `init_reporting` was left as it is (the plan had it take the clock): nothing else in it reads the clock.
+  - 00af5174: **unit tests.** The suites read `UnittestUtil::clock()`. `initTime` no longer sets the bridge pointer, and `incrTime` advances the fixture clock.
+  - c11e899e: **logic, the bridge goes.**
+    - It removes the 21 stateful `Sim::` facades with their definitions in `Clock.h`, `namespace bridge`, `ClockBinding` and `Simulation`'s `clock_binding`. The pure `Sim::` constants and conversions stay.
+    - The time-variable doc comments (`ts0`, `ts1`, `now`, `now_or_ts0`/`now_or_ts1`, `latest_ts0`, `interv_time`, `interv_date`) moved word for word onto `Clock`'s members, as the user chose. The other facades' comments went with them.
+  - 78e6c26e: `util/ab_scenarios.py`, three variants for plants no variant caught (below):
+    - `triggered_effective_gvi_by_treatment`: IRS30's GVI, given an effect.
+    - `triggered_age_limited_by_treatment`: scenario5 with 1000 people and a PEV triggered for ages 1 to 5.
+    - `continuous_begin_end`: twelve `begin`/`end` windows on MonitoringAll's continuous ITN deployment.
+    - Base against base: 0 of 63 (interventions).
+  - 6328c63b: FINDINGS (F87's Debug result), the PLAN.md D9e5 row as built, and README's bridge paragraph and A/B row.
+- Rename and modernise: none due. `model/interventions` was done in D8, `model/mon` in D9a, and `Clock`, `sim.h` and `Simulation` in D1. The new identifiers follow the `sim_clock`/`clock()` convention of `Human`, `TransmissionModel` and the clinical params (G-style clean).
+- Gates:
+  - G-exact / G-unit / G-two-sims: 65/65 (strict) on `build-rework/` (Release) and `build-debug/` (Debug) after each logic commit and at 78e6c26e.
+  - A/B (`util/gates.sh --ab`, base c54c0399): 0 of 311 variants differ at c11e899e, and 0 of 314 at 78e6c26e.
+  - Debug A/B of the interventions group, `../om-bench-base/build-debug` against `build-debug` at 78e6c26e: the four triggered vector variants abort on both sides (F87). Their stderr differs only in the assert's line in `Clock.h` (79 at the base, 94 after c11e899e moved the comments). The script normalises a traced exception's source line, but not an assert's. The other 59 are the same.
+  - Planted bugs (`util/plant.py`, each restored; A/B groups interventions and monitoring):
+
+    | Planted bug | Caught by |
+    |---|---|
+    | ITN insecticide age from `now_or_ts0` | 9 ctest tests, 26 A/B variants |
+    | `HumanITN::update` disposal at `ts1` | 9 ctest tests, 26 A/B variants |
+    | `HumanITN`'s first deployment at `now_or_ts1` (F87's fix) | 1 A/B variant (`triggered_itn_by_treatment`) |
+    | GVI `redeploy` at `now_or_ts0` | not by ctest or 84 A/B variants; after 78e6c26e, 1 A/B variant (`triggered_effective_gvi_by_treatment`) |
+    | vaccine `get_factor` age from `ts0` | 6 ctest tests, 21 A/B variants |
+    | `possibly_vaccinate` at `now_or_ts0` | 1 A/B variant (`triggered_by_treatment`) |
+    | `SubList::deploy` age at `now_or_ts0` | not by ctest or 84 A/B variants; after 78e6c26e, 1 A/B variant (`triggered_age_limited_by_treatment`) |
+    | `TimedHumanDeployment` age one step late | 3 ctest tests, 6 A/B variants |
+    | continuous deployment `interv_date` one step late | not by ctest or 84 A/B variants; after 78e6c26e, 1 A/B variant (`continuous_begin_end`) |
+    | add-non-human-host expiry one step late | 1 ctest test (NonHumanHosts), 1 A/B variant |
+    | `load_from_checkpoint` with `<=` | 7 ctest tests, 4 A/B variants |
+    | `Continuous` during-init step index + 1 | 2 ctest tests (SimpleMPDTest, two_sims), 2 A/B variants |
+    | `init_age_groups` with `from_years_n` | 29 ctest tests, 9 A/B variants |
+  - G-stat: `ctest -L statistical` at c11e899e: 53 passed, 11 disabled.
+  - G-style: `util/style.sh check c54c0399` clean at c11e899e.
+  - G-perf: `util/bench.sh -n 7 --compare ../om-bench-base/build-rework`, median per-pair ratio 1.0125 at c11e899e under load (15.88 at start, spreads 5.72% / 3.00%). Rerun at 78e6c26e (same C++) at load 3.57: 1.0025 (spreads 5.22% / 9.94%). No per-human object grows. The deployments, the manager, `Continuous` and the four components each gain one pointer.
+- Findings: none new. F87 gains a note: reproduced, a Debug abort in all four triggered vector variants at the base and after; still open (fixing it changes Release output).
+- Surprises:
+  - Three of the moved clock reads were reached by no ctest scenario or A/B variant before 78e6c26e:
+    - a GVI with an effect redeployed during the update (IRS30's GVI has deterrency 0 and no other effect);
+    - an age bound on a treatment-triggered deployment that a treated human sits on;
+    - a continuous deployment's `begin`/`end` with a newborn at the bound.
+  - The last two need more than 100 people, or many bounds, to hit the step that matters.
+  - A first scratch harness for these variants ran a copied binary with no `schema/` beside it. Every run failed, which looked like a difference. A base-against-itself check showed it.
+- Follow-ups:
+  - F87: ask the user whether to fix it (`now_or_ts1()` in the GVI, IRS and ITN constructors and `HumanITN`'s `disposal_time`). It changes Release output for a treatment-triggered vector intervention.
+  - `util/ab_scenarios.py` could normalise an assert's source line as it does a traced exception's, so a Debug A/B across an edit to `Clock.h` compares equal.
+  - D9f: G-two-sims with interleaved simulations. Its bridge removal and README text were done here.
+- Next: D9f (its base will be its own HEAD; move `../om-bench-base` again at its start).
