@@ -59,6 +59,7 @@ set (OM_BOXTEST_NAMES
   TBV
   PEVLocusOrder
   VaccineTwoLoci
+  TriggeredVectors
   DecisionTree5DayDielmo
   DecisionTreeLibrary
   HetVecDailyEIR
