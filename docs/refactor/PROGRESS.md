@@ -53,7 +53,7 @@ See `PLAN.md` for the session protocol, chunks and gates. Append one log entry p
 | D9e1 | done | 9ef04fb2, f346dc08, 9e24d7e8, edf9e0f1, adeefb5d, fa76d53c, 1d1a2d24, 0406c608, 38874769, cbefe9ff, 071caef9, 2658e7d2, 62403eb5, (this log entry) |
 | D9e2 | done | f926958b, e400add8, 8772e8c8, 57363da8, eafc3b27, 17b8fe96, 4c199670, a5e29b4e, fa9a590d, e6168dde, (this log entry) |
 | D9e3 | done | 158a95d2, df7d2356, 4ed5d5c2, 4fbd0019, 5e6f7336, (this log entry) |
-| D9e4 | todo | |
+| D9e4 | done | 30c38e1b, 164cd0ff, 894bbcb0, 9b1b1bd1, 2dd6c2b6, 7596392f, (this log entry) |
 | D9e5 | todo | |
 | D9f | todo | |
 | E1 | todo | |
@@ -1865,3 +1865,62 @@ An inventory at d4564e41 (`util/bridges.py`): `bridge::clock()` behind 30 facade
 - Gates: G-exact / G-unit / G-two-sims 65/65 (strict) in `build-rework/` and `build-debug/`; A/B 0 of 305 variants differ against 6560a389; G-style (`util/style.sh check 89a99138`) clean. No G-perf run: the removed branch never ran, and the assert is compiled out of Release.
 - Findings: F90 moved to § Closed.
 - Next: D9e4.
+
+### D9e4: Transmission holds the clock (done, 2026-10-29)
+- Base: 1ec2c8e6 (F90's clean-up). The G-perf and A/B base worktree `../om-bench-base` was moved to 1ec2c8e6 and rebuilt.
+- Inventory at the base (`util/bridges.py`): the clock behind 30 facades, 265 qualified call sites in 33 files. The clock-reading ones under `model/Transmission` (`in_steps`, `modulo_steps`, `modulo_year_steps`, `one_ts`, `steps_per_year`, `from_years_d`, `start_date`, `end_date`, `ts0`, `ts1`, `now`, `interv_time`) were in `TransmissionModel.h`, `NonVectorModel.h`, `VectorModel.cpp`, `transmission.h`, `PerHost.h`, `AnophelesModel.{h,cpp}` and `SimpleMPDAnophelesModel.h`. The constants stay; `EmergenceRateEstimator.h` uses only constants. At the end: 157 sites in 25 files, none under `model/Transmission`. 13 files changed in the logic commits, so no split.
+- Commits:
+  - 30c38e1b: **logic, the transmission models.**
+    - `TransmissionModel` keeps the clock its constructor takes (`clock()`, protected). `VectorModel` and `NonVectorModel` forward it from `create_transmission_model`, which `Simulation` passes its clock.
+    - The create functions take `const Clock&` for their own init-time reads, as does `PerHostParams::adult_age` (its only callers are there).
+    - The per-human loops in `update_kappa`, `vector_update`, `init2` and the alpha ctsout callback read `ts1` or `now` once, before the loop.
+  - 164cd0ff: **logic, Anopheles.**
+    - `AnophelesModel` takes the clock at construction (`explicit AnophelesModel(const Clock&)` in place of the default constructor), and `SimpleMPDAnophelesModel` forwards it. `create_anopheles_model` passes it.
+    - `update` keeps reading the step's `ts0` for the emergence reduction, not the day `d0`, per the PLAN row (F91).
+    - The file-local vector-stat sums (`sum1`–`sum3`) take the clock for the step length: they are free functions, and a bare `clock()` there resolved to libc's `::clock()` and did not compile.
+    - The uncompiled `AnophelesModelSuite` and `MosqLifeCycleSuite` (F9) were not touched.
+  - 894bbcb0: **logic, PerHost.** `PerHostInterventionData`'s constructor takes the deploy time in place of reading `Sim::now()`. The six GVI, IRS and ITN constructors (three of them checkpoint constructors, where the value is then overwritten from the stream) pass `Sim::now()`, so nothing changes. D9e5 replaces those reads with the component's clock, together with F87. This choice keeps `PerHost.h` free of the bridge and leaves F87 local to `interventions/`.
+  - 9b1b1bd1: `util/ab_scenarios.py`, three variants (F92).
+    - `transmission/vector_change_eir` deploys `changeEIR` in the forced-mode, single-species HetVecDailyEIR scenario (1400 days, scenario12's values cycled). `transmission/vector_change_eir_exact_days` gives exactly the 1276 days the run requires.
+    - `interventions/change_eir_exact_days` keeps exactly 561 of scenario12's 572 `changeEIR` days.
+    - The required counts were found with the base binary (`Required:` in the non-vector error; by trial for the vector model, whose error does not print it). Base against base: 0 of 73 (transmission, interventions).
+  - 2dd6c2b6: FINDINGS F91, F92 and a note on F87; PLAN.md D9e4 row as built; README's A/B row.
+  - 7596392f: **hand, G-style.**
+    - The first `--all` run failed G-style: clang-tidy-diff reported the existing `size_t`-to-`int` narrowings (and one `bugprone-misplaced-widening-cast`) on the lines the clock change touched.
+    - Where `Clock` already computes the expression, the code now calls it: `mod_nn(in_steps(d), steps_per_year())` becomes `modulo_year_steps(d)` (`NonVectorModel`'s constructor, `transmission.h`, `AnophelesModel::init_eir`). `NonVectorModel::calculate_eir`'s lag index, and its Debug message, use `modulo_steps` and `modulo_year_steps` on `ts1 - n_spore`.
+    - Sizes passed as `int` are cast. The warm-up kappa fold uses `%` on its non-negative `size_t` index. `required_days` casts the non-negative day difference before adding one, as `AnophelesModel` already did.
+    - Every rewrite computes the same values.
+- Rename and modernise: none due. `model/Transmission` was done in D7, and the new identifiers follow the naming rules (G-style clean).
+- Gates:
+  - G-exact / G-unit / G-two-sims: 65/65 (strict) on `build-rework/` (Release) and `build-debug/` (Debug) after each logic commit, at 9b1b1bd1 and after the G-style fixes.
+  - A/B (`util/gates.sh --ab`, base 1ec2c8e6): 0 of 305 variants differ at 894bbcb0; 0 of 308 at 9b1b1bd1 and again after the G-style fixes.
+  - Planted bugs (`util/plant.py`, each restored; A/B groups transmission, interventions and monitoring):
+
+    | Planted bug | Caught by |
+    |---|---|
+    | `update_kappa` human age at `now_or_ts0` | 62 ctest tests, 48 A/B variants |
+    | `vector_update` availability age at `now_or_ts0` | 37 ctest tests, 40 A/B variants |
+    | `emergence_reduction` at `d0` in `AnophelesModel::update` | 1 ctest test (VecMonthly) |
+    | `cts_cb_input_eir` previous step off by one | 11 ctest tests, 22 A/B variants |
+    | `cts_cb_kappa` one step ahead | 16 ctest tests, 28 A/B variants |
+    | NonVector `calculate_eir` lag from `ts0` | 16 ctest tests, 5 A/B variants |
+    | NonVector transient EIR one step late | 1 ctest test (12), 1 A/B variant |
+    | NonVector `change_eir_intervention` `required_days` + 1 | not by ctest or 94 A/B variants; after 9b1b1bd1, 1 A/B variant (`change_eir_exact_days`) |
+    | Anopheles transient EIR one step late | not by ctest or 94 A/B variants; after 9b1b1bd1, 2 A/B variants (`vector_change_eir`, `vector_change_eir_exact_days`) |
+    | Anopheles `change_eir_intervention` `required_days` + 1 | (planted after 9b1b1bd1) 1 A/B variant (`vector_change_eir_exact_days`) |
+    | SimpleMPD resource availability without the one-step offset | 3 ctest tests (SimpleMPDLarviciding, SimpleMPDTest, two_sims), 1 A/B variant |
+    | vector trap expiry one step late | 1 ctest test (TrapTest), 1 A/B variant |
+    | non-human-host expiry with `>` | 1 ctest test (NonHumanHosts), 1 A/B variant |
+    | survey EIR duration one step long | 36 ctest tests, 36 A/B variants |
+    | `VectorModel` quinquennial kappa at `ts0` | 1 ctest test (ExactNv0), 7 A/B variants |
+  - G-stat: `ctest -L statistical` at 9b1b1bd1 and at 7596392f: 53 passed, 11 disabled.
+  - G-style: `util/style.sh check 1ec2c8e6` failed at 9b1b1bd1 (see 7596392f) and is clean at 7596392f.
+  - G-perf: `util/bench.sh -n 7 --compare ../om-bench-base/build-rework`, median per-pair ratio 0.9939 at 9b1b1bd1 (load 4.17 at start, spreads 7.98% / 5.25%) and 0.9955 at 7596392f (load 4.58, spreads 6.18% / 8.52%). The load was a little above 4, but both ratios are far from the limit, so no idle rerun was made. No per-human or per-infection object grows; the transmission models and each `AnophelesModel` gain one pointer.
+- Findings: F91, the vector-population intervention decays are evaluated at the step's start for every day of the step; F92, the vector `changeEIR` path was unreached and its too-few-values message names the seasonality element. F87 gains a note: the read it concerns is now in the GVI, IRS and ITN constructors.
+- Surprises:
+  - No ctest scenario or A/B variant used `changeEIR` with the vector model, or gave either model's `changeEIR` exactly the days the run needs. Now covered (9b1b1bd1).
+  - G-style's diff-only check made the clock change answer for narrowings that were already on the touched lines (7596392f). Expect the same in D9e5.
+- Follow-ups:
+  - D9e5: the clock (157 sites in 25 files: interventions, mon, the unit tests' direct reads), including the six `Sim::now()` reads 894bbcb0 moved into GVI, IRS and ITN (F87, with a Debug A/B variant); then remove the clock facades, the bridge pointer and `ClockBinding`. D9f: the bridge namespace and interleaved G-two-sims.
+  - F91 and F92's message: change only with the user's agreement (both change output).
+- Next: D9e5 (its base will be its own HEAD; move `../om-bench-base` again at its start).
