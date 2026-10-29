@@ -85,7 +85,6 @@ private:
     mon::MonitoringState monitoring;
     mon::Continuous continuous;
     Clock clock;
-    ClockBinding clock_binding{clock};
     util::MasterRngs master_rngs;
     util::ModelOptionFlags model_options;
     Parameters parameters;

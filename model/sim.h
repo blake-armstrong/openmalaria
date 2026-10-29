@@ -61,16 +61,7 @@ public:
     //@{
     /// Convert to years
     static inline double in_years(SimTime d) { return d * (1.0 / DaysInYear); }
-
-    /// Convert to time steps (rounding down)
-    static inline int in_steps(SimTime d);
     //@}
-
-    /** Return this time in time steps modulo some positive integer. */
-    static inline int modulo_steps(SimTime d, int denominator);
-
-    /** Return this time in time steps modulo some positive integer. */
-    static inline int modulo_year_steps(SimTime d);
 
     /** Duration zero and the time at the start of the simulation. */
     static inline SimTime zero() { return 0; }
@@ -92,92 +83,15 @@ public:
 
     /** One year. See DAYS_IN_YEAR. */
     static inline SimTime one_year() { return DaysInYear; }
-
-    /** One time step (currently either one or five days). */
-    static inline SimTime one_ts();
     //@}
 
     ///@brief Parameterised constructors
     //@{
-    /** Convert. */
-    static inline SimTime from_ts(int ts);
-
     /** Duration in days. Should be fast (currently no conversion required). */
     static inline SimTime from_days(int days) { return days; }
 
     /** Convert from a whole number of years. */
     static inline SimTime from_years_i(int years) { return DaysInYear * years; }
-
-    /** Convert from years to nearest time step. */
-    static inline SimTime from_years_n(double years);
-
-    /** Convert from years, rounding down to the next time step. */
-    static inline SimTime from_years_d(double years);
-
-    /** Round to the nearest time-step, where input is in days. */
-    static inline SimTime round_to_ts_from_days(double days);
-    //@}
-
-    /** The number of time steps in one year. */
-    static inline size_t steps_per_year();
-
-    /** A cached value: one year divided by one time step. */
-    static inline double years_per_step();
-
-    /// Maximum possible age of a human.
-    static inline SimTime max_human_age();
-
-    /// The starting date of the simulation
-    static inline SimTime start_date();
-
-    /// The ending date of the simulation
-    static inline SimTime end_date();
-    //@}
-
-    ///@brief Access simulation time variables
-    //@{
-    /** Time at the beginning of a time step update.
-     *
-     * This is what is mostly used during an update. It is never negative and
-     * increases throughout the simulation. */
-    static inline SimTime ts0();
-    /** Time at the end of a time step update.
-     * 
-     * During an update, ts0() + oneTS() = ts1(). Neither this nor ts0 should
-     * be used outside of updates. */
-    static inline SimTime ts1();
-    /**
-     * Time steps are mid-day to mid-day, and this is the time at mid-day (i.e.
-     * this equals ts1 from the last step and ts0 from the next one).
-     * 
-     * This is for monitoring and intervention deployment which happens between
-     * updates. Cannot be used during human or vector update.
-     */
-    static inline SimTime now();
-    /** During updates, this is ts0; between, this is now. */
-    static inline SimTime now_or_ts0();
-    /** During updates, this is ts1; between, this is now. */
-    static inline SimTime now_or_ts1();
-    /** During updates, this is ts0; between, it is now - 1. */
-    static inline SimTime latest_ts0();
-    //@}
-
-    ///@brief Access intervention-time variables
-    //@{
-    /// Time relative to the start of the intervention period.
-    ///
-    /// This equals (intervDate() - startDate()), but happens to be the most
-    /// common way that intervention-period dates are used.
-    static inline SimTime interv_time();
-
-    /// The current date.
-    ///
-    /// Only valid during the intervention phase, since the duration required
-    /// for warm-up is not known in advance. (In prior phases, this function
-    /// returns a large negative value.)
-    ///
-    /// Intervention deployment times are relative to this date.
-    static inline SimTime interv_date();
     //@}
 };
 
