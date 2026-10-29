@@ -126,6 +126,9 @@ private:
     vector<unique_ptr<TimedDeployment>> timed;
     uint32_t next_timed = 0; // not chcekpointed (see loadFromCheckpoint)
     bool verbose = false;
+    const Clock* sim_clock = nullptr;
+
+    const Clock& clock() const { return *sim_clock; }
 
     // imported infections are not really interventions, and handled by a separate class
     // (but are grouped here for convenience and due toassociation in schema)

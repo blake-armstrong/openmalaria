@@ -55,6 +55,7 @@ void InterventionManager::init(const scnXml::Interventions& interv_elt, Transmis
                                Clinical::ClinicalParams& clinical, Clinical::DecisionTreeLibrary& decision_trees,
                                const util::ModelOptionFlags& options, const util::CommandLineOptions& command_line,
                                const Clock& clock, mon::MonitoringState& monitoring) {
+    sim_clock = &clock;
     next_timed = 0;
     verbose = command_line.option(util::CommandLine::Verbose);
 
@@ -85,7 +86,7 @@ void InterventionManager::init(const scnXml::Interventions& interv_elt, Transmis
                     const SimTime date = unit_parse::read_date(
                         it.getTime(), unit_parse::STEPS /*STEPS is only for backwards compatibility*/, clock,
                         command_line);
-                    timed.push_back(std::make_unique<TimedChangeEIRDeployment>(date, it));
+                    timed.push_back(std::make_unique<TimedChangeEIRDeployment>(date, it, clock));
                 } catch (const util::format_error& e) {
                     throw util::xml_scenario_error(
                         string("interventions/changeEIR/timedDeployment/time: ").append(e.message()));
@@ -131,7 +132,7 @@ void InterventionManager::init(const scnXml::Interventions& interv_elt, Transmis
                     remove_at_lists[sub_pop_remove::OnFirstTreatment].push_back(id);
                 }
                 if (remove_opts.getAfterYears().present()) {
-                    expire_after = Sim::from_years_n(remove_opts.getAfterYears().get());
+                    expire_after = clock.from_years_n(remove_opts.getAfterYears().get());
                 }
             }
 
@@ -198,7 +199,7 @@ void InterventionManager::init(const scnXml::Interventions& interv_elt, Transmis
                 const scnXml::ContinuousList::DeploySequence& cts_seq = cts_it.getDeploy();
                 for (const auto& it2 : cts_seq) {
                     try {
-                        SimTime begin = Sim::start_date();
+                        SimTime begin = clock.start_date();
                         if (it2.getBegin().present()) {
                             begin = unit_parse::read_date(
                                 it2.getBegin().get(), unit_parse::STEPS /*STEPS is only for backwards compatibility*/,
@@ -210,7 +211,8 @@ void InterventionManager::init(const scnXml::Interventions& interv_elt, Transmis
                                                         unit_parse::STEPS /*STEPS is only for backwards compatibility*/,
                                                         clock, command_line);
                         }
-                        continuous.emplace_back(begin, end, it2, intervention, sub_pop, complement, per_host_params);
+                        continuous.emplace_back(begin, end, it2, intervention, sub_pop, complement, per_host_params,
+                                                clock);
                     } catch (const util::format_error& e) {
                         throw util::xml_scenario_error(
                             string("interventions/human/deployment/continuous/deploy: ").append(e.message()));
@@ -238,7 +240,7 @@ void InterventionManager::init(const scnXml::Interventions& interv_elt, Transmis
                         if (it2.getRepeatStep().present()) {
                             const SimTime step = unit_parse::read_duration(it2.getRepeatStep().get(), unit_parse::NONE,
                                                                            clock, command_line);
-                            if (step < Sim::one_ts()) {
+                            if (step < clock.one_ts()) {
                                 throw util::xml_scenario_error("deploy: repeatStep must be >= 1");
                             }
                             const SimTime end =
@@ -266,7 +268,7 @@ void InterventionManager::init(const scnXml::Interventions& interv_elt, Transmis
                                 msg << cp.getId();
                             }
                             msg << " has multiple deplyoments at date " << last_date << " (step "
-                                << Sim::in_steps(last_date - Sim::start_date()) << ')';
+                                << clock.in_steps(last_date - clock.start_date()) << ')';
                             throw util::xml_scenario_error(msg.str());
                         }
                         last_date = deploy_time.first;
@@ -278,13 +280,13 @@ void InterventionManager::init(const scnXml::Interventions& interv_elt, Transmis
                         for (auto& deploy_time : deploy_times) {
                             timed.push_back(std::make_unique<TimedCumulativeHumanDeployment>(
                                 deploy_time.first, *deploy_time.second, intervention, sub_pop, complement,
-                                cum_cov_component, per_host_params));
+                                cum_cov_component, per_host_params, clock));
                         }
                     } else {
                         for (auto& deploy_time : deploy_times) {
                             timed.push_back(std::make_unique<TimedHumanDeployment>(
                                 deploy_time.first, *deploy_time.second, intervention, sub_pop, complement,
-                                per_host_params));
+                                per_host_params, clock));
                         }
                     }
                 } catch (const util::format_error& e) {
@@ -323,7 +325,7 @@ void InterventionManager::init(const scnXml::Interventions& interv_elt, Transmis
             for (const auto& it : elt.getTimedDeployment()) {
                 const SimTime date = unit_parse::read_date(
                     it.getTime(), unit_parse::STEPS /*STEPS is only for backwards compatibility*/, clock, command_line);
-                timed.push_back(std::make_unique<TimedUninfectVectorsDeployment>(date));
+                timed.push_back(std::make_unique<TimedUninfectVectorsDeployment>(date, clock));
             }
         }
     }
@@ -343,7 +345,7 @@ void InterventionManager::init(const scnXml::Interventions& interv_elt, Transmis
                         const SimTime date = unit_parse::read_date(
                             it.getTime(), unit_parse::STEPS /*STEPS is only for backwards compatibility*/, clock,
                             command_line);
-                        timed.push_back(std::make_unique<TimedVectorDeployment>(date, instance));
+                        timed.push_back(std::make_unique<TimedVectorDeployment>(date, instance, clock));
                     }
                     instance++;
                 }
@@ -367,7 +369,7 @@ void InterventionManager::init(const scnXml::Interventions& interv_elt, Transmis
                             unit_parse::read_duration(deploy.getLifespan(), unit_parse::NONE, clock, command_line);
                         timed.push_back(std::make_unique<TimedAddNonHumanHostsDeployment>(
                             date, elt.getName(), lifespan, elt.getDescription().getAnopheles(), transmission,
-                            per_host_params));
+                            per_host_params, clock));
                     }
                     instance++;
                 }
@@ -412,7 +414,7 @@ void InterventionManager::init(const scnXml::Interventions& interv_elt, Transmis
                         const double ratio = deploy.getRatioToHumans();
                         const SimTime lifespan =
                             unit_parse::read_duration(deploy.getLifespan(), unit_parse::NONE, clock, command_line);
-                        timed.push_back(std::make_unique<TimedTrapDeployment>(date, instance, ratio, lifespan));
+                        timed.push_back(std::make_unique<TimedTrapDeployment>(date, instance, ratio, lifespan, clock));
                     }
                 }
                 instance += 1;
@@ -428,7 +430,7 @@ void InterventionManager::init(const scnXml::Interventions& interv_elt, Transmis
 
     // make sure the list ends with something always in the future, so we don't
     // have to check nextTimed is within range:
-    timed.push_back(std::make_unique<DummyTimedDeployment>());
+    timed.push_back(std::make_unique<DummyTimedDeployment>(clock));
 
     if (command_line.option(util::CommandLine::PrintInterventions)) {
         cout << "Continuous deployments:" << endl << "begin\tend\tage\tsub pop\tcompl\tcoverag\tcomponents" << endl;
@@ -462,7 +464,7 @@ ComponentId InterventionManager::get_component_id(const string& text_id) const {
 
 void InterventionManager::load_from_checkpoint(vector<Host::Human>& population,
                                                Transmission::TransmissionModel& transmission) {
-    const SimTime date = Sim::interv_date();
+    const SimTime date = clock().interv_date();
     // We need to re-deploy changeHS and changeEIR interventions, but nothing
     // else. nextTimed should be zero so we can go through all past interventions.
     // Only redeploy those which happened before this time step.
@@ -481,14 +483,14 @@ void InterventionManager::load_from_checkpoint(vector<Host::Human>& population,
 }
 
 void InterventionManager::deploy(vector<Host::Human>& population, Transmission::TransmissionModel& transmission) {
-    if (Sim::interv_time() < Sim::zero())
+    if (clock().interv_time() < Sim::zero())
         return;
 
     // deploy imported infections (not strictly speaking an intervention)
     imported_infections.import(population);
 
     // deploy timed interventions
-    const SimTime now = Sim::interv_date();
+    const SimTime now = clock().interv_date();
     while (timed[next_timed]->date <= now) {
         if (verbose) {
             cout << "deploy::" << now << "::Timed";
