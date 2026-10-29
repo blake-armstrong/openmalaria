@@ -107,10 +107,10 @@ create_anopheles_model(size_t i, const scnXml::AnophelesParams& anoph, vector<do
             throw util::xml_scenario_error("entomology.vector.simpleMPD.femaleEggsLaidByOviposit: "
                                            "must be positive");
 
-        anoph_model = std::make_unique<Anopheles::SimpleMPDAnophelesModel>(development_duration, prob_preadult_survival,
-                                                                           f_eggs_laid_by_oviposit);
+        anoph_model = std::make_unique<Anopheles::SimpleMPDAnophelesModel>(
+            clock, development_duration, prob_preadult_survival, f_eggs_laid_by_oviposit);
     } else
-        anoph_model = std::make_unique<Anopheles::AnophelesModel>();
+        anoph_model = std::make_unique<Anopheles::AnophelesModel>(clock);
 
     const scnXml::Seasonality& seasonality = anoph.getSeasonality();
 

@@ -177,12 +177,13 @@ class AnophelesModel {
 public:
     ///@brief Initialisation and destruction
     //@{
-    AnophelesModel()
+    explicit AnophelesModel(const Clock& clock)
         : nhh_avail(numeric_limits<double>::signaling_NaN()), nhh_sigma_df(numeric_limits<double>::signaling_NaN()),
           nhh_sigma_dff(numeric_limits<double>::signaling_NaN()),
           // EmergenceModel
           eir_rotate_angle(numeric_limits<double>::quiet_NaN()), init_nv_from_sv(numeric_limits<double>::quiet_NaN()),
-          init_ov_from_sv(numeric_limits<double>::quiet_NaN()), init_nv0_from_sv(numeric_limits<double>::quiet_NaN()) {
+          init_ov_from_sv(numeric_limits<double>::quiet_NaN()), init_nv0_from_sv(numeric_limits<double>::quiet_NaN()),
+          sim_clock(&clock) {
         forced_s_v.resize(Sim::one_year());
         quinquennial_s_v.resize(Sim::from_years_i(5), 0.0);
         mosq_emerge_rate.resize(Sim::one_year(), 0.0);
@@ -286,7 +287,7 @@ public:
 
     /// Intermediatary from vector model equations used to calculate EIR
     inline double get_init_partial_eir() const {
-        return partial_init_eir[Sim::modulo_year_steps(Sim::ts0())] / init_avail;
+        return partial_init_eir[clock().modulo_year_steps(clock().ts0())] / init_avail;
     }
     //@}
 
@@ -338,7 +339,7 @@ public:
 
     /// Intermediatary from vector model equations used to calculate EIR in intervention mode
     inline double get_intervention_eir() const {
-        return intervention_eir[Sim::in_steps(Sim::interv_time())] / init_avail;
+        return intervention_eir[clock().in_steps(clock().interv_time())] / init_avail;
     }
     //@}
 
@@ -357,7 +358,7 @@ public:
     inline void reset_ts_stats() { time_step_n_v0 = 0.0; }
 
     /// Get mean emergence per day during last time-step
-    inline double get_last_n_v0() const { return time_step_n_v0 / Sim::one_ts(); }
+    inline double get_last_n_v0() const { return time_step_n_v0 / clock().one_ts(); }
 
     /// Get mean P_A/P_df/P_dif/N_v/O_v/S_v during last time-step
     /// @param vs PA, PDF, PDIF, NV, OV or SV
@@ -420,6 +421,8 @@ public:
         uninfected_v & stream;
         time_step_n_v0 & stream;
     }
+
+    const Clock& clock() const { return *sim_clock; }
 
     MosquitoParams mosq;
 
@@ -638,6 +641,7 @@ public:
     /** Description of intervention killing effects on emerging pupae */
     vector<util::SimpleDecayingValue> emergence_reduction;
 
+    const Clock* sim_clock;
     const PerHostParams* per_host_params = nullptr;
     const WithinHost::GenotypeRegistry* genotypes = nullptr;
 };

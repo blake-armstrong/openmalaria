@@ -31,9 +31,10 @@ class SimpleMPDAnophelesModel : public AnophelesModel {
 public:
     ///@brief Initialisation and destruction
     //@{
-    SimpleMPDAnophelesModel(SimTime development_duration, double prob_preadult_survival, double f_eggs_laid_by_oviposit)
-        : development_duration(development_duration), prob_preadult_survival(prob_preadult_survival),
-          f_eggs_laid_by_oviposit(f_eggs_laid_by_oviposit) {
+    SimpleMPDAnophelesModel(const Clock& clock, SimTime development_duration, double prob_preadult_survival,
+                            double f_eggs_laid_by_oviposit)
+        : AnophelesModel(clock), development_duration(development_duration),
+          prob_preadult_survival(prob_preadult_survival), f_eggs_laid_by_oviposit(f_eggs_laid_by_oviposit) {
         quinquennial_ovipositing.resize(Sim::from_years_i(5), 0.0);
         inv_larval_resources.resize(Sim::one_year(), 0.0);
         n_ovipositing_delayed.resize(development_duration, 0.0);
@@ -133,7 +134,7 @@ public:
         n_ovipositing_delayed[util::mod_nn(d1, development_duration)] = n_ovipositing;
         quinquennial_ovipositing[util::mod_nn(d1, Sim::from_years_i(5))] = n_ovipositing;
 
-        if (Sim::interv_time() > 0 && emergence < 0) {
+        if (clock().interv_time() > 0 && emergence < 0) {
             std::ostringstream oss;
             oss << "Error: SimpleMPD model: negative emergence at t=" << d0 << ": " << emergence << ". ";
             oss << "Check the seasonality and make sure it does not go too low. For monthly EIR values, the lowest "
@@ -149,13 +150,13 @@ public:
     double get_res_availability() const override {
         // TODO: why offset by one time step? This is effectively getting the resources available on the last time step
         // TODO: only have to add one year because of offset
-        const SimTime start = Sim::now() - Sim::one_ts() + Sim::one_year();
+        const SimTime start = clock().now() - clock().one_ts() + Sim::one_year();
         double total = 0;
-        for (SimTime i = start, end = start + Sim::one_ts(); i < end; i = i + Sim::one_day()) {
+        for (SimTime i = start, end = start + clock().one_ts(); i < end; i = i + Sim::one_day()) {
             const SimTime d_year1 = mod_nn(i, Sim::one_year());
             total += 1.0 / inv_larval_resources[d_year1];
         }
-        return total / Sim::one_ts();
+        return total / clock().one_ts();
     }
 
     double get_res_requirements() const override { return numeric_limits<double>::quiet_NaN(); }
