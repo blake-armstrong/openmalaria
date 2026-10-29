@@ -1988,3 +1988,26 @@ An inventory at d4564e41 (`util/bridges.py`): `bridge::clock()` behind 30 facade
   - `util/ab_scenarios.py` could normalise an assert's source line as it does a traced exception's, so a Debug A/B across an edit to `Clock.h` compares equal.
   - D9f: G-two-sims with interleaved simulations. Its bridge removal and README text were done here.
 - Next: D9f (its base will be its own HEAD; move `../om-bench-base` again at its start).
+
+### D9e5 follow-up: F87 fixed, with tests (2026-10-29, after D9e5)
+The user asked for F87 to be fixed after D9e5 reproduced it. The A/B and G-perf base is still D9e5's base c54c0399 (`../om-bench-base`, with a Debug build in `build-debug`). D9e5 itself differs from it in no variant, so the A/B shows the fix's change and nothing else.
+- Commits:
+  - 3797804e: **fix.** `HumanGVI`, `HumanIRS` and `HumanITN`'s deploy constructors, and `HumanITN`'s `disposal_time`, read `now_or_ts1()` in place of `now()`, as `redeploy` and `SubList::deploy`'s age check already did. Between updates `now_or_ts1()` is `now()`, so timed and continuous deployments are unchanged. A treatment's triggered deployment runs inside the human update: a first deployment there is now stamped `ts1`, like a redeployment. Before, Debug aborted on `now()`'s `assert(!in_update)` and Release stamped `ts0`. The checkpoint constructors keep `now()`: they run between steps, and the stream overwrites the value.
+  - 8b3094c4: `util/ab_scenarios.py`. `triggered_by_treatment` takes several components, and `triggered_vectors_by_treatment` deploys scenarioIRS30's ITN, IRS and GVI (given an effect) from one treatment. Base against base: the same.
+  - ad4d2267: scenario test TriggeredVectors, in `OM_BOXTEST_NAMES`; new files only. The scenario is `triggered_vectors_by_treatment`'s transform written out. Its expected output and ctsout come from the fixed build (Release; Debug gives the same, with checkpoint stop and resume).
+- How outputs change (A/B against c54c0399: 4 of 315 variants differ, all in `interventions`; the other 311 are identical):
+  - No ctest scenario changes: none triggers a vector intervention from a treatment.
+  - `triggered_itn_by_treatment`, `triggered_irs_by_treatment`, `triggered_effective_gvi_by_treatment` and `triggered_vectors_by_treatment`: first deployments made by a treatment take effect from `ts1`, one step later than before. Their stdout differs too where it reports coverage.
+  - `triggered_gvi_by_treatment` is unchanged: its GVI has no effect.
+- Checks of correctness (rerunnable with `util/ab_scenarios.py`):
+  - The fixed Debug build runs all five triggered vector variants, where the base's Debug build aborts on four of them. Fixed Release against fixed Debug: 0 of 64 differ (interventions).
+  - A first deployment and a redeployment during the update now take the same time, `ts1`, as does the age check that chooses whether to deploy (`SubList::deploy`) and the vaccine's `possibly_vaccinate`.
+- Gates:
+  - G-exact / G-unit / G-two-sims: 66/66 (strict, TriggeredVectors included) on Release and Debug.
+  - A/B (base c54c0399): 4 of 315 differ, the four listed above.
+  - Planted bugs (`util/plant.py`, the old Release behaviour put back, each restored): `now_or_ts0()` in `HumanGVI`'s, `HumanIRS`'s or `HumanITN`'s deploy constructor, or in `HumanITN`'s `disposal_time`. Each is caught by ctest TriggeredVectors (only it). The A/B against the pre-fix base then shows the plant's variant back at base output.
+  - G-stat: `ctest -L statistical`: 53 passed, 12 disabled (TriggeredVectors has no reference).
+  - G-style: `util/style.sh check c54c0399` clean.
+  - G-perf: `util/bench.sh -n 7 --compare ../om-bench-base/build-rework`, median per-pair ratio 1.0039 (load 4.93 at start, spreads 4.89% / 2.29%). The load was a little above 4, but the ratio is far from the limit, so no idle rerun was made. The change is one read per deployment.
+- Findings: F87 moved to FINDINGS § Closed.
+- Next: D9f (its base will be its own HEAD; move `../om-bench-base` again at its start).
