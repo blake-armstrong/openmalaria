@@ -83,6 +83,9 @@ private:
 
     unique_ptr<DecayFunction> decay;
     vector<GVIAnopheles> species; // vector specific params
+    const Clock* sim_clock;
+
+    const Clock& clock() const { return *sim_clock; }
 
     friend class HumanGVI;
 };
@@ -101,7 +104,7 @@ public:
 
     /** This is the survival factor of the effect. */
     inline double get_effect_survival(const GVIComponent& params) const {
-        const SimTime age = Sim::now_or_ts1() - deploy_time; // implies age 1 TS on first use
+        const SimTime age = params.clock().now_or_ts1() - deploy_time; // implies age 1 TS on first use
         return decay_het->eval(age);
     }
 

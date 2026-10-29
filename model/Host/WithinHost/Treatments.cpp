@@ -52,7 +52,7 @@ Treatments::Stages stage_from_string(const std::string& str) {
 }
 Treatments::Treatments(const scnXml::TreatmentOption& elt, const interventions::InterventionManager& interventions,
                        const Clock& clock, const util::CommandLineOptions& command_line)
-    : TriggeredDeployments(elt, interventions), time_liver(Sim::zero()), time_blood(Sim::zero()) {
+    : TriggeredDeployments(elt, interventions, clock), time_liver(Sim::zero()), time_blood(Sim::zero()) {
     for (const auto& it : elt.getClearInfections()) {
         try {
             //NOTE: if changing XSD, this should not be called "timesteps" or have a default unit

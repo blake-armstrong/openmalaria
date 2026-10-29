@@ -206,6 +206,9 @@ private:
     unique_ptr<DecayFunction> insecticide_decay;
     unique_ptr<DecayFunction> attrition_of_nets;
     vector<ITNAnopheles> species; // vector specific params
+    const Clock* sim_clock;
+
+    const Clock& clock() const { return *sim_clock; }
 
     friend class HumanITN;
 };
@@ -223,7 +226,7 @@ public:
 
     inline double get_hole_index() const { return hole_index; }
     inline double get_insecticide_content(const ITNComponent& params) const {
-        const SimTime age = Sim::now_or_ts1() - deploy_time; // implies age 1 TS on first use
+        const SimTime age = params.clock().now_or_ts1() - deploy_time; // implies age 1 TS on first use
         const double effect_survival = insecticide_decay_het->eval(age);
         return initial_insecticide * effect_survival;
     }

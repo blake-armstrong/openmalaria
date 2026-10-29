@@ -34,7 +34,7 @@ namespace OM::interventions {
 IRSComponent::IRSComponent(ComponentId id, const scnXml::IRSDescription& elt,
                            const map<string, size_t>& species_name_map, const Clock& clock,
                            const util::CommandLineOptions& command_line)
-    : Transmission::HumanVectorInterventionComponent(id) {
+    : Transmission::HumanVectorInterventionComponent(id), sim_clock(&clock) {
     initial_insecticide.setParams(elt.getInitialInsecticide());
     const double max_prop = 0.999; //NOTE: this could be exposed in XML, but probably doesn't need to be
     max_insecticide = R::qnorm5(max_prop, initial_insecticide.getMu(), initial_insecticide.getSigma(), true, false);
@@ -215,15 +215,15 @@ double IRSComponent::sample_initial_insecticide(LocalRng& rng) const {
 
 // ———  per-human data  ———
 HumanIRS::HumanIRS(LocalRng& rng, const IRSComponent& params)
-    : PerHostInterventionData(params.id(), Sim::now()), initial_insecticide(params.sample_initial_insecticide(rng)),
-      component(&params) {
+    : PerHostInterventionData(params.id(), params.clock().now()),
+      initial_insecticide(params.sample_initial_insecticide(rng)), component(&params) {
     // Varience factor of decay is sampled once per human: human is assumed
     // to account for most variance.
     insecticide_decay_het = params.insecticide_decay->het_sample(rng);
 }
 
 void HumanIRS::redeploy(LocalRng& rng, const OM::Transmission::HumanVectorInterventionComponent& params) {
-    deploy_time = Sim::now_or_ts1();
+    deploy_time = component->clock().now_or_ts1();
     const auto* irs_params = dynamic_cast<const IRSComponent*>(&params);
     assert(irs_params != nullptr); // code error if this fails
     initial_insecticide = irs_params->sample_initial_insecticide(rng);
@@ -264,7 +264,7 @@ void HumanIRS::checkpoint(ostream& stream) {
     component->insecticide_decay->checkpoint_sample(insecticide_decay_het, stream);
 }
 HumanIRS::HumanIRS(istream& stream, ComponentId id, const IRSComponent& params)
-    : PerHostInterventionData(id, Sim::now()), component(&params) {
+    : PerHostInterventionData(id, params.clock().now()), component(&params) {
     deploy_time & stream;
     initial_insecticide & stream;
     component->insecticide_decay->checkpoint_sample(insecticide_decay_het, stream);

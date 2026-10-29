@@ -466,14 +466,14 @@ double factors::RelativeAttractiveness::relative_attractiveness(double hole_inde
 ITNComponent::ITNComponent(ComponentId id, const scnXml::ITNDescription& elt,
                            const map<string, size_t>& species_name_map, const Clock& clock,
                            const util::CommandLineOptions& command_line)
-    : Transmission::HumanVectorInterventionComponent(id), rip_factor(elt.getRipFactor().getValue()) {
+    : Transmission::HumanVectorInterventionComponent(id), rip_factor(elt.getRipFactor().getValue()), sim_clock(&clock) {
     initial_insecticide.setParams(elt.getInitialInsecticide());
     const double max_prop = 0.999; //NOTE: this could be exposed in XML, but probably doesn't need to be
     max_insecticide = R::qnorm5(max_prop, initial_insecticide.getMu(), initial_insecticide.getSigma(), true, false);
     hole_rate = util::createSampler(elt.getHoleRate()); // per year
-    hole_rate->scaleMean(Sim::years_per_step());        // convert to per step
+    hole_rate->scaleMean(clock.years_per_step());       // convert to per step
     rip_rate = util::createSampler(elt.getRipRate());
-    rip_rate->scaleMean(Sim::years_per_step());
+    rip_rate->scaleMean(clock.years_per_step());
 
     insecticide_decay =
         DecayFunction::make_object(elt.getInsecticideDecay(), "ITNDescription.insecticideDecay", clock, command_line);
@@ -585,8 +585,8 @@ HumanITN::HumanITN(LocalRng& rng, const ITNComponent& params)
     : HumanITN(rng, params, util::NormalSample::generate(rng)) {}
 
 HumanITN::HumanITN(LocalRng& rng, const ITNComponent& params, util::NormalSample handling)
-    : PerHostInterventionData(params.id(), Sim::now()),
-      disposal_time(Sim::now() + params.attrition_of_nets->sample_age_of_decay(rng)),
+    : PerHostInterventionData(params.id(), params.clock().now()),
+      disposal_time(params.clock().now() + params.attrition_of_nets->sample_age_of_decay(rng)),
 
       // this is sampled independently: initial insecticide content doesn't depend on handling
       initial_insecticide(params.initial_insecticide.sample(rng)), hole_rate(params.hole_rate->sample(handling)),
@@ -601,8 +601,8 @@ HumanITN::HumanITN(LocalRng& rng, const ITNComponent& params, util::NormalSample
 void HumanITN::redeploy(LocalRng& rng, const OM::Transmission::HumanVectorInterventionComponent& params0) {
     const ITNComponent& params = *dynamic_cast<const ITNComponent*>(&params0);
 
-    deploy_time = Sim::now_or_ts1();
-    disposal_time = Sim::now_or_ts1() + params.attrition_of_nets->sample_age_of_decay(rng);
+    deploy_time = params.clock().now_or_ts1();
+    disposal_time = params.clock().now_or_ts1() + params.attrition_of_nets->sample_age_of_decay(rng);
     n_holes = 0;
     hole_index = 0.0;
     // this is sampled independently: initial insecticide content doesn't depend on handling
@@ -617,7 +617,7 @@ void HumanITN::update(Host::Human& human) {
     const ITNComponent& params = *component;
     if (deploy_time != Sim::never()) {
         // First use is at age 0 relative to ts0()
-        if (Sim::ts0() >= disposal_time) {
+        if (params.clock().ts0() >= disposal_time) {
             deploy_time = Sim::never();
             human.remove_from_cohort(id());
             return;
@@ -678,7 +678,7 @@ void HumanITN::checkpoint(ostream& stream) {
     component->insecticide_decay->checkpoint_sample(insecticide_decay_het, stream);
 }
 HumanITN::HumanITN(istream& stream, ComponentId id, const ITNComponent& params)
-    : PerHostInterventionData(id, Sim::now()), component(&params) {
+    : PerHostInterventionData(id, params.clock().now()), component(&params) {
     deploy_time & stream;
     disposal_time & stream;
     n_holes & stream;

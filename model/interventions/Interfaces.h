@@ -33,6 +33,7 @@ class DeploymentBase;
 }
 
 namespace OM {
+class Clock;
 namespace Host {
 class Human;
 }
@@ -179,13 +180,15 @@ protected:
 // could just store ComponentId instead of inheriting HumanIntervention)
 class TriggeredDeployments {
 public:
-    TriggeredDeployments(const scnXml::TriggeredDeployments& elt, const InterventionManager& manager);
+    TriggeredDeployments(const scnXml::TriggeredDeployments& elt, const InterventionManager& manager,
+                         const Clock& clock);
 
     void deploy(Host::Human& human, mon::DeployMethod method, VaccineLimits vacc_limits) const;
 
 private:
     struct SubList : protected HumanIntervention {
-        SubList(const scnXml::TriggeredDeployments::DeployType& elt, const InterventionManager& manager);
+        SubList(const scnXml::TriggeredDeployments::DeployType& elt, const InterventionManager& manager,
+                const Clock& clock);
 
         // NOLINTNEXTLINE(bugprone-derived-method-shadowing-base-method)
         void deploy(Host::Human& human, mon::DeployMethod method, VaccineLimits vacc_limits) const;

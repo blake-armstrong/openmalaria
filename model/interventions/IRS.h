@@ -142,6 +142,9 @@ private:
     double max_insecticide; // maximum initial insecticide
     unique_ptr<DecayFunction> insecticide_decay;
     vector<IRSAnopheles> species; // vector specific params
+    const Clock* sim_clock;
+
+    const Clock& clock() const { return *sim_clock; }
 
     friend class HumanIRS;
 };
@@ -159,7 +162,7 @@ public:
 
     /// Get remaining insecticide content based on initial amount and decay.
     inline double get_insecticide_content(const IRSComponent& params) const {
-        const SimTime age = Sim::now_or_ts1() - deploy_time; // implies age 1 TS on first use
+        const SimTime age = params.clock().now_or_ts1() - deploy_time; // implies age 1 TS on first use
         const double effect_survival = insecticide_decay_het->eval(age);
         return initial_insecticide * effect_survival;
     }

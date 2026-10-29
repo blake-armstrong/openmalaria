@@ -148,7 +148,8 @@ VaccineComponent::VaccineComponent(ComponentId component, const scnXml::VaccineD
                                    const util::CommandLineOptions& command_line)
     : HumanInterventionComponent(component), type(type),
       decay_func(DecayFunction::make_object(vd.getDecay(), "decay", clock, command_line)),
-      n_genotypes(genotypes.count()), efficacy_b(vd.getEfficacyB().getValue()), report_deployments(report_deployments) {
+      n_genotypes(genotypes.count()), efficacy_b(vd.getEfficacyB().getValue()), report_deployments(report_deployments),
+      sim_clock(&clock) {
     if (type == vaccines::BSV && options.option(util::VivaxSimpleModel))
         throw util::unimplemented_exception("blood stage vaccines (BSV) cannot be used with vivax model");
 
@@ -276,7 +277,8 @@ double PerHumanVaccine::get_factor(vaccines::Types type, uint32_t genotype) cons
     double factor = 1.0;
     for (const auto& effect : effects) {
         if (effect.params->type == type) {
-            const SimTime age = Sim::ts1() - effect.time_last_deployment; // implies age 1 TS on first use
+            const SimTime age =
+                effect.params->clock().ts1() - effect.time_last_deployment; // implies age 1 TS on first use
             const double decay_factor = effect.het_sample->eval(age);
             factor *= 1.0 - effect.per_genotype_initial_efficacy[genotype] * decay_factor;
         }
@@ -312,7 +314,7 @@ bool PerHumanVaccine::possibly_vaccinate(Host::Human& human, const VaccineCompon
     util::streamValidate(effect->per_genotype_initial_efficacy);
 
     effect->num_doses_administered = num_doses_administered + 1;
-    effect->time_last_deployment = Sim::now_or_ts1();
+    effect->time_last_deployment = params.clock().now_or_ts1();
 
     return true;
 }

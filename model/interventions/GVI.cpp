@@ -33,7 +33,7 @@ namespace OM::interventions {
 GVIComponent::GVIComponent(ComponentId id, const scnXml::GVIDescription& elt,
                            const map<string, size_t>& species_name_map, const Clock& clock,
                            const util::CommandLineOptions& command_line)
-    : Transmission::HumanVectorInterventionComponent(id) {
+    : Transmission::HumanVectorInterventionComponent(id), sim_clock(&clock) {
     decay = DecayFunction::make_object(elt.getDecay(), "interventions.human.vector.decay", clock, command_line);
     // assume usage modifier is 100% if none is specified
     double prop_use = NAN;
@@ -93,14 +93,14 @@ void GVIComponent::GVIAnopheles::init(const scnXml::GVIDescription::AnophelesPar
 
 // ———  per-human data  ———
 HumanGVI::HumanGVI(LocalRng& rng, const GVIComponent& params)
-    : PerHostInterventionData(params.id(), Sim::now()), component(&params) {
+    : PerHostInterventionData(params.id(), params.clock().now()), component(&params) {
     // Varience factor of decay is sampled once per human: human is assumed
     // to account for most variance.
     decay_het = params.decay->het_sample(rng);
 }
 
 void HumanGVI::redeploy(LocalRng& rng, const Transmission::HumanVectorInterventionComponent&) {
-    deploy_time = Sim::now_or_ts1();
+    deploy_time = component->clock().now_or_ts1();
 }
 
 void HumanGVI::update(Host::Human& human) {}
@@ -137,7 +137,7 @@ void HumanGVI::checkpoint(ostream& stream) {
     component->decay->checkpoint_sample(decay_het, stream);
 }
 HumanGVI::HumanGVI(istream& stream, ComponentId id, const GVIComponent& params)
-    : PerHostInterventionData(id, Sim::now()), component(&params) {
+    : PerHostInterventionData(id, params.clock().now()), component(&params) {
     deploy_time & stream;
     component->decay->checkpoint_sample(decay_het, stream);
 }

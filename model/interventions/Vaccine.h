@@ -87,6 +87,10 @@ private:
      * delivery can be reported. This is whichever is first configured. */
     bool report_deployments;
 
+    const Clock* sim_clock;
+
+    const Clock& clock() const { return *sim_clock; }
+
     friend class PerHumanVaccine;
     friend class PerEffectPerHumanVaccine;
 };

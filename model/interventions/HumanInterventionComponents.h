@@ -145,11 +145,11 @@ void HumanIntervention::print_details(std::ostream& out) const {
 
 // ———  Utilities  ———
 
-TriggeredDeployments::TriggeredDeployments(const scnXml::TriggeredDeployments& elt,
-                                           const InterventionManager& manager) {
+TriggeredDeployments::TriggeredDeployments(const scnXml::TriggeredDeployments& elt, const InterventionManager& manager,
+                                           const Clock& clock) {
     lists.reserve(elt.getDeploy().size());
     for (const auto& it : elt.getDeploy()) {
-        lists.emplace_back(it, manager);
+        lists.emplace_back(it, manager, clock);
     }
 }
 void TriggeredDeployments::deploy(Human& human, mon::DeployMethod method, VaccineLimits vacc_limits) const {
@@ -159,11 +159,11 @@ void TriggeredDeployments::deploy(Human& human, mon::DeployMethod method, Vaccin
 }
 
 TriggeredDeployments::SubList::SubList(const scnXml::TriggeredDeployments::DeployType& elt,
-                                       const InterventionManager& manager)
-    : HumanIntervention(elt.getComponent(), manager), min_age(Sim::from_years_n(elt.getMinAge())),
+                                       const InterventionManager& manager, const Clock& clock)
+    : HumanIntervention(elt.getComponent(), manager), min_age(clock.from_years_n(elt.getMinAge())),
       max_age(Sim::future()), coverage(elt.getP()) {
     if (elt.getMaxAge().present())
-        max_age = Sim::from_years_n(elt.getMaxAge().get());
+        max_age = clock.from_years_n(elt.getMaxAge().get());
 
     if (min_age < Sim::zero() || max_age < min_age) {
         throw util::xml_scenario_error("triggered intervention must have 0 <= minAge <= maxAge");
@@ -183,7 +183,7 @@ void TriggeredDeployments::SubList::deploy(Host::Human& human, mon::DeployMethod
     // the beginning of the step since this gives the expected result with age
     // limits of 0 to 1 time step.
     //TODO: why does the above contradict what we do? Is this due to a date being shifted later?
-    const SimTime age = human.age(Sim::now_or_ts1());
+    const SimTime age = human.age(human.clock().now_or_ts1());
     if (age >= min_age && age < max_age) {
         if (coverage >= 1.0 || human.intervention_rng.bernoulli(coverage)) {
             HumanIntervention::deploy(human, method, vacc_limits);
@@ -245,7 +245,7 @@ public:
                         unit_parse::read_short_duration(elt.getDurationLiver(), unit_parse::NONE, clock, command_line),
                     dur_b =
                         unit_parse::read_short_duration(elt.getDurationBlood(), unit_parse::NONE, clock, command_line);
-            const SimTime neg1 = -Sim::one_ts();
+            const SimTime neg1 = -clock.one_ts();
             if (dur_l < neg1 || dur_b < neg1) {
                 throw util::xml_scenario_error("treatSimple: cannot have durationBlood or durationLiver less than -1");
             }
@@ -284,7 +284,7 @@ public:
 
     void deploy(Human& human, mon::DeployMethod method, VaccineLimits) const override {
         mon::record_deploy(mon::measure("nMDAs"), mon::measure("nCtsMDA"), human, method);
-        const double age = Sim::in_years(human.age(Sim::now_or_ts1()));
+        const double age = Sim::in_years(human.age(human.clock().now_or_ts1()));
         human.within_host_model->treat_pk_pd(schedule, dosage, age, delay_d);
     }
 
@@ -305,9 +305,9 @@ public:
         : HumanInterventionComponent(id), tree(decision_trees.create(elt, false)) {}
 
     void deploy(Human& human, mon::DeployMethod method, VaccineLimits) const override {
-        const Clinical::CMDTOut out =
-            tree.exec(Clinical::CMHostData(human, human.intervention_rng, Sim::in_years(human.age(Sim::now_or_ts1())),
-                                           human.clinical_model->get_latest_state()));
+        const Clinical::CMDTOut out = tree.exec(
+            Clinical::CMHostData(human, human.intervention_rng, Sim::in_years(human.age(human.clock().now_or_ts1())),
+                                 human.clinical_model->get_latest_state()));
         if (out.treated) {
             mon::record_deploy(mon::measure("nMDAs"), mon::measure("nCtsMDA"), human, method);
         }
