@@ -319,6 +319,29 @@ def const_first_species_availability(s):
     return rep(s, '<availability distr="gamma" CV="3"/>', '<availability distr="const"/>')
 
 
+CHANGE_EIR_DAYS = re.compile(r'\s*<EIRDaily origin="\w+">[0-9.e-]+</EIRDaily>')
+VECTOR_FORCED = "scenarioHetVecDailyEIR.xml"
+VECTOR_CHANGE_EIR_REQUIRED_DAYS = 1276
+NON_VECTOR_CHANGE_EIR_REQUIRED_DAYS = 561
+
+
+def keep_change_eir_days(n):
+    def transform(s):
+        start = s.index("<changeEIR>")
+        days = list(CHANGE_EIR_DAYS.finditer(s, start, s.index("</changeEIR>", start)))
+        assert len(days) > n
+        return s[:days[n].start()] + s[days[-1].end():]
+    return transform
+
+
+def vector_change_eir(n):
+    values = re.findall(r'<EIRDaily origin="\w+">([0-9.e-]+)</EIRDaily>', read("scenario12.xml"))
+    days = "".join(f"<EIRDaily>{values[i % len(values)]}</EIRDaily>" for i in range(n))
+    return lambda s: rep(s, '<interventions name="No Intervention" />',
+                         '<interventions name="changeEIR"><changeEIR><timedDeployment eipDuration="10" time="0t">'
+                         + days + "</timedDeployment></changeEIR></interventions>")
+
+
 MA = "scenarioMonitoringAll.xml"
 ITNS = "scenario2ITNs.xml"
 MDA_TREE = ('<decisionTree>\n          <diagnostic diagnostic="RDT">',
@@ -748,6 +771,8 @@ GROUPS = {
         Variant("copula_deployed_checkpoint", COPULA, copula_in_run, ["--checkpoint"], runs=2),
         Variant("copula_deployed_two_species", COPULA, lambda s: second_species(copula_in_run(s))),
         Variant("copula_two_species_not_deployed", COPULA, second_species),
+        Variant("vector_change_eir", VECTOR_FORCED, vector_change_eir(VECTOR_CHANGE_EIR_REQUIRED_DAYS + 124)),
+        Variant("vector_change_eir_exact_days", VECTOR_FORCED, vector_change_eir(VECTOR_CHANGE_EIR_REQUIRED_DAYS)),
     ],
     "host": [
         *(Variant(f"het_workaround_{o.lower()}", "scenario5.xml", model_option(o))
@@ -777,6 +802,7 @@ GROUPS = {
         Variant("monitoring_all_checkpoint", MA, args=["--checkpoint"], runs=2),
         Variant("2itns_checkpoint", ITNS, args=["--checkpoint"], runs=2),
         Variant("change_eir_checkpoint", "scenario12.xml", args=["--checkpoint"], runs=2),
+        Variant("change_eir_exact_days", "scenario12.xml", keep_change_eir_days(NON_VECTOR_CHANGE_EIR_REQUIRED_DAYS)),
         Variant("vaccine_report_tbv_not_deployed", MA, tbv_not_deployed),
         Variant("vaccine_report_pev_first_tbv_not_deployed", MA, lambda s: pev_first(tbv_not_deployed(s))),
         Variant("clear_immunity", MA, with_clear_immunity),
