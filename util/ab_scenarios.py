@@ -807,6 +807,8 @@ GROUPS = {
         Variant("vaccine_report_pev_first_tbv_not_deployed", MA, lambda s: pev_first(tbv_not_deployed(s))),
         Variant("clear_immunity", MA, with_clear_immunity),
         Variant("triggered_by_treatment", "scenario5.xml", triggered_by_treatment("PEV")),
+        *(Variant(f"triggered_{name}_by_treatment", "scenarioIRS30.xml", triggered_by_treatment(component))
+          for name, component in (("itn", "ITN"), ("irs", "IRS"), ("gvi", "vectorDeterrent"))),
         *(Variant(f"sub_pop_removal_{o}", "scenarioSubPopRemoval.xml", only_removal(o))
           for o in ("onFirstBout", "onFirstTreatment", "onFirstInfection")),
         Variant("restrict_to_sub_pop", ITNS, lambda s: rep(s, 'complement="true"', 'complement="false"')),
