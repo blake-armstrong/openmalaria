@@ -51,17 +51,17 @@ inline SimulationMode read_mode(const string& str) {
 
 inline std::unique_ptr<NonVectorModel> create_non_vector_model(const scnXml::Entomology& ento_data, size_t n_genotypes,
                                                                SimTime adult_age, bool vaccine_genotype,
-                                                               mon::Continuous& continuous) {
+                                                               const Clock& clock, mon::Continuous& continuous) {
     const scnXml::NonVector& non_vector_data = ento_data.getNonVector().get();
 
     const int intervention_mode = read_mode(ento_data.getMode());
     const int eip_duration = non_vector_data.getEipDuration();
 
     vector<double> initialisation_eir;
-    initialisation_eir.assign(Sim::steps_per_year(), 0.0);
+    initialisation_eir.assign(clock.steps_per_year(), 0.0);
 
     return std::make_unique<NonVectorModel>(initialisation_eir, intervention_mode, ento_data, non_vector_data,
-                                            eip_duration, n_genotypes, adult_age, vaccine_genotype, continuous);
+                                            eip_duration, n_genotypes, adult_age, vaccine_genotype, clock, continuous);
 }
 
 inline bool anopheles_compare(const scnXml::AnophelesParams& a1, const scnXml::AnophelesParams& a2) {
@@ -72,7 +72,7 @@ inline std::unique_ptr<Anopheles::AnophelesModel>
 create_anopheles_model(size_t i, const scnXml::AnophelesParams& anoph, vector<double>& initialisation_eir,
                        int population_size, int intervention_mode, PerHostParams& per_host_params,
                        const WithinHost::GenotypeRegistry& genotypes, const util::ModelOptionFlags& options,
-                       const util::CommandLineOptions& command_line) {
+                       const Clock& clock, const util::CommandLineOptions& command_line) {
     std::unique_ptr<Anopheles::AnophelesModel> anoph_model;
 
     if (options.option(util::VectorLifeCycleModel)) {
@@ -296,7 +296,7 @@ create_anopheles_model(size_t i, const scnXml::AnophelesParams& anoph, vector<do
                           command_line.option(util::CommandLine::PrintAnnualEir));
 
     for (SimTime i = Sim::zero(); i < Sim::one_year(); i = i + Sim::one_day())
-        initialisation_eir[mod_nn(Sim::in_steps(i), Sim::steps_per_year())] += init_eir365[i];
+        initialisation_eir[mod_nn(clock.in_steps(i), clock.steps_per_year())] += init_eir365[i];
 
     return anoph_model;
 }
@@ -304,15 +304,15 @@ create_anopheles_model(size_t i, const scnXml::AnophelesParams& anoph, vector<do
 inline std::unique_ptr<VectorModel>
 create_vector_model(const scnXml::Entomology& ento_data, int population_size, PerHostParams& per_host_params,
                     util::MasterRng& transmission_rng, const WithinHost::GenotypeRegistry& genotypes,
-                    const util::ModelOptionFlags& options, const util::CommandLineOptions& command_line,
-                    mon::Continuous& continuous) {
+                    const util::ModelOptionFlags& options, const Clock& clock,
+                    const util::CommandLineOptions& command_line, mon::Continuous& continuous) {
     const scnXml::Vector& vector_data = ento_data.getVector().get();
     scnXml::Vector::AnophelesSequence anopheles_list = vector_data.getAnopheles();
 
     const int intervention_mode = read_mode(ento_data.getMode());
 
     vector<double> initialisation_eir;
-    initialisation_eir.assign(Sim::steps_per_year(), 0.0);
+    initialisation_eir.assign(clock.steps_per_year(), 0.0);
 
     vector<std::unique_ptr<Anopheles::AnophelesModel>> species;
     vector<std::unique_ptr<Anopheles::EmergenceRateEstimator>> emergence_rate_estimators;
@@ -333,7 +333,7 @@ create_vector_model(const scnXml::Entomology& ento_data, int population_size, Pe
 
         std::unique_ptr<Anopheles::AnophelesModel> anoph_model =
             create_anopheles_model(i, anoph, initialisation_eir, population_size, intervention_mode, per_host_params,
-                                   genotypes, options, command_line);
+                                   genotypes, options, clock, command_line);
         std::unique_ptr<Anopheles::EmergenceRateEstimator> estimator;
         if (options.option(util::UseExactNv0Solver))
             estimator = std::make_unique<Anopheles::EmergenceRateSolver>(*anoph_model, population_size);
@@ -354,8 +354,8 @@ create_vector_model(const scnXml::Entomology& ento_data, int population_size, Pe
 
     return std::make_unique<VectorModel>(initialisation_eir, intervention_mode, std::move(species),
                                          std::move(emergence_rate_estimators), species_index, population_size,
-                                         transmission_rng, genotypes.count(), per_host_params.adult_age(),
-                                         options.option(util::VaccineGenotype), continuous);
+                                         transmission_rng, genotypes.count(), per_host_params.adult_age(clock),
+                                         options.option(util::VaccineGenotype), clock, continuous);
 }
 
 ///@brief Creation, destruction and checkpointing
@@ -364,22 +364,22 @@ create_vector_model(const scnXml::Entomology& ento_data, int population_size, Pe
 inline std::unique_ptr<TransmissionModel>
 create_transmission_model(const scnXml::Entomology& ento_data, int population_size, PerHostParams& per_host_params,
                           util::MasterRng& transmission_rng, const WithinHost::GenotypeRegistry& genotypes,
-                          const util::ModelOptionFlags& options, const util::CommandLineOptions& command_line,
-                          mon::Continuous& continuous) {
+                          const util::ModelOptionFlags& options, const Clock& clock,
+                          const util::CommandLineOptions& command_line, mon::Continuous& continuous) {
     // Entomology contains either a list of at least one anopheles or a list of at
     // least one EIRDaily.
     std::unique_ptr<TransmissionModel> model;
     if (ento_data.getVector().present())
         model = create_vector_model(ento_data, population_size, per_host_params, transmission_rng, genotypes, options,
-                                    command_line, continuous);
+                                    clock, command_line, continuous);
     else {
         if (!ento_data.getNonVector().present()) // should be a validation error, but anyway...
             throw util::xml_scenario_error("Neither vector nor non-vector data present in the XML!");
         if (options.option(util::VectorLifeCycleModel) || options.option(util::VectorSimpleMpdModel))
             throw util::xml_scenario_error(
                 "VECTOR_*_MODEL is only compatible with the vector model (and non-vector data is present).");
-        model = create_non_vector_model(ento_data, genotypes.count(), per_host_params.adult_age(),
-                                        options.option(util::VaccineGenotype), continuous);
+        model = create_non_vector_model(ento_data, genotypes.count(), per_host_params.adult_age(clock),
+                                        options.option(util::VaccineGenotype), clock, continuous);
     }
 
     if (ento_data.getScaledAnnualEIR().present()) {

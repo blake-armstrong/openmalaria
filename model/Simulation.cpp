@@ -127,7 +127,7 @@ Simulation::Simulation(std::unique_ptr<scnXml::Scenario> scenario, util::Command
                                                     master_rngs.population);
     transmission_model = Transmission::create_transmission_model(
         scenario_xml->getEntomology(), static_cast<int>(pop_size), per_host_params, master_rngs.transmission, genotypes,
-        model_options, command_line, continuous);
+        model_options, clock, command_line, continuous);
 
     register_continuous_population_callbacks(continuous, diagnostics);
 

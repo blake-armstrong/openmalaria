@@ -81,10 +81,11 @@ void VectorModel::cts_cb_s_v(ostream& stream) {
         stream << '\t' << species[i]->get_last_vec_stat(Anopheles::SV);
 }
 void VectorModel::cts_cb_alpha(const vector<Host::Human>& population, ostream& stream) {
+    const SimTime now = clock().now();
     for (size_t i = 0; i < species_index.size(); ++i) {
         double total = 0.0;
         for (const Host::Human& human : population) {
-            total += human.per_host_transmission.ento_availability_full(i, Sim::in_years(human.age(Sim::now())));
+            total += human.per_host_transmission.ento_availability_full(i, Sim::in_years(human.age(now)));
         }
         stream << '\t' << total / static_cast<double>(population.size());
     }
@@ -163,9 +164,11 @@ VectorModel::VectorModel(vector<double> init_eir, int intervention_mode,
                          vector<std::unique_ptr<Anopheles::AnophelesModel>> species_list,
                          vector<std::unique_ptr<Anopheles::EmergenceRateEstimator>> emergence_rate_estimators_list,
                          map<string, size_t> species_index_list, int population_size, util::MasterRng& transmission_rng,
-                         size_t n_genotypes, SimTime adult_age, bool vaccine_genotype, mon::Continuous& continuous)
-    : TransmissionModel(std::move(init_eir), intervention_mode, n_genotypes, adult_age, vaccine_genotype, continuous),
-      rng(transmission_rng), quinquennial_kappa(5 * Sim::steps_per_year(), 0.0), species(std::move(species_list)),
+                         size_t n_genotypes, SimTime adult_age, bool vaccine_genotype, const Clock& clock,
+                         mon::Continuous& continuous)
+    : TransmissionModel(std::move(init_eir), intervention_mode, n_genotypes, adult_age, vaccine_genotype, clock,
+                        continuous),
+      rng(transmission_rng), quinquennial_kappa(5 * clock.steps_per_year(), 0.0), species(std::move(species_list)),
       emergence_rate_estimators(std::move(emergence_rate_estimators_list)),
       species_index(std::move(species_index_list)), opt_vaccine_genotype(vaccine_genotype) {
     // set VACCINE_GENOTYPE option
@@ -235,10 +238,11 @@ VectorModel::VectorModel(vector<double> init_eir, int intervention_mode,
 VectorModel::~VectorModel() = default;
 
 void VectorModel::init2(const vector<Host::Human>& population) {
+    const SimTime now = clock().now();
     double sum_relative_availability = 0.0;
     for (const Host::Human& human : population) {
         sum_relative_availability +=
-            human.per_host_transmission.relative_availability_age(Sim::in_years(human.age(Sim::now())));
+            human.per_host_transmission.relative_availability_age(Sim::in_years(human.age(now)));
     }
     const int pop_size = static_cast<int>(population.size());
     // value should be unimportant when no humans are available, though inf/nan is not acceptable
@@ -254,7 +258,7 @@ void VectorModel::init2(const vector<Host::Human>& population) {
 
         for (const Host::Human& human : population) {
             const OM::Transmission::PerHost& host = human.per_host_transmission;
-            double prod = host.ento_availability_full(i, Sim::in_years(human.age(Sim::now())));
+            double prod = host.ento_availability_full(i, Sim::in_years(human.age(now)));
             sum_avail += prod;
             prod *= host.prob_mosq_biting(i);
             sigma_f += prod;
@@ -336,12 +340,12 @@ SimTime VectorModel::init_iterate() {
 
 double VectorModel::update_kappa(const vector<Host::Human>& population) {
     const double kappa = TransmissionModel::update_kappa(population);
-    quinquennial_kappa[Sim::modulo_steps(Sim::ts1(), static_cast<int>(quinquennial_kappa.size()))] = kappa;
+    quinquennial_kappa[clock().modulo_steps(clock().ts1(), static_cast<int>(quinquennial_kappa.size()))] = kappa;
     return kappa;
 }
 
 vector<double> VectorModel::mean_annual_kappa() const {
-    const size_t steps_per_year = Sim::steps_per_year();
+    const size_t steps_per_year = clock().steps_per_year();
     vector<double> mean(steps_per_year, 0.0);
     for (size_t step = 0; step < steps_per_year; ++step) {
         double total = 0.0;
@@ -435,6 +439,7 @@ void VectorModel::vector_update(const vector<Host::Human>& population) {
     std::vector<double> sigma_dff(species_index.size());
     std::vector<std::vector<double>> sigma_dif_i(species_index.size(), std::vector<double>(num_genotypes())),
         sigma_dif_l(species_index.size(), std::vector<double>(num_genotypes()));
+    const SimTime ts1 = clock().ts1();
     for (const Host::Human& human : population) {
         const OM::Transmission::PerHost& host = human.per_host_transmission;
         const WithinHost::WHInterface& whm = *human.within_host_model;
@@ -447,7 +452,7 @@ void VectorModel::vector_update(const vector<Host::Human>& population) {
             // NOTE: calculate availability relative to age at end of time step;
             // not my preference but consistent with TransmissionModel::getEIR().
             // TODO: even stranger since probTransmission comes from the previous time step
-            const double avail = host.ento_availability_full(s, Sim::in_years(human.age(Sim::ts1())));
+            const double avail = host.ento_availability_full(s, Sim::in_years(human.age(ts1)));
             sum_avail[s] += avail;
             const double df = avail * host.prob_mosq_biting(s) * host.prob_mosq_resting(s);
             sigma_df[s] += df;
