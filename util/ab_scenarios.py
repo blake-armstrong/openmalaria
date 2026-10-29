@@ -375,8 +375,9 @@ def mda_tree_negative(node):
               """ + node)
 
 
-def triggered_by_treatment(component, limits=""):
-    return lambda s: rep(s, LEGACY_ACT, LEGACY_ACT + f'<deploy p="0.5"{limits}><component id="{component}"/></deploy>')
+def triggered_by_treatment(*components, limits=""):
+    ids = "".join(f'<component id="{c}"/>' for c in components)
+    return lambda s: rep(s, LEGACY_ACT, LEGACY_ACT + f'<deploy p="0.5"{limits}>{ids}</deploy>')
 
 
 def effective_gvi(s):
@@ -820,8 +821,10 @@ GROUPS = {
           for name, component in (("itn", "ITN"), ("irs", "IRS"), ("gvi", "vectorDeterrent"))),
         Variant("triggered_effective_gvi_by_treatment", "scenarioIRS30.xml",
                 lambda s: triggered_by_treatment("vectorDeterrent")(effective_gvi(s))),
+        Variant("triggered_vectors_by_treatment", "scenarioIRS30.xml",
+                lambda s: triggered_by_treatment("ITN", "IRS", "vectorDeterrent")(effective_gvi(s))),
         Variant("triggered_age_limited_by_treatment", "scenario5.xml",
-                lambda s: triggered_by_treatment("PEV", ' minAge="1" maxAge="5"')(
+                lambda s: triggered_by_treatment("PEV", limits=' minAge="1" maxAge="5"')(
                     rep(s, 'popSize="100"', 'popSize="1000"'))),
         Variant("continuous_begin_end", MA,
                 continuous_windows('<deploy coverage="0.35" targetAgeYrs="0.0833"/>',
