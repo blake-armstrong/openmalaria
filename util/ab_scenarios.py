@@ -375,8 +375,17 @@ def mda_tree_negative(node):
               """ + node)
 
 
-def triggered_by_treatment(component):
-    return lambda s: rep(s, LEGACY_ACT, LEGACY_ACT + f'<deploy p="0.5"><component id="{component}"/></deploy>')
+def triggered_by_treatment(component, limits=""):
+    return lambda s: rep(s, LEGACY_ACT, LEGACY_ACT + f'<deploy p="0.5"{limits}><component id="{component}"/></deploy>')
+
+
+def effective_gvi(s):
+    return rep(s, '<deterrency value="0"/>',
+               '<deterrency value="0.5"/><preprandialKillingEffect value="0.1"/><postprandialKillingEffect value="0.2"/>')
+
+
+def continuous_windows(deploy, windows):
+    return lambda s: rep(s, deploy, "".join(deploy.replace("/>", f' begin="{b}" end="{e}"/>') for b, e in windows))
 
 
 def tbv_not_deployed(s):
@@ -809,6 +818,14 @@ GROUPS = {
         Variant("triggered_by_treatment", "scenario5.xml", triggered_by_treatment("PEV")),
         *(Variant(f"triggered_{name}_by_treatment", "scenarioIRS30.xml", triggered_by_treatment(component))
           for name, component in (("itn", "ITN"), ("irs", "IRS"), ("gvi", "vectorDeterrent"))),
+        Variant("triggered_effective_gvi_by_treatment", "scenarioIRS30.xml",
+                lambda s: triggered_by_treatment("vectorDeterrent")(effective_gvi(s))),
+        Variant("triggered_age_limited_by_treatment", "scenario5.xml",
+                lambda s: triggered_by_treatment("PEV", ' minAge="1" maxAge="5"')(
+                    rep(s, 'popSize="100"', 'popSize="1000"'))),
+        Variant("continuous_begin_end", MA,
+                continuous_windows('<deploy coverage="0.35" targetAgeYrs="0.0833"/>',
+                                   [(f"{b}t", f"{b + 50}t") for b in range(100, 1800, 150)])),
         *(Variant(f"sub_pop_removal_{o}", "scenarioSubPopRemoval.xml", only_removal(o))
           for o in ("onFirstBout", "onFirstTreatment", "onFirstInfection")),
         Variant("restrict_to_sub_pop", ITNS, lambda s: rep(s, 'complement="true"', 'complement="false"')),
