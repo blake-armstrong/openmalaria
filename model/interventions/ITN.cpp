@@ -585,8 +585,8 @@ HumanITN::HumanITN(LocalRng& rng, const ITNComponent& params)
     : HumanITN(rng, params, util::NormalSample::generate(rng)) {}
 
 HumanITN::HumanITN(LocalRng& rng, const ITNComponent& params, util::NormalSample handling)
-    : PerHostInterventionData(params.id(), params.clock().now()),
-      disposal_time(params.clock().now() + params.attrition_of_nets->sample_age_of_decay(rng)),
+    : PerHostInterventionData(params.id(), params.clock().now_or_ts1()),
+      disposal_time(params.clock().now_or_ts1() + params.attrition_of_nets->sample_age_of_decay(rng)),
 
       // this is sampled independently: initial insecticide content doesn't depend on handling
       initial_insecticide(params.initial_insecticide.sample(rng)), hole_rate(params.hole_rate->sample(handling)),

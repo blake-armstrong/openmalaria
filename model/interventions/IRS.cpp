@@ -215,7 +215,7 @@ double IRSComponent::sample_initial_insecticide(LocalRng& rng) const {
 
 // ———  per-human data  ———
 HumanIRS::HumanIRS(LocalRng& rng, const IRSComponent& params)
-    : PerHostInterventionData(params.id(), params.clock().now()),
+    : PerHostInterventionData(params.id(), params.clock().now_or_ts1()),
       initial_insecticide(params.sample_initial_insecticide(rng)), component(&params) {
     // Varience factor of decay is sampled once per human: human is assumed
     // to account for most variance.
