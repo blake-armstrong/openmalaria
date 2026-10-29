@@ -79,7 +79,7 @@ public:
 
         bool extinct = false;
         int iterations = 0;
-        SimTime now = Sim::ts0();
+        SimTime now = UnittestUtil::clock().ts0();
         do {
             extinct = infection->update(m_rng, 1.0, now, numeric_limits<double>::quiet_NaN());
             int age_days = (now - infection->start_date - infection->latent_period());

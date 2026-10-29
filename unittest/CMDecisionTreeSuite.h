@@ -49,7 +49,7 @@ public:
 
         UnittestUtil::EmpiricalWHM_setup();
 
-        human.reset(UnittestUtil::createHuman(Sim::now_or_ts0()).release());
+        human.reset(UnittestUtil::createHuman(UnittestUtil::clock().now_or_ts0()).release());
 
         ETS_ASSERT(human.get() != 0);
         whm = dynamic_cast<WHMock*>(UnittestUtil::setHumanWH(
@@ -309,7 +309,7 @@ public:
 
 private:
     static Clinical::DecisionTreeLibrary make_library() {
-        return {unittest_options::diagnostics,          UnittestUtil::pk_pd_params(), Sim::from_ts(5),
+        return {unittest_options::diagnostics,          UnittestUtil::pk_pd_params(), UnittestUtil::clock().from_ts(5),
                 unittest_options::intervention_manager, UnittestUtil::clock(),        unittest_options::command_line};
     }
 

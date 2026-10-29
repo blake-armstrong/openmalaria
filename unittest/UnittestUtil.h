@@ -253,11 +253,10 @@ public:
         dummyXML::scenario.setMonitoring(dummyXML::monitoring);
         util::ModelNameProvider modelNameProvider(dummyXML::scenario.getModel());
         Clock& clock = UnittestUtil::clock();
-        bridge::current_clock = &clock;
         clock.init(dummyXML::scenario, modelNameProvider, unittest_options::command_line, unittest_options::monitoring);
 
         // we could just use zero, but we may spot more errors by using some weird number
-        clock.t0 = Sim::from_years_n(83.2591);
+        clock.t0 = clock.from_years_n(83.2591);
         clock.t1 = clock.t0;
 #ifndef NDEBUG
         clock.in_update =
@@ -266,7 +265,7 @@ public:
     }
     static void incrTime(SimTime incr) {
         //NOTE: for unit tests, we do not differentiate between t0 and t1
-        Clock& clock = bridge::clock();
+        Clock& clock = UnittestUtil::clock();
         clock.t0 = clock.t0 + incr;
         clock.t1 = clock.t0;
     }

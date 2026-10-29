@@ -42,7 +42,8 @@ public:
         // pkpdID (1st value) isn't important since we're not using drug model here:
         infection = new DummyInfection(UnittestUtil::clock().now_or_ts0(), UnittestUtil::infection_latent_p(), m_rng,
                                        0xFFFFFFFF, InfectionOrigin::Indigenous);
-        for (SimTime d = Sim::ts1(), end = Sim::ts1() + Sim::from_days(15); d < end; d = d + Sim::one_day()) {
+        for (SimTime d = UnittestUtil::clock().ts1(), end = UnittestUtil::clock().ts1() + Sim::from_days(15); d < end;
+             d = d + Sim::one_day()) {
             // blood stage starts 15 days after creation
             UnittestUtil::incrTime(Sim::one_day());
             infection->update(m_rng, 1.0, d, numeric_limits<double>::quiet_NaN());
@@ -53,31 +54,31 @@ public:
     void testNewInf() { TS_ASSERT_APPROX(infection->get_density(), 16.00000000288086086); }
 
     void testUpdatedInf() {
-        UnittestUtil::incrTime(Sim::one_ts());
-        infection->update(m_rng, 1.0, Sim::ts1(), numeric_limits<double>::quiet_NaN());
+        UnittestUtil::incrTime(UnittestUtil::clock().one_ts());
+        infection->update(m_rng, 1.0, UnittestUtil::clock().ts1(), numeric_limits<double>::quiet_NaN());
         TS_ASSERT_APPROX(infection->get_density(), 128.00000008620828820);
     }
     void testUpdated2Inf() {
-        UnittestUtil::incrTime(Sim::one_ts());
-        infection->update(m_rng, 1.0, Sim::ts1(), numeric_limits<double>::quiet_NaN());
-        UnittestUtil::incrTime(Sim::one_ts());
-        infection->update(m_rng, 1.0, Sim::ts1(), numeric_limits<double>::quiet_NaN());
+        UnittestUtil::incrTime(UnittestUtil::clock().one_ts());
+        infection->update(m_rng, 1.0, UnittestUtil::clock().ts1(), numeric_limits<double>::quiet_NaN());
+        UnittestUtil::incrTime(UnittestUtil::clock().one_ts());
+        infection->update(m_rng, 1.0, UnittestUtil::clock().ts1(), numeric_limits<double>::quiet_NaN());
         TS_ASSERT_APPROX(infection->get_density(), 1024.00000082264208600);
     }
 
     void testUpdatedReducedInf() {
-        UnittestUtil::incrTime(Sim::one_ts());
-        infection->update(m_rng, 1.0, Sim::ts1(), numeric_limits<double>::quiet_NaN());
-        UnittestUtil::incrTime(Sim::one_ts());
-        infection->update(m_rng, 0.1, Sim::ts1(), numeric_limits<double>::quiet_NaN());
+        UnittestUtil::incrTime(UnittestUtil::clock().one_ts());
+        infection->update(m_rng, 1.0, UnittestUtil::clock().ts1(), numeric_limits<double>::quiet_NaN());
+        UnittestUtil::incrTime(UnittestUtil::clock().one_ts());
+        infection->update(m_rng, 0.1, UnittestUtil::clock().ts1(), numeric_limits<double>::quiet_NaN());
         // This is, as expected, 1/10th of that in testUpdated2Inf
         TS_ASSERT_APPROX(infection->get_density(), 102.40000008226420860);
     }
     void testUpdatedReducedInf2() {
-        UnittestUtil::incrTime(Sim::one_ts());
-        infection->update(m_rng, 0.1, Sim::ts1(), numeric_limits<double>::quiet_NaN());
-        UnittestUtil::incrTime(Sim::one_ts());
-        infection->update(m_rng, 1.0, Sim::ts1(), numeric_limits<double>::quiet_NaN());
+        UnittestUtil::incrTime(UnittestUtil::clock().one_ts());
+        infection->update(m_rng, 0.1, UnittestUtil::clock().ts1(), numeric_limits<double>::quiet_NaN());
+        UnittestUtil::incrTime(UnittestUtil::clock().one_ts());
+        infection->update(m_rng, 1.0, UnittestUtil::clock().ts1(), numeric_limits<double>::quiet_NaN());
         // This is nearly the same
         TS_ASSERT_APPROX(infection->get_density(), 102.00000008286288040);
     }

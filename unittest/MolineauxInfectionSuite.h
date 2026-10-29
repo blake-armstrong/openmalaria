@@ -73,7 +73,7 @@ public:
                                    m_rng, 0xFFFFFFFF, InfectionOrigin::Indigenous);
         bool extinct = false;
         size_t day = 0;
-        SimTime now = Sim::ts0();
+        SimTime now = UnittestUtil::clock().ts0();
         do {
             extinct = infection->update(m_rng, 1.0 /*no external immunity*/, now,
                                         71.43 /*adult body mass in kg to get 5l blood volume*/);
@@ -297,7 +297,7 @@ private:
                 auto* infection = new MolineauxInfection(params, UnittestUtil::clock().now_or_ts0(),
                                                          UnittestUtil::infection_latent_p(), rng, 0xFFFFFFFF,
                                                          InfectionOrigin::Indigenous);
-                SimTime now = Sim::ts0();
+                SimTime now = UnittestUtil::clock().ts0();
 
                 while (!infection->update(rng, 1.0 /*no external immunity*/, now,
                                           71.43 /*adult body mass in kg to get 5l blood volume*/)) {
