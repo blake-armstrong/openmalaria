@@ -373,12 +373,12 @@ private:
     void cts_cb_input_eir(ostream& stream) {
         const int prev_step = (clock().now() - clock().one_ts()) / clock().one_ts();
         // Note: prevStep may be negative, hence util::mod not mod_nn:
-        stream << '\t' << initialisation_eir[util::mod(prev_step, clock().steps_per_year())];
+        stream << '\t' << initialisation_eir[util::mod(prev_step, static_cast<int>(clock().steps_per_year()))];
     }
     void cts_cb_simulated_eir(ostream& stream) { stream << '\t' << ts_adult_eir; }
     void cts_cb_kappa(ostream& stream) {
         // The latest time-step's kappa:
-        stream << '\t' << lagged_kappa[clock().modulo_steps(clock().now(), lagged_kappa.size())];
+        stream << '\t' << lagged_kappa[clock().modulo_steps(clock().now(), static_cast<int>(lagged_kappa.size()))];
     }
     void cts_cb_num_transmitting_humans(ostream& stream) { stream << '\t' << num_transmitting_humans; }
 

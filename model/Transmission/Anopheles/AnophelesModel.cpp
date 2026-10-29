@@ -295,7 +295,7 @@ void AnophelesModel::init_eir(const vector<double>& init_eir365, vector<double> 
     // Add to the TransmissionModel's EIR, used for the initalization phase.
     // Note: sum stays the same, units changes to per-time-step.
     for (SimTime i = Sim::zero(); i < Sim::one_year(); i = i + Sim::one_day()) {
-        partial_init_eir[mod_nn(clock().in_steps(i), clock().steps_per_year())] += init_eir365[i];
+        partial_init_eir[clock().modulo_year_steps(i)] += init_eir365[i];
     }
 
     if (print_annual_eir)
@@ -817,7 +817,7 @@ void AnophelesModel::change_eir_intervention(const scnXml::NonVector& non_vector
         throw util::xml_scenario_error(
             "entomology.anopheles.seasonality.dailyValues insufficient daily data for a year");
 
-    vector<int> n_days(clock().in_steps(Sim::from_days(daily.size() - 1)) + 1, 0);
+    vector<int> n_days(clock().in_steps(Sim::from_days(static_cast<int>(daily.size()) - 1)) + 1, 0);
 
     intervention_eir.assign(n_days.size(), 0.0);
 

@@ -296,7 +296,7 @@ create_anopheles_model(size_t i, const scnXml::AnophelesParams& anoph, vector<do
                           command_line.option(util::CommandLine::PrintAnnualEir));
 
     for (SimTime i = Sim::zero(); i < Sim::one_year(); i = i + Sim::one_day())
-        initialisation_eir[mod_nn(clock.in_steps(i), clock.steps_per_year())] += init_eir365[i];
+        initialisation_eir[clock.modulo_year_steps(i)] += init_eir365[i];
 
     return anoph_model;
 }

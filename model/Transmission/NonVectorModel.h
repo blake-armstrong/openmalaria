@@ -60,7 +60,7 @@ public:
             // Index 0 of initialisationEIR refers to the EIR affecting the
             // first day(s) of the year. Correspondingly, the first 1 or 5 values
             // of EIRDaily affect this (1- or 5-day) time-step.
-            size_t i = mod_nn(clock.in_steps(mpcday), clock.steps_per_year());
+            size_t i = clock.modulo_year_steps(mpcday);
 
             n_days[i] += 1;
             initialisation_eir[i] += eir_daily;
@@ -97,7 +97,7 @@ public:
         assert(initial_kappa.size() >= clock().steps_per_year());
         assert(mod_nn(initial_kappa.size(), clock().steps_per_year()) == 0);
         for (size_t i = clock().steps_per_year(); i < initial_kappa.size(); ++i) {
-            initial_kappa[mod_nn(i, clock().steps_per_year())] += initial_kappa[i];
+            initial_kappa[i % clock().steps_per_year()] += initial_kappa[i];
         }
         const double factor = static_cast<double>(clock().steps_per_year()) / static_cast<double>(initial_kappa.size());
         initial_kappa.resize(clock().steps_per_year());
@@ -120,9 +120,9 @@ public:
             throw util::xml_scenario_error("change-of-EIR intervention cannot change EIP duration");
 
         const scnXml::NonVector::EIRDailySequence& daily = non_vector_data.getEIRDaily();
-        vector<int> n_days(clock().in_steps(Sim::from_days(daily.size() - 1)) + 1, 0);
+        vector<int> n_days(clock().in_steps(Sim::from_days(static_cast<int>(daily.size()) - 1)) + 1, 0);
         intervention_eir.assign(n_days.size(), 0.0);
-        size_t required_days = static_cast<size_t>((clock().end_date() - clock().start_date()) + 1);
+        const auto required_days = static_cast<size_t>(clock().end_date() - clock().start_date()) + 1;
         if (daily.size() < required_days) {
             cerr << "Days: " << daily.size() << "\nIntervals: " << n_days.size() << "\nRequired: " << required_days
                  << endl;
@@ -159,7 +159,7 @@ public:
     double update_kappa(const vector<Host::Human>& population) override {
         const double current_kappa = TransmissionModel::update_kappa(population);
         if (simulation_mode == ForcedEir) {
-            initial_kappa[clock().modulo_steps(clock().ts1(), initial_kappa.size())] = current_kappa;
+            initial_kappa[clock().modulo_steps(clock().ts1(), static_cast<int>(initial_kappa.size()))] = current_kappa;
         }
         return current_kappa;
     }
@@ -181,20 +181,21 @@ public:
                 // we modulate the initialization based on the human infectiousness time steps ago in the
                 // simulation relative to infectiousness at the same time-of-year, pre-intervention.
                 // nspore gives the sporozoite development delay.
-                size_t t = clock().in_steps(clock().ts1() - n_spore);
+                const SimTime spore_start = clock().ts1() - n_spore;
                 genotype_eir_l[0] *=
-                    lagged_kappa[mod_nn(t, lagged_kappa.size())] / initial_kappa[mod_nn(t, clock().steps_per_year())];
+                    lagged_kappa[clock().modulo_steps(spore_start, static_cast<int>(lagged_kappa.size()))] /
+                    initial_kappa[clock().modulo_year_steps(spore_start)];
             }
         } else {
             throw util::xml_scenario_error("Invalid simulation mode");
         }
 #ifndef NDEBUG
         if (!(std::isfinite)(genotype_eir_l[0])) {
-            size_t t = clock().in_steps(clock().ts1() - n_spore);
+            const SimTime spore_start = clock().ts1() - n_spore;
             ostringstream msg;
             msg << "Error: non-vect eir is: " << genotype_eir_l[0] << "\nlaggedKappa:\t"
-                << lagged_kappa[mod_nn(t, lagged_kappa.size())] << "\ninitialKappa:\t"
-                << initial_kappa[mod_nn(t, clock().steps_per_year())] << endl;
+                << lagged_kappa[clock().modulo_steps(spore_start, static_cast<int>(lagged_kappa.size()))]
+                << "\ninitialKappa:\t" << initial_kappa[clock().modulo_year_steps(spore_start)] << endl;
             throw TRACED_EXCEPTION(msg.str(), util::Error::InitialKappa);
         }
 #endif
