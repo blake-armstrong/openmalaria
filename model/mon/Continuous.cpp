@@ -37,6 +37,7 @@ using util::xml_scenario_error;
          * Search for Continuous::registerCallback to see outputs available. */
 void Continuous::init(const scnXml::Monitoring& monitoring, bool is_checkpoint, const Clock& clock,
                       const util::CommandLineOptions& command_line) {
+    sim_clock = &clock;
     const scnXml::Monitoring::ContinuousOptional& cts_opt = monitoring.getContinuous();
     if (!cts_opt.present()) {
         cts_period = Sim::zero();
@@ -46,7 +47,7 @@ void Continuous::init(const scnXml::Monitoring& monitoring, bool is_checkpoint, 
     try {
         //NOTE: if changing XSD, this should not have a default unit:
         cts_period = unit_parse::read_short_duration(options.getPeriod(), unit_parse::STEPS, clock, command_line);
-        if (cts_period < Sim::one_ts())
+        if (cts_period < clock.one_ts())
             throw util::format_error("must be >= 1 time step");
     } catch (const util::format_error& e) {
         throw xml_scenario_error(string("monitoring/continuous/period: ").append(e.message()));
@@ -134,20 +135,20 @@ void Continuous::update(Population& population) {
     if (cts_period == Sim::zero())
         return; // output disabled
     if (!during_init) {
-        if (Sim::interv_time() < Sim::zero() || mod_nn(Sim::interv_time(), cts_period) != Sim::zero())
+        if (clock().interv_time() < Sim::zero() || mod_nn(clock().interv_time(), cts_period) != Sim::zero())
             return;
     } else {
-        if (mod_nn(Sim::now(), cts_period) != Sim::zero())
+        if (mod_nn(clock().now(), cts_period) != Sim::zero())
             return;
-        cts_stream << Sim::in_steps(Sim::now()) << '\t';
+        cts_stream << clock().in_steps(clock().now()) << '\t';
     }
 
-    if (during_init && Sim::interv_time() < Sim::zero()) {
+    if (during_init && clock().interv_time() < Sim::zero()) {
         cts_stream << "nan";
     } else {
         // NOTE: we could switch this to output dates, but (1) it would be
         // breaking change and (2) it may be harder to use.
-        cts_stream << Sim::in_steps(Sim::interv_time());
+        cts_stream << clock().in_steps(clock().interv_time());
     }
     for (const auto& report : to_report)
         std::get<1>(report)(population, cts_stream);

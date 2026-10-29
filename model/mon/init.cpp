@@ -48,7 +48,7 @@ namespace {
 
 constexpr uint32_t MaxCohortNumber = uint32_t{1} << 21;
 
-void init_age_groups(MonitoringState& state, const scnXml::Monitoring& monitoring) {
+void init_age_groups(MonitoringState& state, const scnXml::Monitoring& monitoring, const Clock& clock) {
     const scnXml::MonAgeGroup::GroupSequence& groups = monitoring.getAgeGroup().getGroup();
     if (!(monitoring.getAgeGroup().getLowerbound() <= 0.0)) {
         throw util::xml_scenario_error("Expected survey age-group lowerbound of 0");
@@ -56,7 +56,7 @@ void init_age_groups(MonitoringState& state, const scnXml::Monitoring& monitorin
 
     state.age_group_upper_bound.resize(groups.size() + 1);
     for (size_t i = 0; i < groups.size(); ++i) {
-        state.age_group_upper_bound[i] = Sim::from_years_d(groups[i].getUpperbound());
+        state.age_group_upper_bound[i] = clock.from_years_d(groups[i].getUpperbound());
     }
     state.age_group_upper_bound[groups.size()] = Sim::future();
 }
@@ -156,7 +156,7 @@ SimTime read_survey_dates(MonitoringState& state, const scnXml::Monitoring& moni
             if (surv.getRepeatStep().present()) {
                 const SimTime step =
                     unit_parse::read_duration(surv.getRepeatStep().get(), unit_parse::NONE, clock, command_line);
-                if (step < Sim::one_ts()) {
+                if (step < clock.one_ts()) {
                     throw util::xml_scenario_error("surveyTime: repeatStep must be >= 1");
                 }
                 const SimTime end =
@@ -194,7 +194,7 @@ SimTime read_survey_dates(MonitoringState& state, const scnXml::Monitoring& moni
         for (const SurveyDate& survey_date : state.survey_dates) {
             if (!survey_date.is_reported())
                 continue;
-            std::cout << (survey_date.num + 1) << '\t' << Sim::in_steps(survey_date.date - Sim::start_date()) << '\t'
+            std::cout << (survey_date.num + 1) << '\t' << clock.in_steps(survey_date.date - clock.start_date()) << '\t'
                       << survey_date.date << std::endl;
         }
     }
@@ -203,7 +203,7 @@ SimTime read_survey_dates(MonitoringState& state, const scnXml::Monitoring& moni
     if (monitoring.getCohorts().present()) {
         state.n_cohorts = static_cast<uint32_t>(1) << monitoring.getCohorts().get().getSubPop().size();
     }
-    init_age_groups(state, monitoring);
+    init_age_groups(state, monitoring, clock);
     return state.survey_dates.back().date;
 }
 

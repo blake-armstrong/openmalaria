@@ -107,6 +107,10 @@ private:
     SimTime cts_period = Sim::zero();
 
     bool during_init = false;
+
+    const Clock* sim_clock = nullptr;
+
+    const Clock& clock() const { return *sim_clock; }
 };
 
 } // namespace mon
