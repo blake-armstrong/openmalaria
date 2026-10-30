@@ -92,7 +92,7 @@ See `PLAN.md` for the session protocol, chunks and gates. Append one log entry p
 | M5 | todo | |
 | M6 | todo | |
 | M7 | split | M7a, M7b |
-| M7a | todo | |
+| M7a | done | 7f0100a2, 20ef0e4b, 888950d3, 8eee2548, 372eb714, f9188e91, (this log entry) |
 | M7b | todo | |
 | M8 | todo | |
 | M9 | todo | |
@@ -2121,3 +2121,33 @@ The user asked for F87 to be fixed after D9e5 reproduced it. The A/B and G-perf 
 - Asked whether to bring oneTBB in now or after the refactor, Claude recommended splitting M7, and the user agreed. M7a, now: the thread-safety gate (`two_sims_parallel`, simulations on N `std::thread`s at once, and the same test under ThreadSanitizer) with no new library, so every chunk from E to J is checked for shared mutable state the interleaved test cannot see (a cache or scratch variable that is written but does not change output). M7b, just before M8: the parallelism library (Decision 6, now asked before M7b) and `om::run_replicates`.
 - Reasons for not doing all of M7 now: the batch API would be built on `scnXml::Scenario` and `CommandLineOptions` (`test/two_sims.cpp`'s `make_simulation`), which E and I replace; until J its only user would be a test driver, while S1's runner already runs replicates as parallel processes; oneTBB is a compiled dependency that every CI, Windows and cibuildwheel build would carry through E–J; independent replicates need no work-stealing scheduler, whereas M8's per-human update nested inside parallel replicates does; and Decision 6 (Apache-2.0 vs GPLv2) is about distribution, so is better answered with H2 and J4 in view.
 - PLAN: M7's row records the split; new rows M7a and M7b; M8 needs M7b; recommended order 12b is M3, M7a and 14c is G1 → G3, then M7b, M8; G-two-sims gains `two_sims_parallel` and the ThreadSanitizer run from M7a; Decision 6 is asked before M7b.
+
+### M7a: thread-safety gate, simulations on threads at once under ThreadSanitizer (done, 2026-10-30)
+- Base: 149c219b (the M7 split). The base worktree `../om-bench-base` was moved to 149c219b and rebuilt.
+- Commits:
+  - 7f0100a2: `OM_SANITIZE` (CMake cache string): with a value, `add_compile_options(-fsanitize=<value> -fno-omit-frame-pointer)` and the link option for everything built, the fetched spdlog and Catch2 included; GCC or Clang only. Empty by default, so no existing build changes.
+  - 20ef0e4b: `openMalaria-two-sims --parallel N`. `load` (command line, `loadScenario`, post-validation checks) is now shared by the three modes; in parallel mode every scenario is loaded on the main thread first (Xerces initialisation is process-wide and not checked here), then N `std::thread`s take the next index from an atomic counter, construct the `Simulation` and run it; exceptions are kept per index and the first is rethrown, as in interleaved mode. `two_sims.py --parallel N`. ctest `two_sims_parallel` (`PROCESSORS 4`): 18 simulations on 4 threads, TriggeredMSAT and VecTest twice each and first, so each pair runs at the same moment, then Molineaux, Empirical, Vivax, VivaxPQ, ESTS, DecisionTree5DayDielmo, EffectiveDrug, PkPdModels, 2ITNs, IRS30, GaussianCopulaGamma, SimpleMPDTest, NoInterv, Cohort (within-host, vivax, PK/PD, event scheduler, decision trees, vector, ITN, IRS, copula, cohort). 5.6 s in Release. With `OM_SANITIZE` set, the three two-sims tests get `--timeout 1200` (the interleaved one took 74 s under ThreadSanitizer, close to the old 120).
+  - 888950d3: `util/gates.sh --tsan` (part of `--all`): configures `build-tsan/` (RelWithDebInfo, `-DOM_SANITIZE=thread`, strict) if it has no cache, builds `openMalaria-two-sims` and `inlined_xsd` there (about 20 s from clean), runs `ctest -L two-sims --output-on-failure` and logs the pass count and the number of race reports.
+  - 8eee2548: `util/plant.py --tsan`: rebuilds `build-tsan/`'s driver with the plant, runs the two-sims tests there, and rebuilds it again after the restore.
+  - 372eb714: `modernize-use-designated-initializers` on the driver's `LoadedRun`. G-style checks only `model/` and `unittest/`, so `util/style.sh format --dry-run` and `tidy` were run on `test/two_sims.cpp` by hand: clean after this commit.
+  - f9188e91: FINDINGS (F99, a note on F93), PLAN (M7a as built), README (the G-two-sims row and the `--tsan` command).
+- Gates:
+  - G-exact / G-unit / G-two-sims: 68/68 on `build-rework/` and `build-debug/` at 8eee2548 (one test more: `two_sims_parallel`); 68/68 on `build-rework/` at 372eb714.
+  - G-two-sims under ThreadSanitizer: 3 of 3, 0 race reports, at 20ef0e4b, 8eee2548 and 372eb714 (about 2 min: `two_sims_parallel` 57 s).
+  - A/B (base 149c219b): 0 of 324 variants differ. G-cli: 0 of 34 differ. G-stat: 53 of 53 (12 disabled).
+  - G-style: no changed C++ under `model/` or `unittest/`; the driver by hand, as above.
+  - G-perf: median per-pair ratio 0.9916 (-0.84%), spreads 3.54% (base) / 2.07%, load 3.57 at the start. No model code changed.
+  - Planted bugs (`util/plant.py --tsan`, each restored and rebuilt in both builds), both in `CommonWithinHost::update`, which Molineaux, Empirical and the PK/PD scenarios run per human per step:
+    - `body_mass` made a function `static` (set, then used, within one call; serial and interleaved runs cannot tell): ctest 1 of 68 fail, only `two_sims_parallel` (its byte compare); under ThreadSanitizer `two_sims_parallel` fails with 3 race reports. `two_sims` and `two_sims_interleaved` pass in both builds.
+    - a write-only `static volatile double` set to `body_mass` on every call (cannot reach output): ctest 0 of 68 fail; under ThreadSanitizer `two_sims_parallel` fails with 4 race reports. Only the sanitizer run sees this kind.
+- Findings: F99 (`unimplemented_exception::message()` returns a string with no NUL, printed by `main` as a C string; reachable through a BSV vaccine with the vivax model; fixing it changes stderr, so it waits for the user). Note on F93: no race report on the paths the 18 scenarios take.
+- Surprises:
+  - ThreadSanitizer found nothing in the model as it stands: D9 left no shared mutable state on these paths, and the PK/PD integration workspaces were already `thread_local`.
+  - A sanitizer slows the two-sims tests about 12 times; the interleaved test came within 46 s of its timeout.
+  - The pre-commit hook stashes unstaged files during a commit; committing while `plant.py` has a file planted would stash and restore the plant underneath it. Nothing was lost here (the plant had finished), but commit only between plants.
+- Follow-ups:
+  - The user: whether to fix F99 now (and with it F93's shared buffer), or with E's error handling.
+  - B6/CI: a ThreadSanitizer job (Linux, `-DOM_SANITIZE=thread`, `ctest -L two-sims`) would run the gate on every push; not added, since each push needs the user's approval.
+  - G-style: `util/style.sh check` could cover `test/*.cpp` too.
+  - M7b (before M8): Decision 6, `om::run_replicates`, and the driver's `--parallel` onto the chosen library.
+- Next: E1 (ask Decision 3 first). Its base is the commit of this entry; move `../om-bench-base` to it.
