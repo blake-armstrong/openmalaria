@@ -32,6 +32,7 @@
 #include "util/ModelOptions.h"
 #include "util/CommandLine.h"
 #include "util/errors.h"
+#include "util/logging.h"
 #include "util/UnitParse.h"
 #include "schema/scenario.h"
 
@@ -66,9 +67,8 @@ ClinicalParams::ClinicalParams(const OM::Parameters& parameters, const util::Mod
             kind = Kind::ImmediateOutcomes;
 
             if (command_line.option(util::CommandLine::DeprecationWarnings)) {
-                cerr << "Deprecation warning: healthSystem: use of ImmediateOutcomes can be replaced by the more "
-                        "flexible DecisionTree5Day (optional)"
-                     << endl; // NOLINT(performance-avoid-endl)
+                logging::warn("Deprecation warning: healthSystem: use of ImmediateOutcomes can be replaced by the more "
+                              "flexible DecisionTree5Day (optional)");
             }
         }
         // else: decision tree 5 day

@@ -26,6 +26,7 @@
 #include "util/errors.h"
 #include "util/ModelOptions.h"
 #include "util/CommandLine.h"
+#include "util/logging.h"
 #include "schema/scenario.h"
 #include <limits>
 
@@ -143,9 +144,8 @@ DiagnosticRegistry::DiagnosticRegistry(const Parameters& parameters, const util:
                                            "specify both detectionLimit and diagnostic");
         }
         if (command_line.option(util::CommandLine::DeprecationWarnings)) {
-            std::cerr << "Deprecation warning: monitoring/surveys: "
-                         "specification of \"diagnostic\" is suggested over \"detectionLimit\""
-                      << std::endl;
+            logging::warn("Deprecation warning: monitoring/surveys: "
+                          "specification of \"diagnostic\" is suggested over \"detectionLimit\"");
         }
 
         // This controls whether the detection limit is specified relative to
@@ -157,10 +157,9 @@ DiagnosticRegistry::DiagnosticRegistry(const Parameters& parameters, const util:
             if (scenario.getAnalysisNo().present()) {
                 const int analysis_no = scenario.getAnalysisNo().get();
                 if ((analysis_no >= 22) && (analysis_no <= 30)) {
-                    cerr << "Warning: these analysis numbers used to mean "
-                            "use Garki density bias. If you do want to use this, "
-                            "specify the option GARKI_DENSITY_BIAS; if not, nothing's wrong."
-                         << endl;
+                    logging::warn("Warning: these analysis numbers used to mean "
+                                  "use Garki density bias. If you do want to use this, "
+                                  "specify the option GARKI_DENSITY_BIAS; if not, nothing's wrong.");
                 }
             }
             densitybias = parameters[Parameter::DensityBiasNonGarki];

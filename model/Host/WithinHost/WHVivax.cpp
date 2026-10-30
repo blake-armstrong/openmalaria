@@ -28,6 +28,7 @@
 #include "mon/Monitoring.h"
 #include "util/random.h"
 #include "util/errors.h"
+#include "util/logging.h"
 #include "util/checkpoint_containers.h"
 #include "util/UnitParse.h"
 #include "util/sampler.h"
@@ -139,9 +140,8 @@ void VivaxParams::set_health_system(const scnXml::LiverStageDrug* elt) {
         hs.p_receive_pq = elt->getPUseUncomplicated().present() ? elt->getPUseUncomplicated().get().getValue() : 0.0;
         if (hs.p_receive_pq > 0.0) {
             if (deprecation_warnings) {
-                cerr << "Deprecation warning: pUseUncomplicated is deprecated; it is "
-                        "suggested to use the liver stage simple treatment option instead."
-                     << endl; // NOLINT(performance-avoid-endl)
+                logging::warn("Deprecation warning: pUseUncomplicated is deprecated; it is "
+                              "suggested to use the liver stage simple treatment option instead.");
             }
         }
         hs.effectiveness_pq = elt->getEffectivenessOnUse().getValue();

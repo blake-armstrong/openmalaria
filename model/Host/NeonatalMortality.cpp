@@ -26,6 +26,7 @@
 #include "Host/WithinHost/Diagnostic.h"
 #include "util/random.h"
 #include "util/CommandLine.h"
+#include "util/logging.h"
 #include "schema/healthSystem.h"
 
 #include <cmath>
@@ -57,10 +58,9 @@ NeonatalMortality::NeonatalMortality(const scnXml::Clinical& clinical,
     } else {
         //NOTE: this is a compatibility option for older scenarios
         if (command_line.option(CommandLine::DeprecationWarnings)) {
-            cerr << "Deprecation warning: specification of the diagnostic "
-                    "used by the Neonatal Mortality model is recommended "
-                    "(model/clinical/neonatalMortality)"
-                 << endl; // NOLINT(performance-avoid-endl)
+            logging::warn("Deprecation warning: specification of the diagnostic "
+                          "used by the Neonatal Mortality model is recommended "
+                          "(model/clinical/neonatalMortality)");
         }
         neonatal_diagnostic = &diagnostics.monitoring_diagnostic();
     }

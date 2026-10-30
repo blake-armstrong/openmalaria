@@ -28,6 +28,7 @@
 #include "util/ModelOptions.h"
 #include "util/random.h"
 #include "util/errors.h"
+#include "util/logging.h"
 
 #include <stdexcept>
 #include <cmath>
@@ -77,7 +78,7 @@ InfectionIncidenceParams::InfectionIncidenceParams(const Parameters& parameters,
         if (model_options.option(util::TransHet) || model_options.option(util::ComorbTransHet) ||
             model_options.option(util::TransTreatHet) || model_options.option(util::TripleHet)) {
             kind = Kind::HeterogeneityWorkaround;
-            cerr << "Warning: will use heterogeneity workaround." << endl;
+            logging::warn("Warning: will use heterogeneity workaround.");
         }
     }
 }
