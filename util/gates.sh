@@ -5,6 +5,7 @@ set -uo pipefail
 ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 RELEASE="${OM_BUILD_DIR:-build-rework}"
 DEBUG="${OM_DEBUG_DIR:-build-debug}"
+TSAN="${OM_TSAN_DIR:-build-tsan}"
 BASE="${OM_BASE_BUILD:-../om-bench-base/build-rework}"
 JOBS="${OM_JOBS:-4}"
 
@@ -24,9 +25,12 @@ which /close-chunk reads.
                       the next argument starting with --)
   --cli               G-cli: util/ab_cli.sh against the base build
   --stat              G-stat: ctest -L statistical
+  --tsan              G-two-sims under ThreadSanitizer: ctest -L two-sims in
+                      $TSAN (configured with -DOM_SANITIZE=thread if missing;
+                      env OM_TSAN_DIR)
   --style BASE        G-style: util/style.sh check BASE
   --perf              G-perf: util/bench.sh -n 7 --compare BASE_BUILD
-  --all BASE          everything: --ab --cli --stat --style BASE --perf
+  --all BASE          everything: --ab --cli --stat --tsan --style BASE --perf
   --base DIR          base build dir (default $BASE; env OM_BASE_BUILD)
   -j N                parallel jobs (default $JOBS; env OM_JOBS)
   -h                  this help
@@ -35,7 +39,7 @@ Exit status: 0 if every gate run passed, 1 otherwise, 2 for a build error.
 EOF
 }
 
-ab=0 ab_groups=() cli=0 stat=0 style_base="" perf=0 release_only=0
+ab=0 ab_groups=() cli=0 stat=0 tsan=0 style_base="" perf=0 release_only=0
 while (($#)); do
     case "$1" in
     --release-only) release_only=1 ;;
@@ -48,9 +52,10 @@ while (($#)); do
         ;;
     --cli) cli=1 ;;
     --stat) stat=1 ;;
+    --tsan) tsan=1 ;;
     --style) style_base="$2"; shift ;;
     --perf) perf=1 ;;
-    --all) ab=1 cli=1 stat=1 perf=1 style_base="$2"; shift ;;
+    --all) ab=1 cli=1 stat=1 tsan=1 perf=1 style_base="$2"; shift ;;
     --base) BASE="$2"; shift ;;
     -j) JOBS="$2"; shift ;;
     -h | --help) usage; exit 0 ;;
@@ -152,6 +157,29 @@ if ((stat)); then
     if grep -qE '\((Failed|Timeout)\)' "$out"; then
         failed=1
         grep -E '^\s+[0-9]+ - .*\((Failed|Timeout)\)' "$out"
+    fi
+fi
+
+if ((tsan)); then
+    out="$SCRATCH/tsan.txt"
+    if [[ ! -f "$TSAN/CMakeCache.txt" ]]; then
+        cmake -S . -B "$TSAN" -G Ninja -DCMAKE_BUILD_TYPE=RelWithDebInfo -DOM_SANITIZE=thread \
+            -DOM_BOXTEST_STRICT=ON >"$out" 2>&1
+    fi
+    if ! cmake --build "$TSAN" -j "$JOBS" --target openMalaria-two-sims inlined_xsd >>"$out" 2>&1; then
+        result "G-two-sims ThreadSanitizer: FAILED (build $TSAN)"
+        failed=1
+        grep -E 'error|FAILED' -A3 "$out" | head -20
+    else
+        (cd "$TSAN" && caffeinate -i ctest -j "$JOBS" -L two-sims --output-on-failure >>"$out" 2>&1)
+        summary=$(grep -E 'tests passed' "$out" | tail -1)
+        races=$(grep -c 'WARNING: ThreadSanitizer' "$out")
+        result "G-two-sims ThreadSanitizer: ${summary:-no summary}, $races race reports"
+        if grep -qE '\((Failed|Timeout)\)' "$out" || [[ -z "$summary" ]]; then
+            failed=1
+            grep -E '^\s+[0-9]+ - .*\((Failed|Timeout)\)' "$out"
+            grep -A12 -m3 'WARNING: ThreadSanitizer' "$out"
+        fi
     fi
 fi
 
