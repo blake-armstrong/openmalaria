@@ -139,13 +139,6 @@ private:
 class unimplemented_exception : public base_exception {
 public:
     explicit unimplemented_exception(const string& msg);
-
-    /** Complete the error message.
-         *
-         * Warning: this function is not very robust. References to the
-         * returned result should not survive beyond a second call to this
-         * function (from any unimplemented_exception object). */
-    virtual const char* message() const;
 };
 
 /** Extension of base_exception which tries to get a stack trace. Also
