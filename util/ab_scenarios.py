@@ -1,4 +1,5 @@
 import argparse
+import gzip
 import os
 import re
 import shutil
@@ -34,7 +35,7 @@ def drop_parameter(text, number):
 
 class Variant:
     def __init__(self, name, scenario, transform=lambda s: s, args=(), omit_resource=None, runs=1,
-                 pass_scenario=True):
+                 pass_scenario=True, before_run=None):
         self.name = name
         self.scenario = scenario
         self.transform = transform
@@ -42,6 +43,25 @@ class Variant:
         self.omit_resource = omit_resource
         self.runs = runs
         self.pass_scenario = pass_scenario
+        self.before_run = before_run
+
+
+def truncate_checkpoint_before_resume(work, index):
+    if index == 1:
+        path = os.path.join(work, "checkpoint0.gz")
+        with open(path, "rb") as f:
+            data = f.read()
+        with open(path, "wb") as f:
+            f.write(data[:len(data) // 2])
+
+
+def extend_checkpoint_before_resume(work, index):
+    if index == 1:
+        path = os.path.join(work, "checkpoint0.gz")
+        with gzip.open(path, "rb") as f:
+            data = f.read()
+        with gzip.open(path, "wb") as f:
+            f.write(data + bytes(9))
 
 
 def vivax_lsd(p_no="0.3", ignore=None, puse=None, eff="0.8"):
@@ -998,6 +1018,10 @@ GROUPS = {
         Variant("version", "scenario5.xml", args=["--version"]),
         Variant("missing_scenario", "scenario5.xml", args=["--scenario", "/nonexistent/scenario.xml"],
                 pass_scenario=False),
+        Variant("truncated_checkpoint", "scenario5.xml", args=["--checkpoint"], runs=2,
+                before_run=truncate_checkpoint_before_resume),
+        Variant("extended_checkpoint", "scenario5.xml", args=["--checkpoint"], runs=2,
+                before_run=extend_checkpoint_before_resume),
         Variant("schema_error", "scenario5.xml", lambda s: rep(s, "<monitoring", '<monitoring bogus="1"')),
     ],
 }
@@ -1039,7 +1063,9 @@ def run(binary, variant, text, work):
     resources = resource_dir(work, variant.omit_resource)
     results = []
     args = ["--resource-path", resources] + (["--scenario", scenario] if variant.pass_scenario else [])
-    for _ in range(variant.runs):
+    for index in range(variant.runs):
+        if variant.before_run:
+            variant.before_run(work, index)
         p = subprocess.run([binary] + args + variant.args, cwd=work, capture_output=True)
         stdout, stderr = (normalise(stream, work, binary) for stream in (p.stdout, p.stderr))
         results.append((p.returncode, stdout, TRACE.sub("SOURCE", stderr)))
