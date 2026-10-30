@@ -25,6 +25,7 @@
 
 #include "Global.h"
 #include "util/errors.h"
+#include "util/logging.h"
 #include "util/checkpoint_containers.h"
 
 #ifndef M_PI
@@ -77,7 +78,7 @@ inline bool approxEqual(const double a, const double b, const double lim_fact = 
     bool aE = (fabs(a - b) <= max(fabs(a), fabs(b)) * lim_fact);
 #ifndef NDEBUG
     if (!aE) {
-        cerr << "not approx equal: " << a << ", " << b << endl;
+        logging::warn("not approx equal: {:g}, {:g}", a, b);
     }
 #endif
     return aE;

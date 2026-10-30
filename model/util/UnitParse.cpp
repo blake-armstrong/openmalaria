@@ -26,6 +26,7 @@
 #include "Clock.h"
 #include "util/CommandLine.h"
 #include "util/UnitParse.h"
+#include "util/logging.h"
 #include "schema/scenario.h"
 #include "mon/Monitoring.h"
 
@@ -59,8 +60,9 @@ SimTime read_short_duration(const std::string& str, DefaultUnit def_unit, const 
             throw util::format_error("unit required but not given (try e.g. 5d or 12t)");
         } else {
             if (command_line.option(util::CommandLine::DeprecationWarnings)) {
-                cerr << "Deprecation warning: duration \"" << str
-                     << "\" specified without unit; it is recommended to do so (e.g. 5d or 1t)" << endl;
+                logging::warn("Deprecation warning: duration \"{}\" specified without unit; it is recommended to do "
+                              "so (e.g. 5d or 1t)",
+                              str);
             }
             if (def_unit == DAYS) {
                 return clock.round_to_ts_from_days(static_cast<double>(v));
@@ -109,8 +111,9 @@ double parse_duration_and_unit(const std::string& str, DefaultUnit& unit,
         else if (unit == NONE /*no default set for this value*/) {
             throw util::format_error("unit required but not given (try e.g. 5d or 12t or 2.3y)");
         } else if (command_line.option(util::CommandLine::DeprecationWarnings)) {
-            cerr << "Deprecation warning: duration \"" << str
-                 << "\" specified without unit; it is recommended to do so (e.g. 5d or 1t or 0.5y)" << endl;
+            logging::warn("Deprecation warning: duration \"{}\" specified without unit; it is recommended to do so "
+                          "(e.g. 5d or 1t or 0.5y)",
+                          str);
         }
     } else {
         throw util::format_error(string("bad format: '").append(str).append("' (try e.g. 1 or 2d or 3s or 4y)"));
@@ -178,16 +181,16 @@ SimTime read_date(const std::string& str, DefaultUnit def_unit, const Clock& clo
     const SimTime date = parse_date(str, clock);
     if (date != Sim::never()) {
         if (date > clock.start_date() + Sim::from_years_i(500)) {
-            cerr << "Warning: date is a long time after start date. Did you forget to set monitoring/startDate?"
-                 << endl;
+            logging::warn("Warning: date is a long time after start date. Did you forget to set monitoring/startDate?");
         } else if (date < clock.start_date()) {
             throw util::format_error("date of event is before the start of monitoring");
         }
         return date;
     } else {
         if (command_line.option(util::CommandLine::DeprecationWarnings)) {
-            cerr << "Deprecation warning: time specified via duration \"" << str
-                 << "\" where a date could be used; recommended to use a date (e.g. 2011-12-20)" << endl;
+            logging::warn("Deprecation warning: time specified via duration \"{}\" where a date could be used; "
+                          "recommended to use a date (e.g. 2011-12-20)",
+                          str);
         }
         return clock.start_date() + read_duration(str, def_unit, clock, command_line);
     }

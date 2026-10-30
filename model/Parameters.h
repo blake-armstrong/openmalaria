@@ -31,6 +31,7 @@
 #include "util/ModelNameProvider.h"
 #include "util/CommandLine.h"
 #include "util/errors.h"
+#include "util/logging.h"
 
 namespace scnXml {
 class Parameters;
@@ -223,8 +224,7 @@ private:
             const bool param_id_is_valid = id_code_to_name_map().count(param_id);
             if (!param_id_is_valid) {
                 if (deprecation_warnings) {
-                    cerr << "Deprecation warning: <parameter> index" << to_string(param_id) << " is no longer used"
-                         << endl;
+                    logging::warn("Deprecation warning: <parameter> index{} is no longer used", param_id);
                 }
 
                 // If we throw here, old scenarios containing the deprecated parameter
@@ -260,7 +260,7 @@ private:
             try {
                 return id_code_to_name_map().at(id);
             } catch (const exception& e) {
-                cerr << "Error: " << e.what() << endl;
+                logging::error("Error: {}", e.what());
                 throw util::traced_exception("Base model attempted to set a value for a parameter with id: " +
                                                  std::to_string(id) + ", which is not currently supported.",
                                              __FILE__, __LINE__);

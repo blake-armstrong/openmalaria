@@ -23,11 +23,11 @@
 #include "util/ModelOptions.h"
 #include "util/CommandLine.h"
 #include "util/errors.h"
+#include "util/logging.h"
 #include "schema/util.h"
 
 #include <array>
 #include <format>
-#include <iostream>
 
 namespace OM::util {
 // Utility: converts option strings to codes and back
@@ -89,7 +89,7 @@ public:
             return code_it->second;
         if (ignore_options.count(s)) {
             if (deprecation_warnings) {
-                cerr << "Deprecation warning: model option " << s << " is no longer used" << endl;
+                logging::warn("Deprecation warning: model option {} is no longer used", s);
             }
             return Ignore;
         }
@@ -168,12 +168,12 @@ ModelOptionFlags::ModelOptionFlags(const scnXml::Model::ModelOptionsOptional& op
     // Print non-default model options:
     if (command_line.option(CommandLine::PrintModelOptions)) {
         const std::bitset<NumOptions> default_opt_set = get_legacy_default_model_options();
-        cout << "Non-default model options:";
+        string line = "Non-default model options:";
         for (int i = 0; i < NumOptions; ++i) {
             if (options[i] != default_opt_set[i])
-                cout << "\t" << code_map.to_string(OptionCodes(i)) << "=" << options[i];
+                line += std::format("\t{}={:d}", code_map.to_string(OptionCodes(i)), options.test(i));
         }
-        cout << endl;
+        logging::info("{}", line);
     }
 
     // Test for incompatible options

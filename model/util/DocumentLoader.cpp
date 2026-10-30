@@ -22,6 +22,7 @@
 
 #include "util/DocumentLoader.h"
 #include "util/errors.h"
+#include "util/logging.h"
 #include <fstream>
 
 namespace OM {
@@ -46,8 +47,7 @@ std::unique_ptr<scnXml::Scenario> loadScenario(std::string lXmlFile) {
     if (scenarioVersion < SCHEMA_VERSION) {
         // Don't bother aborting. Mostly if something really is incompatible
         // loading will not succeed anyway.
-        std::cerr << "Warning: " << lXmlFile << " uses an old schema version (latest is " << SCHEMA_VERSION << ")."
-                  << endl;
+        logging::warn("Warning: {} uses an old schema version (latest is {}).", lXmlFile, SCHEMA_VERSION);
     } else if (scenarioVersion > SCHEMA_VERSION)
         throw util::xml_scenario_error("Error: new schema version unsupported");
 
