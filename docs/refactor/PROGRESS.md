@@ -91,7 +91,9 @@ See `PLAN.md` for the session protocol, chunks and gates. Append one log entry p
 | M4 | done | 1d4cc809, 0cbf0d72, 1856ab43, (this log entry) |
 | M5 | todo | |
 | M6 | todo | |
-| M7 | todo | |
+| M7 | split | M7a, M7b |
+| M7a | todo | |
+| M7b | todo | |
 | M8 | todo | |
 | M9 | todo | |
 
@@ -2114,3 +2116,8 @@ The user asked for F87 to be fixed after D9e5 reproduced it. The A/B and G-perf 
   - E: F98, with F3 and F76; F55's duplicate-drug code error.
   - J: F95's progress callback (from M3a).
 - Next: M7 (ask Decision 6 first). Its base is the commit of this entry; move `../om-bench-base` to it.
+
+### Plan amendment: M7 split (2026-10-30, before M7)
+- Asked whether to bring oneTBB in now or after the refactor, Claude recommended splitting M7, and the user agreed. M7a, now: the thread-safety gate (`two_sims_parallel`, simulations on N `std::thread`s at once, and the same test under ThreadSanitizer) with no new library, so every chunk from E to J is checked for shared mutable state the interleaved test cannot see (a cache or scratch variable that is written but does not change output). M7b, just before M8: the parallelism library (Decision 6, now asked before M7b) and `om::run_replicates`.
+- Reasons for not doing all of M7 now: the batch API would be built on `scnXml::Scenario` and `CommandLineOptions` (`test/two_sims.cpp`'s `make_simulation`), which E and I replace; until J its only user would be a test driver, while S1's runner already runs replicates as parallel processes; oneTBB is a compiled dependency that every CI, Windows and cibuildwheel build would carry through E–J; independent replicates need no work-stealing scheduler, whereas M8's per-human update nested inside parallel replicates does; and Decision 6 (Apache-2.0 vs GPLv2) is about distribution, so is better answered with H2 and J4 in view.
+- PLAN: M7's row records the split; new rows M7a and M7b; M8 needs M7b; recommended order 12b is M3, M7a and 14c is G1 → G3, then M7b, M8; G-two-sims gains `two_sims_parallel` and the ThreadSanitizer run from M7a; Decision 6 is asked before M7b.
