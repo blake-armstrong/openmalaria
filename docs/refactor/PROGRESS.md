@@ -2150,4 +2150,19 @@ The user asked for F87 to be fixed after D9e5 reproduced it. The A/B and G-perf 
   - B6/CI: a ThreadSanitizer job (Linux, `-DOM_SANITIZE=thread`, `ctest -L two-sims`) would run the gate on every push; not added, since each push needs the user's approval.
   - G-style: `util/style.sh check` could cover `test/*.cpp` too.
   - M7b (before M8): Decision 6, `om::run_replicates`, and the driver's `--parallel` onto the chosen library.
+- Next: E1 (ask Decision 3 first). Its base is the commit of this entry; move `../om-bench-base` to it. (Now the F99 follow-up's entry, below.)
+
+### M7a follow-up: F99 fixed, with tests (2026-10-30, after M7a)
+The user asked for F99 to be fixed after M7a found it. The A/B and G-cli base is still 149c219b (`../om-bench-base`); M7a differs from it in no variant, so the A/B shows the fix's change and nothing else.
+- Commits:
+  - 5a805ad7: **fix.** `unimplemented_exception`'s constructor passes the prefix and the message to `base_exception`, so `what()` and the inherited `message()` return the whole, terminated string; the `message()` override and the process-wide `msg_buf` are removed (also F93's first item). Catch2 `unittest/ErrorsTests.cpp`, `[errors]`: a longer then a shorter message each read back whole (`[F99]`), and a message pointer still right after another exception's `message()` (`[F93]`).
+  - 5bcc3891: FINDINGS (F99 to § Closed, a note on F93).
+- How outputs change: not at all on this platform. The base build's stderr on `interventions/vivax_bsv`, the one variant that raises the exception, is the full message and a newline (242 bytes, three runs): the byte after the buffer happened to be zero. A/B 0 of 324 differ, G-cli 0 of 34.
+- Checks of correctness: `util/plant.py --patch` with the reverse diff of `errors.{h,cpp}` (the old code under the new tests): ctest 1 of 68 fail, `unittest-catch2` only.
+- Gates (at 5a805ad7):
+  - G-exact / G-unit / G-two-sims: 68/68 on `build-rework/` and `build-debug/`.
+  - G-two-sims under ThreadSanitizer: 3 of 3, 0 race reports.
+  - A/B (base 149c219b): 0 of 324 differ. G-cli: 0 of 34. G-stat: 53 of 53 (12 disabled).
+  - G-style (since 21ac4dbf): clean; `unittest/ErrorsTests.cpp`, new and untracked when the check ran, by hand: clean after naming the constant `Prefix` (`constexpr std::string_view`, as `GlobalConstantCase` asks, which also avoids a throwing static initialiser).
+  - G-perf: the first run's base spread was 999.91% (one base run stalled; load 5.12), ratio 0.9997. Rerun: median per-pair ratio 0.9868 (-1.32%), spreads 3.26% / 1.79%, load 9.25 at the start. Only the throw path changed.
 - Next: E1 (ask Decision 3 first). Its base is the commit of this entry; move `../om-bench-base` to it.
