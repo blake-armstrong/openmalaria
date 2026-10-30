@@ -22,10 +22,11 @@ which /close-chunk reads.
   --ab [GROUP...]     A/B: util/ab_scenarios.py against the base build's
                       openMalaria (all groups if none given; options end at
                       the next argument starting with --)
+  --cli               G-cli: util/ab_cli.sh against the base build
   --stat              G-stat: ctest -L statistical
   --style BASE        G-style: util/style.sh check BASE
   --perf              G-perf: util/bench.sh -n 7 --compare BASE_BUILD
-  --all BASE          everything: --ab --stat --style BASE --perf
+  --all BASE          everything: --ab --cli --stat --style BASE --perf
   --base DIR          base build dir (default $BASE; env OM_BASE_BUILD)
   -j N                parallel jobs (default $JOBS; env OM_JOBS)
   -h                  this help
@@ -34,7 +35,7 @@ Exit status: 0 if every gate run passed, 1 otherwise, 2 for a build error.
 EOF
 }
 
-ab=0 ab_groups=() stat=0 style_base="" perf=0 release_only=0
+ab=0 ab_groups=() cli=0 stat=0 style_base="" perf=0 release_only=0
 while (($#)); do
     case "$1" in
     --release-only) release_only=1 ;;
@@ -45,10 +46,11 @@ while (($#)); do
             shift
         done
         ;;
+    --cli) cli=1 ;;
     --stat) stat=1 ;;
     --style) style_base="$2"; shift ;;
     --perf) perf=1 ;;
-    --all) ab=1 stat=1 perf=1 style_base="$2"; shift ;;
+    --all) ab=1 cli=1 stat=1 perf=1 style_base="$2"; shift ;;
     --base) BASE="$2"; shift ;;
     -j) JOBS="$2"; shift ;;
     -h | --help) usage; exit 0 ;;
@@ -113,6 +115,26 @@ if ((ab)); then
         summary=$(grep -E 'variants differ' "$out" | tail -1)
         [[ -n "$summary" ]] || summary="did not finish (exit $status)"
         result "A/B (base $base_head${ab_groups:+, ${ab_groups[*]}}): $summary"
+        if ((status)); then
+            failed=1
+            grep -E '^DIFF' "$out" | cut -c1-160
+            [[ "$summary" == *differ* ]] || tail -20 "$out"
+        fi
+    fi
+fi
+
+if ((cli)); then
+    out="$SCRATCH/cli.txt"
+    if [[ ! -x "$BASE/openMalaria" ]]; then
+        result "G-cli: FAILED (no $BASE/openMalaria)"
+        failed=1
+    else
+        base_head=$(git -C "$BASE/.." rev-parse --short HEAD 2>/dev/null || echo '?')
+        caffeinate -i util/ab_cli.sh "$BASE" "$RELEASE" >"$out" 2>&1
+        status=$?
+        summary=$(grep -E 'variants differ' "$out" | tail -1)
+        [[ -n "$summary" ]] || summary="did not finish (exit $status)"
+        result "G-cli (base $base_head): $summary"
         if ((status)); then
             failed=1
             grep -E '^DIFF' "$out" | cut -c1-160

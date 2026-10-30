@@ -33,13 +33,15 @@ def drop_parameter(text, number):
 
 
 class Variant:
-    def __init__(self, name, scenario, transform=lambda s: s, args=(), omit_resource=None, runs=1):
+    def __init__(self, name, scenario, transform=lambda s: s, args=(), omit_resource=None, runs=1,
+                 pass_scenario=True):
         self.name = name
         self.scenario = scenario
         self.transform = transform
         self.args = list(args)
         self.omit_resource = omit_resource
         self.runs = runs
+        self.pass_scenario = pass_scenario
 
 
 def vivax_lsd(p_no="0.3", ignore=None, puse=None, eff="0.8"):
@@ -965,7 +967,42 @@ GROUPS = {
         Variant("decay_nodeprec", ITNS, args=["--no-deprecation-warnings"]),
         Variant("decay_checkpoint", ITNS, args=["--checkpoint"], runs=2),
     ],
+    "cli": [
+        Variant(f"{label}_{flags}", scenario, args=args, runs=2)
+        for label, scenario in (("5", "scenario5.xml"), ("vec", "scenarioVecTest.xml"))
+        for flags, args in (("default", []), ("verbose_progress", ["--verbose", "--progress"]),
+                            ("checkpoint", ["--checkpoint", "--verbose", "--progress"]),
+                            ("checkpoint_stop", ["--checkpoint-stop", "--verbose", "--progress"]))
+    ] + [
+        Variant("short_verbose", "scenario5.xml", args=["-V"]),
+        Variant("checkpoint_file", "scenario5.xml", args=["--checkpoint-file", "checkpoint_named"], runs=2),
+        Variant("short_checkpoint", "scenario5.xml", args=["-c"], runs=2),
+        Variant("print_model", "scenario5.xml", args=["--print-model"]),
+        Variant("short_print_model", "scenario5.xml", args=["-m"]),
+        Variant("print_eir", "scenarioVecTest.xml", args=["--print-EIR"]),
+        Variant("print_interventions", "scenario5.xml", args=["--print-interventions"]),
+        Variant("print_survey_times", "scenario5.xml", args=["--print-survey-times"]),
+        Variant("print_genotypes", "scenarioGenotypes.xml", args=["--print-genotypes"]),
+        Variant("validate_only", "scenario5.xml", args=["--validate-only"]),
+        Variant("no_deprecation_warnings", "scenario5.xml", args=["--no-deprecation-warnings"]),
+        Variant("debug_vector_fitting", "scenarioVecTest.xml", args=["--debug-vector-fitting"]),
+        Variant("output_format_bin", "scenario5.xml", args=["--output-format", "bin"]),
+        Variant("compress_output", "scenario5.xml", args=["-z"]),
+        Variant("output_name", "scenario5.xml", args=["--output", "output_named", "--ctsout", "ctsout_named.txt"]),
+        Variant("name", "scenario5.xml", args=["--name", "5"], pass_scenario=False),
+        Variant("bad_long_flag", "scenario5.xml", args=["--no-such-option"]),
+        Variant("bad_short_flag", "scenario5.xml", args=["-Q"]),
+        Variant("unexpected_parameter", "scenario5.xml", args=["stray"]),
+        Variant("missing_argument", "scenario5.xml", args=["--output"]),
+        Variant("help", "scenario5.xml", args=["--help"]),
+        Variant("version", "scenario5.xml", args=["--version"]),
+        Variant("missing_scenario", "scenario5.xml", args=["--scenario", "/nonexistent/scenario.xml"],
+                pass_scenario=False),
+        Variant("schema_error", "scenario5.xml", lambda s: rep(s, "<monitoring", '<monitoring bogus="1"')),
+    ],
 }
+
+DEFAULT_GROUPS = sorted(g for g in GROUPS if g != "cli")
 
 
 TRACE = re.compile(r"(?<=Call stack, starting from )\S+:\d+(?=:)")
@@ -987,6 +1024,10 @@ def resource_dir(work, omit):
     return d
 
 
+def normalise(stream, work, binary):
+    return stream.decode("utf-8", "surrogateescape").replace(binary, "OPENMALARIA").replace(work, "WORK")
+
+
 def run(binary, variant, text, work):
     os.makedirs(work)
     scenario = os.path.join(work, "scenario.xml")
@@ -997,10 +1038,11 @@ def run(binary, variant, text, work):
     os.symlink(built if os.path.isfile(built) else os.path.join(SCHEMA, xsd), os.path.join(work, xsd))
     resources = resource_dir(work, variant.omit_resource)
     results = []
+    args = ["--resource-path", resources] + (["--scenario", scenario] if variant.pass_scenario else [])
     for _ in range(variant.runs):
-        p = subprocess.run([binary, "--resource-path", resources, "--scenario", scenario] + variant.args,
-                           cwd=work, capture_output=True, text=True)
-        results.append((p.returncode, p.stdout.replace(work, "WORK"), TRACE.sub("SOURCE", p.stderr.replace(work, "WORK"))))
+        p = subprocess.run([binary] + args + variant.args, cwd=work, capture_output=True)
+        stdout, stderr = (normalise(stream, work, binary) for stream in (p.stdout, p.stderr))
+        results.append((p.returncode, stdout, TRACE.sub("SOURCE", stderr)))
     files = {}
     for f in sorted(os.listdir(work)):
         if f.startswith(("output", "ctsout", "checkpoint")) or f.endswith(".csv"):
@@ -1017,8 +1059,9 @@ def main():
                     "traced exception reports in stderr are not compared.")
     parser.add_argument("base", help="base openMalaria binary")
     parser.add_argument("candidate", help="candidate openMalaria binary")
-    parser.add_argument("groups", nargs="*", default=sorted(GROUPS), help=f"variant groups (default: all of "
-                                                                          f"{', '.join(sorted(GROUPS))})")
+    parser.add_argument("groups", nargs="*", default=DEFAULT_GROUPS,
+                        help=f"variant groups (default: {', '.join(DEFAULT_GROUPS)}; the cli group is G-cli, run "
+                             f"by util/ab_cli.sh)")
     parser.add_argument("--keep", metavar="DIR", help="run in DIR and keep it, instead of a temporary directory")
     opts = parser.parse_args()
     for g in opts.groups:
