@@ -86,7 +86,7 @@ int main(int argc, char* argv[]) { // NOLINT(bugprone-exception-escape)
             // this is not an error, but exiting due to command line
             logging::warn("{}; exiting...", e.what());
         } else {
-            std::cerr << "Command-line error: " << e.what();
+            logging::error("Command-line error: {}", e.what());
             exit_status = e.getCode();
         }
     } catch (const ::xsd::cxx::tree::exception<char>& e) {
@@ -129,10 +129,6 @@ int main(int argc, char* argv[]) { // NOLINT(bugprone-exception-escape)
         logging::error("Unknown error");
         exit_status = EXIT_FAILURE;
     }
-
-    // If we get to here, we already know an error occurred.
-    if (errno != 0)
-        std::perror("OpenMalaria");
 
     return exit_status;
 }
