@@ -69,7 +69,10 @@ def recommended_order(plan, rows):
                 i += 3
             else:
                 if tokens[i] != "→":
-                    order.append(tokens[i])
+                    tok = tokens[i]
+                    order.append(tok)
+                    order += [c for c in ids if len(c) > len(tok) and c.startswith(tok)
+                              and c[len(tok)].islower()]
                 i += 1
     seen = set()
     return [c for c in order if not (c in seen or seen.add(c))]
