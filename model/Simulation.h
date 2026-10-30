@@ -45,8 +45,10 @@
 
 #include "schema/scenario.h"
 
+#include <functional>
 #include <memory>
 #include <string>
+#include <utility>
 
 namespace OM {
 
@@ -69,6 +71,7 @@ public:
     void run_phase(const std::string& phase, SimTime end);
     void run_until(SimTime end);
     void step();
+    void set_step_hook(std::function<void()> hook) { step_hook = std::move(hook); }
 
     const scnXml::Scenario& scenario() const { return *scenario_xml; }
     Population& population() { return *population_model; }
@@ -82,6 +85,7 @@ private:
     void finish();
 
     util::CommandLineOptions command_line;
+    std::function<void()> step_hook;
     mon::MonitoringState monitoring;
     mon::Continuous continuous;
     Clock clock;

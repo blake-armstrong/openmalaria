@@ -262,8 +262,11 @@ void Simulation::run_phase(const std::string& phase, SimTime end) {
 }
 
 void Simulation::run_until(SimTime end) {
-    while (clock.now() < end)
+    while (clock.now() < end) {
         step();
+        if (step_hook)
+            step_hook();
+    }
 }
 
 void Simulation::step() {
