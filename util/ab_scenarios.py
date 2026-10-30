@@ -60,8 +60,8 @@ def extend_checkpoint_before_resume(work, index):
         path = os.path.join(work, "checkpoint0.gz")
         with gzip.open(path, "rb") as f:
             data = f.read()
-        with gzip.open(path, "wb") as f:
-            f.write(data + bytes(9))
+        with open(path, "wb") as f:
+            f.write(gzip.compress(data + bytes(9), mtime=0))
 
 
 def vivax_lsd(p_no="0.3", ignore=None, puse=None, eff="0.8"):
