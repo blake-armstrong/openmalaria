@@ -29,6 +29,7 @@
 #include "util/ModelNameProvider.h"
 #include "util/StreamValidator.h"
 #include "util/errors.h"
+#include "util/logging.h"
 #include "util/random.h"
 
 #include "mon/Continuous.h"
@@ -36,7 +37,7 @@
 #include "mon/init.h"
 
 #include <cerrno>
-#include <cstdio>
+#include <cstring>
 #include <fstream>
 #include <iostream>
 #include <string>
@@ -56,10 +57,7 @@ void print_progress(int last_percent, SimTime now, SimTime est_end_time) {
 
 void print_errno(SimTime now) {
     if (errno != 0) {
-        const int error = errno;
-        const std::string context = "t = " + std::to_string(static_cast<int>(now)) + " Please report! Error: ";
-        errno = error;
-        std::perror(context.c_str());
+        logging::error("t = {} Please report! Error: : {}", static_cast<int>(now), std::strerror(errno));
         errno = 0;
     }
 }
@@ -253,12 +251,12 @@ void Simulation::finish() {
 
 void Simulation::run_phase(const std::string& phase, SimTime end) {
     if (command_line.option(util::CommandLine::Verbose))
-        cout << "Starting " << phase << "..." << endl; // NOLINT(performance-avoid-endl)
+        logging::info("Starting {}...", phase);
 
     run_until(end);
 
     if (command_line.option(util::CommandLine::Verbose))
-        cout << "Finishing " << phase << "..." << endl; // NOLINT(performance-avoid-endl)
+        logging::info("Finishing {}...", phase);
 }
 
 void Simulation::run_until(SimTime end) {
@@ -274,9 +272,8 @@ void Simulation::step() {
     Transmission::TransmissionModel& transmission = *transmission_model;
 
     if (command_line.option(util::CommandLine::Verbose) && clock.interv_date() > 0)
-        cout << "Time step: " << clock.now() / clock.one_ts() << ", internal days: " << clock.now() << " | "
-             << est_end_time << ", Intervention Date: " << clock.interv_date()
-             << endl; // NOLINT(performance-avoid-endl)
+        logging::info("Time step: {}, internal days: {} | {}, Intervention Date: {}", clock.now() / clock.one_ts(),
+                      clock.now(), est_end_time, clock.interv_date());
 
     // Monitoring. clock.now() gives time of end of last step,
     // and is when reporting happens in our time-series.

@@ -26,16 +26,31 @@
 #include "util/CommandLine.h"
 #include "util/DocumentLoader.h"
 #include "util/XMLChecker.h"
+#include "util/logging.h"
 
 #include "Simulation.h"
 
 #include "schema/scenario.h"
 
 #include <cerrno>
+#include <sstream>
+#include <string>
 
 using namespace OM;
 
 namespace {
+
+template <typename Exception> std::string streamed(const Exception& e) {
+    std::ostringstream stream;
+    stream << e;
+    return stream.str();
+}
+
+std::string without_final_newline(std::string text) {
+    if (text.ends_with('\n'))
+        text.pop_back();
+    return text;
+}
 
 CheckpointOptions checkpoint_options(const util::CommandLineOptions& command_line) {
     CheckpointOptions options;
@@ -50,7 +65,7 @@ CheckpointOptions checkpoint_options(const util::CommandLineOptions& command_lin
 }
 
 /// main() — loads scenario XML and runs simulation
-int main(int argc, char* argv[]) {
+int main(int argc, char* argv[]) { // NOLINT(bugprone-exception-escape)
     int exit_status = EXIT_SUCCESS;
     string scenario_file;
 
@@ -69,7 +84,7 @@ int main(int argc, char* argv[]) {
     } catch (const OM::util::cmd_exception& e) {
         if (e.getCode() == 0) {
             // this is not an error, but exiting due to command line
-            std::cerr << e.what() << "; exiting..." << endl;
+            logging::warn("{}; exiting...", e.what());
         } else {
             std::cerr << "Command-line error: " << e.what();
             exit_status = e.getCode();
@@ -79,41 +94,39 @@ int main(int argc, char* argv[]) {
             2) // Errno value 2 corresponds to "No such file or directory" i.e. this is not a mismatch between scenario contents and schema rules.
         {
             // We don't print the content of the xsdcxx exception since the error messages are not relevant to the user in this case.
-            std::cerr << "Parsing scenario file failed.\n\tLikely the XSD schema file is not present at an expected "
-                         "location/with expected filename."
-                      << std::endl;
+            logging::error("Parsing scenario file failed.\n\tLikely the XSD schema file is not present at an expected "
+                           "location/with expected filename.");
         } else {
             // e.what() returns a concise error message e.g. "instance document parsing failed".
             // Whereas inserting e into a stream inserts the (possibly long and repetitive) list of error messages arising from the parsing attempt.
-            std::cerr << "XSD error: " << e.what() << '\n' << e << endl;
+            logging::error("XSD error: {}\n{}", e.what(), streamed(e));
 
             // We print this *after* the above since users are more likely to take note of the tail of stderr/stdout output than the head.
-            std::cerr << "Parsing scenario file failed.\n\tLikely the XSD schema is named/located correctly but the "
-                         "scenario does not conform to the schema."
-                      << std::endl;
+            logging::error("Parsing scenario file failed.\n\tLikely the XSD schema is named/located correctly but the "
+                           "scenario does not conform to the schema.");
         }
         exit_status = OM::util::Error::XSD;
     } catch (const OM::util::checkpoint_error& e) {
-        std::cerr << "Checkpoint error: " << e.what() << endl;
-        std::cerr << e << flush;
+        logging::error("Checkpoint error: {}", e.what());
+        logging::error("{}", without_final_newline(streamed(e)));
         exit_status = e.getCode();
     } catch (const OM::util::traced_exception& e) {
-        std::cerr << "Code error: " << e.what() << endl;
-        std::cerr << e << flush;
-        std::cerr << "This is likely an error in the C++ code. Please report!" << endl;
+        logging::error("Code error: {}", e.what());
+        logging::error("{}", without_final_newline(streamed(e)));
+        logging::error("This is likely an error in the C++ code. Please report!");
         exit_status = e.getCode();
     } catch (const OM::util::xml_scenario_error& e) {
-        std::cerr << "Error: " << e.what() << endl;
-        std::cerr << "In: " << scenario_file << '\n';
+        logging::error("Error: {}", e.what());
+        logging::error("In: {}", scenario_file);
         exit_status = e.getCode();
     } catch (const OM::util::base_exception& e) {
-        std::cerr << "Error: " << e.message() << endl;
+        logging::error("Error: {}", e.message());
         exit_status = e.getCode();
     } catch (const exception& e) {
-        std::cerr << "Error: " << e.what() << endl;
+        logging::error("Error: {}", e.what());
         exit_status = EXIT_FAILURE;
     } catch (...) {
-        std::cerr << "Unknown error" << endl;
+        logging::error("Unknown error");
         exit_status = EXIT_FAILURE;
     }
 

@@ -33,6 +33,7 @@
 #include "Clinical/ClinicalModel.h"
 
 #include "checkpoint.h"
+#include "util/logging.h"
 
 namespace OM {
 
@@ -195,7 +196,7 @@ void read_checkpoint(const string& checkpoint_file_name, const util::CommandLine
                continuous, monitoring, end_time, est_end_time, population, transmission, intervention_manager);
     in.close();
 
-    cerr << clock.in_steps(clock.now()) << "t loaded checkpoint\n";
+    logging::warn("{}t loaded checkpoint", clock.in_steps(clock.now()));
 }
 
 }
