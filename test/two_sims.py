@@ -4,8 +4,10 @@ and ctsout.txt byte-identical to test/expected/, i.e. to a run of its own.
 
 The driver (openMalaria-two-sims) runs one Simulation per group of command-line arguments:
 by default in order, each constructed after the previous one is destroyed; with --interleave
-all alive together, taking turns one time step at a time. The run happens in a fresh
-temporary directory, which is removed afterwards unless the check fails or --keep is given.
+all alive together, taking turns one time step at a time; with --parallel N on N threads at
+once (the scenarios are parsed first, one at a time, then each thread constructs and runs the
+next simulation not yet taken). The run happens in a fresh temporary directory, which is
+removed afterwards unless the check fails or --keep is given.
 """
 import argparse
 import filecmp
@@ -53,12 +55,19 @@ def main():
     parser.add_argument("driver", help="the openMalaria-two-sims binary")
     parser.add_argument("scenarios", nargs="+", help="scenario names, as in test/scenario<NAME>.xml, run in order")
     parser.add_argument("--interleave", action="store_true", help="interleave the simulations' time steps")
+    parser.add_argument("--parallel", type=int, metavar="N", help="run the simulations on N threads at once")
     parser.add_argument("--keep", action="store_true", help="keep the working directory")
     parser.add_argument("--timeout", type=float, default=120, help="seconds before the driver is killed (default 120)")
     opts = parser.parse_args()
+    if opts.interleave and opts.parallel:
+        parser.error("--interleave and --parallel exclude each other")
 
     work = tempfile.mkdtemp(prefix="two_sims-")
-    cmd = [os.path.abspath(opts.driver)] + (["--interleave"] if opts.interleave else [])
+    cmd = [os.path.abspath(opts.driver)]
+    if opts.interleave:
+        cmd.append("--interleave")
+    elif opts.parallel:
+        cmd += ["--parallel", str(opts.parallel)]
     for index, name in enumerate(opts.scenarios):
         scenario = os.path.join(TEST, f"scenario{name}.xml")
         link_schema(opts.driver, scenario, work)
@@ -79,7 +88,7 @@ def main():
         print(f"working directory kept: {work}")
     else:
         shutil.rmtree(work)
-    mode = "interleaved" if opts.interleave else "one after another"
+    mode = "interleaved" if opts.interleave else f"on {opts.parallel} threads" if opts.parallel else "one after another"
     print(f"{len(opts.scenarios)} simulations in one process, {mode}: {'FAIL' if failures else 'pass'}")
     return 1 if failures else 0
 

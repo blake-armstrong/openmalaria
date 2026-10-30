@@ -156,9 +156,19 @@ target_link_libraries (openMalaria-two-sims
   ${OM_STD_LIBS}
 )
 set_target_properties (openMalaria-two-sims PROPERTIES RUNTIME_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR})
-add_test (NAME two_sims COMMAND ${PYTHON_EXECUTABLE} ${CMAKE_CURRENT_SOURCE_DIR}/two_sims.py
+if (OM_SANITIZE)
+  set (OM_TWO_SIMS_TIMEOUT 1200)
+else ()
+  set (OM_TWO_SIMS_TIMEOUT 120)
+endif ()
+add_test (NAME two_sims COMMAND ${PYTHON_EXECUTABLE} ${CMAKE_CURRENT_SOURCE_DIR}/two_sims.py --timeout ${OM_TWO_SIMS_TIMEOUT}
     $<TARGET_FILE:openMalaria-two-sims> NoInterv 1 TriggeredMSAT TriggeredMSAT 9 1 SimpleMPDTest)
 set_tests_properties (two_sims PROPERTIES LABELS two-sims)
-add_test (NAME two_sims_interleaved COMMAND ${PYTHON_EXECUTABLE} ${CMAKE_CURRENT_SOURCE_DIR}/two_sims.py --interleave
+add_test (NAME two_sims_interleaved COMMAND ${PYTHON_EXECUTABLE} ${CMAKE_CURRENT_SOURCE_DIR}/two_sims.py --interleave --timeout ${OM_TWO_SIMS_TIMEOUT}
     $<TARGET_FILE:openMalaria-two-sims> NoInterv Molineaux TriggeredMSAT TriggeredMSAT Vivax 9 SimpleMPDTest)
 set_tests_properties (two_sims_interleaved PROPERTIES LABELS two-sims)
+add_test (NAME two_sims_parallel COMMAND ${PYTHON_EXECUTABLE} ${CMAKE_CURRENT_SOURCE_DIR}/two_sims.py --parallel 4 --timeout ${OM_TWO_SIMS_TIMEOUT}
+    $<TARGET_FILE:openMalaria-two-sims>
+    TriggeredMSAT TriggeredMSAT VecTest VecTest Molineaux Empirical Vivax VivaxPQ ESTS DecisionTree5DayDielmo
+    EffectiveDrug PkPdModels 2ITNs IRS30 GaussianCopulaGamma SimpleMPDTest NoInterv Cohort)
+set_tests_properties (two_sims_parallel PROPERTIES LABELS two-sims PROCESSORS 4)

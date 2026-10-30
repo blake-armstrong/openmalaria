@@ -28,6 +28,8 @@
 
 #include "schema/scenario.h"
 
+#include <algorithm>
+#include <atomic>
 #include <condition_variable>
 #include <cstddef>
 #include <cstdlib>
@@ -36,6 +38,7 @@
 #include <memory>
 #include <mutex>
 #include <span>
+#include <string>
 #include <string_view>
 #include <thread>
 #include <utility>
@@ -54,11 +57,29 @@ std::vector<std::vector<char*>> split_runs(std::span<char*> args) {
     return runs;
 }
 
-std::unique_ptr<OM::Simulation> make_simulation(const std::vector<char*>& args) {
+struct LoadedRun {
+    OM::util::CommandLineOptions command_line;
+    std::unique_ptr<scnXml::Scenario> scenario;
+};
+
+LoadedRun load(const std::vector<char*>& args) {
     OM::util::CommandLineOptions command_line = OM::util::CommandLine::parse(args);
     std::unique_ptr<scnXml::Scenario> scenario = OM::util::loadScenario(command_line.scenario_path());
     OM::util::XMLChecker().PerformPostValidationChecks(*scenario);
-    return std::make_unique<OM::Simulation>(std::move(scenario), std::move(command_line));
+    return {std::move(command_line), std::move(scenario)};
+}
+
+std::unique_ptr<OM::Simulation> make_simulation(LoadedRun run) {
+    return std::make_unique<OM::Simulation>(std::move(run.scenario), std::move(run.command_line));
+}
+
+std::unique_ptr<OM::Simulation> make_simulation(const std::vector<char*>& args) { return make_simulation(load(args)); }
+
+void rethrow_first(const std::vector<std::exception_ptr>& errors) {
+    for (const std::exception_ptr& error : errors) {
+        if (error)
+            std::rethrow_exception(error);
+    }
 }
 
 void run_one(const std::vector<char*>& args) { make_simulation(args)->run(OM::CheckpointOptions{}); }
@@ -122,10 +143,33 @@ void run_interleaved(const std::vector<std::vector<char*>>& runs) {
     }
     for (std::thread& thread : threads)
         thread.join();
-    for (const std::exception_ptr& error : errors) {
-        if (error)
-            std::rethrow_exception(error);
+    rethrow_first(errors);
+}
+
+void run_parallel(const std::vector<std::vector<char*>>& runs, size_t thread_count) {
+    std::vector<LoadedRun> loaded;
+    loaded.reserve(runs.size());
+    for (const std::vector<char*>& run_args : runs)
+        loaded.push_back(load(run_args));
+
+    std::atomic<size_t> next = 0;
+    std::vector<std::exception_ptr> errors(loaded.size());
+    std::vector<std::thread> threads;
+    threads.reserve(thread_count);
+    for (size_t thread = 0; thread < std::min(thread_count, loaded.size()); ++thread) {
+        threads.emplace_back([&] {
+            for (size_t index = next++; index < loaded.size(); index = next++) {
+                try {
+                    make_simulation(std::move(loaded[index]))->run(OM::CheckpointOptions{});
+                } catch (...) {
+                    errors[index] = std::current_exception();
+                }
+            }
+        });
     }
+    for (std::thread& thread : threads)
+        thread.join();
+    rethrow_first(errors);
 }
 
 }
@@ -134,14 +178,21 @@ int main(int argc, char* argv[]) {
     try {
         OM::util::set_gsl_handler();
         std::span<char*> args{argv, static_cast<size_t>(argc)};
-        const bool interleave = args.size() > 1 && std::string_view(args[1]) == "--interleave";
-        if (interleave) {
+        const std::string_view mode = args.size() > 1 ? args[1] : "";
+        size_t thread_count = 0;
+        if (mode == "--interleave") {
             args[1] = args[0];
             args = args.subspan(1);
+        } else if (mode == "--parallel" && args.size() > 2) {
+            thread_count = std::stoul(args[2]);
+            args[2] = args[0];
+            args = args.subspan(2);
         }
         const std::vector<std::vector<char*>> runs = split_runs(args);
-        if (interleave)
+        if (mode == "--interleave")
             run_interleaved(runs);
+        else if (thread_count > 0)
+            run_parallel(runs, thread_count);
         else {
             for (const std::vector<char*>& run_args : runs)
                 run_one(run_args);
