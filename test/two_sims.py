@@ -1,9 +1,10 @@
 #!/usr/bin/env python3
-"""G-two-sims: run several scenarios one after another in one process and check that each
-gives output.txt and ctsout.txt byte-identical to test/expected/, i.e. to a run of its own.
+"""G-two-sims: run several scenarios in one process and check that each gives output.txt
+and ctsout.txt byte-identical to test/expected/, i.e. to a run of its own.
 
-The driver (openMalaria-two-sims) runs one Simulation per group of command-line arguments,
-in order, each constructed after the previous one is destroyed. The run happens in a fresh
+The driver (openMalaria-two-sims) runs one Simulation per group of command-line arguments:
+by default in order, each constructed after the previous one is destroyed; with --interleave
+all alive together, taking turns one time step at a time. The run happens in a fresh
 temporary directory, which is removed afterwards unless the check fails or --keep is given.
 """
 import argparse
@@ -51,11 +52,12 @@ def main():
     parser = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
     parser.add_argument("driver", help="the openMalaria-two-sims binary")
     parser.add_argument("scenarios", nargs="+", help="scenario names, as in test/scenario<NAME>.xml, run in order")
+    parser.add_argument("--interleave", action="store_true", help="interleave the simulations' time steps")
     parser.add_argument("--keep", action="store_true", help="keep the working directory")
     opts = parser.parse_args()
 
     work = tempfile.mkdtemp(prefix="two_sims-")
-    cmd = [os.path.abspath(opts.driver)]
+    cmd = [os.path.abspath(opts.driver)] + (["--interleave"] if opts.interleave else [])
     for index, name in enumerate(opts.scenarios):
         scenario = os.path.join(TEST, f"scenario{name}.xml")
         link_schema(opts.driver, scenario, work)
@@ -73,7 +75,8 @@ def main():
         print(f"working directory kept: {work}")
     else:
         shutil.rmtree(work)
-    print(f"{len(opts.scenarios)} simulations in one process: {'FAIL' if failures else 'pass'}")
+    mode = "interleaved" if opts.interleave else "one after another"
+    print(f"{len(opts.scenarios)} simulations in one process, {mode}: {'FAIL' if failures else 'pass'}")
     return 1 if failures else 0
 
 

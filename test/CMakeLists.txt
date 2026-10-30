@@ -159,3 +159,6 @@ set_target_properties (openMalaria-two-sims PROPERTIES RUNTIME_OUTPUT_DIRECTORY 
 add_test (NAME two_sims COMMAND ${PYTHON_EXECUTABLE} ${CMAKE_CURRENT_SOURCE_DIR}/two_sims.py
     $<TARGET_FILE:openMalaria-two-sims> NoInterv 1 TriggeredMSAT TriggeredMSAT 9 1 SimpleMPDTest)
 set_tests_properties (two_sims PROPERTIES LABELS two-sims)
+add_test (NAME two_sims_interleaved COMMAND ${PYTHON_EXECUTABLE} ${CMAKE_CURRENT_SOURCE_DIR}/two_sims.py --interleave
+    $<TARGET_FILE:openMalaria-two-sims> NoInterv Molineaux TriggeredMSAT TriggeredMSAT Vivax 9 SimpleMPDTest)
+set_tests_properties (two_sims_interleaved PROPERTIES LABELS two-sims)
