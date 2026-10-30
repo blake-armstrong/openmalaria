@@ -50,6 +50,15 @@ if (CMAKE_CXX_COMPILER_ID MATCHES "GNU|Clang")
   set (CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -ffp-contract=off")
 endif ()
 
+set (OM_SANITIZE "" CACHE STRING "Build everything with -fsanitize=<value> (e.g. thread, for the G-two-sims ThreadSanitizer run)")
+if (OM_SANITIZE)
+  if (NOT CMAKE_CXX_COMPILER_ID MATCHES "GNU|Clang")
+    message (FATAL_ERROR "OM_SANITIZE needs GCC or Clang")
+  endif ()
+  add_compile_options (-fsanitize=${OM_SANITIZE} -fno-omit-frame-pointer)
+  add_link_options (-fsanitize=${OM_SANITIZE})
+endif ()
+
 # Statically link libgcc; isn't going to work when other C++ libraries are dynamically linked
 if ("${CMAKE_CXX_COMPILER_ID}" MATCHES "GNU")
   option (OM_COVERAGE "Produce coverage into binary.")
