@@ -25,11 +25,12 @@
 #include "util/errors.h"
 #include "util/vectors.h"
 #include "util/CommandLine.h"
+#include "util/logging.h"
 #include "schema/scenario.h"
 
 #include <algorithm>
 #include <cassert>
-#include <iomanip>
+#include <format>
 
 namespace OM::WithinHost {
 
@@ -189,21 +190,18 @@ void GenotypeRegistry::print_genotypes() const {
     }
 
     const int id_width = genotype_id_width(genotype_list.size());
-    cout << endl; // NOLINT(performance-avoid-endl)
+    logging::info("");
 
-    // Table header:
-    cout << "|" << std::setw(id_width) << "Genotype";
+    string header = std::format("|{:>{}}", "Genotype", id_width);
     for (const auto& locus : loci)
-        cout << "|" << std::setw(static_cast<int>(longest[locus])) << locus;
-    cout << "|" << std::setw(9) << "init freq" << "|" << std::setw(7) << "fitness" << "|"
-         << endl; // NOLINT(performance-avoid-endl)
+        header += std::format("|{:>{}}", locus, longest[locus]);
+    logging::info("{}|{:>9}|{:>7}|", header, "init freq", "fitness");
 
-    cout << "|" << string(id_width, '-');
+    string rule = "|" + string(id_width, '-');
     for (const auto& locus : loci)
-        cout << "|" << string(longest[locus], '-');
-    cout << "|" << string(9, '-') << "|" << string(7, '-') << "|" << endl; // NOLINT(performance-avoid-endl)
+        rule += "|" + string(longest[locus], '-');
+    logging::info("{}|{}|{}|", rule, string(9, '-'), string(7, '-'));
 
-    cout << std::fixed << setprecision(3);
     for (size_t i = 0; i < genotype_list.size(); ++i) {
         const Genotype& genotype = genotype_list[i];
         map<string, string> locus_allele; // to find allele for each locus
@@ -212,14 +210,13 @@ void GenotypeRegistry::print_genotypes() const {
             locus_allele[allele_names[allele].first] = allele_names[allele].second;
         }
 
-        cout << "|" << std::setw(id_width) << (i * GenotypeOutputIdStep);
+        string row = std::format("|{:>{}}", i * GenotypeOutputIdStep, id_width);
         for (const auto& locus : loci) {
             auto la = locus_allele.find(locus);
             assert(la != locus_allele.end());
-            cout << "|" << std::setw(static_cast<int>(longest[locus])) << la->second;
+            row += std::format("|{:>{}}", la->second, longest[locus]);
         }
-        cout << "|" << std::setw(9) << genotype.init_freq << "|" << std::setw(7) << genotype.fitness << "|"
-             << endl; // NOLINT(performance-avoid-endl)
+        logging::info("{}|{:>9.3f}|{:>7.3f}|", row, genotype.init_freq, genotype.fitness);
     }
 }
 

@@ -987,6 +987,9 @@ GROUPS = {
         Variant("decay_nodeprec", ITNS, args=["--no-deprecation-warnings"]),
         Variant("decay_checkpoint", ITNS, args=["--checkpoint"], runs=2),
     ],
+    "logging": [
+        Variant("genotypes_print_eir", G, args=["--print-genotypes", "--print-EIR"]),
+    ],
     "cli": [
         Variant(f"{label}_{flags}", scenario, args=args, runs=2)
         for label, scenario in (("5", "scenario5.xml"), ("vec", "scenarioVecTest.xml"))

@@ -28,6 +28,7 @@
 #include "Host/WithinHost/Genotypes.h"
 #include "PkPd/Drug/LSTMDrugType.h"
 #include "util/CommandLine.h"
+#include "util/logging.h"
 
 #include <array>
 #include <iostream>
@@ -85,6 +86,23 @@ public:
     }
 
 private:
+    class LogCapture {
+    public:
+        explicit LogCapture(std::string& out) {
+            OM::logging::set_console(false);
+            OM::logging::register_log_callback(
+                [&out](OM::logging::Level, const std::string& message) { out += message + "\n"; });
+        }
+        LogCapture(const LogCapture&) = delete;
+        LogCapture& operator=(const LogCapture&) = delete;
+        LogCapture(LogCapture&&) = delete;
+        LogCapture& operator=(LogCapture&&) = delete;
+        ~LogCapture() {
+            OM::logging::clear_log_callbacks();
+            OM::logging::set_console(true);
+        }
+    };
+
     static scnXml::ParasiteLocus first_locus() {
         scnXml::ParasiteLocus locus("first");
         locus.getAllele().push_back(scnXml::ParasiteAllele("only", 1.0, 1.0));
@@ -129,15 +147,10 @@ private:
     static std::string printed(const std::vector<scnXml::ParasiteLocus>& loci) {
         const scnXml::Scenario scenario = scenario_with(loci);
         const util::CommandLineOptions command_line = options(true);
-        std::ostringstream out;
-        std::streambuf* const cout_buffer = std::cout.rdbuf(out.rdbuf());
-        const std::ios_base::fmtflags cout_flags = std::cout.flags();
-        const std::streamsize cout_precision = std::cout.precision();
+        std::string out;
+        const LogCapture capture(out);
         const GenotypeRegistry genotypes(scenario, command_line);
-        std::cout.precision(cout_precision);
-        std::cout.flags(cout_flags);
-        std::cout.rdbuf(cout_buffer);
-        return out.str();
+        return out;
     }
 };
 

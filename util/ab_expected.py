@@ -2,9 +2,11 @@
 """Check a deliberate console change: run util/ab_scenarios.py variants with a
 base and a candidate openMalaria and require, for every run, that the
 candidate's exit code, stdout and stderr equal the named transform applied to
-the base's, and that the files they write are equal."""
+the base's, and that the files they write are equal. A transform may also use
+the base's runs of the same variant without one of its flags."""
 
 import argparse
+import copy
 import os
 import re
 import shutil
@@ -15,9 +17,23 @@ import ab_scenarios as ab
 
 PROGRESS_SEGMENT = re.compile(r"\r\d+%\t")
 STALE_PERROR = re.compile(r"OpenMalaria: No such file or directory\n\Z")
+PRINT_GENOTYPES_LINE = re.compile(r"(\||Phenotype mapping for drug .*:$|-+$|$)")
 
 
-def collapse_progress(code, stdout, stderr):
+class Context:
+    def __init__(self, base, variant, text, work):
+        self.base, self.variant, self.text, self.work = base, variant, text, work
+        self.reruns = {}
+
+    def without(self, flag):
+        if flag not in self.reruns:
+            v = copy.copy(self.variant)
+            v.args = [a for a in v.args if a != flag]
+            self.reruns[flag] = ab.run(self.base, v, self.text, os.path.join(self.work, "without" + flag))[0]
+        return self.reruns[flag]
+
+
+def collapse_progress(ctx, index, code, stdout, stderr):
     out, last, pos = [], None, 0
     for m in PROGRESS_SEGMENT.finditer(stderr):
         out.append(stderr[pos:m.start()])
@@ -28,16 +44,27 @@ def collapse_progress(code, stdout, stderr):
     return code, stdout, "".join(out)
 
 
-def drop_stale_perror(code, stdout, stderr):
+def drop_stale_perror(ctx, index, code, stdout, stderr):
     line_start = stderr.rfind("\n", 0, len(stderr) - 1) + 1
     if stderr.startswith("Command-line error: ", line_start):
         return code, stdout, STALE_PERROR.sub("\n", stderr)
     return code, stdout, STALE_PERROR.sub("", stderr)
 
 
+def unformatted_after_genotypes(ctx, index, code, stdout, stderr):
+    if "--print-genotypes" not in ctx.variant.args:
+        return code, stdout, stderr
+    plain = iter(ctx.without("--print-genotypes")[index][1].splitlines(keepends=True))
+    lines = [line if PRINT_GENOTYPES_LINE.match(line) else next(plain, "")
+             for line in stdout.splitlines(keepends=True)]
+    return code, "".join(lines) + "".join(plain), stderr
+
+
 TRANSFORMS = {
     "progress": (collapse_progress, "F1: one progress segment per percent, not per step"),
     "f2": (drop_stale_perror, "F2: no trailing perror; Command-line error ends its line"),
+    "f97": (unformatted_after_genotypes, "F97: stdout lines outside the --print-genotypes tables as in the base's "
+                                         "run without that flag"),
 }
 
 
@@ -54,9 +81,9 @@ def main():
         if name not in TRANSFORMS:
             parser.error(f"unknown transform {name}")
 
-    def transform(*run):
+    def transform(ctx, index, run):
         for name in names:
-            run = TRANSFORMS[name][0](*run)
+            run = TRANSFORMS[name][0](ctx, index, *run)
         return run
 
     root = tempfile.mkdtemp(prefix="ab_expected-")
@@ -65,9 +92,11 @@ def main():
         for g in opts.groups:
             for v in ab.GROUPS[g]:
                 text = v.transform(ab.read(v.scenario))
-                base = ab.run(os.path.abspath(opts.base), v, text, os.path.join(root, g, v.name, "base"))
-                cand = ab.run(os.path.abspath(opts.candidate), v, text, os.path.join(root, g, v.name, "candidate"))
-                expected = [transform(*r) for r in base[0]]
+                work = os.path.join(root, g, v.name)
+                base = ab.run(os.path.abspath(opts.base), v, text, os.path.join(work, "base"))
+                cand = ab.run(os.path.abspath(opts.candidate), v, text, os.path.join(work, "candidate"))
+                ctx = Context(os.path.abspath(opts.base), v, text, work)
+                expected = [transform(ctx, i, r) for i, r in enumerate(base[0])]
                 ok = cand[0] == expected and cand[1] == base[1]
                 total += 1
                 failed += not ok
