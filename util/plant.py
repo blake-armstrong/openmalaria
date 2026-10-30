@@ -9,8 +9,10 @@ recompiles them and later gates test the restored code.
 
 The planted build must compile: a build error stops the run with exit 2, so
 no gate is ever run against a stale binary. Then ctest (-LE statistical) runs
-in the Release build, and util/ab_scenarios.py for the given groups against
-the base build. Exit 0 if something caught the bug, 1 if nothing did.
+in the Release build, util/ab_scenarios.py for the given groups against
+the base build, and with --tsan the two-sims tests in the ThreadSanitizer
+build (rebuilt with the plant, and again after the restore). Exit 0 if
+something caught the bug, 1 if nothing did.
 """
 
 import argparse
@@ -30,6 +32,8 @@ def parse_args():
     p.add_argument("--patch", help="unified diff to apply with git apply")
     p.add_argument("--ab", nargs="*", metavar="GROUP", help="A/B groups to run (no group given: all)")
     p.add_argument("--no-ctest", action="store_true", help="skip ctest")
+    p.add_argument("--tsan", action="store_true", help="run the two-sims tests in the ThreadSanitizer build")
+    p.add_argument("--tsan-build", default=os.environ.get("OM_TSAN_DIR", "build-tsan"))
     p.add_argument("--name", default="planted bug", help="label for the report")
     p.add_argument("--build", default=os.environ.get("OM_BUILD_DIR", "build-rework"))
     p.add_argument("--base", default=os.environ.get("OM_BASE_BUILD", "../om-bench-base/build-rework"))
@@ -37,8 +41,8 @@ def parse_args():
     args = p.parse_args()
     if not args.replace and not args.patch:
         p.error("give --replace or --patch")
-    if args.no_ctest and args.ab is None:
-        p.error("nothing to run: --no-ctest without --ab")
+    if args.no_ctest and args.ab is None and not args.tsan:
+        p.error("nothing to run: --no-ctest without --ab or --tsan")
     return args
 
 
@@ -71,7 +75,10 @@ def plant(args):
 
 
 def build(args):
-    return run(["cmake", "--build", args.build, "-j", args.jobs])
+    r = run(["cmake", "--build", args.build, "-j", args.jobs])
+    if r.returncode or not args.tsan:
+        return r
+    return run(["cmake", "--build", args.tsan_build, "-j", args.jobs, "--target", "openMalaria-two-sims", "inlined_xsd"])
 
 
 def main():
@@ -99,6 +106,15 @@ def main():
                   (f": {', '.join(failing)}" if failing else ""))
             if failing:
                 caught.append(f"{len(failing)} ctest tests fail")
+        if args.tsan:
+            r = run(["caffeinate", "-i", "ctest", "-j", args.jobs, "-L", "two-sims", "--output-on-failure"],
+                    cwd=os.path.join(ROOT, args.tsan_build))
+            failing = re.findall(r"^\s+\d+ - (\S+) \(", r.stdout, re.M)
+            races = r.stdout.count("WARNING: ThreadSanitizer")
+            print(f"ThreadSanitizer two-sims: {len(failing)} fail, {races} race reports" +
+                  (f": {', '.join(failing)}" if failing else ""))
+            if failing:
+                caught.append(f"{len(failing)} ThreadSanitizer two-sims tests fail")
         if args.ab is not None:
             cmd = ["caffeinate", "-i", sys.executable, "util/ab_scenarios.py",
                    os.path.join(args.base, "openMalaria"), os.path.join(args.build, "openMalaria"), *args.ab]
@@ -121,7 +137,7 @@ def main():
             print("restored, but the rebuild failed", file=sys.stderr)
             status = 3
         else:
-            print(f"restored {', '.join(files)} and rebuilt {args.build}")
+            print(f"restored {', '.join(files)} and rebuilt {args.build}" + (f" and {args.tsan_build}" if args.tsan else ""))
         sys.exit(status)
 
 
