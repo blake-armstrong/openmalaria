@@ -31,9 +31,7 @@
 #include "util/logging.h"
 
 #include <array>
-#include <iostream>
 #include <set>
-#include <sstream>
 #include <string>
 #include <utility>
 #include <vector>
@@ -62,17 +60,18 @@ public:
         const GenotypeRegistry genotypes(scenario_with({mdr_locus()}), options(false));
         scnXml::Drugs drugs;
         drugs.getDrug().push_back(drug_with_phenotypes("CQ"));
-        std::ostringstream out;
-        std::streambuf* const cout_buffer = std::cout.rdbuf(out.rdbuf());
-        const pk_pd::DrugRegistry registry(drugs, genotypes, options(true));
-        std::cout.rdbuf(cout_buffer);
-        TS_ASSERT_EQUALS(out.str(), "\n"
-                                    "Phenotype mapping for drug CQ:\n"
-                                    "------------------------------\n"
-                                    "|genotype|              phenotype|\n"
-                                    "|--------|-----------------------|\n"
-                                    "|       0|              sensitive|\n"
-                                    "| 1000000|resistant to everything|\n");
+        std::string out;
+        {
+            const LogCapture capture(out);
+            const pk_pd::DrugRegistry registry(drugs, genotypes, options(true));
+        }
+        TS_ASSERT_EQUALS(out, "\n"
+                              "Phenotype mapping for drug CQ:\n"
+                              "------------------------------\n"
+                              "|genotype|              phenotype|\n"
+                              "|--------|-----------------------|\n"
+                              "|       0|              sensitive|\n"
+                              "| 1000000|resistant to everything|\n");
     }
 
     void test_one_allele_locus_genotypes() {

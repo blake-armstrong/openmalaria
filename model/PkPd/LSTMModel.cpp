@@ -28,6 +28,7 @@
 #include "mon/Monitoring.h"
 #include "util/checkpoint_containers.h"
 #include "util/errors.h"
+#include "util/logging.h"
 
 #include "schema/scenario.h"
 
@@ -123,8 +124,8 @@ double LSTMModel::get_drug_conc(size_t drug_index) const {
         if (d < 0.0) {
             // FIXME: @tph-thuering, 2015-08-11:
             // This is trying to circumvent an issue we have with negative metabolite concentration values in the implementation of the conversion model. see #53
-            cerr << "ERROR! concentration is lower than zero, setting it to zero for now: " << d
-                 << " drug_index: " << drug_index << endl;
+            logging::warn("ERROR! concentration is lower than zero, setting it to zero for now: {:g} drug_index: {}", d,
+                          drug_index);
             d = 0.0;
         }
         c += d;

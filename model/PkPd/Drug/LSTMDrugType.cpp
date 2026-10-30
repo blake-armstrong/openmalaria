@@ -25,6 +25,7 @@
 #include "Host/WithinHost/Infection/CommonInfection.h"
 #include "util/errors.h"
 #include "util/CommandLine.h"
+#include "util/logging.h"
 #include "PkPd/Drug/LSTMDrugOneComp.h"
 #include "PkPd/Drug/LSTMDrugThreeComp.h"
 #include "PkPd/Drug/LSTMDrugConversion.h"
@@ -32,7 +33,6 @@
 
 #include <cmath>
 #include <format>
-#include <iomanip>
 #include <numbers>
 
 using namespace std;
@@ -340,16 +340,14 @@ LSTMDrugType::LSTMDrugType(size_t index, const scnXml::PKPDDrug& drug_data, Drug
             const int id_width = WithinHost::genotype_id_width(genotype_mapping.size());
             const string title = "Phenotype mapping for drug " + string(drug_data.getAbbrev()) + ":";
 
-            cout << endl;                                               // NOLINT(performance-avoid-endl)
-            cout << title << endl << string(title.size(), '-') << endl; // NOLINT(performance-avoid-endl)
-            cout << "|" << setw(id_width) << "genotype" << "|" << setw(static_cast<int>(name_width)) << "phenotype"
-                 << "|" << endl; // NOLINT(performance-avoid-endl)
-            cout << "|" << string(id_width, '-') << "|" << string(name_width, '-') << "|"
-                 << endl; // NOLINT(performance-avoid-endl)
+            logging::info("");
+            logging::info("{}", title);
+            logging::info("{}", string(title.size(), '-'));
+            logging::info("|{:>{}}|{:>{}}|", "genotype", id_width, "phenotype", name_width);
+            logging::info("|{}|{}|", string(id_width, '-'), string(name_width, '-'));
             for (size_t genotype = 0; genotype < phenotype_names.size(); ++genotype) {
-                cout << "|" << setw(id_width) << (genotype * WithinHost::GenotypeOutputIdStep) << "|"
-                     << setw(static_cast<int>(name_width)) << phenotype_names[genotype] << "|"
-                     << endl; // NOLINT(performance-avoid-endl)
+                logging::info("|{:>{}}|{:>{}}|", genotype * WithinHost::GenotypeOutputIdStep, id_width,
+                              phenotype_names[genotype], name_width);
             }
         }
     }
