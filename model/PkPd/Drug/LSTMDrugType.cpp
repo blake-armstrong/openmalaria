@@ -189,7 +189,7 @@ LSTMDrugType::LSTMDrugType(size_t index, const scnXml::PKPDDrug& drug_data, Drug
         if (!k12 && !conversion_rate) {
             throw util::xml_scenario_error("PK models only allow an "
                                            "absorption rate parameter (k_a) when compartment2 or "
-                                           " conversion parameters are present");
+                                           "conversion parameters are present");
         }
         absorption_rate = util::createSampler(pk.getK_a().get());
     } else {
@@ -320,7 +320,7 @@ LSTMDrugType::LSTMDrugType(size_t index, const scnXml::PKPDDrug& drug_data, Drug
             if (phenotype == numeric_limits<uint32_t>::max()) {
                 // We could try to convert genotype's allele codes to
                 // locus/allele names, but requires several lookups
-                throw util::xml_scenario_error("phenotype restrictions too"
+                throw util::xml_scenario_error("phenotype restrictions too "
                                                "restrictive: no phenotype matching some genotype");
             }
             genotype_mapping[j] = phenotype;

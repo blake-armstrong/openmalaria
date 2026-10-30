@@ -74,9 +74,15 @@ def f94_levels(ctx, index, code, stdout, stderr):
     return code, stdout, stderr
 
 
+def f55_typos(ctx, index, code, stdout, stderr):
+    return code, stdout, stderr.replace("restrictions toorestrictive", "restrictions too restrictive").replace(
+        "compartment2 or  conversion", "compartment2 or conversion")
+
+
 TRANSFORMS = {
     "progress": (collapse_progress, "F1: one progress segment per percent, not per step"),
     "f2": (drop_stale_perror, "F2: no trailing perror; Command-line error ends its line"),
+    "f55": (f55_typos, "F55: the missing space in toorestrictive and the double space before conversion"),
     "f94": (f94_levels, "F94: the loaded-checkpoint line on stdout (before the run's first verbose line); cum "
                         "deployment and TSMD hit limit at debug, absent from a Release build"),
     "f97": (unformatted_after_genotypes, "F97: stdout lines outside the --print-genotypes tables as in the base's "
