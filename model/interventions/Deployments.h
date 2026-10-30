@@ -33,6 +33,7 @@
 #include "Transmission/VectorModel.h"
 #include "Transmission/PerHost.h"
 #include "util/random.h"
+#include "util/logging.h"
 #include "util/errors.h"
 #include <schema/interventions.h>
 #include <format>
@@ -58,8 +59,7 @@ public:
         if (deploy_date < clock.start_date()) {
             throw util::xml_scenario_error("timed intervention deployment: may not be negative");
         } else if (deploy_date >= clock.end_date()) {
-            cerr << "Warning: timed intervention deployment at date " << deploy_date;
-            cerr << " happens after last survey" << endl;
+            logging::warn("Warning: timed intervention deployment at date {} happens after last survey", deploy_date);
         }
     }
     virtual ~TimedDeployment() = default;
@@ -379,8 +379,8 @@ public:
             // additionally cover the proportion (coverage - propProtected),
             // selected from the list unprotected.
             const double additional_coverage = (coverage - prop_protected) / (1.0 - prop_protected);
-            cerr << "cum deployment: prop protected " << prop_protected << "; additionalCoverage "
-                 << additional_coverage << "; total " << total << endl;
+            logging::warn("cum deployment: prop protected {:g}; additionalCoverage {:g}; total {}", prop_protected,
+                          additional_coverage, total);
             for (Human* human : unprotected) {
                 if (human->intervention_rng.uniform_01() < additional_coverage) {
                     deploy_to_human(*human, mon::DeployMethod::Timed);

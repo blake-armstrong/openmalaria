@@ -23,6 +23,7 @@
 #include "interventions/ITN.h"
 #include "util/random.h"
 #include "util/errors.h"
+#include "util/logging.h"
 #include "util/SpeciesIndexChecker.h"
 #include "Host/Human.h"
 #include "R_nmath/qnorm.h"
@@ -228,9 +229,10 @@ void factors::SurvivalFactor::init_logit(const scnXml::ITNEffectLogit& elt, doub
 
         // We expect K >= K0 and deduce these "advisory limits":
         if (b.pf < 0.0 || b.pf + b.IF * b.h_max < 0.0) {
-            cerr << "ITN.description.anophelesParams.*KillingEffectLogit: expected"
-                 << "\n(insecticide) P >= 0, found P = " << b.pf
-                 << "\n(interaction) P+I*log(holeIndexMax+1) >= 0, found " << b.pf + b.IF * b.h_max << endl;
+            logging::warn("ITN.description.anophelesParams.*KillingEffectLogit: expected"
+                          "\n(insecticide) P >= 0, found P = {:g}"
+                          "\n(interaction) P+I*log(holeIndexMax+1) >= 0, found {:g}",
+                          b.pf, b.pf + b.IF * b.h_max);
         }
     }
 }
@@ -337,22 +339,22 @@ void factors::RelativeAttractiveness::init_single_stage(const scnXml::ITNDeterre
     // Print out a warning if nets may increase transmission.
     double pmax = 1.0 - exp(-max_insecticide * a.insecticide_scaling);
     if (!(hf > 0.0 && pf > 0.0 && IF > 0.0 && hf <= 1.0 && pf <= 1.0 && hf * pow(pf * IF, pmax) <= 1.0)) {
-        cerr << "Note: since the following bounds are not met, the ITN could make humans more\n";
-        cerr << "attractive to mosquitoes than they would be without a net.\n";
-        cerr << "ITN.description.anophelesParams.deterrency: bounds not met:\n";
+        string note = "Note: since the following bounds are not met, the ITN could make humans more\n"
+                      "attractive to mosquitoes than they would be without a net.\n"
+                      "ITN.description.anophelesParams.deterrency: bounds not met:";
         if (!(hf > 0.0))
-            cerr << "  holeFactor>0\n";
+            note += "\n  holeFactor>0";
         if (!(pf > 0.0))
-            cerr << "  insecticideFactor>0\n";
+            note += "\n  insecticideFactor>0";
         if (!(IF > 0.0))
-            cerr << "  interactionFactor>0\n";
+            note += "\n  interactionFactor>0";
         if (!(hf <= 1.0))
-            cerr << "  holeFactor≤1\n";
+            note += "\n  holeFactor≤1";
         if (!(pf <= 1.0))
-            cerr << "  insecticideFactor≤1\n";
+            note += "\n  insecticideFactor≤1";
         if (!(hf * pow(pf * IF, pmax) <= 1.0))
-            cerr << "  holeFactor×(insecticideFactor×interactionFactor)^" << pmax << "≤1\n";
-        cerr.flush();
+            note += std::format("\n  holeFactor×(insecticideFactor×interactionFactor)^{:g}≤1", pmax);
+        logging::warn("{}", note);
     }
     a.l_hf = log(hf);
     a.l_pf = log(pf);
@@ -387,11 +389,10 @@ void factors::RelativeAttractiveness::init_two_stage(const scnXml::TwoStageDeter
         * We therefore just need PF ≤ 1. */
         // Print out a warning if ITNs may increase transmission.
         if (!(pf <= 1.0)) {
-            cerr << "Note: since the following bounds are not met, the IRS could make humans more\n";
-            cerr << "attractive to mosquitoes than they would be without IRS.\n";
-            cerr << "IRS.description.anophelesParams.deterrency: bounds not met:\n";
-            cerr << "  0<insecticideFactor≤1\n";
-            cerr.flush();
+            logging::warn("Note: since the following bounds are not met, the IRS could make humans more\n"
+                          "attractive to mosquitoes than they would be without IRS.\n"
+                          "IRS.description.anophelesParams.deterrency: bounds not met:\n"
+                          "  0<insecticideFactor≤1");
         }
         b.l_pf_entering = log(pf);
     } else {
@@ -400,8 +401,8 @@ void factors::RelativeAttractiveness::init_two_stage(const scnXml::TwoStageDeter
         c.ent_base_factor = elt.getEnteringLogit().get().getBaseFactor();
         c.ent_insecticide_factor = elt.getEnteringLogit().get().getInsecticideFactor();
         if (c.ent_insecticide_factor > 0.0) {
-            cerr << "ITN.description.anophelesParams.twoStageDeterrency.enteringLogit: \n"
-                 << "insecticideFactor should be negative to for nets to reduce chance of entering." << endl;
+            logging::warn("ITN.description.anophelesParams.twoStageDeterrency.enteringLogit: \n"
+                          "insecticideFactor should be negative to for nets to reduce chance of entering.");
         }
         // pre-calculate for efficieny:
         c.p_ent0_inv = (exp(c.ent_base_factor) + 1.0) / exp(c.ent_base_factor);

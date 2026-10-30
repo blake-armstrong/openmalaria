@@ -24,6 +24,7 @@
 #include "Population.h"
 #include "util/CommandLine.h"
 #include "util/UnitParse.h"
+#include "util/logging.h"
 #include "interventions/GVI.h"
 #include "interventions/IRS.h"
 #include "interventions/ITN.h"
@@ -38,9 +39,20 @@
 #include <algorithm>
 #include <memory>
 #include <format>
+#include <sstream>
 #include <utility>
 
 namespace OM::interventions {
+
+namespace {
+
+template <typename Printable> string details(const Printable& printable) {
+    std::ostringstream out;
+    printable.print_details(out);
+    return out.str();
+}
+
+}
 
 // ———  InterventionManager  ———
 
@@ -433,21 +445,17 @@ void InterventionManager::init(const scnXml::Interventions& interv_elt, Transmis
     timed.push_back(std::make_unique<DummyTimedDeployment>(clock));
 
     if (command_line.option(util::CommandLine::PrintInterventions)) {
-        cout << "Continuous deployments:" << endl << "begin\tend\tage\tsub pop\tcompl\tcoverag\tcomponents" << endl;
-        for (auto& deployment : continuous) {
-            deployment.print_details(std::cout);
-            cout << endl;
-        }
-        cout << "Timed deployments:" << endl << "time\tmin age\tmax age\tsub pop\tcompl\tcoverag\tcomponents" << endl;
-        for (auto& deploy : timed) {
-            deploy->print_details(std::cout);
-            cout << endl;
-        }
-        cout << "Human components:" << endl;
-        for (auto& component : human_components) {
-            component->print_details(cout);
-            cout << endl;
-        }
+        logging::info("Continuous deployments:");
+        logging::info("begin\tend\tage\tsub pop\tcompl\tcoverag\tcomponents");
+        for (auto& deployment : continuous)
+            logging::info("{}", details(deployment));
+        logging::info("Timed deployments:");
+        logging::info("time\tmin age\tmax age\tsub pop\tcompl\tcoverag\tcomponents");
+        for (auto& deploy : timed)
+            logging::info("{}", details(*deploy));
+        logging::info("Human components:");
+        for (auto& component : human_components)
+            logging::info("{}", details(*component));
     }
 }
 
@@ -493,9 +501,7 @@ void InterventionManager::deploy(vector<Host::Human>& population, Transmission::
     const SimTime now = clock().interv_date();
     while (timed[next_timed]->date <= now) {
         if (verbose) {
-            cout << "deploy::" << now << "::Timed";
-            timed[next_timed]->print_details(cout);
-            cout << endl;
+            logging::info("deploy::{}::Timed{}", now, details(*timed[next_timed]));
         }
 
         timed[next_timed]->deploy(population, transmission);
@@ -508,9 +514,7 @@ void InterventionManager::deploy(vector<Host::Human>& population, Transmission::
         // deploy continuous interventions
         while (next_cts_dist < continuous.size()) {
             if (verbose) {
-                cout << "deploy::" << now << "::Continuous";
-                continuous[next_cts_dist].print_details(cout);
-                cout << endl;
+                logging::info("deploy::{}::Continuous{}", now, details(continuous[next_cts_dist]));
             }
             if (!continuous[next_cts_dist].filter_and_deploy(human))
                 break; // deployment (and all remaining) happens in the future

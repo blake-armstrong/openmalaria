@@ -31,11 +31,11 @@
 #include "util/CommandLine.h"
 #include "util/UnitParse.h"
 #include "util/errors.h"
+#include "util/logging.h"
 
 #include <algorithm>
 #include <bit>
 #include <cctype>
-#include <iostream>
 #include <map>
 #include <ranges>
 #include <utility>
@@ -184,18 +184,17 @@ SimTime read_survey_dates(MonitoringState& state, const scnXml::Monitoring& moni
         throw util::xml_scenario_error("Scenario defines no surveys; at least one is required.");
     }
     if (!state.survey_dates.back().is_reported()) {
-        std::cerr
-            << "Warning: the last survey is unreported. Having surveys beyond the last reported survey is pointless."
-            << std::endl;
+        logging::warn("Warning: the last survey is unreported. Having surveys beyond the last reported survey is "
+                      "pointless.");
     }
 
     if (command_line.option(util::CommandLine::PrintSurveyTimes)) {
-        std::cout << "Survey\tsteps\tdate\n";
+        logging::info("Survey\tsteps\tdate");
         for (const SurveyDate& survey_date : state.survey_dates) {
             if (!survey_date.is_reported())
                 continue;
-            std::cout << (survey_date.num + 1) << '\t' << clock.in_steps(survey_date.date - clock.start_date()) << '\t'
-                      << survey_date.date << std::endl;
+            logging::info("{}\t{}\t{}", survey_date.num + 1, clock.in_steps(survey_date.date - clock.start_date()),
+                          survey_date.date);
         }
     }
 
