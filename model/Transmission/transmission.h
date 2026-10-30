@@ -29,6 +29,7 @@
 #include "Transmission/Anopheles/SimpleMPDAnophelesModel.h"
 #include "Transmission/Anopheles/EmergenceRateEstimator.h"
 #include "util/CommandLine.h"
+#include "util/logging.h"
 #include "util/ModelOptions.h"
 
 #include <algorithm>
@@ -390,7 +391,7 @@ create_transmission_model(const scnXml::Entomology& ento_data, int population_si
     if (command_line.option(util::CommandLine::PrintAnnualEir)) {
         // Note: after internal scaling (which doesn't imply exit)
         // but before external scaling.
-        cout << "Total annual EIR: " << model->annual_eir << endl;
+        logging::info("Total annual EIR: {:g}", model->annual_eir);
     }
 
     return model;

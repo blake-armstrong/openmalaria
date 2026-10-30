@@ -25,6 +25,7 @@
 
 #include "TransmissionModel.h"
 #include "util/vectors.h"
+#include "util/logging.h"
 #include "Host/Human.h"
 #include "mon/Monitoring.h"
 
@@ -124,8 +125,7 @@ public:
         intervention_eir.assign(n_days.size(), 0.0);
         const auto required_days = static_cast<size_t>(clock().end_date() - clock().start_date()) + 1;
         if (daily.size() < required_days) {
-            cerr << "Days: " << daily.size() << "\nIntervals: " << n_days.size() << "\nRequired: " << required_days
-                 << endl;
+            logging::warn("Days: {}\nIntervals: {}\nRequired: {}", daily.size(), n_days.size(), required_days);
             throw util::xml_scenario_error("Insufficient intervention phase EIR values provided");
         }
         // The minimum EIR allowed in the array. The product of the average EIR and a constant.
@@ -151,7 +151,7 @@ public:
 
     void uninfect_vectors() override {
         if (simulation_mode != DynamicEir)
-            cerr << "Warning: uninfectVectors is not efficacious with forced EIR" << endl;
+            logging::warn("Warning: uninfectVectors is not efficacious with forced EIR");
         // reset history of human infectivity, which scales dynamic EIR:
         lagged_kappa.assign(lagged_kappa.size(), 0.0);
     }

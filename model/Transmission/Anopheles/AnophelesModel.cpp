@@ -28,6 +28,7 @@
 #include "Host/WithinHost/Genotypes.h"
 #include "util/vectors.h"
 #include "util/errors.h"
+#include "util/logging.h"
 #include "util/ModelOptions.h"
 #include "util/StreamValidator.h"
 
@@ -299,7 +300,7 @@ void AnophelesModel::init_eir(const vector<double>& init_eir365, vector<double> 
     }
 
     if (print_annual_eir)
-        cout << "Annual EIR for " << mosq.name << ": " << vectors::sum(species_eir) << endl;
+        logging::info("Annual EIR for {}: {:g}", mosq.name, vectors::sum(species_eir));
 
     // Set other data used for mosqEmergeRate calculation:
     init_nv_from_sv = 1.0 / prop_infectious;

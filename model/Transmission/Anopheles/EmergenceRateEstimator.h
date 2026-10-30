@@ -30,6 +30,7 @@
 #include "util/vectors.h"
 #include "util/CommandLine.h"
 #include "util/errors.h"
+#include "util/logging.h"
 
 #include "CalcNvO.h"
 
@@ -117,8 +118,8 @@ public:
             if (vectors::sum(m.forced_s_v) == 0.0) {
                 return false; // no EIR desired: nothing to do
             }
-            cerr << "Input S_v for this vector:\t" << vectors::sum(m.forced_s_v) << endl;
-            cerr << "Simulated S_v:\t\t\t" << vectors::sum(m.quinquennial_s_v) / 5.0 << endl;
+            logging::warn("Input S_v for this vector:\t{:g}", vectors::sum(m.forced_s_v));
+            logging::warn("Simulated S_v:\t\t\t{:g}", vectors::sum(m.quinquennial_s_v) / 5.0);
             throw TRACED_EXCEPTION("factor out of bounds", util::Error::VectorFitting);
         }
 

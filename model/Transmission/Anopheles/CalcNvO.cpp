@@ -19,7 +19,6 @@
 
 /* Entomology model coordinator: Nakul Chitnis. */
 
-#include <cstdio>
 #include <cstdlib>
 #include <cstring>
 #include <cmath>
@@ -33,6 +32,7 @@
 
 #include "CalcNvO.h"
 #include "util/errors.h"
+#include "util/logging.h"
 
 #include <vector>
 #include <algorithm>
@@ -224,7 +224,7 @@ static int calc_sv_diff_rf(const gsl_vector* x, void* p, gsl_vector* f) {
         status = GSL_EMAXITER;
     }
     if (status != GSL_SUCCESS) {
-        printf("root finding failed: %s\n", gsl_strerror(status));
+        OM::logging::info("root finding failed: {}", gsl_strerror(status));
     }
 
     gsl_multiroot_fsolver_free(srootfind);
