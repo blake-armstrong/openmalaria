@@ -98,6 +98,7 @@ set (Model_CPP
   util/DocumentLoader.cpp
   util/UnitParse.cpp
   util/DecayFunction.cpp
+  util/logging.cpp
   
   interventions/InterventionManager.cpp
   interventions/ITN.cpp
