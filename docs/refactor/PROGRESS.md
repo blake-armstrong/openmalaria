@@ -55,7 +55,7 @@ See `PLAN.md` for the session protocol, chunks and gates. Append one log entry p
 | D9e3 | done | 158a95d2, df7d2356, 4ed5d5c2, 4fbd0019, 5e6f7336, (this log entry) |
 | D9e4 | done | 30c38e1b, 164cd0ff, 894bbcb0, 9b1b1bd1, 2dd6c2b6, 7596392f, (this log entry) |
 | D9e5 | done | 2aca6412, 56dfb444, 914138d2, 4c8495d1, 00af5174, c11e899e, 78e6c26e, 6328c63b, (this log entry) |
-| D9f | todo | |
+| D9f | done | 34e001f1, 27f83ed8, 7401694e, 221a6c30, 7c533a6a, (this log entry) |
 | E1 | todo | |
 | E2 | todo | |
 | E3 | todo | |
@@ -2011,3 +2011,28 @@ The user asked for F87 to be fixed after D9e5 reproduced it. The A/B and G-perf 
   - G-perf: `util/bench.sh -n 7 --compare ../om-bench-base/build-rework`, median per-pair ratio 1.0039 (load 4.93 at start, spreads 4.89% / 2.29%). The load was a little above 4, but the ratio is far from the limit, so no idle rerun was made. The change is one read per deployment.
 - Findings: F87 moved to FINDINGS § Closed.
 - Next: D9f (its base will be its own HEAD; move `../om-bench-base` again at its start).
+
+### D9f: G-two-sims with interleaved simulations (done, 2026-10-30)
+- Base: 3b39db4f (F87 fixed after D9e5). The G-perf and A/B base worktree `../om-bench-base` was moved to 3b39db4f and rebuilt. The row's bridge removal and README bridge text were already done in D9e5: `util/bridges.py` prints `no bridges left`, and `bridge`/`Binding` occur nowhere in `model/` or `unittest/`.
+- Commits:
+  - 34e001f1: `Simulation::set_step_hook(std::function<void()>)`; `run_until` calls the hook, if set, after each `step()`. `step()` is unchanged. Every phase (warmup, EIR calibration, intervention period) goes through `run_phase` → `run_until`, so the hook sees every step. `openMalaria` never sets it.
+  - 27f83ed8: `openMalaria-two-sims --interleave` runs each argument group in its own `std::thread`. A `Turns` helper (mutex, condition variable, done flags) lets one thread run at a time and hands the turn on round-robin to the next unfinished one after each time step. So constructions, steps and destructions interleave in a fixed order, with no data race. Each thread constructs, runs and destroys its `Simulation` in its own turns. An exception is kept per thread, the turn still passes on, and the first is rethrown after `join` into `main`'s handlers, so exit codes are unchanged. `two_sims.py --interleave` passes the flag. New ctest `two_sims_interleaved` (label `two-sims`, ~5 s): NoInterv, Molineaux, TriggeredMSAT, TriggeredMSAT, Vivax, 9, SimpleMPDTest. It covers vector and non-vector models, 1-day steps beside 5-day steps, one scenario alive twice, ctsout both ways, and simulations ending (and being destroyed) while others still step. The sequential `two_sims` stays. The driver (`test/`, outside the gate's paths) is clean under `util/style.sh format --dry-run` and `tidy`.
+  - 7401694e: FINDINGS F93, the sweep of process-wide mutable state left in `model/` (below).
+  - 221a6c30: `two_sims.py --timeout` (default 120 s, ~20× the normal run). On expiry the script kills the driver and fails. The first planted bug made the interleaved driver loop forever. ctest's own 1500 s timeout would kill only the Python script and leave the driver spinning.
+  - 7c533a6a: PLAN.md D9f as built and the G-two-sims gate row; README's G-two-sims row.
+- Gates:
+  - G-exact / G-unit / G-two-sims: 67/67 (strict scenarios, unit suites, `two_sims` and `two_sims_interleaved`) on `build-rework/` (Release) and `build-debug/` (Debug), at 27f83ed8 and at 221a6c30.
+  - A/B (`util/ab_scenarios.py`, base 3b39db4f): 0 of 315 variants differ.
+  - G-stat: `ctest -L statistical`: 53 passed, 12 disabled, as after D9e5's follow-up.
+  - G-style: `util/style.sh check 3b39db4f` clean.
+  - G-perf: `util/bench.sh -n 7 --compare ../om-bench-base/build-rework`, median per-pair ratio 0.9998 (−0.02%), spreads 4.45% (base) / 9.65%, load 3.90 at the start. The candidate's spread was wide, but the ratio is far from the limit and the change is one branch per time step, so there was no idle rerun.
+  - Planted bugs (`util/plant.py --patch`, each restored and rebuilt):
+    - A file-scope `const Clock* current_clock` in `Simulation.cpp`, set by the constructor and read by `run_until`. This is the old bridges' failure mode. Caught by `two_sims_interleaved` only; `two_sims`, the scenarios and the unit tests pass. The first run hung (the first simulation loops on a later one's clock) until the user killed the driver. After 221a6c30 it fails within the timeout.
+    - The same plus the hook call removed from `run_until`, so the driver degenerates to sequential runs: not caught (0 of 67 fail). This shows that the interleaving is what catches the first.
+- Findings: F93 (process-wide state that reaches no output: `errors.cpp`'s shared `msg_buf`, which two threads raising `unimplemented_exception` at once would race; `WHVivaxSamples`' debug globals; `StreamValidator`; the uncompiled IPT file's static; the stateless `AgeGroupDummy`).
+- Surprises: the planted bug hung rather than failed, which is why the script got a timeout. The sweep found nothing that reaches output: D9a–D9e5 had removed it all.
+- Follow-ups:
+  - M7: extend G-two-sims to simulations on threads at the same moment (N parallel equal N serial). F93's `msg_buf` is the one known race.
+  - H3: a G-two-sims case with checkpoint and resume in the same process (from D9a).
+  - Sweep before F0: modules the D chunks did not rename or modernise.
+- Next: M3 (recommended order 12b; M7 after it needs Decision 6).
