@@ -989,6 +989,25 @@ GROUPS = {
     ],
     "logging": [
         Variant("genotypes_print_eir", G, args=["--print-genotypes", "--print-EIR"]),
+        Variant("old_schema_version", "scenario5.xml", lambda s: rep(s, 'schemaVersion="50"', 'schemaVersion="49"')),
+        Variant("change_eir_too_few_days", "scenario12.xml",
+                keep_change_eir_days(NON_VECTOR_CHANGE_EIR_REQUIRED_DAYS - 1)),
+        Variant("uninfect_vectors_forced", "scenario12.xml",
+                lambda s: rep(s, "    </human>\n  </interventions>", "    </human>\n    <uninfectVectors name=\"u\">"
+                              '<timedDeployment time="7t"/></uninfectVectors>\n  </interventions>')),
+        Variant("itn_killing_logit_negative", "scenarioITNHoleIndexMaxZero.xml",
+                lambda s: rep(s, 'holeFactor="-0.34248" insecticideFactor="3.44955"',
+                              'holeFactor="-0.34248" insecticideFactor="-1"')),
+        Variant("itn_entering_logit_positive", "scenarioITNHoleIndexMaxZero.xml",
+                lambda s: rep(s, 'insecticideFactor="-2.8851"', 'insecticideFactor="2.8851"')),
+        Variant("itn_deterrency_above_one", ITNS,
+                lambda s: rep_first(s, '<deterrency holeFactor="0.5" holeScalingFactor="0.1" insecticideFactor="0.67"',
+                                    '<deterrency holeFactor="1.5" holeScalingFactor="0.1" insecticideFactor="1.2"')),
+        Variant("itn_deterrency_interaction_zero", ITNS,
+                lambda s: rep_first(s, 'insecticideScalingFactor="0.1" interactionFactor="1.492537"',
+                                    'insecticideScalingFactor="0.1" interactionFactor="0"')),
+        Variant("irs_entering_above_one", "scenarioLifeNet1.xml",
+                lambda s: rep(s, 'insecticideFactor="0.1553273"', 'insecticideFactor="1.5"')),
     ],
     "cli": [
         Variant(f"{label}_{flags}", scenario, args=args, runs=2)
