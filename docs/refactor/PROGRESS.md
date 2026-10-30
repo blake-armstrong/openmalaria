@@ -87,7 +87,7 @@ See `PLAN.md` for the session protocol, chunks and gates. Append one log entry p
 | M2 | done | afd3fa8c, 9183ffe4, ca51c409, bff08fc0, b979260e, a0f1112c, d4869a62, d9d45adb, 7b330170, a592041f, 565239f1, (this log entry) |
 | M3 | split | M3a–M3b |
 | M3a | done | 689cfe15, 05e29e78, 9d0761e5, bd273976, 6b474581, 3e8fd719, 4764addf, 35bdcb83, 9c0eb6c2, (this log entry) |
-| M3b | todo | |
+| M3b | done | ad03850c, 0664b1fd, 45345703, e187162d, 59da38cc, 49b3af70, bbef89e2, 99a30993, b55e4083, 042a827e, 99e7f74a, (this log entry) |
 | M4 | done | 1d4cc809, 0cbf0d72, 1856ab43, (this log entry) |
 | M5 | todo | |
 | M6 | todo | |
@@ -2078,3 +2078,39 @@ The user asked for F87 to be fixed after D9e5 reproduced it. The A/B and G-perf 
   - J: a progress callback (F95); `register_log_callback` holding the GIL, as occ does.
   - I2: F96.
 - Next: M3b. Its base is the commit of this entry; move `../om-bench-base` to it.
+
+### M3b: the remaining console messages on util/logging; F94 levels, F55, F97 (done, 2026-10-30)
+- Base: a1d68527 (M3a's 38c33e06 plus the `chunk.py` fix below). `../om-bench-base` was moved to a1d68527 and rebuilt.
+- Before the chunk: a1d68527 fixes `util/chunk.py next`, which picked M7: row 12b names `M3` alone, and a split chunk named alone was skipped without its sub-chunks. It now expands to M3a, M3b; the order is otherwise unchanged.
+- Commits:
+  - ad03850c: F97 (found here, fixed by the user's choice). `GenotypeRegistry::print_genotypes` set `std::fixed`/`setprecision(3)` on `cout` and left them, so with `--print-genotypes` every later `cout` double printed with three decimals (`Annual EIR for funestus: 77.006` for `77.0063`). The table now formats its own lines (`{:>{}}`, `{:>9.3f}`) and logs them at info. `GenotypesSuite` captures it through a `LogCapture` (console off, a callback, restored on scope exit) instead of swapping `cout`'s buffer and restoring its flags. `util/ab_expected.py`: transforms take a context that can rerun the base without one flag; `f97` expects every stdout line outside the `--print-genotypes` tables as the base prints it without the flag (the base's own `77.006` cannot be turned back into `77.0063`). New A/B group `logging`, first variant `genotypes_print_eir`.
+  - 0664b1fd: the rest of the `logging` group, for converted messages no variant printed (found by running every variant on the base and searching its stdout and stderr for each message): an old schema version, 560 non-vector `changeEIR` days (one short), `uninfectVectors` under the forced EIR of a `changeEIR`, the ITN killing-logit and entering-logit advisories, the ITN deterrency bounds (above one; interaction factor 0, F98) and the IRS entering bound. Base against base: 9 of 9 identical; each prints its message.
+  - 45345703, e187162d, 59da38cc, 49b3af70, bbef89e2: the conversion, byte for byte, one commit per module (util and `Parameters.h`; Host, Clinical, WithinHost; PkPd; Transmission; interventions and `mon/init`), 23 files. stderr messages at warn (the parameter lookup failure at error), stdout at info. Doubles as `{:g}`, which is an ostream's default `%.6g` (the form the code already used in `std::format` messages); the model-option bits as `{:d}`, as the file already did. A line built over several statements is built as a string and logged once; a multi-line note is one message with embedded newlines, whose bytes match. `print_details(std::ostream&)` stays; `InterventionManager` writes it into a string (`details()`) for the `--print-interventions` lists and the `--verbose` deploy lines. `CalcNvO.cpp`'s `printf` (stdout) logs at info. F94's three messages stay at warn here.
+  - 99a30993: F94 levels (the user's choice in M3a): "Nt loaded checkpoint" at info (it moves to stdout), "cum deployment" and "TSMD hit limit" at debug (compiled out of Release; on stdout in Debug). Transform `f94`: the loaded line leaves stderr and enters stdout before the run's first `Starting `/`Time step: `/`deploy::` line (the load happens before `run_phase("Intervention period")`), the debug lines leave stderr.
+  - b55e4083: F55's typos ("toorestrictive", "or  conversion"). Transform `f55`. The duplicate-drug code error of F55 stays open.
+  - 042a827e: G-style found `pro-type-union-access` on bbef89e2's ITN advisory line (it reads ITN's factor union, as the `cerr` line did); a targeted NOLINT, as STYLE.md says.
+  - 99e7f74a: FINDINGS, PLAN (M3b as built), README (the `logging` group, the new transforms).
+- Not converted: `util/CommandLine` (usage, help, option errors; I1), the progress meter (F95), `StreamValidator` (F42), the `WHVivaxSamples` block (F93), writes to files and string streams (`AgeGroupInterpolation`'s CSV, `print_details`, exception texts), the unit-test suites' own output.
+- Gates:
+  - G-exact / G-unit / G-two-sims: 67/67 on `build-rework/` and `build-debug/` at bbef89e2 (logged as 0664b1fd +uncommitted, the conversion before its commits) and at b55e4083; 67/67 on `build-rework/` at 042a827e.
+  - G-cli (base a1d68527): 34 of 34 identical at bbef89e2; at b55e4083 6 of 34 differ, the six checkpoint variants (F94's line).
+  - A/B, every default group (base a1d68527), at b55e4083: 43 of 324 differ, all deliberate (below).
+  - Deliberate changes: `util/ab_expected.py … f97,f94,f55` over every group and cli at 042a827e: 0 of 358 differ from the expected change, 49 changed (43 A/B + 6 cli). Each transform is needed: `f97` alone over every group at bbef89e2 0 of 358 (1 changed); after F94, `f97` alone fails 6 of 34 cli variants; without `f55`, the pkpd group fails its 2 variants that reach the typos.
+  - G-stat: 53 of 53 (12 disabled).
+  - G-style: clean at 042a827e (failed at b55e4083, see above).
+  - G-perf: median per-pair ratio 1.0133 (+1.33%), spreads 2.70% (base) / 7.03%, load 5.14 at the start. Above the ~4 the skill names, but the ratio is far from the limit and M3b touches no hot path (the converted messages are init-time, error-path or behind flags); not rerun.
+  - Planted bugs (`util/plant.py`, each restored and rebuilt; A/B against a1d68527, so the deliberate-change variants differ too, and each catch below is a variant the plant alone changes):
+    - a byte in the ITN deterrency note: caught by `logging/itn_deterrency_above_one` and `_interaction_zero`;
+    - "Annual EIR" with `{}` for `{:g}`: caught by `cli/print_eir` and `transmission/vector_print_eir`;
+    - the phenotype names left-aligned: caught by the 9 registries `genotypes_print*` variants and pkpd's print variants;
+    - the `--print-survey-times` header at warn: caught by `monitoring/print_survey_times` and `survey_repeat_unreported_last`.
+- Findings: F97 (fixed), F98 (an ITN interaction factor of 0 reported as a code error). F14 and F94 closed. Note on F55 (typos fixed; the duplicate-drug code error stays).
+- Surprises:
+  - `std::format("{}")` on a double is shortest round-trip, not an ostream's `%.6g`; every double needs `{:g}` to keep the bytes. A bool from a bitset needs `{:d}`. `std::format` aligns strings left by default, so every `setw` became an explicit `>`.
+  - The genotype table's leaked stream state (F97) was known to `GenotypesSuite`, which saved and restored `cout`'s flags around the call.
+  - 13 of the converted call sites were printed by no A/B variant; the `logging` group reaches 7 (8 variants: the ITN deterrency note has two). TSMD, the root-finding failure, the S_v fit report, the negative-concentration message, the debug-only `approxEqual` note and the unreachable parameter-lookup error are covered by review only (TSMD is now debug and absent from Release anyway).
+- Follow-ups:
+  - I1: `CommandLine`'s usage, help and option errors on the logger, and its `endl`s (the end of F14).
+  - E: F98, with F3 and F76; F55's duplicate-drug code error.
+  - J: F95's progress callback (from M3a).
+- Next: M7 (ask Decision 6 first). Its base is the commit of this entry; move `../om-bench-base` to it.
