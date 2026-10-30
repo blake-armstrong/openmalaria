@@ -28,6 +28,10 @@ om_dependency (Catch2 VERSION 3.x.y
   also the minimum accepted from an installed package.
 - Set build options of a fetched project (e.g. `CATCH_INSTALL_DOCS`) as normal
   variables before the call.
+- `NO_FIND_PACKAGE` skips `find_package` and always fetches the pinned tarball. Use it
+  only when installed packages are built in a way the tree cannot use: spdlog's
+  Homebrew, apt and conda packages are built against fmt, while this tree needs
+  `SPDLOG_USE_STD_FORMAT`, which changes spdlog's ABI.
 
 Standard FetchContent cache variables control it from the command line:
 
@@ -73,6 +77,7 @@ need a newer CMake before it builds code from this branch.
 | ChaCha RNG | in tree (`contrib/chacha.h`), modified (see its header) | Zlib | vendored | `model/util/random.h`, `unittest/ChaChaSuite.h` | stays; per-human streams in M8 |
 | xoshiro | in-tree port (`model/util/xoshiro.h`) of the Blackman/Vigna reference generator | reference code public domain (CC0); port GPL-2.0-or-later as part of OpenMalaria | in tree | `model/util/random.h`, `unittest/XoshiroSuite.h` | stays |
 | Random variates | in tree (`model/util/random_variates.h`, M4): polar method (normal), Marsaglia–Tsang (gamma), Jöhnk or gamma ratio (beta), multiplication or Hörmann's PTRS (Poisson), inversion (Weibull) | GPL-2.0-or-later as part of OpenMalaria; written from the published algorithms, no code copied | in tree | `model/util/random.h` | stays; replaces `gsl_ran_*`, not `std::` distributions (their output differs between standard libraries) |
+| spdlog | 1.17.0 | MIT | `om_dependency(NO_FIND_PACKAGE)`, always fetched (M3), built with `SPDLOG_USE_STD_FORMAT=ON`, so no fmt | `model/util/logging.cpp` only, linked `PRIVATE` to `model`; no header in `model/` includes it. `model` sets `SPDLOG_ACTIVE_LEVEL` (debug in Debug builds, info otherwise) `PUBLIC`, so `logging.h` compiles out debug and trace calls in Release | stays |
 | CxxTest | 4.4, in tree (`contrib/cxxtest/`), modified | LGPL-3.0 | vendored | `unittest/*Suite.h` only (`cxxtestgen` needs Python) | new tests are Catch2 since M1; removed in M9 |
 
 `contrib/README.txt` still says CxxTest 3.10.1 under LGPL-2.1. The tree has had 4.4,

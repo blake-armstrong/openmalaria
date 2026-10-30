@@ -135,6 +135,16 @@ add_library (model
   ${CMAKE_CURRENT_BINARY_DIR}/util/version.h
 )
 
+set (SPDLOG_USE_STD_FORMAT ON)
+set (SPDLOG_INSTALL OFF)
+set (SPDLOG_BUILD_EXAMPLE OFF)
+om_dependency (spdlog VERSION 1.17.0 NO_FIND_PACKAGE
+  URL https://github.com/gabime/spdlog/archive/refs/tags/v1.17.0.tar.gz
+  SHA256 d8862955c6d74e5846b3f580b1605d2428b11d97a410d86e2fb13e857cd3a744
+)
+target_link_libraries (model PRIVATE spdlog::spdlog)
+target_compile_definitions (model PUBLIC SPDLOG_ACTIVE_LEVEL=$<IF:$<CONFIG:Debug>,1,2>)
+
 if (MSVC)
   set_target_properties (model PROPERTIES
     LINK_FLAGS "${OM_LINK_FLAGS}"
