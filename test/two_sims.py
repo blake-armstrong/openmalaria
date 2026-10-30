@@ -54,6 +54,7 @@ def main():
     parser.add_argument("scenarios", nargs="+", help="scenario names, as in test/scenario<NAME>.xml, run in order")
     parser.add_argument("--interleave", action="store_true", help="interleave the simulations' time steps")
     parser.add_argument("--keep", action="store_true", help="keep the working directory")
+    parser.add_argument("--timeout", type=float, default=120, help="seconds before the driver is killed (default 120)")
     opts = parser.parse_args()
 
     work = tempfile.mkdtemp(prefix="two_sims-")
@@ -65,8 +66,11 @@ def main():
             cmd.append("--next")
         cmd += ["--resource-path", TEST, "--scenario", scenario,
                 "--output", f"output-{index}-{name}.txt", "--ctsout", f"ctsout-{index}-{name}.txt"]
-    ret = subprocess.call(cmd, cwd=work)
-    failures = [] if ret == 0 else [f"driver exit status {ret}"]
+    try:
+        ret = subprocess.run(cmd, cwd=work, timeout=opts.timeout).returncode
+        failures = [] if ret == 0 else [f"driver exit status {ret}"]
+    except subprocess.TimeoutExpired:
+        failures = [f"driver killed after {opts.timeout:g} s"]
     for index, name in enumerate(opts.scenarios):
         failures += check(work, index, name)
     for failure in failures:
