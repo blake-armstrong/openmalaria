@@ -232,7 +232,7 @@ void factors::SurvivalFactor::init_logit(const scnXml::ITNEffectLogit& elt, doub
             logging::warn("ITN.description.anophelesParams.*KillingEffectLogit: expected"
                           "\n(insecticide) P >= 0, found P = {:g}"
                           "\n(interaction) P+I*log(holeIndexMax+1) >= 0, found {:g}",
-                          b.pf, b.pf + b.IF * b.h_max);
+                          b.pf, b.pf + b.IF * b.h_max); // NOLINT(cppcoreguidelines-pro-type-union-access)
         }
     }
 }
