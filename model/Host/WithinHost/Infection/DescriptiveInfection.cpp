@@ -170,7 +170,7 @@ void DescriptiveInfection::determine_densities(LocalRng& rng, const Clock& clock
             time_step_max_density = rng.max_multi_log_normal(density, clock.one_ts() - 1, meanlog, stdlog);
         }
         if (time_step_max_density > MaxDens && not_printed_md_warning) {
-            logging::warn("TSMD hit limit:\t{:g},\t{:g}", density, time_step_max_density);
+            logging::debug("TSMD hit limit:\t{:g},\t{:g}", density, time_step_max_density);
             not_printed_md_warning = false;
         }
         density = min(density, MaxDens);

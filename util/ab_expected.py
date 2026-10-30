@@ -17,6 +17,9 @@ import ab_scenarios as ab
 
 PROGRESS_SEGMENT = re.compile(r"\r\d+%\t")
 STALE_PERROR = re.compile(r"OpenMalaria: No such file or directory\n\Z")
+LOADED_CHECKPOINT = re.compile(r"^\d+t loaded checkpoint\n", re.M)
+AFTER_LOAD = re.compile(r"^(Starting |Time step: |deploy::)", re.M)
+DEBUG_LINE = re.compile(r"^(cum deployment: prop protected |TSMD hit limit:).*\n", re.M)
 PRINT_GENOTYPES_LINE = re.compile(r"(\||Phenotype mapping for drug .*:$|-+$|$)")
 
 
@@ -60,9 +63,22 @@ def unformatted_after_genotypes(ctx, index, code, stdout, stderr):
     return code, "".join(lines) + "".join(plain), stderr
 
 
+def f94_levels(ctx, index, code, stdout, stderr):
+    stderr = DEBUG_LINE.sub("", stderr)
+    loaded = LOADED_CHECKPOINT.search(stderr)
+    if loaded:
+        stderr = stderr[:loaded.start()] + stderr[loaded.end():]
+        after = AFTER_LOAD.search(stdout)
+        at = after.start() if after else len(stdout)
+        stdout = stdout[:at] + loaded.group() + stdout[at:]
+    return code, stdout, stderr
+
+
 TRANSFORMS = {
     "progress": (collapse_progress, "F1: one progress segment per percent, not per step"),
     "f2": (drop_stale_perror, "F2: no trailing perror; Command-line error ends its line"),
+    "f94": (f94_levels, "F94: the loaded-checkpoint line on stdout (before the run's first verbose line); cum "
+                        "deployment and TSMD hit limit at debug, absent from a Release build"),
     "f97": (unformatted_after_genotypes, "F97: stdout lines outside the --print-genotypes tables as in the base's "
                                          "run without that flag"),
 }

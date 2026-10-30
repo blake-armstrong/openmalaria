@@ -379,8 +379,8 @@ public:
             // additionally cover the proportion (coverage - propProtected),
             // selected from the list unprotected.
             const double additional_coverage = (coverage - prop_protected) / (1.0 - prop_protected);
-            logging::warn("cum deployment: prop protected {:g}; additionalCoverage {:g}; total {}", prop_protected,
-                          additional_coverage, total);
+            logging::debug("cum deployment: prop protected {:g}; additionalCoverage {:g}; total {}", prop_protected,
+                           additional_coverage, total);
             for (Human* human : unprotected) {
                 if (human->intervention_rng.uniform_01() < additional_coverage) {
                     deploy_to_human(*human, mon::DeployMethod::Timed);

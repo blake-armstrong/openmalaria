@@ -196,7 +196,7 @@ void read_checkpoint(const string& checkpoint_file_name, const util::CommandLine
                continuous, monitoring, end_time, est_end_time, population, transmission, intervention_manager);
     in.close();
 
-    logging::warn("{}t loaded checkpoint", clock.in_steps(clock.now()));
+    logging::info("{}t loaded checkpoint", clock.in_steps(clock.now()));
 }
 
 }
