@@ -85,7 +85,9 @@ See `PLAN.md` for the session protocol, chunks and gates. Append one log entry p
 | M0 | done | e5205c8a, 331463a7, 45d57ba3, (this log entry) |
 | M1 | done | de71bd96, c7293e4e, 80034802, 941c2e77, (this log entry) |
 | M2 | done | afd3fa8c, 9183ffe4, ca51c409, bff08fc0, b979260e, a0f1112c, d4869a62, d9d45adb, 7b330170, a592041f, 565239f1, (this log entry) |
-| M3 | todo | |
+| M3 | split | M3a–M3b |
+| M3a | done | 689cfe15, 05e29e78, 9d0761e5, bd273976, 6b474581, 3e8fd719, 4764addf, 35bdcb83, 9c0eb6c2, (this log entry) |
+| M3b | todo | |
 | M4 | done | 1d4cc809, 0cbf0d72, 1856ab43, (this log entry) |
 | M5 | todo | |
 | M6 | todo | |
@@ -2036,3 +2038,43 @@ The user asked for F87 to be fixed after D9e5 reproduced it. The A/B and G-perf 
   - H3: a G-two-sims case with checkpoint and resume in the same process (from D9a).
   - Sweep before F0: modules the D chunks did not rename or modernise.
 - Next: M3 (recommended order 12b; M7 after it needs Decision 6).
+
+### Plan amendment: M3 split and the logging design (2026-10-30, at the start of M3)
+- Inventory at 2fbc8cd2: 129 `cout`/`cerr` matches in 32 files of `model/`. Of these, `util/CommandLine` (usage, help, option errors; I1 replaces it), the progress meter, `StreamValidator` (F42), the `WHVivaxSamples` block (F93) and commented-out lines are not converted. An Explore pass traced how each remaining site could receive a logger owned by `Simulation`: about 51 files, and about 76 counting `unit_parse`, whose four functions have 30 callers in 10 files with callers of their own. `loadScenario`'s old-schema warning runs before any `Simulation` exists.
+- The user chose the design of peterspackman/occ (`include/occ/core/log.h`, `src/core/log.cpp`): one process-wide logger, free functions at the call sites, pattern `%v`, a callback sink for Python. This replaces the row's "`Simulation` owns an `om::Logger`, handed to components"; no signature changes. They also chose to fix F1, F2 and F55 in M3, each in its own commit after the byte-identical conversion, and to give the informational stderr messages their level (F94).
+- Split (PLAN step 4): M3a (G-cli, spdlog, `util/logging`, `main`/`Simulation`/`checkpoint`, F1, F2) and M3b (the other sites, the levels, F55, F14). Rows in PLAN.md.
+
+### M3a: G-cli, spdlog and util/logging; F1, F2 (done, 2026-10-30)
+- Base: 2fbc8cd2 (D9f). The G-perf and A/B base worktree `../om-bench-base` was moved to 2fbc8cd2 and rebuilt.
+- Commits:
+  - 689cfe15: G-cli. `util/ab_scenarios.py` gets a `cli` group: scenario5 and scenarioVecTest with default, `--verbose --progress`, `--checkpoint` and `--checkpoint-stop` (each run twice, so the checkpoint runs resume), and D9e1's hand invocations (each `--print-*` option, `--validate-only`, `-V`, `-c`, `--checkpoint-file`, `--output`/`--ctsout`, `--name`, `--output-format bin`, `-z`, `--no-deprecation-warnings`, `--debug-vector-fitting`, bad long and short flags, a stray parameter, a missing argument, `--help`, `--version`, a missing scenario file, a schema error). `util/ab_cli.sh BASE [CANDIDATE]` runs it; `gates.sh --cli` (part of `--all`); the default groups leave it out. The runner now compares raw bytes: it captured with `text=True`, whose newline translation turned the progress meter's `\r` into `\n`, so a change between the two was invisible to every A/B so far. The binary path is normalised, so the usage text's `argv[0]` compares (D9e1 had to except it by hand). `pass_scenario=False` for variants that name their own scenario.
+  - 05e29e78: spdlog 1.17.0 through `om_dependency`, linked `PRIVATE` to `model`, built with `SPDLOG_USE_STD_FORMAT=ON` (no fmt is fetched). `om_dependency` gains `NO_FIND_PACKAGE`: Homebrew's, apt's and conda's spdlog are built against fmt, and the std-format build has another ABI, so an installed copy must not be used. `model` sets `SPDLOG_ACTIVE_LEVEL` `PUBLIC` (1 = debug in Debug builds, 2 = info otherwise). DEPENDENCIES.md: the flag and a row.
+  - 9d0761e5: `model/util/logging.{h,cpp}`, namespace `OM::logging`. From occ: process-wide logger, `info`/`warn`/`error`/`debug`/`trace` free functions, `%v`, `set_level`, `register_log_callback`/`clear_log_callbacks`. Different from occ, each for a reason: the header does not include spdlog (PLAN: no third-party type in a public header), so the templates format with `std::format` and call `write()` in the .cpp; a `ConsoleSink` routes info and below to stdout and warn and above to stderr, with `fflush` after each message (occ's sink sends everything to stdout); eol is `"\n"` on every platform; `debug`/`trace` compile out above `SPDLOG_ACTIVE_LEVEL`, and the runtime level starts there; callbacks get the bare message; `set_console(false)` for embedders; no buffer API. Not `OM::log`, because 15 unqualified `log(` calls in `model/` would find the namespace. `unittest/LoggingTests.cpp` (Catch2, 4 cases): callbacks get level and text, `set_level` filters, debug reaches the sinks only when compiled in (Release no, Debug yes), `clear_log_callbacks`. The `namespace OM::logging` lines carry `NOLINT(readability-identifier-naming)`, as `random_variates.h` does.
+  - bd273976: `Variant(before_run=…)`, and two cli variants that damage the checkpoint before the resume: `truncated_checkpoint` (half the gz: `Error: Xoshiro256P::binary_checkpoint: stream read error`, exit 1) and `extended_checkpoint` (9 bytes appended to the data: `Checkpoint error: … 9 bytes remaining.` and the call stack, exit 68). No variant reached `main`'s `checkpoint_error` branch before.
+  - 6b474581: byte-identical conversion of `Simulation.cpp` (the `--verbose` lines at info; `print_errno`'s `perror` as `logging::error` with `std::strerror`, the same bytes), `checkpoint.cpp` ("Nt loaded checkpoint" at warn for now, F94) and `main.cpp` (the exception reports at error; the code-0 "…; exiting..." note at warn). A traced exception's stream text always ends in `\n`, so it is logged without it. "Command-line error: " had no newline and the trailing `perror` cannot go through a sink, so both waited for F2. `main` carries `NOLINT(bugprone-exception-escape)`: an error report can now throw `bad_alloc` from `std::format`, and terminating is right then. The progress meter stays on `cerr` (F95).
+  - 3e8fd719: F1, `print_progress` takes `last_percent` by reference. Only `--progress` runs change (stderr).
+  - 4764addf: `extended_checkpoint` rewrites the gz with `mtime=0`. `gzip.open` stored the current time in the header, so base and candidate matched only when both ran in the same second. (The first version of this commit also took `ab_progress.py`'s deletion by mistake; amended before anything else was built on it.)
+  - 35bdcb83: F2. The final `perror("OpenMalaria")` is removed, and "Command-line error" logs at error and ends its line. `util/ab_expected.py` replaces 3e8fd719's `ab_progress.py`: it runs `ab_scenarios` variants and requires candidate = transforms(base) for exit code, stdout and stderr, and equal files. Transforms `progress` (F1: consecutive repeats of a progress segment collapsed) and `f2` (the trailing ENOENT `perror` line removed, or replaced by `\n` after "Command-line error").
+  - 9c0eb6c2: FINDINGS, PLAN (the split, M3a as built, M3b), README (a G-cli row and the commands).
+- Gates:
+  - G-exact / G-unit / G-two-sims: 67/67 on `build-rework/` (Release) and `build-debug/` (Debug) at 35bdcb83. The Catch2 binary now holds the 4 logging cases.
+  - G-cli (`util/ab_cli.sh`, base 2fbc8cd2): 32 of 32 identical at 689cfe15 (base build against the same commit), 34 of 34 at 6b474581 (after the conversion). After F1: 6 of 34 differ, the six `--progress` variants.
+  - A/B, every default group (base 2fbc8cd2): 315 of 315 identical at 6b474581; in 175 of them the stderr line shown is an error report (`Error:`, `Code error:`, `XSD error:` and so on).
+  - Deliberate changes: `util/ab_expected.py … progress,f2` over all 349 variants (default groups and cli) at 35bdcb83: 0 differ from the expected change, 190 changed (6 by F1, the rest by F2). With `progress` alone, falciparum-init gives 12 of 12 failing, so the check sees F2. `ab_progress.py` (3e8fd719) gave scenario5 8032 → 101 progress segments and scenarioVecTest 7886 → 116 (percents recur in the init phases), and failed base against base.
+  - G-style: `util/style.sh check 2fbc8cd2` clean.
+  - G-perf: median per-pair ratio 0.9904 (−0.96%), spreads 8.82% (base) / 2.07%, load 6.04 at the start. The load was high, but the ratio is far from the limit and M3a touches no hot path.
+  - Planted bugs (`util/plant.py`, each restored and rebuilt):
+    - a one-byte change to the "Starting" verbose line: caught by G-cli (7 variants);
+    - the progress meter's `\r` changed to `\n`: caught by G-cli (6 variants), which the old `text=True` capture would have missed;
+    - the checkpoint error's call stack logged with its final newline: caught by `cli/extended_checkpoint` only.
+- Findings: F1 and F2 closed. F94 (informational messages on stderr; the levels the user chose for three of them), F95 (the unconditional `'\r'` at the end of every run), F96 (`main`'s XSD branch on `errno == 2`, with errno already ENOENT at startup). Notes on F14 (the flush per message keeps the interleaving) and F93 (the logger is process-wide on purpose).
+- Surprises:
+  - errno is ENOENT before `main` does anything, so F2's line appeared on 59 of 64 error runs, including a bad flag.
+  - Every A/B so far compared stderr after Python's newline translation, so `\r` and `\n` were the same to it.
+  - `CalcNvO.cpp:227` prints "root finding failed" with `printf`, which the `cout`/`cerr` count missed. Added to M3b.
+  - Building `build-rework` while a background A/B used its binary would have mixed builds; that run was stopped and repeated after the commit.
+- Follow-ups:
+  - M3b: the remaining sites; a `logging` A/B group; the F94 levels and F55 typos, each checked with a new `ab_expected.py` transform; close F14.
+  - J: a progress callback (F95); `register_log_callback` holding the GIL, as occ does.
+  - I2: F96.
+- Next: M3b. Its base is the commit of this entry; move `../om-bench-base` to it.
