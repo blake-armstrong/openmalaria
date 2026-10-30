@@ -66,7 +66,7 @@ LoadedRun load(const std::vector<char*>& args) {
     OM::util::CommandLineOptions command_line = OM::util::CommandLine::parse(args);
     std::unique_ptr<scnXml::Scenario> scenario = OM::util::loadScenario(command_line.scenario_path());
     OM::util::XMLChecker().PerformPostValidationChecks(*scenario);
-    return {std::move(command_line), std::move(scenario)};
+    return {.command_line = std::move(command_line), .scenario = std::move(scenario)};
 }
 
 std::unique_ptr<OM::Simulation> make_simulation(LoadedRun run) {
