@@ -1,0 +1,30 @@
+[package]
+name = "openmalaria"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+description = "Safe, modular, library-first Rust API for OpenMalaria (Schema v50) individual-based malaria simulations"
+
+[features]
+default = ["soa"]
+soa = ["om-sim/soa"]
+
+[dependencies]
+om-clinical.workspace = true
+om-core.workspace = true
+om-interventions.workspace = true
+om-monitoring.workspace = true
+om-pkpd.workspace = true
+om-rng.workspace = true
+om-schema.workspace = true
+om-sim = { workspace = true, default-features = false }
+om-transmission.workspace = true
+om-within-host.workspace = true
+rayon.workspace = true
+serde.workspace = true
+serde_json.workspace = true
+thiserror.workspace = true
+
+[dev-dependencies]
+approx.workspace = true
+proptest.workspace = true

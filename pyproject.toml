@@ -1,0 +1,23 @@
+[build-system]
+requires = ["maturin>=1.7,<2.0"]
+build-backend = "maturin"
+
+[project]
+name = "openmalaria"
+version = "50.0.0"
+description = "Safe Rust library and Python bindings for OpenMalaria (Schema v50) individual-based malaria epidemiology simulations"
+requires-python = ">=3.9"
+license = { text = "GPL-2.0-or-later" }
+dependencies = []
+
+[project.optional-dependencies]
+dev = ["pytest>=8.0", "numpy>=1.26"]
+
+[tool.maturin]
+python-source = "python"
+manifest-path = "bindings/openmalaria-py/Cargo.toml"
+module-name = "openmalaria._core"
+features = ["extension-module"]
+
+[tool.pytest.ini_options]
+testpaths = ["python/tests"]

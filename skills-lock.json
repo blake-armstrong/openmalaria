@@ -1,0 +1,11 @@
+{
+  "version": 2,
+  "skills": {
+    "migrate-to-rust": {
+      "source": "google/skills",
+      "sourceType": "github",
+      "skillPath": "skills/developers/migrate-to-rust/SKILL.md",
+      "computedHash": "56c60c4a34b0a6409015c64018f78e568bec9b66a32db804a641d5902bc9b516"
+    }
+  }
+}

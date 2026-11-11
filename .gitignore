@@ -14,3 +14,11 @@ lib
 .clangd
 *.swp
 .vscode
+/target/
+/pgo-data/
+/.venv/
+*.profraw
+*.profdata
+__pycache__/
+*.egg-info/
+.pytest_cache/

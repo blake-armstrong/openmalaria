@@ -1,0 +1,14 @@
+[package]
+name = "om-rng"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+description = "Bit-exact ChaCha8 MasterRng, Xoshiro256+ LocalRng, and pure-Rust GSL 2.8 probability distributions and CDFs for OpenMalaria"
+
+[dependencies]
+serde.workspace = true
+thiserror.workspace = true
+
+[dev-dependencies]
+approx.workspace = true
+proptest.workspace = true

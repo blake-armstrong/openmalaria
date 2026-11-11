@@ -1,0 +1,18 @@
+[package]
+name = "openmalaria-py"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+description = "Thin PyO3 Python bindings for the safe Rust openmalaria library"
+
+[lib]
+name = "_core"
+crate-type = ["cdylib", "rlib"]
+
+[features]
+default = []
+extension-module = ["pyo3/extension-module"]
+
+[dependencies]
+openmalaria.workspace = true
+pyo3 = { version = "0.24", features = ["abi3-py39"] }

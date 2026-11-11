@@ -1,0 +1,161 @@
+{
+  "project_name": "OpenMalaria",
+  "legacy_language": "C++20",
+  "user": "blaarm",
+  "model": "Gemini 4 Carbon (High)",
+  "source_url": "https://github.com/OpenMalaria-Org/openmalaria",
+  "scope_summary": "Full OpenMalaria v50 modular Safe Rust library, CLI, and PyO3 Python package",
+  "started_at_epoch": 1794364391.772727,
+  "completed_at": null,
+  "_active_bucket": {
+    "name": "rewrite",
+    "started_at": 1794366347.10706
+  },
+  "_bucket_seconds": {
+    "discovery": 1954.8944787979126,
+    "blueprint": 0.4095590114593506,
+    "rewrite": 0.0,
+    "test_heal": 0.0,
+    "parity": 0.0,
+    "pgo_bench": 0.0
+  },
+  "story": {
+    "headline": "",
+    "intro": "",
+    "ch1_narrative": "",
+    "ch2_narrative": "",
+    "ch3_narrative": "",
+    "ch4_narrative": "",
+    "ch5_narrative": ""
+  },
+  "census": {
+    "before": {
+      "scanned": true,
+      "files": 150,
+      "code_loc": 17548,
+      "comment_loc": 11127,
+      "comment_pct": 63.4,
+      "max_file_loc": 856,
+      "avg_file_loc": 191,
+      "files_under_400_pct": 92.0,
+      "doc_tests": 0,
+      "max_nesting_depth": 11,
+      "avg_fn_loc": 16,
+      "hazards_count": 1188,
+      "latent_bugs_found": 8
+    },
+    "after": {
+      "scanned": false,
+      "files": 0,
+      "code_loc": 0,
+      "comment_loc": 0,
+      "comment_pct": null,
+      "max_file_loc": 0,
+      "avg_file_loc": 0,
+      "files_under_400_pct": null,
+      "doc_tests": 0,
+      "max_nesting_depth": null,
+      "avg_fn_loc": null,
+      "unsafe_blocks": null,
+      "forbid_unsafe": false,
+      "branch_coverage_pct": null,
+      "clippy_warnings": null
+    }
+  },
+  "opportunities": [
+    {
+      "category": "latent_bug",
+      "title": "Uninitialized EIR accumulators in TransmissionModel",
+      "file": "model/Transmission/TransmissionModel.h:466",
+      "description": "tsAdultEIR_i, tsAdultEIR_l, surveyInputEIR_i/_l, and surveySimulatedEIR_i/_l are uninitialized in TransmissionModel constructor while surveyEIR() executes += on every warmup step (UB)."
+    },
+    {
+      "category": "latent_bug",
+      "title": "Pre-main-sim EIR reset skipped due to init ordering",
+      "file": "model/main.cpp:278",
+      "description": "transmission->summarize() is called before mon::initMainSim() when mon::isReported() is false, returning early at TransmissionModel.h:175 without zeroing warmup EIR accumulators."
+    },
+    {
+      "category": "latent_bug",
+      "title": "Copy-pasted assert(simulationMode == forcedEIR) in transientEIRknown",
+      "file": "model/Transmission/VectorModel.cpp:381",
+      "description": "Inside if (simulationMode == transientEIRknown), assert(simulationMode == forcedEIR) unconditionally aborts any debug build when transientEIRknown is active."
+    },
+    {
+      "category": "latent_bug",
+      "title": "Human::removeFromCohort leaves stale cohortSet bitmask",
+      "file": "model/Host/Human.cpp:131",
+      "description": "subPopExp.erase(id) omits mon::updateCohortSet(cohortSet, id, false), leaving the cached cohortSet bitmask permanently stale for cohort monitoring."
+    },
+    {
+      "category": "latent_bug",
+      "title": "Pass-by-value lastPercent in print_progress & int32 overflow",
+      "file": "model/main.cpp:54",
+      "description": "print_progress(int lastPercent, ...) takes lastPercent by value instead of reference so static lastPercent=-1 never updates, spamming stderr every step; sim::now()*100 also risks signed overflow."
+    },
+    {
+      "category": "latent_bug",
+      "title": "Divide-by-zero UB on missing interval and zero-adult step",
+      "file": "model/sim.cpp:35",
+      "description": "SimData::interval stays 0 when neither ModelName=base nor <parameters> is set, causing 365/0 integer UB; surveyEIR() also divides 0.0/0 when tsNumAdults == 0, poisoning surveySimulatedEIR with NaN."
+    },
+    {
+      "category": "latent_bug",
+      "title": "Infinite resampling loop when human weight multStdDev == 0",
+      "file": "model/Host/WithinHost/CommonWithinHost.cpp:79",
+      "description": "When multStdDev == 0.0 (allowed by schema.xsd) and newborn mean weight < 0.5 kg, do-while resampling hetMassMultiplier >= minHetMassMult hangs forever in Release builds."
+    },
+    {
+      "category": "latent_bug",
+      "title": "Uninitialized fields in VivaxBrood::UpdResult & EventScheduler",
+      "file": "model/Host/WithinHost/WHVivax.h:70",
+      "description": "VivaxBrood::UpdResult() leaves isFinished uninitialized and ClinicalEventScheduler leaves previousDensity uninitialized."
+    },
+    {
+      "category": "architecture",
+      "title": "Eliminate 15+ process-wide mutable static singletons",
+      "file": "model/sim.h:50",
+      "description": "Encapsulate SimClock, MasterRng, Parameters, ModelOptions, Genotypes, Monitoring, and Interventions in instance-owned ScenarioContext & Simulation structs for multi-instance thread-safe Python execution."
+    },
+    {
+      "category": "performance",
+      "title": "Eliminate ~400M hot-loop heap vector allocations & pointer chasing",
+      "file": "model/Host/Human.cpp:248",
+      "description": "Replace per-human per-step std::vector<double> EIR/genotype heap allocations, 3 unique_ptr virtual dispatches, and raw std::list<CommonInfection*> with SoA population buffers, inline fixed-capacity slots, and pre-allocated scratch slices."
+    },
+    {
+      "category": "safety",
+      "title": "Replace 1,188 raw pointer/malloc/static hazards with #![forbid(unsafe_code)]",
+      "file": "model/Transmission/Anopheles/CalcNvO.cpp:139",
+      "description": "Eliminate raw malloc/free GSL matrix arrays, owning raw pointers in CommonWithinHost, and reinterpret_cast GSL RNG hooks via 100% Safe Rust crates."
+    },
+    {
+      "category": "hygiene",
+      "title": "Decompose >600 LOC monoliths into <=400 LOC documented modules",
+      "file": "model/Transmission/Anopheles/AnophelesModel.cpp:1",
+      "description": "Split 7 oversized files (up to 960 lines) into focused <=400 LOC single-responsibility Rust modules with complete rustdoc and runnable doc-tests."
+    }
+  ],
+  "test_iterations": [],
+  "parity_iterations": [],
+  "benchmarks": [
+    {
+      "stage": "legacy_baseline",
+      "label": "1. Legacy C++20 Release Baseline (-O3)",
+      "wall_time_ms": 6241.08,
+      "peak_rss_mb": 17.41,
+      "speedup": 1.0,
+      "notes": "Median of 3 Release runs across 5 scenarios (VecFullTest, 2ITNs, Molineaux, Vivax, EffectiveDrug); 66/66 cxxtest passed."
+    }
+  ],
+  "time_buckets": [],
+  "scorecard": [],
+  "roi": {},
+  "spotlight": {
+    "explanation": "",
+    "legacy_file": "",
+    "legacy_code": "",
+    "rust_file": "",
+    "rust_code": ""
+  }
+}

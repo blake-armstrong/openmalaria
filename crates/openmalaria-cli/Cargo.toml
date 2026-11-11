@@ -1,0 +1,17 @@
+[package]
+name = "openmalaria-cli"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+description = "Thin OpenMalaria CLI executable built strictly as a sequence of safe openmalaria library calls"
+
+[[bin]]
+name = "openMalaria"
+path = "src/main.rs"
+
+[features]
+default = ["soa"]
+soa = ["openmalaria/soa"]
+
+[dependencies]
+openmalaria = { workspace = true, default-features = false }

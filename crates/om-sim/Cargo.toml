@@ -1,0 +1,31 @@
+[package]
+name = "om-sim"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+description = "Struct-of-Arrays (SoA) OpenMalaria simulation engine, demography, lifecycle phases, checkpointing, and Rayon batch runner"
+
+[features]
+default = ["soa"]
+soa = []
+
+[dependencies]
+om-clinical.workspace = true
+om-core.workspace = true
+om-interventions.workspace = true
+om-monitoring.workspace = true
+om-pkpd.workspace = true
+om-rng.workspace = true
+om-schema.workspace = true
+om-transmission.workspace = true
+om-within-host.workspace = true
+bincode.workspace = true
+flate2.workspace = true
+rayon.workspace = true
+serde.workspace = true
+serde_json.workspace = true
+thiserror.workspace = true
+
+[dev-dependencies]
+approx.workspace = true
+proptest.workspace = true
